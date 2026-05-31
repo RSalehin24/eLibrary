@@ -138,6 +138,9 @@ class BookCreationRequest(TimeStampedModel):
         related_name="duplicate_creation_requests",
     )
     duplicate_confirmed = models.BooleanField(default=False)
+    has_multi_page_toc = models.BooleanField(default=False, db_index=True)
+    source_toc_page_count = models.PositiveIntegerField(default=1)
+    fetched_toc_page_count = models.PositiveIntegerField(default=1)
     linked_book = models.ForeignKey(
         "catalog.Book",
         on_delete=models.SET_NULL,

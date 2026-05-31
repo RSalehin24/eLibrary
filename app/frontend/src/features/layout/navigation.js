@@ -28,6 +28,11 @@ export const processingItems = [
     capabilityRequired: true,
   },
   {
+    to: "/multipage-toc",
+    label: "Multi-page TOC",
+    capabilityRequired: true,
+  },
+  {
     to: "/reprocessing",
     label: "Reprocessing",
     capabilityRequired: true,
@@ -54,6 +59,7 @@ export function isProcessingRoute(pathname) {
     pathname === "/create" ||
     pathname === "/on-hold" ||
     pathname === "/incomplete" ||
+    pathname === "/multipage-toc" ||
     pathname === "/reprocessing" ||
     pathname.startsWith("/processing")
   );

@@ -20,6 +20,7 @@ import {
   CatalogProcessingPage,
   CreateProcessingPage,
   IncompleteProcessingPage,
+  MultiPageTocProcessingPage,
   OnHoldProcessingPage,
 } from "../processing/BookProcessingPages";
 import ProtectedRoute from "./ProtectedRoute";
@@ -30,6 +31,7 @@ const protectedRoutes = [
   { path: "/create", element: <CreateProcessingPage /> },
   { path: "/on-hold", element: <OnHoldProcessingPage /> },
   { path: "/incomplete", element: <IncompleteProcessingPage /> },
+  { path: "/multipage-toc", element: <MultiPageTocProcessingPage /> },
   { path: "/reprocessing", element: <ReprocessingPage /> },
   { path: "/library", element: <LibraryPage /> },
   { path: "/categories", element: <CategoryPage /> },

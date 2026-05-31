@@ -2,7 +2,8 @@ export const PROCESSING_ROUTE_PAGES = {
   "/catalog": "catalog",
   "/create": "create",
   "/on-hold": "on-hold",
-  "/incomplete": "incomplete"
+  "/incomplete": "incomplete",
+  "/multipage-toc": "multipage",
 };
 
 export const PROCESSING_SYNC_SCOPE_CATALOG = "catalog";
@@ -26,7 +27,8 @@ export const PROCESSING_CARD_KEYS = [
   "incomplete-overview",
   "incomplete-automation",
   "incomplete-records",
-  "incomplete-completed"
+  "incomplete-completed",
+  "multipage-records",
 ];
 
 export const SHARED_PROCESSING_CARD_KEYS = new Set([
@@ -36,7 +38,7 @@ export const SHARED_PROCESSING_CARD_KEYS = new Set([
   "create-overview",
   "on-hold-overview",
   "incomplete-overview",
-  "incomplete-automation"
+  "incomplete-automation",
 ]);
 
 export function scopedSyncPath(scope, action) {
@@ -44,7 +46,9 @@ export function scopedSyncPath(scope, action) {
 }
 
 export function processingPath(path) {
-  return path.includes("?") ? `${path}&includeLists=0` : `${path}?includeLists=0`;
+  return path.includes("?")
+    ? `${path}&includeLists=0`
+    : `${path}?includeLists=0`;
 }
 
 export function processingPageForPathname(pathname) {
@@ -69,8 +73,8 @@ export function catalogRemotePages(remotePages) {
       (page) =>
         Array.isArray(page) &&
         page.every(
-          (item) => item && typeof item === "object" && !Array.isArray(item)
-        )
+          (item) => item && typeof item === "object" && !Array.isArray(item),
+        ),
     )
   ) {
     return remotePages;

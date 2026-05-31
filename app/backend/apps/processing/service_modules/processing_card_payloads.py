@@ -45,10 +45,39 @@ def incomplete_completed_rows():
     )
 
 
+def multipage_toc_rows():
+    queryset = (
+        BookCreationRequest.objects.filter(has_multi_page_toc=True)
+        .select_related("book_record", "linked_book", "book_record__linked_book")
+        .order_by("-updated_at", "-created_at", "id")
+    )
+    return [
+        processing_row_payload(processing_request.book_record, processing_request)
+        for processing_request in queryset
+    ]
+
+
+def multipage_toc_summary():
+    queryset = BookCreationRequest.objects.filter(has_multi_page_toc=True)
+    return {
+        "total": queryset.count(),
+        "created": queryset.filter(state=BookCreationRequestState.CREATED).count(),
+        "failed": queryset.filter(state=BookCreationRequestState.FAILED).count(),
+        "processing": queryset.filter(
+            state__in=(
+                BookCreationRequestState.INITIAL,
+                BookCreationRequestState.QUEUED,
+                BookCreationRequestState.PROCESSING,
+            )
+        ).count(),
+    }
+
+
 PROCESSING_TABLE_BUILDERS = {
     "catalog-records": catalog_processing_rows,
     "incomplete-records": incomplete_record_rows,
     "incomplete-completed": incomplete_completed_rows,
+    "multipage-records": multipage_toc_rows,
     **{
         card_id: (lambda states: lambda: request_processing_rows(states))(states)
         for card_id, states in PROCESSING_REQUEST_CARD_STATES.items()
@@ -142,6 +171,22 @@ def processing_table_payload(
             limit=limit_value,
             include_facets=include_facets,
         )
+        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        return payload
+
+    if card == "multipage-records":
+        payload = build_processing_request_table_payload(
+            BookCreationRequest.objects.filter(has_multi_page_toc=True)
+            .select_related("book_record", "linked_book", "book_record__linked_book")
+            .order_by("-updated_at", "-created_at", "id"),
+            query=query_value,
+            category=category,
+            status=status,
+            offset=offset_value,
+            limit=limit_value,
+            include_facets=include_facets,
+        )
+        payload["summary"] = multipage_toc_summary()
         payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
         return payload
 

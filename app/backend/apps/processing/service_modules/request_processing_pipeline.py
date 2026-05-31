@@ -92,6 +92,74 @@ def _saved_curated_result_for_resume(processing_request):
     return curated_result if isinstance(curated_result, dict) else None
 
 
+SIGN_IN_REQUIRED_TOC_ERROR = (
+    "Sign-in required: the source table of contents spans multiple pages on "
+    "ebanglalibrary.com but only {fetched} of {source} TOC pages could be "
+    "retrieved. Update the ebanglalibrary.com auth cookie and regenerate this book."
+)
+
+
+def _source_structure_from_curated(curated_result):
+    if not isinstance(curated_result, dict):
+        return {}
+    snapshot = curated_result.get("source_snapshot")
+    if not isinstance(snapshot, dict):
+        return {}
+    manifest = snapshot.get("manifest")
+    if not isinstance(manifest, dict):
+        return {}
+    structure = manifest.get("source_structure")
+    return structure if isinstance(structure, dict) else {}
+
+
+def _apply_multi_page_toc_signal(processing_request, curated_result):
+    """Persist multi-page TOC signals and fail the request when pages are missing.
+
+    The LearnDash AJAX pager only returns later TOC pages for an authenticated
+    session. When the ebanglalibrary.com sign-in cookie is missing or expired,
+    pages beyond the first yield no new lessons, so the book would be created
+    with only a fraction of its content. We surface that as an explicit failure
+    instead of silently producing an incomplete book.
+    """
+    structure = _source_structure_from_curated(curated_result)
+
+    def _coerce_int(value, default):
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            return default
+
+    has_paginated = bool(structure.get("has_paginated_toc"))
+    source_pages = _coerce_int(structure.get("source_total_pages"), 1)
+    attempted_pages = _coerce_int(structure.get("fetched_total_pages"), 1)
+    fetched_pages = _coerce_int(structure.get("toc_pages_with_content"), 0)
+    toc_incomplete = bool(structure.get("toc_incomplete"))
+
+    total_pages = max(source_pages, attempted_pages, 1)
+    processing_request.has_multi_page_toc = has_paginated
+    processing_request.source_toc_page_count = total_pages
+    processing_request.fetched_toc_page_count = max(fetched_pages, 0)
+    processing_request.save(
+        update_fields=[
+            "has_multi_page_toc",
+            "source_toc_page_count",
+            "fetched_toc_page_count",
+            "updated_at",
+        ]
+    )
+
+    if toc_incomplete:
+        # Message intentionally mentions "ebanglalibrary.com" so the retry loop in
+        # _run_processing_request stops retrying (re-scraping cannot recover the
+        # missing pages until the auth cookie is refreshed).
+        raise ValueError(
+            SIGN_IN_REQUIRED_TOC_ERROR.format(
+                fetched=max(fetched_pages, 0),
+                source=total_pages,
+            )
+        )
+
+
 def _process_request_once(processing_request):
     processing_request = _reload_processing_request(processing_request.id)
     if processing_request.state in TERMINAL_STATES or processing_request.state == BookCreationRequestState.PAUSED:
@@ -211,6 +279,8 @@ def _process_request_once(processing_request):
         and not scraped_data.get("book_title")
     ):
         raise ValueError("Curated document requires review before a book can be created.")
+
+    _apply_multi_page_toc_signal(processing_request, curated_result)
 
     book = _persist_processing_book(
         processing_request,

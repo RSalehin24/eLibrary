@@ -104,6 +104,8 @@ PASSWORD_RESET_FRONTEND_PATH = env(
 PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 6 * 60 * 60)
 SUPER_ADMIN_EMAIL = env("SUPER_ADMIN_EMAIL", "rsalehin24@gmail.com")
 SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD", "")
+EBANGLA_EMAIL = env("EBANGLA_EMAIL", "")
+EBANGLA_PASSWORD = env("EBANGLA_PASSWORD", "")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "noreply@banglalibrary.local")
 SOURCE_SITE_HOST = env("SOURCE_SITE_HOST", "www.ebanglalibrary.com").strip().lower()
 SOURCE_SITE_FALLBACK_HOSTS = env_list("SOURCE_SITE_FALLBACK_HOSTS", "ebanglalibrary.com")
@@ -210,6 +212,9 @@ REST_FRAMEWORK = {
 
 STATIC_URL = "/static/"
 RUNTIME_STORAGE_DIR = Path(env("RUNTIME_STORAGE_DIR", str(BASE_DIR / "storage")))
+# Auth cookie state file lives in the runtime storage dir so it always tracks the
+# mounted storage volume. An explicit EBANGLA_AUTH_STATE_PATH still overrides it.
+EBANGLA_AUTH_STATE_PATH = env("EBANGLA_AUTH_STATE_PATH", "") or str(RUNTIME_STORAGE_DIR / "ebangla_auth.json")
 STATIC_ROOT = Path(env("STATIC_ROOT", str(RUNTIME_STORAGE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"

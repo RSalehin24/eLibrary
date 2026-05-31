@@ -89,6 +89,9 @@ class BookCreationRequestSerializer(serializers.ModelSerializer):
     linkedBookId = serializers.CharField(source="linked_book_id", allow_null=True)
     linkedBookSlug = serializers.SerializerMethodField()
     pipelineOutcome = serializers.CharField(source="pipeline_outcome")
+    hasMultiPageToc = serializers.BooleanField(source="has_multi_page_toc")
+    sourceTocPageCount = serializers.IntegerField(source="source_toc_page_count")
+    fetchedTocPageCount = serializers.IntegerField(source="fetched_toc_page_count")
 
     class Meta:
         model = BookCreationRequest
@@ -108,6 +111,9 @@ class BookCreationRequestSerializer(serializers.ModelSerializer):
             "linkedBookId",
             "linkedBookSlug",
             "pipelineOutcome",
+            "hasMultiPageToc",
+            "sourceTocPageCount",
+            "fetchedTocPageCount",
         ]
 
     def get_progress(self, obj):

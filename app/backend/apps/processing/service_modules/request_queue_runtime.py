@@ -245,4 +245,7 @@ def processing_row_payload(record, request=None, *, selectable=True):
         if request and request.duplicate_of_record_id
         else None,
         "duplicateConfirmed": bool(request.duplicate_confirmed) if request else False,
+        "hasMultiPageToc": bool(request.has_multi_page_toc) if request else False,
+        "sourceTocPageCount": int(request.source_toc_page_count) if request else 1,
+        "fetchedTocPageCount": int(request.fetched_toc_page_count) if request else 1,
     }

@@ -23,6 +23,7 @@ from apps.ingestion.pipeline.scraper_support.network import (
     clean_buttons,
     create_session_with_retries,
     decode_html_response,
+    login_source_session,
     normalize_source_url,
 )
 from apps.ingestion.services.normalization import (
@@ -137,6 +138,7 @@ class SourceFetchContext:
         self.sleep_seconds = sleep_seconds
         self.pages = []
         self.cache = {}
+        login_source_session(session)
 
     def fetch_soup(self, url, *, kind, title="", cache=True):
         if cache and url in self.cache:
@@ -626,35 +628,123 @@ def append_toc_node(target, node, seen_lesson_keys, current_section):
     return current_section
 
 
+def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
+    """Fetch a LearnDash TOC page via the AJAX pager endpoint.
+
+    The ``?ld-courseinfo-lesson-page=N`` GET parameter is ignored by the
+    server for unauthenticated (and sometimes authenticated) requests; the
+    only reliable path is the ``ld30_ajax_pager`` admin-ajax action used by
+    the LearnDash JavaScript.
+
+    Returns a BeautifulSoup of the lesson-list HTML on success, or None.
+    """
+    pager = landing_soup.select_one(".ld-pagination[data-pager-nonce]") if landing_soup else None
+    if not pager:
+        return None
+
+    nonce = pager.get("data-pager-nonce", "")
+    pager_data = pagination_data(pager)
+
+    item_list = landing_soup.select_one(".ld-item-list[data-shortcode_instance]") if landing_soup else None
+    shortcode_raw = item_list.get("data-shortcode_instance", "{}") if item_list else "{}"
+    try:
+        shortcode = json.loads(shortcode_raw.replace("&quot;", '"'))
+    except (ValueError, json.JSONDecodeError):
+        shortcode = {}
+
+    course_id = shortcode.get("course_id") or pager_data.get("course_id")
+    if not course_id or not nonce:
+        return None
+
+    ajax_url = "https://www.ebanglalibrary.com/wp-admin/admin-ajax.php"
+    params = {
+        "action": "ld30_ajax_pager",
+        "ld-courseinfo-lesson-page": page_number,
+        "pager_nonce": nonce,
+        "pager_results[paged]": 1,
+        "pager_results[total_items]": pager_data.get("total_items", 0),
+        "pager_results[total_pages]": pager_data.get("total_pages", 1),
+        "context": "course_content_shortcode",
+        "course_id": course_id,
+        "shortcode_instance[course_id]": course_id,
+        "shortcode_instance[post_id]": shortcode.get("post_id", course_id),
+        "shortcode_instance[group_id]": shortcode.get("group_id", 0),
+        "shortcode_instance[paged]": 1,
+        "shortcode_instance[num]": shortcode.get("num", 50),
+        "shortcode_instance[wrapper]": "true",
+        "shortcode_instance[user_id]": shortcode.get("user_id", 0),
+    }
+    headers = {**HEADERS, "X-Requested-With": "XMLHttpRequest", "Referer": course_url}
+    try:
+        resp = ctx.session.get(ajax_url, params=params, headers=headers, timeout=30)
+        if resp.status_code != 200:
+            return None
+        payload = resp.json()
+        markup = (payload.get("data") or {}).get("markup") or ""
+        if not markup:
+            return None
+        return BeautifulSoup(markup, "html.parser")
+    except (requests.RequestException, ValueError):
+        return None
+
+
 def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
     if limits.get("disable_recursive"):
-        return [], {"toc_page_count": 0, "has_paginated_toc": False, "has_section_headings": False}
+        return [], {
+            "toc_page_count": 0,
+            "has_paginated_toc": False,
+            "has_section_headings": False,
+            "source_total_pages": 1,
+            "fetched_total_pages": 1,
+            "toc_pages_with_content": 0,
+            "toc_incomplete": False,
+        }
 
-    total_pages = bounded_total(lesson_total_pages(landing_soup), limits.get("max_lesson_pages"))
+    source_total_pages = lesson_total_pages(landing_soup)
+    total_pages = bounded_total(source_total_pages, limits.get("max_lesson_pages"))
     collected = []
     seen_lesson_keys = set()
     current_section = None
     page_count = 0
+    pages_with_content = 0
 
     for page_number in range(1, total_pages + 1):
         page_url = canonical_url if page_number == 1 else build_query_url(canonical_url, {"ld-courseinfo-lesson-page": page_number})
-        soup = landing_soup if page_number == 1 else ctx.fetch_soup(page_url, kind="toc_page")
+        if page_number == 1:
+            soup = landing_soup
+        else:
+            # The ?ld-courseinfo-lesson-page=N GET parameter is ignored by the
+            # server; use the AJAX pager action instead (requires auth cookies).
+            soup = _fetch_learndash_toc_page_ajax(ctx, landing_soup, canonical_url, page_number)
+            if soup is None:
+                # Fallback to the GET parameter (may work on some configurations)
+                soup = ctx.fetch_soup(page_url, kind="toc_page")
         if not soup:
             continue
         page_count += 1
+        keys_before = len(seen_lesson_keys)
         for node in parse_toc_nodes_from_page(soup, page_url, ctx, limits):
             if node.get("type") == "section":
                 current_section = append_toc_node(collected, node, seen_lesson_keys, current_section)
                 continue
             current_section = append_toc_node(collected, node, seen_lesson_keys, current_section)
+        if len(seen_lesson_keys) > keys_before:
+            pages_with_content += 1
 
     has_sections = any(node.get("type") == "section" for node in collected)
+    # A multi-page TOC is "incomplete" when one or more of the pages we attempted
+    # to fetch produced no new lessons. This is the signature of the LearnDash
+    # AJAX pager being rejected (typically because the ebanglalibrary.com sign-in
+    # cookie is missing or expired), so only the first page of lessons is captured.
+    toc_incomplete = total_pages > 1 and pages_with_content < total_pages
     return collected, {
         "toc_page_count": page_count,
         "has_paginated_toc": total_pages > 1,
         "has_section_headings": has_sections,
-        "source_total_pages": lesson_total_pages(landing_soup),
+        "source_total_pages": source_total_pages,
         "fetched_total_pages": total_pages,
+        "toc_pages_with_content": pages_with_content,
+        "toc_incomplete": toc_incomplete,
     }
 
 
@@ -921,6 +1011,8 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
         "has_section_headings": toc_meta.get("has_section_headings", False),
         "source_total_pages": toc_meta.get("source_total_pages", 1),
         "fetched_total_pages": toc_meta.get("fetched_total_pages", 1),
+        "toc_pages_with_content": toc_meta.get("toc_pages_with_content", 0),
+        "toc_incomplete": toc_meta.get("toc_incomplete", False),
     }
 
 

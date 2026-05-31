@@ -105,6 +105,82 @@ def get_soup(url, max_retries=3):
     return None
 
 
+def login_source_session(session):
+    """Load ebanglalibrary.com auth cookies from a saved session-state file.
+
+    The state file is generated once by running ``local/scripts/save_ebangla_auth.py``
+    on a local machine (which reads the wordpress_logged_in_* cookie straight out
+    of the developer's logged-in browser, since Cloudflare blocks automated
+    logins), then placed in ``app/backend/storage/`` which is mounted into all
+    Docker containers.
+
+    Configure via the ``EBANGLA_AUTH_STATE_PATH`` env var (defaults to
+    ``{RUNTIME_STORAGE_DIR}/ebangla_auth.json`` when that env var is set, or
+    leave empty to skip authentication entirely).
+
+    Mutates ``session`` in-place with the resulting auth cookies.
+    Returns True when at least one auth cookie was loaded.
+    """
+    import json
+    import logging
+    import os
+
+    logger = logging.getLogger(__name__)
+
+    from django.conf import settings
+
+    state_path = (getattr(settings, "EBANGLA_AUTH_STATE_PATH", "") or "").strip()
+    if not state_path:
+        logger.debug(
+            "EBANGLA_AUTH_STATE_PATH not set; ebanglalibrary.com auth skipped."
+        )
+        return False
+
+    if not os.path.exists(state_path):
+        logger.warning(
+            "EBANGLA_AUTH_STATE_PATH=%r but the file does not exist. "
+            "Run local/scripts/save_ebangla_auth.py to generate it, "
+            "then for EC2: scp app/backend/storage/ebangla_auth.json "
+            "ubuntu@<EC2_IP>:~/library_app/app/backend/storage/",
+            state_path,
+        )
+        return False
+
+    try:
+        with open(state_path) as f:
+            state = json.load(f)
+    except (OSError, ValueError) as exc:
+        logger.warning("Failed to read ebangla auth state from %r: %s", state_path, exc)
+        return False
+
+    domain_cookies = [
+        c
+        for c in state.get("cookies", [])
+        if c.get("domain", "").lstrip(".") in ("ebanglalibrary.com", "www.ebanglalibrary.com")
+        and c.get("name")
+    ]
+
+    has_login_cookie = any(
+        c["name"].startswith("wordpress_logged_in_") for c in domain_cookies
+    )
+    if not has_login_cookie:
+        logger.warning(
+            "No wordpress_logged_in_* cookies found in %r. "
+            "Re-run local/scripts/save_ebangla_auth.py to refresh the auth state.",
+            state_path,
+        )
+        return False
+
+    for c in domain_cookies:
+        session.cookies.set(c["name"], c.get("value", ""), domain="www.ebanglalibrary.com")
+
+    logger.debug(
+        "Loaded %d ebanglalibrary.com cookie(s) from state file.",
+        len(domain_cookies),
+    )
+    return True
+
+
 def clean_buttons(soup):
     for button in soup.find_all("button"):
         button.decompose()

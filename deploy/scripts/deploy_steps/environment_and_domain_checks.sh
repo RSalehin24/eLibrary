@@ -195,6 +195,24 @@ sync_workspace_files() {
   ) | ssh "${TARGET}" "tar --warning=no-unknown-keyword --no-same-owner --no-same-permissions -xzf - -C '${REMOTE_APP_ABS_DIR}'"
 }
 
+sync_ebangla_auth_file() {
+  # app/backend/storage is excluded from the workspace tar (it holds runtime
+  # data), so the ebanglalibrary.com auth cookies must be copied explicitly.
+  # Generated locally by: bash local/scripts/save-ebangla-auth.sh
+  local auth_file="${REPO_ROOT}/app/backend/storage/ebangla_auth.json"
+  local remote_dir="${REMOTE_APP_ABS_DIR}/app/backend/storage"
+
+  if [[ ! -f "${auth_file}" ]]; then
+    print_info "No ebangla_auth.json found locally; skipping auth-cookie sync (multi-page TOC scraping will be limited until you run local/scripts/save-ebangla-auth.sh)."
+    return 0
+  fi
+
+  print_info "Syncing ebanglalibrary.com auth cookies to ${TARGET}"
+  ssh "${TARGET}" "mkdir -p '${remote_dir}'"
+  scp "${auth_file}" "${TARGET}:${remote_dir}/ebangla_auth.json" >/dev/null
+  print_info "Auth cookies synced to ${remote_dir}/ebangla_auth.json"
+}
+
 sync_remote_env_file() {
   local sync_mode="${1:?sync mode is required}"
 

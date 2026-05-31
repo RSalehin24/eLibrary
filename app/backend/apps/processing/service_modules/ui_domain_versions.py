@@ -125,6 +125,10 @@ def processing_domains_for_request_change(
     if after_overview:
         domains.add(after_overview)
 
+    # The multi-page TOC page surfaces requests across every state, so refresh it
+    # whenever any request transitions.
+    domains.add(PROCESSING_CARD_MULTIPAGE_RECORDS)
+
     if record is not None:
         if processing_record_is_incomplete(record):
             domains.update(
