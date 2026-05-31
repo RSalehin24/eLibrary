@@ -98,6 +98,11 @@ SIGN_IN_REQUIRED_TOC_ERROR = (
     "retrieved. Update the ebanglalibrary.com auth cookie and regenerate this book."
 )
 
+CONTENT_FETCH_INCOMPLETE_ERROR = (
+    "Incomplete scrape: only {fetched} of {expected} topic pages returned content. "
+    "The source may be rate-limiting requests — please try regenerating."
+)
+
 
 def _source_structure_from_curated(curated_result):
     if not isinstance(curated_result, dict):
@@ -159,6 +164,22 @@ def _apply_multi_page_toc_signal(processing_request, curated_result):
             )
         )
 
+    content_incomplete = bool(structure.get("content_incomplete"))
+    topics_expected = _coerce_int(structure.get("topics_expected"), 0)
+    topics_fetched = _coerce_int(structure.get("topics_fetched"), 0)
+    if content_incomplete:
+        # Does NOT contain "ebanglalibrary.com" so the retry loop will attempt up
+        # to MAX_PROCESSING_REQUEST_ATTEMPTS re-scrapes (transient rate-limiting
+        # may clear between attempts). The pipeline fails *before*
+        # _persist_processing_book so book.content_items is never overwritten with
+        # the partial scrape result.
+        raise ValueError(
+            CONTENT_FETCH_INCOMPLETE_ERROR.format(
+                fetched=topics_fetched,
+                expected=topics_expected,
+            )
+        )
+
 
 def _process_request_once(processing_request):
     processing_request = _reload_processing_request(processing_request.id)
@@ -216,16 +237,8 @@ def _process_request_once(processing_request):
                 name=f"scrape-heartbeat-{processing_request.id}",
             )
             _heartbeat_thread.start()
-            _page_cache = DiskPageCache(scrape_cache_path_for_request(processing_request.id))
-            if _page_cache.has_cached_pages():
-                logger.info(
-                    "Request %s resuming scrape from disk cache (%d pages already fetched).",
-                    processing_request.id,
-                    _page_cache.cached_count(),
-                )
             try:
-                curated_result = curate_book(normalized_url, page_cache=_page_cache)
-                _page_cache.delete()
+                curated_result = curate_book(normalized_url)
             finally:
                 _stop_heartbeat.set()
                 _heartbeat_thread.join(timeout=5)
@@ -256,6 +269,13 @@ def _process_request_once(processing_request):
     if processing_request.state == BookCreationRequestState.DELETED:
         sync_record_state(processing_request.book_record)
         return processing_request
+
+    # Save multi-page TOC detection fields now — before the PAUSED branch — so
+    # that books paused after a long scrape still appear on the Multi-page TOC
+    # page. If the TOC is incomplete (sign-in required), the resulting ValueError
+    # propagates to _fail_processing_request which safely no-ops for PAUSED state.
+    _apply_multi_page_toc_signal(processing_request, curated_result)
+
     if processing_request.state == BookCreationRequestState.PAUSED:
         return _save_paused_processing_progress(
             processing_request.id,
@@ -279,8 +299,6 @@ def _process_request_once(processing_request):
         and not scraped_data.get("book_title")
     ):
         raise ValueError("Curated document requires review before a book can be created.")
-
-    _apply_multi_page_toc_signal(processing_request, curated_result)
 
     book = _persist_processing_book(
         processing_request,
@@ -351,6 +369,9 @@ def _mark_request_review_required(processing_request, book, curated_result):
     return processing_request
 
 
+CONTENT_INCOMPLETE_RETRY_DELAY = 60  # seconds
+
+
 def _run_processing_request(processing_request):
     last_error = None
     for _attempt in range(MAX_PROCESSING_REQUEST_ATTEMPTS):
@@ -373,6 +394,21 @@ def _run_processing_request(processing_request):
                 BookCreationRequestState.PAUSED,
             }:
                 return reloaded
+            is_last_attempt = _attempt >= MAX_PROCESSING_REQUEST_ATTEMPTS - 1
+            if (
+                not is_last_attempt
+                and isinstance(exc, ValueError)
+                and str(exc).startswith("Incomplete scrape:")
+            ):
+                logger.info(
+                    "Processing request %s: incomplete content scrape on attempt %d/%d. "
+                    "Waiting %ds before retry.",
+                    processing_request.id,
+                    _attempt + 1,
+                    MAX_PROCESSING_REQUEST_ATTEMPTS,
+                    CONTENT_INCOMPLETE_RETRY_DELAY,
+                )
+                time.sleep(CONTENT_INCOMPLETE_RETRY_DELAY)
     return _fail_processing_request(processing_request, last_error or PROCESSING_STALE_MESSAGE)
 
 

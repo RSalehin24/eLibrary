@@ -77,13 +77,18 @@ def high_fidelity_scrape_limits():
 
 
 def processing_curate_limits():
-    """Memory-safe content limits for the curate_book() pipeline in the processing worker.
+    """Content limits for the curate_book() pipeline in the processing worker.
 
-    These defaults are lower than DEFAULT_SCRAPE_LIMITS to stay within the Docker VM
-    memory ceiling when scraping large books.  Override via env vars if needed.
+    max_nodes defaults to None (unlimited) so that large books with many topics
+    (e.g. 911 topics) are fully scraped.  Override via env vars if needed.
     """
+    raw_max_nodes = getattr(settings, "PROCESSING_CURATE_MAX_NODES", None)
+    try:
+        max_nodes = int(raw_max_nodes) if raw_max_nodes is not None else None
+    except (TypeError, ValueError):
+        max_nodes = None
     return {
-        "max_nodes": getattr(settings, "PROCESSING_CURATE_MAX_NODES", 80),
+        "max_nodes": max_nodes,
         "max_depth": getattr(settings, "PROCESSING_CURATE_MAX_DEPTH", 6),
         "max_lesson_pages": getattr(settings, "PROCESSING_CURATE_MAX_LESSON_PAGES", 20),
         "max_content_chars": getattr(settings, "PROCESSING_CURATE_MAX_CONTENT_CHARS", 60000),

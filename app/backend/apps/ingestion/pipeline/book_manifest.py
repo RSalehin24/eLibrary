@@ -132,8 +132,16 @@ def html_text(html):
     return clean_display_text(plain_text_from_html(html or ""))
 
 
+# HTTP statuses that indicate a transient/rate-limit condition where the same
+# URL is expected to succeed on a later attempt. The source site (ebanglalibrary)
+# intermittently throttles rapid topic requests with these codes.
+_TRANSIENT_HTTP_STATUSES = {429, 500, 502, 503, 504}
+_FETCH_MAX_ATTEMPTS = 4
+_FETCH_RETRY_BACKOFF = 2.0  # seconds; multiplied by attempt number
+
+
 class SourceFetchContext:
-    def __init__(self, session, *, sleep_seconds=0.25):
+    def __init__(self, session, *, sleep_seconds=0.5):
         self.session = session
         self.sleep_seconds = sleep_seconds
         self.pages = []
@@ -151,35 +159,70 @@ class SourceFetchContext:
             "status": "failed",
             "status_code": None,
         }
-        try:
-            response = get_with_host_fallback(
-                self.session,
-                url,
-                headers=HEADERS,
-                timeout=30,
-            )
-            page["status_code"] = getattr(response, "status_code", None)
-            if response.status_code != 200:
+        last_error = None
+        for attempt in range(1, _FETCH_MAX_ATTEMPTS + 1):
+            try:
+                response = get_with_host_fallback(
+                    self.session,
+                    url,
+                    headers=HEADERS,
+                    timeout=60,
+                )
+                page["status_code"] = getattr(response, "status_code", None)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(decode_html_response(response), "html.parser")
+                    page["status"] = "fetched"
+                    if not page["title"]:
+                        page["title"] = page_title_from_soup(soup)
+                    self.pages.append(page)
+                    if cache:
+                        self.cache[url] = soup
+                    if self.sleep_seconds:
+                        time.sleep(self.sleep_seconds)
+                    return soup
+
+                # Non-200: retry transient statuses with backoff, otherwise give up.
+                if (
+                    response.status_code in _TRANSIENT_HTTP_STATUSES
+                    and attempt < _FETCH_MAX_ATTEMPTS
+                ):
+                    logger.warning(
+                        "Transient HTTP %s for %s (attempt %d/%d) — retrying.",
+                        response.status_code,
+                        url,
+                        attempt,
+                        _FETCH_MAX_ATTEMPTS,
+                    )
+                    time.sleep(_FETCH_RETRY_BACKOFF * attempt)
+                    continue
                 self.pages.append(page)
                 self.cache[url] = None
                 return None
+            except requests.exceptions.RequestException as error:
+                last_error = error
+                if attempt < _FETCH_MAX_ATTEMPTS:
+                    logger.warning(
+                        "Network error for %s (attempt %d/%d): %s — retrying.",
+                        url,
+                        attempt,
+                        _FETCH_MAX_ATTEMPTS,
+                        error,
+                    )
+                    time.sleep(_FETCH_RETRY_BACKOFF * attempt)
+                    continue
+                page["error"] = str(error)
+                self.pages.append(page)
+                if cache:
+                    self.cache[url] = None
+                return None
 
-            soup = BeautifulSoup(decode_html_response(response), "html.parser")
-            page["status"] = "fetched"
-            if not page["title"]:
-                page["title"] = page_title_from_soup(soup)
-            self.pages.append(page)
-            if cache:
-                self.cache[url] = soup
-            if self.sleep_seconds:
-                time.sleep(self.sleep_seconds)
-            return soup
-        except requests.exceptions.RequestException as error:
-            page["error"] = str(error)
-            self.pages.append(page)
-            if cache:
-                self.cache[url] = None
-            return None
+        # Exhausted all attempts on transient failures.
+        if last_error is not None:
+            page["error"] = str(last_error)
+        self.pages.append(page)
+        if cache:
+            self.cache[url] = None
+        return None
 
 
 def page_title_from_soup(soup):
@@ -302,7 +345,7 @@ def download_cover_asset(cover_url, output_folder, session):
     if not cover_url or not output_folder:
         return ""
     try:
-        response = session.get(cover_url, headers=HEADERS, timeout=30)
+        response = session.get(cover_url, headers=HEADERS, timeout=60)
         response.raise_for_status()
     except requests.exceptions.RequestException:
         return ""
@@ -352,6 +395,10 @@ def lesson_total_pages(soup):
             except (TypeError, ValueError):
                 return 1
     for pager in pagers:
+        # Skip topic-level pagers that are nested inside a lesson/topic list item;
+        # those paginate sub-topics within a lesson, not the course page itself.
+        if pager.find_parent(class_="ld-item-lesson-item"):
+            continue
         data = pagination_data(pager)
         if "total_pages" in data:
             try:
@@ -366,12 +413,20 @@ def topic_page_numbers(lesson_item, page_url, max_topic_pages=None):
     if not expand_id:
         return [1]
 
+    # LearnDash stores the expand_id as "ld-expand-{lesson_id}" but the
+    # ld-topic-page URL parameter and data-ld-topic-page attributes use only
+    # the numeric lesson_id (e.g. "216992-2", not "ld-expand-216992-2").
+    # Accept both formats so link-based detection works correctly.
+    str_expand_id = str(expand_id)
+    numeric_expand_id = str_expand_id[len("ld-expand-"):] if str_expand_id.startswith("ld-expand-") else str_expand_id
+    valid_prefixes = {str_expand_id, numeric_expand_id}
+
     page_numbers = {1}
     for tag in lesson_item.find_all(href=True):
         parsed = urlparse(urljoin(page_url, tag.get("href", "")))
         for value in parse_qs(parsed.query).get("ld-topic-page", []):
             prefix, _, page_number = str(value).partition("-")
-            if prefix != str(expand_id):
+            if prefix not in valid_prefixes:
                 continue
             try:
                 page_numbers.add(int(page_number))
@@ -380,7 +435,7 @@ def topic_page_numbers(lesson_item, page_url, max_topic_pages=None):
 
     for tag in lesson_item.find_all(attrs={"data-ld-topic-page": True}):
         prefix, _, page_number = str(tag.get("data-ld-topic-page", "")).partition("-")
-        if prefix != str(expand_id):
+        if prefix not in valid_prefixes:
             continue
         try:
             page_numbers.add(int(page_number))
@@ -457,7 +512,7 @@ def extract_topic_entries_from_lesson(lesson_item, *, base_url, seen_urls):
     return topics
 
 
-def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits):
+def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None):
     expand_id = lesson_item.get("data-ld-expand-id") if lesson_item else ""
     if not expand_id:
         return []
@@ -472,7 +527,12 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits):
         paged_lesson_item = lesson_item
         topic_page_url = page_url
         if page_number > 1:
-            topic_page_url = build_query_url(page_url, {"ld-topic-page": f"{expand_id}-{page_number}"})
+            if _meta is not None:
+                _meta["has_topic_pagination"] = True
+            # LearnDash's ld-topic-page URL parameter uses the numeric lesson ID,
+            # not the full expand_id string (e.g. "216992-2", not "ld-expand-216992-2").
+            lesson_id = expand_id[len("ld-expand-"):] if expand_id.startswith("ld-expand-") else expand_id
+            topic_page_url = build_query_url(page_url, {"ld-topic-page": f"{lesson_id}-{page_number}"})
             topic_soup = ctx.fetch_soup(topic_page_url, kind="topic_toc_page")
             paged_lesson_item = find_lesson_item_by_expand_id(topic_soup, expand_id)
             if paged_lesson_item is None:
@@ -512,7 +572,7 @@ def toc_items_container(soup):
     return soup.select_one(".ld-lesson-list")
 
 
-def parse_lesson_node(lesson_item, page_url, ctx, limits):
+def parse_lesson_node(lesson_item, page_url, ctx, limits, *, _meta=None):
     anchor = lesson_item.find("a", class_=lambda value: value and "ld-item-name" in value)
     if anchor is None:
         return None
@@ -521,7 +581,7 @@ def parse_lesson_node(lesson_item, page_url, ctx, limits):
     url = normalize_content_url(anchor.get("href", ""), page_url)
     if not title and not url:
         return None
-    topics = scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits)
+    topics = scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, _meta=_meta)
     return {
         "title": title or url,
         "url": url,
@@ -537,7 +597,7 @@ def section_heading_title(block):
     return normalized_heading(text)
 
 
-def parse_toc_nodes_from_page(soup, page_url, ctx, limits):
+def parse_toc_nodes_from_page(soup, page_url, ctx, limits, *, _meta=None):
     container = toc_items_container(soup)
     if not container:
         return []
@@ -573,7 +633,7 @@ def parse_toc_nodes_from_page(soup, page_url, ctx, limits):
         if lesson_item is None:
             continue
 
-        lesson_node = parse_lesson_node(lesson_item, page_url, ctx, limits)
+        lesson_node = parse_lesson_node(lesson_item, page_url, ctx, limits, _meta=_meta)
         if lesson_node is None:
             continue
         if current_section is not None:
@@ -638,7 +698,14 @@ def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
 
     Returns a BeautifulSoup of the lesson-list HTML on success, or None.
     """
-    pager = landing_soup.select_one(".ld-pagination[data-pager-nonce]") if landing_soup else None
+    # Find a course-level pager (skip any pager nested inside a lesson item;
+    # those paginate topics within a lesson, not the course page itself).
+    pager = None
+    if landing_soup:
+        for candidate in landing_soup.select(".ld-pagination[data-pager-nonce]"):
+            if not candidate.find_parent(class_="ld-item-lesson-item"):
+                pager = candidate
+                break
     if not pager:
         return None
 
@@ -676,7 +743,7 @@ def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
     }
     headers = {**HEADERS, "X-Requested-With": "XMLHttpRequest", "Referer": course_url}
     try:
-        resp = ctx.session.get(ajax_url, params=params, headers=headers, timeout=30)
+        resp = ctx.session.get(ajax_url, params=params, headers=headers, timeout=60)
         if resp.status_code != 200:
             return None
         payload = resp.json()
@@ -707,6 +774,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
     current_section = None
     page_count = 0
     pages_with_content = 0
+    _meta = {}
 
     for page_number in range(1, total_pages + 1):
         page_url = canonical_url if page_number == 1 else build_query_url(canonical_url, {"ld-courseinfo-lesson-page": page_number})
@@ -723,7 +791,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
             continue
         page_count += 1
         keys_before = len(seen_lesson_keys)
-        for node in parse_toc_nodes_from_page(soup, page_url, ctx, limits):
+        for node in parse_toc_nodes_from_page(soup, page_url, ctx, limits, _meta=_meta):
             if node.get("type") == "section":
                 current_section = append_toc_node(collected, node, seen_lesson_keys, current_section)
                 continue
@@ -732,6 +800,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
             pages_with_content += 1
 
     has_sections = any(node.get("type") == "section" for node in collected)
+    has_topic_pagination = bool(_meta.get("has_topic_pagination"))
     # A multi-page TOC is "incomplete" when one or more of the pages we attempted
     # to fetch produced no new lessons. This is the signature of the LearnDash
     # AJAX pager being rejected (typically because the ebanglalibrary.com sign-in
@@ -739,7 +808,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
     toc_incomplete = total_pages > 1 and pages_with_content < total_pages
     return collected, {
         "toc_page_count": page_count,
-        "has_paginated_toc": total_pages > 1,
+        "has_paginated_toc": total_pages > 1 or has_topic_pagination,
         "has_section_headings": has_sections,
         "source_total_pages": source_total_pages,
         "fetched_total_pages": total_pages,
@@ -1003,6 +1072,14 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
     if traits["section_count"] and structure_type in {"flat_lessons", "lesson_topic_nested", "mixed_lessons_and_topics"}:
         structure_type = f"sectioned_{structure_type}"
 
+    # For flat-lesson books (no topics) the expected count is lessons; for
+    # nested books it is topics; for mixed books it is topics + lessons without topics.
+    topics_expected = traits["topic_count"] + (
+        traits["lessons_without_topics"] if not traits["topic_count"] else 0
+    )
+    topics_fetched = len(content_items) if content_items else 0
+    content_incomplete = topics_expected > 0 and topics_fetched < topics_expected
+
     return {
         "type": structure_type,
         "traits": traits,
@@ -1013,6 +1090,9 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
         "fetched_total_pages": toc_meta.get("fetched_total_pages", 1),
         "toc_pages_with_content": toc_meta.get("toc_pages_with_content", 0),
         "toc_incomplete": toc_meta.get("toc_incomplete", False),
+        "content_incomplete": content_incomplete,
+        "topics_expected": topics_expected,
+        "topics_fetched": topics_fetched,
     }
 
 
@@ -1078,6 +1158,34 @@ def _drop_inline_toc_front_sections(front_sections):
         title = clean_display_text(s.get("title") or "")
         norm = normalize_catalog_text(title)
         if norm in _INLINE_TOC_HEADING_NORMS:
+            continue
+        result.append(s)
+    return result
+
+
+def _drop_chapter_title_front_sections(front_sections, toc):
+    """Remove front sections whose titles duplicate a chapter/lesson name in the TOC.
+
+    The source landing page sometimes lists lesson/chapter names as headings,
+    which get extracted as front matter sections.  Since each such lesson
+    already appears as a proper body chapter (with all its topics), keeping a
+    tiny title-only front section would create an empty duplicate page in the
+    EPUB.
+    """
+    if not front_sections or not toc:
+        return front_sections
+    lesson_norms = set()
+    for entry in toc:
+        title = clean_display_text(entry.get("title") or "")
+        if title:
+            lesson_norms.add(normalize_catalog_text(title))
+    if not lesson_norms:
+        return front_sections
+    result = []
+    for s in front_sections:
+        title = clean_display_text(s.get("title") or "")
+        norm = normalize_catalog_text(title)
+        if norm and norm in lesson_norms:
             continue
         result.append(s)
     return result
@@ -1408,6 +1516,12 @@ def normalize_body_sections(
     # Keeping them would show two identical "সূচিপত্র" entries in the nav.
     if toc or content_items:
         front_sections = _drop_inline_toc_front_sections(front_sections)
+
+    # Drop front sections whose titles duplicate a lesson/chapter name from the
+    # TOC.  Landing pages sometimes surface lesson headings as extractable
+    # sections; the result is an empty front page that duplicates the chapter.
+    if toc and front_sections:
+        front_sections = _drop_chapter_title_front_sections(front_sections, toc)
 
     return {
         "book_info": book_info,

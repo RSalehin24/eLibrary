@@ -37,6 +37,7 @@ def create_session_with_retries(retries=3, backoff_factor=1):
     session = requests.Session()
     retry_strategy = Retry(
         total=retries,
+        read=0,
         backoff_factor=backoff_factor,
         status_forcelist=[429, 500, 502, 503, 504],
         allowed_methods=["HEAD", "GET", "OPTIONS"],
