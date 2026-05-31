@@ -1,4 +1,5 @@
 configure_remote_nginx() {
+  echo
   print_info "[7/8] Configuring host nginx and certbot on ${TARGET}"
   ssh -t "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && sudo bash deploy/scripts/setup-host-nginx.sh '${DOMAIN}' '${CERTBOT_EMAIL}' '${REMOTE_APP_ABS_DIR}' '${BACKEND_PORT}' '${FRONTEND_PORT}' '${DEPLOY_NGINX_CONFIG_NAME}' '${DEPLOY_NGINX_CONF_DIR}' '${DEPLOY_NGINX_VERSION}'"
 }
@@ -21,18 +22,19 @@ wait_for_https_endpoint() {
 
 verify_deployment() {
   local remote_nginx_config_path="${DEPLOY_NGINX_CONF_DIR}/${DEPLOY_NGINX_CONFIG_NAME}"
-
+  echo
   print_info "[8/8] Verifying nginx configuration and HTTPS reachability"
   ssh "${TARGET}" "sudo nginx -T 2>/dev/null | grep -Fq '${remote_nginx_config_path}'" || die "Expected nginx config was not loaded: ${remote_nginx_config_path}"
 
   if ! wait_for_https_endpoint "https://${DOMAIN}/" 20 3 || ! wait_for_https_endpoint "https://${DOMAIN}/api/csrf/" 20 3; then
-    print_info "HTTPS probes failed. Collecting remote diagnostics from ${TARGET}."
+    print_info "[8/8] HTTPS probes failed. Collecting remote diagnostics from ${TARGET}."
     ssh "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && if docker compose version >/dev/null 2>&1; then docker compose -f '${DEPLOY_COMPOSE_REL}' ps && docker compose -f '${DEPLOY_COMPOSE_REL}' logs --tail=80 backend frontend; elif command -v docker-compose >/dev/null 2>&1; then docker-compose -f '${DEPLOY_COMPOSE_REL}' ps && docker-compose -f '${DEPLOY_COMPOSE_REL}' logs --tail=80 backend frontend; fi" || true
     ssh "${TARGET}" "sudo tail -n 80 /var/log/nginx/error.log" || true
     die "HTTPS is not reachable at https://${DOMAIN}. Check that nginx is running and all containers are healthy on the server, then rerun the deploy."
   fi
 
-  print_info "Deployment verification passed for https://${DOMAIN}"
+  print_info "[8/8] Deployment verification passed for https://${DOMAIN}"
+  echo
 }
 
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
@@ -130,6 +132,7 @@ require_non_empty_env_key "${LOCAL_ENV_FILE}" "SUPER_ADMIN_PASSWORD"
 LOCAL_SUPER_ADMIN_EMAIL="$(read_env_value_from_file "${LOCAL_ENV_FILE}" "SUPER_ADMIN_EMAIL")"
 LOCAL_SUPER_ADMIN_PASSWORD="$(read_env_value_from_file "${LOCAL_ENV_FILE}" "SUPER_ADMIN_PASSWORD")"
 
+echo
 print_info "[1/8] Running deployment preflight checks"
 resolved_ips="$(resolve_domain_ips "${DOMAIN}")"
 if [[ -z "${resolved_ips}" || "$(printf '%s\n' "${resolved_ips}" | grep -Fx "${DEPLOY_IP}" || true)" == "" ]]; then
@@ -162,8 +165,8 @@ esac
 
 sync_remote_env_file "${SYNC_MODE}"
 
-print_info "Prompting for optional remote env edit"
-remote_env_choice="$(timed_yes_no_prompt "Edit remote deploy/env/.app.env now?" 5 "n")"
+print_info "[4/8] Prompting for optional remote env edit"
+remote_env_choice="$(timed_yes_no_prompt "[INFO] [4/8] Edit remote deploy/env/.app.env now?" 5 "n")"
 if [[ "${remote_env_choice}" =~ ^[Yy]$ ]]; then
   ssh -tt "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && ${DEPLOY_REMOTE_EDITOR} ${REMOTE_APP_ENV_REL}"
 fi

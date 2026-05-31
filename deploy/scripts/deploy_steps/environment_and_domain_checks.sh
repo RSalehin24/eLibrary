@@ -104,6 +104,7 @@ validate_local_database_env() {
 }
 
 sync_remote_repository() {
+  echo
   print_info "[2/8] Syncing repository on ${TARGET}"
   ssh -A "${TARGET}" \
     REPO_SSH="${REPO_SSH}" \
@@ -163,6 +164,7 @@ EOF
 }
 
 sync_workspace_files() {
+  echo
   print_info "[3/8] Syncing workspace content to ${TARGET}"
   (
     cd "${REPO_ROOT}"
@@ -215,7 +217,8 @@ sync_ebangla_auth_file() {
 
 sync_remote_env_file() {
   local sync_mode="${1:?sync mode is required}"
-
+  echo
+  echo
   print_info "[4/8] Syncing application env to ${TARGET}"
   if [[ "${sync_mode}" == "preserve" ]]; then
     print_info "Preserving remote ${REMOTE_APP_ENV_REL} values"
@@ -226,7 +229,7 @@ sync_remote_env_file() {
 
   scp "${LOCAL_ENV_FILE}" "${TARGET}:${REMOTE_APP_ABS_DIR}/deploy/env/.env.sync" >/dev/null
   ssh "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && python3 automation/lib/env_tools.py merge ${REMOTE_APP_ENV_REL} deploy/env/.env.sync deploy/env/.app.env.merged --non-empty-only && mv deploy/env/.app.env.merged ${REMOTE_APP_ENV_REL} && rm -f deploy/env/.env.sync"
-  print_info "Merged non-empty values from $(basename "${LOCAL_ENV_FILE}") into ${REMOTE_APP_ENV_REL}"
+  print_info "[4/8] Merged non-empty values from $(basename "${LOCAL_ENV_FILE}") into ${REMOTE_APP_ENV_REL}"
 }
 
 refresh_ports_from_remote_env() {
@@ -243,7 +246,8 @@ refresh_ports_from_remote_env() {
     FRONTEND_PORT="${remote_frontend_port}"
   fi
 
-  print_info "Using runtime ports backend:${BACKEND_PORT} frontend:${FRONTEND_PORT}"
+  print_info "[4/8] Using runtime ports backend:${BACKEND_PORT} frontend:${FRONTEND_PORT}"
+  echo
 }
 
 ensure_remote_docker() {
@@ -252,7 +256,7 @@ ensure_remote_docker() {
   needs_install="$(
     ssh "${TARGET}" "if ! command -v docker >/dev/null 2>&1; then echo yes; elif ! docker compose version >/dev/null 2>&1 && ! command -v docker-compose >/dev/null 2>&1; then echo yes; elif [ -n '${DEPLOY_DOCKER_VERSION}' ] && ! docker --version | grep -Fq '${DEPLOY_DOCKER_VERSION}'; then echo yes; else echo no; fi"
   )"
-
+  echo
   if [[ "${needs_install}" == "yes" ]]; then
     print_info "[5/8] Installing or upgrading Docker on ${TARGET}"
     ssh -t "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && sudo bash deploy/scripts/install-docker.sh '${DEPLOY_DOCKER_VERSION}'"
@@ -262,6 +266,7 @@ ensure_remote_docker() {
 }
 
 start_remote_stack() {
+  echo
   print_info "[6/8] Starting dockerized frontend and backend on ${TARGET}"
   ssh "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && BACKEND_PORT='${BACKEND_PORT}' FRONTEND_PORT='${FRONTEND_PORT}' bash -s" <<'EOF'
 set -euo pipefail
