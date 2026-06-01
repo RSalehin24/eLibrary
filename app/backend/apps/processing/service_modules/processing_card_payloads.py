@@ -148,6 +148,24 @@ def processing_table_payload(
                 book_record__resolved_from_incomplete=True,
             )
             .select_related("book_record", "linked_book", "book_record__linked_book")
+            .defer(
+                "linked_book__summary",
+                "linked_book__raw_scraped_metadata",
+                "linked_book__raw_scrape_payload",
+                "linked_book__main_content_html",
+                "linked_book__book_info_html",
+                "linked_book__dedication_html",
+                "linked_book__toc",
+                "linked_book__content_items",
+                "book_record__linked_book__summary",
+                "book_record__linked_book__raw_scraped_metadata",
+                "book_record__linked_book__raw_scrape_payload",
+                "book_record__linked_book__main_content_html",
+                "book_record__linked_book__book_info_html",
+                "book_record__linked_book__dedication_html",
+                "book_record__linked_book__toc",
+                "book_record__linked_book__content_items",
+            )
             .order_by("-updated_at", "-created_at", "id"),
             query=query_value,
             category=category,
@@ -163,6 +181,24 @@ def processing_table_payload(
         payload = build_processing_request_table_payload(
             BookCreationRequest.objects.filter(state__in=PROCESSING_REQUEST_CARD_STATES[card])
             .select_related("book_record", "linked_book", "book_record__linked_book")
+            .defer(
+                "linked_book__summary",
+                "linked_book__raw_scraped_metadata",
+                "linked_book__raw_scrape_payload",
+                "linked_book__main_content_html",
+                "linked_book__book_info_html",
+                "linked_book__dedication_html",
+                "linked_book__toc",
+                "linked_book__content_items",
+                "book_record__linked_book__summary",
+                "book_record__linked_book__raw_scraped_metadata",
+                "book_record__linked_book__raw_scrape_payload",
+                "book_record__linked_book__main_content_html",
+                "book_record__linked_book__book_info_html",
+                "book_record__linked_book__dedication_html",
+                "book_record__linked_book__toc",
+                "book_record__linked_book__content_items",
+            )
             .order_by("-updated_at", "-created_at", "id"),
             query=query_value,
             category=category,
@@ -178,6 +214,24 @@ def processing_table_payload(
         payload = build_processing_request_table_payload(
             BookCreationRequest.objects.filter(has_multi_page_toc=True)
             .select_related("book_record", "linked_book", "book_record__linked_book")
+            .defer(
+                "linked_book__summary",
+                "linked_book__raw_scraped_metadata",
+                "linked_book__raw_scrape_payload",
+                "linked_book__main_content_html",
+                "linked_book__book_info_html",
+                "linked_book__dedication_html",
+                "linked_book__toc",
+                "linked_book__content_items",
+                "book_record__linked_book__summary",
+                "book_record__linked_book__raw_scraped_metadata",
+                "book_record__linked_book__raw_scrape_payload",
+                "book_record__linked_book__main_content_html",
+                "book_record__linked_book__book_info_html",
+                "book_record__linked_book__dedication_html",
+                "book_record__linked_book__toc",
+                "book_record__linked_book__content_items",
+            )
             .order_by("-updated_at", "-created_at", "id"),
             query=query_value,
             category=category,
