@@ -703,10 +703,10 @@ class EpubBuilder:
                 is_empty_source = False
 
             # For empty-source placeholder chapters (page reachable on source
-            # but has no text), render a brief "unavailable" notice so the
-            # chapter still appears as a navigable page in the EPUB.
+            # but has no text), keep the page blank so the chapter still
+            # appears in the EPUB TOC without any content.
             if is_empty_source:
-                content = '<p class="chapter-unavailable">এই অধ্যায়ের বিষয়বস্তু উৎস ওয়েবসাইটে পাওয়া যায়নি।</p>'
+                content = ""
 
             # Build heading hierarchy from the content path.
             # path is a tuple from the root ancestor down to the current title,

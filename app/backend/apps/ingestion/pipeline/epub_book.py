@@ -273,6 +273,25 @@ def create_epub(book_data):
         main_content_title = book_data.get("book_title") or "মূল লেখা"
         builder.add_main_content_page(main_content=compact_main_content, title=main_content_title)
     
+    # Refuse to build EPUB when too many chapters have no fetchable content.
+    # Two thresholds (either triggers a failure):
+    #   • > 95% empty — nearly the entire book is missing content
+    #   • > 33.33% empty — more than a third of chapters are missing
+    _total_ci = len(content_items)
+    _empty_ci = sum(
+        1 for item in content_items
+        if isinstance(item, dict)
+        and item.get("has_content") is None
+        and "source_url" in item
+    )
+    if _total_ci > 0:
+        _ratio = _empty_ci / _total_ci
+        if _ratio > 0.95 or _ratio > 1 / 3:
+            raise ValueError(
+                f"Too many empty chapters: {_empty_ci}/{_total_ci} "
+                f"({_empty_ci * 100 // _total_ci}%) chapters have no content on the source."
+            )
+
     # Add lesson pages
     builder.add_lesson_pages(content_items)
 

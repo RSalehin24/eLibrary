@@ -214,7 +214,7 @@ export default function BookDetailPage() {
         </section>
       ) : null}
 
-      {canEditMetadata && book.empty_chapters?.length > 0 ? (
+      {book.empty_chapters?.length > 0 ? (
         <section className="detail-card">
           <div className="section-title-block">
             <p className="eyebrow">Attention required</p>
