@@ -19,7 +19,6 @@ import ReprocessingPage from "../../pages/ReprocessingPage";
 import {
   CatalogProcessingPage,
   CreateProcessingPage,
-  EmptyChaptersProcessingPage,
   IncompleteProcessingPage,
   MultiPageTocProcessingPage,
   OnHoldProcessingPage,
@@ -33,7 +32,6 @@ const protectedRoutes = [
   { path: "/on-hold", element: <OnHoldProcessingPage /> },
   { path: "/incomplete", element: <IncompleteProcessingPage /> },
   { path: "/multipage-toc", element: <MultiPageTocProcessingPage /> },
-  { path: "/empty-chapters", element: <EmptyChaptersProcessingPage /> },
   { path: "/reprocessing", element: <ReprocessingPage /> },
   { path: "/library", element: <LibraryPage /> },
   { path: "/categories", element: <CategoryPage /> },

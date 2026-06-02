@@ -4,7 +4,6 @@ export const PROCESSING_ROUTE_PAGES = {
   "/on-hold": "on-hold",
   "/incomplete": "incomplete",
   "/multipage-toc": "multipage",
-  "/empty-chapters": "empty-chapters",
 };
 
 export const PROCESSING_SYNC_SCOPE_CATALOG = "catalog";
@@ -30,7 +29,6 @@ export const PROCESSING_CARD_KEYS = [
   "incomplete-records",
   "incomplete-completed",
   "multipage-records",
-  "empty-chapters-records",
 ];
 
 export const SHARED_PROCESSING_CARD_KEYS = new Set([

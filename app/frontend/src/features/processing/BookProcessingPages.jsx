@@ -5,4 +5,3 @@ export {
   OnHoldProcessingPage,
 } from "./processing-pages/QueueProcessingPages";
 export { MultiPageTocProcessingPage } from "./processing-pages/MultiPageTocProcessingPage";
-export { EmptyChaptersProcessingPage } from "./processing-pages/EmptyChaptersProcessingPage";
