@@ -1,4 +1,4 @@
-from django.db.models import Exists, F, OuterRef, Subquery
+from django.db.models import Exists, OuterRef, Subquery
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -24,7 +24,7 @@ class BookDetailView(generics.RetrieveDestroyAPIView):
     def get_queryset(self):
         owned = UserBook.objects.filter(book=OuterRef("pk"), user=self.request.user).order_by("-created_at")
         latest_submission = BookSubmission.objects.filter(linked_book=OuterRef("pk"), submitter=self.request.user).order_by("-created_at").values("created_at")[:1]
-        return Book.objects.prefetch_related("book_contributors__contributor", "book_series__series", "book_categories__category", "generated_assets", "source_urls", "processing_jobs").annotate(is_in_my_books=Exists(owned), my_books_added_at=Subquery(owned.values("created_at")[:1]), latest_submission_at=Subquery(latest_submission)).annotate(user_owns_book=F("is_in_my_books")).filter(deleted_at__isnull=True)
+        return Book.objects.prefetch_related("book_contributors__contributor", "book_series__series", "book_categories__category", "generated_assets", "source_urls", "processing_jobs").annotate(is_in_my_books=Exists(owned), user_owns_book=Exists(owned), my_books_added_at=Subquery(owned.values("created_at")[:1]), latest_submission_at=Subquery(latest_submission)).filter(deleted_at__isnull=True)
 
     def get_object(self):
         queryset = self.get_queryset()

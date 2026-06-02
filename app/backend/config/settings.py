@@ -168,9 +168,13 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 DATABASES = {
-    "default": database_config(
-        env("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/bangla_library")
-    )
+    "default": {
+        **database_config(
+            env("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/bangla_library")
+        ),
+        "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60),
+        "CONN_HEALTH_CHECKS": True,
+    }
 }
 
 AUTH_PASSWORD_VALIDATORS = [
