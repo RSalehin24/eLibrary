@@ -14,7 +14,7 @@ class BookSubmission(UUIDPrimaryKeyModel, TimeStampedModel):
     resolved_url = models.URLField(max_length=1000, blank=True)
     resolution_status = models.CharField(max_length=24, choices=ResolutionStatus.choices, default=ResolutionStatus.UNRESOLVED)
     resolution_confidence = models.FloatField(default=0.0)
-    status = models.CharField(max_length=32, choices=SubmissionStatus.choices, default=SubmissionStatus.DRAFT)
+    status = models.CharField(max_length=32, choices=SubmissionStatus.choices, default=SubmissionStatus.DRAFT, db_index=True)
     review_state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING)
     linked_book = models.ForeignKey("catalog.Book", on_delete=models.SET_NULL, blank=True, null=True, related_name="linked_submissions")
     duplicate_of_book = models.ForeignKey("catalog.Book", on_delete=models.SET_NULL, blank=True, null=True, related_name="duplicate_submissions")

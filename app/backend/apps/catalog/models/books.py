@@ -64,8 +64,8 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
         related_name="books",
     )
     summary = models.TextField(blank=True)
-    state = models.CharField(max_length=32, choices=LifecycleState.choices, default=LifecycleState.DRAFT)
-    review_state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING)
+    state = models.CharField(max_length=32, choices=LifecycleState.choices, default=LifecycleState.DRAFT, db_index=True)
+    review_state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING, db_index=True)
     source_site = models.CharField(max_length=100, default="ebanglalibrary.com")
     raw_scraped_metadata = models.JSONField(default=dict, blank=True)
     raw_scrape_payload = models.JSONField(default=dict, blank=True)

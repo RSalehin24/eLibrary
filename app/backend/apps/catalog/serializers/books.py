@@ -73,7 +73,9 @@ class BookListSerializer(serializers.ModelSerializer):
         return payload
 
     def get_contributors(self, obj):
-        return normalize_book_contributors(self.relation_contributors(obj))
+        if not hasattr(obj, '_normalized_contributors'):
+            obj._normalized_contributors = normalize_book_contributors(self.relation_contributors(obj))
+        return obj._normalized_contributors
 
     def get_authors(self, obj):
         return [entry["name"] for entry in self.get_contributors(obj) if entry["role"] == ContributorRole.AUTHOR]

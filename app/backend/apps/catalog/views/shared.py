@@ -1,6 +1,6 @@
 import re
 
-from django.db.models import Exists, OuterRef, Q, Subquery
+from django.db.models import Exists, F, OuterRef, Q, Subquery
 from django.utils.dateparse import parse_date, parse_datetime
 from rest_framework.response import Response
 
@@ -277,7 +277,8 @@ class BookQueryMixin:
                 "generated_assets",
                 "source_urls",
             )
-            .annotate(is_in_my_books=Exists(owned), user_owns_book=Exists(owned), my_books_added_at=Subquery(owned.values("created_at")[:1]), latest_submission_at=Subquery(latest_submission))
+            .annotate(is_in_my_books=Exists(owned), my_books_added_at=Subquery(owned.values("created_at")[:1]), latest_submission_at=Subquery(latest_submission))
+            .annotate(user_owns_book=F("is_in_my_books"))
             .defer(
                 "summary",
                 "raw_scraped_metadata",

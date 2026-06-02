@@ -1,3 +1,4 @@
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
@@ -78,12 +79,13 @@ class ReprocessJobSummaryView(APIView):
 
     def get(self, request):
         base = visible_jobs_queryset(request.user).filter(job_type=JobType.REPROCESS)
+        counts = {row["status"]: row["n"] for row in base.values("status").annotate(n=Count("id"))}
         return Response({
-            "queued": base.filter(status=JobStatus.QUEUED).count(),
-            "active": base.filter(status=JobStatus.PROCESSING).count(),
-            "done": base.filter(status=JobStatus.SUCCEEDED).count(),
-            "failed": base.filter(status=JobStatus.FAILED).count(),
-            "stopped": base.filter(status=JobStatus.CANCELLED).count(),
+            "queued": counts.get(JobStatus.QUEUED, 0),
+            "active": counts.get(JobStatus.PROCESSING, 0),
+            "done": counts.get(JobStatus.SUCCEEDED, 0),
+            "failed": counts.get(JobStatus.FAILED, 0),
+            "stopped": counts.get(JobStatus.CANCELLED, 0),
         })
 
 

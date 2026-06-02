@@ -9,8 +9,8 @@ from .submissions import BookSubmission
 class ProcessingJob(UUIDPrimaryKeyModel, TimeStampedModel):
     submission = models.ForeignKey(BookSubmission, on_delete=models.CASCADE, related_name="processing_jobs")
     book = models.ForeignKey("catalog.Book", on_delete=models.SET_NULL, blank=True, null=True, related_name="processing_jobs")
-    job_type = models.CharField(max_length=24, choices=JobType.choices, default=JobType.INGESTION)
-    status = models.CharField(max_length=16, choices=JobStatus.choices, default=JobStatus.QUEUED)
+    job_type = models.CharField(max_length=24, choices=JobType.choices, default=JobType.INGESTION, db_index=True)
+    status = models.CharField(max_length=16, choices=JobStatus.choices, default=JobStatus.QUEUED, db_index=True)
     task_id = models.CharField(max_length=255, blank=True)
     queue_name = models.CharField(max_length=100, blank=True)
     retry_count = models.PositiveIntegerField(default=0)
