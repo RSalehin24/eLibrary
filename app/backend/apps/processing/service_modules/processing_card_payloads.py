@@ -73,11 +73,40 @@ def multipage_toc_summary():
     }
 
 
+def empty_chapters_rows():
+    queryset = (
+        BookCreationRequest.objects.filter(linked_book__empty_chapters_count__gt=0)
+        .select_related("book_record", "linked_book", "book_record__linked_book")
+        .order_by("-updated_at", "-created_at", "id")
+    )
+    return [
+        processing_row_payload(processing_request.book_record, processing_request)
+        for processing_request in queryset
+    ]
+
+
+def empty_chapters_summary():
+    queryset = BookCreationRequest.objects.filter(linked_book__empty_chapters_count__gt=0)
+    return {
+        "total": queryset.count(),
+        "created": queryset.filter(state=BookCreationRequestState.CREATED).count(),
+        "failed": queryset.filter(state=BookCreationRequestState.FAILED).count(),
+        "processing": queryset.filter(
+            state__in=(
+                BookCreationRequestState.INITIAL,
+                BookCreationRequestState.QUEUED,
+                BookCreationRequestState.PROCESSING,
+            )
+        ).count(),
+    }
+
+
 PROCESSING_TABLE_BUILDERS = {
     "catalog-records": catalog_processing_rows,
     "incomplete-records": incomplete_record_rows,
     "incomplete-completed": incomplete_completed_rows,
     "multipage-records": multipage_toc_rows,
+    "empty-chapters-records": empty_chapters_rows,
     **{
         card_id: (lambda states: lambda: request_processing_rows(states))(states)
         for card_id, states in PROCESSING_REQUEST_CARD_STATES.items()
@@ -241,6 +270,40 @@ def processing_table_payload(
             include_facets=include_facets,
         )
         payload["summary"] = multipage_toc_summary()
+        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        return payload
+
+    if card == "empty-chapters-records":
+        payload = build_processing_request_table_payload(
+            BookCreationRequest.objects.filter(linked_book__empty_chapters_count__gt=0)
+            .select_related("book_record", "linked_book", "book_record__linked_book")
+            .defer(
+                "linked_book__summary",
+                "linked_book__raw_scraped_metadata",
+                "linked_book__raw_scrape_payload",
+                "linked_book__main_content_html",
+                "linked_book__book_info_html",
+                "linked_book__dedication_html",
+                "linked_book__toc",
+                "linked_book__content_items",
+                "book_record__linked_book__summary",
+                "book_record__linked_book__raw_scraped_metadata",
+                "book_record__linked_book__raw_scrape_payload",
+                "book_record__linked_book__main_content_html",
+                "book_record__linked_book__book_info_html",
+                "book_record__linked_book__dedication_html",
+                "book_record__linked_book__toc",
+                "book_record__linked_book__content_items",
+            )
+            .order_by("-updated_at", "-created_at", "id"),
+            query=query_value,
+            category=category,
+            status=status,
+            offset=offset_value,
+            limit=limit_value,
+            include_facets=include_facets,
+        )
+        payload["summary"] = empty_chapters_summary()
         payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
         return payload
 

@@ -33,6 +33,11 @@ export const processingItems = [
     capabilityRequired: true,
   },
   {
+    to: "/empty-chapters",
+    label: "Empty Chapters",
+    capabilityRequired: true,
+  },
+  {
     to: "/reprocessing",
     label: "Reprocessing",
     capabilityRequired: true,
@@ -60,6 +65,7 @@ export function isProcessingRoute(pathname) {
     pathname === "/on-hold" ||
     pathname === "/incomplete" ||
     pathname === "/multipage-toc" ||
+    pathname === "/empty-chapters" ||
     pathname === "/reprocessing" ||
     pathname.startsWith("/processing")
   );

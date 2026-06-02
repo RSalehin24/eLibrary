@@ -214,6 +214,42 @@ export default function BookDetailPage() {
         </section>
       ) : null}
 
+      {canEditMetadata && book.empty_chapters?.length > 0 ? (
+        <section className="detail-card">
+          <div className="section-title-block">
+            <p className="eyebrow">Attention required</p>
+            <h2>Chapters without content ({book.empty_chapters.length})</h2>
+          </div>
+          <p className="detail-description">
+            The following chapters are in the table of contents but have no
+            content in the generated book. Regenerate the book to retry fetching
+            them.
+          </p>
+          <div className="toc-record-list">
+            {book.empty_chapters.map((ch, i) => (
+              <article
+                key={i}
+                className="toc-record-card toc-record-card--empty"
+              >
+                <div className="toc-record-copy">
+                  <strong>{ch.title || `Chapter ${i + 1}`}</strong>
+                  <div className="inline-pills toc-record-pills">
+                    {ch.type ? (
+                      <span className="status-pill">{ch.type}</span>
+                    ) : null}
+                    <span className="status-pill status-needs_review">
+                      {ch.has_content === null
+                        ? "No content on source"
+                        : "Fetch failed"}
+                    </span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {canEditMetadata ? (
         <BookMetadataWorkspace
           editor={editor}

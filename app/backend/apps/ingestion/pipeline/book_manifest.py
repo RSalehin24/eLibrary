@@ -361,14 +361,19 @@ def download_cover_asset(cover_url, output_folder, session):
 def extract_entry_content_html(soup, title=""):
     if not soup:
         return ""
-    container = (
-        soup.select_one(".ld-tab-content.ld-visible.entry-content")
-        or soup.select_one(".ld-tab-content.entry-content")
-        or soup.select_one("article .entry-content")
-        or soup.select_one(".entry-content")
+    candidates = (
+        soup.select(".ld-tab-content.ld-visible.entry-content")
+        or soup.select(".ld-tab-content.entry-content")
+        or soup.select("article .entry-content")
+        or soup.select(".entry-content")
     )
-    if not container:
+    if not candidates:
         return ""
+    # Some LearnDash pages emit multiple .entry-content tab panels (e.g. a
+    # "Bookmark" tab followed by the actual lesson content tab).  Pick the
+    # candidate with the most text so we don't accidentally return the short
+    # "Bookmark" panel instead of the real content.
+    container = max(candidates, key=lambda el: len(el.get_text()))
     container = clean_buttons(container)
     html = container.decode_contents()
     return scraper.remove_redundant_headers(html, title)
@@ -572,6 +577,76 @@ def toc_items_container(soup):
     return soup.select_one(".ld-lesson-list")
 
 
+def _scrape_embedded_lesson_page_toc(lesson_url, ctx, limits):
+    """Fetch a lesson page and return any embedded sub-chapter TOC as topic nodes.
+
+    Handles the "container lesson" pattern in the LearnDash sidebar navigation.
+    On lesson pages, LearnDash renders a ``.ld-course-navigation`` sidebar with
+    ``.ld-lesson-items`` containers:
+
+    * One container lists the *course-level* lessons (the lesson's siblings in
+      the book).  This container includes a ``ld-is-current-lesson`` item for
+      the current page, so it is the course navigation — not sub-chapter
+      content.
+    * A *second* container (present only for "section" lessons that aggregate
+      sub-chapters) lists the sub-chapters and contains **no**
+      ``ld-is-current-lesson`` item.
+
+    Regular leaf lessons have only the first (course-level) container, so this
+    function returns [] and the lesson stays as a leaf node for
+    ``fetch_content_item`` to collect later.
+
+    Container lessons that also carry their own story text are handled
+    correctly: the sub-chapter container is found regardless of whether story
+    content is also present on the page.
+
+    Returns a list of ``topic``-typed nodes when a sub-chapter container is
+    found, or an empty list in all other cases.
+    """
+    lesson_soup = ctx.fetch_soup(lesson_url, kind="lesson_toc_check")
+    if not lesson_soup:
+        return []
+
+    nav = lesson_soup.select_one(".ld-course-navigation")
+    if not nav:
+        return []
+
+    topics = []
+    seen_urls: set = set()
+    for lesson_list in nav.select(".ld-lesson-items"):
+        # Skip the course-level navigation list — it marks the current lesson
+        # with ld-is-current-lesson and lists the lesson's siblings, not its
+        # sub-chapters.
+        if lesson_list.select_one(".ld-is-current-lesson"):
+            continue
+        # This container holds sub-chapters of the current section lesson.
+        for item in lesson_list.find_all(
+            "div",
+            class_=lambda c: c and "ld-lesson-item" in c,
+            recursive=False,
+        ):
+            anchor = item.find("a")
+            if anchor is None:
+                continue
+            title = normalized_heading(anchor.get_text(" ", strip=True))
+            url = normalize_content_url(anchor.get("href", ""), lesson_url)
+            if not url or url in seen_urls:
+                continue
+            seen_urls.add(url)
+            if not title:
+                continue
+            topics.append(
+                {
+                    "title": title,
+                    "url": url,
+                    "type": "topic",
+                    "has_content": True,
+                    "children": [],
+                }
+            )
+    return topics
+
+
 def parse_lesson_node(lesson_item, page_url, ctx, limits, *, _meta=None):
     anchor = lesson_item.find("a", class_=lambda value: value and "ld-item-name" in value)
     if anchor is None:
@@ -582,6 +657,12 @@ def parse_lesson_node(lesson_item, page_url, ctx, limits, *, _meta=None):
     if not title and not url:
         return None
     topics = scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, _meta=_meta)
+    # If no inline topic entries were found on the book page, check whether the
+    # lesson page itself hosts an embedded LearnDash TOC (a "container lesson").
+    # Books whose lesson items already have visible inline topics are unaffected
+    # because scrape_nested_topic_nodes returns a non-empty list for them.
+    if not topics and url:
+        topics = _scrape_embedded_lesson_page_toc(url, ctx, limits)
     return {
         "title": title or url,
         "url": url,
@@ -597,10 +678,46 @@ def section_heading_title(block):
     return normalized_heading(text)
 
 
+def _parse_tab_content_lesson_links(soup, page_url, ctx, limits):
+    """Fallback TOC extraction for Gutenberg ld-tab-content format.
+
+    Some books (e.g. using the Gutenberg block editor) place lesson links
+    directly inside a ``div.ld-tab-content`` as paragraph links rather than
+    in the standard ``.ld-lesson-list`` structure.  Extract those as plain
+    lesson nodes.
+    """
+    tab = soup.select_one(".ld-tab-content")
+    if not tab:
+        return []
+    seen_urls: set = set()
+    nodes = []
+    for anchor in tab.find_all("a"):
+        href = anchor.get("href", "")
+        if "/lessons/" not in href:
+            continue
+        url = normalize_content_url(href, page_url)
+        if not url or url in seen_urls:
+            continue
+        seen_urls.add(url)
+        title = normalized_heading(anchor.get_text(" ", strip=True))
+        if not title:
+            continue
+        nodes.append(
+            {
+                "title": title,
+                "url": url,
+                "type": "lesson",
+                "has_content": True,
+                "children": [],
+            }
+        )
+    return nodes
+
+
 def parse_toc_nodes_from_page(soup, page_url, ctx, limits, *, _meta=None):
     container = toc_items_container(soup)
     if not container:
-        return []
+        return _parse_tab_content_lesson_links(soup, page_url, ctx, limits)
 
     nodes = []
     current_section = None
@@ -825,10 +942,11 @@ def assign_paths_to_toc(nodes, parent_path=()):
             continue
         path = [*parent_path, title]
         children = assign_paths_to_toc(node.get("children", []), tuple(path))
+        _raw_hc = node.get("has_content", True)
         normalized = {
             "title": title,
             "type": node.get("type") or "lesson",
-            "has_content": bool(node.get("has_content", True)),
+            "has_content": _raw_hc if _raw_hc is None else bool(_raw_hc),
             "path": path,
         }
         if node.get("url"):
@@ -957,6 +1075,12 @@ def disambiguate_duplicate_content_paths(toc, content_items):
     return update_toc_entries(toc), normalized_items
 
 
+# Sentinel returned when a page was fetched successfully but has no text content
+# (the source chapter exists but is genuinely empty on the website).
+# Distinct from None, which means the page could not be fetched at all.
+_EMPTY_SOURCE_PAGE = object()
+
+
 def fetch_content_item(node, path, ctx, limits):
     url = node.get("url", "")
     if not url:
@@ -967,6 +1091,7 @@ def fetch_content_item(node, path, ctx, limits):
         title=node.get("title", ""),
         cache=False,
     )
+    page_fetched = soup is not None
     try:
         html = truncate_html(
             extract_entry_content_html(soup, node.get("title", "")),
@@ -976,7 +1101,8 @@ def fetch_content_item(node, path, ctx, limits):
         if soup is not None:
             soup.decompose()
     if not html_text(html):
-        return None
+        # Distinguish: page fetched OK but source has no text vs page unreachable.
+        return _EMPTY_SOURCE_PAGE if page_fetched else None
     return {
         "title": clean_display_text(node.get("title", "")),
         "content": html,
@@ -1004,11 +1130,38 @@ def collect_content_items(nodes, ctx, limits, *, page_cache=None):
         url = node.get("url", "")
         if url and url in cached:
             item = cached[url]
-            node["has_content"] = bool(item)
-            if item:
+            # Preserve original has_content from the cached item dict;
+            # fall back to bool check for legacy cache entries that lack the field.
+            if isinstance(item, dict):
+                cached_has_content = item.get("has_content", True) if item.get("content") else item.get("has_content")
+                # Treat has_content=None placeholder same as truthy (reachable page)
+                node["has_content"] = cached_has_content if cached_has_content is not None else None
                 content_items.append(item)
+            else:
+                node["has_content"] = bool(item)
+                if item:
+                    content_items.append(item)
             continue
         item = fetch_content_item(node, path, ctx, limits)
+        if item is _EMPTY_SOURCE_PAGE:
+            # The page was reachable but has no text on the source website.
+            # Keep the chapter in content_items as a placeholder so it still
+            # appears in the EPUB TOC and spine (rendered as "unavailable").
+            # It is NOT counted as missing for the completeness threshold.
+            node["has_content"] = None
+            placeholder = {
+                "title": clean_display_text(node.get("title", "")),
+                "content": "",
+                "type": node.get("type") or "lesson",
+                "parent": path[-2] if len(path) > 1 else None,
+                "path": list(path),
+                "source_url": url,
+                "has_content": None,
+            }
+            if page_cache is not None:
+                page_cache.save_item(placeholder)
+            content_items.append(placeholder)
+            continue
         if item is None:
             node["has_content"] = False
             continue
@@ -1077,8 +1230,26 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
     topics_expected = traits["topic_count"] + (
         traits["lessons_without_topics"] if not traits["topic_count"] else 0
     )
+    # A book is considered complete when it meets a minimum content threshold.
+    # For small books (< 10 chapters): allow up to 33.33% of chapters missing.
+    # For larger books: require at least 95% of chapters to have content.
+    # Both empty-source pages (has_content=None) and failed fetches
+    # (has_content=False) count as missing chapters.
+    # Count only items that were actually fetched (including empty-source
+    # placeholders with has_content=None). Items with has_content=False (truly
+    # unreachable pages) are NOT in content_items and count as missing.
     topics_fetched = len(content_items) if content_items else 0
-    content_incomplete = topics_expected > 0 and topics_fetched < topics_expected
+    topics_missing = topics_expected - topics_fetched
+    if topics_expected == 0:
+        content_incomplete = False
+    elif topics_expected < 10:
+        # Allow up to 33.33% missing (1-3 chapters for very small books)
+        allowed_missing = max(1, topics_expected // 3)
+        content_incomplete = topics_missing > allowed_missing
+    else:
+        # Allow up to 5% missing (95% threshold)
+        allowed_missing = max(1, int(topics_expected * 0.05))
+        content_incomplete = topics_missing > allowed_missing
 
     return {
         "type": structure_type,

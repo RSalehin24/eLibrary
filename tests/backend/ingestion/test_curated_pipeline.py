@@ -599,3 +599,152 @@ def test_manifest_disambiguates_duplicate_source_backed_paths():
         ["সেইসব ঈদ"],
         ["সেইসব ঈদ (২)"],
     ]
+
+
+def test_manifest_parser_expands_embedded_lesson_page_toc():
+    """Container lessons should have sub-chapters discovered from the
+    .ld-course-navigation sidebar's sub-chapter .ld-lesson-items container.
+
+    LearnDash renders the sidebar with two types of .ld-lesson-items:
+    - The course-level nav (includes .ld-is-current-lesson) — skipped.
+    - The sub-chapter nav (no .ld-is-current-lesson) — used as children.
+
+    Container lessons that also carry story content (like সহাবস্থান) are
+    expanded correctly — story content must NOT prevent sub-chapter detection.
+    Regular leaf lessons (only the course-level nav, no sub-chapter container)
+    remain as leaf nodes.
+    """
+    source_url = "https://www.ebanglalibrary.com/books/container-book/"
+
+    # Book page: two lessons with no inline topic entries (no data-ld-expand-id
+    # and no .ld-table-list-item children).
+    landing = BeautifulSoup(
+        """
+        <div class="ld-item-list ld-lesson-list">
+          <div class="ld-item-list-items">
+            <div class="ld-item-list-item ld-item-lesson-item">
+              <a class="ld-item-name" href="https://www.ebanglalibrary.com/lessons/novel-a/">
+                <div class="ld-item-title">উপন্যাস ক</div>
+              </a>
+            </div>
+            <div class="ld-item-list-item ld-item-lesson-item">
+              <a class="ld-item-name" href="https://www.ebanglalibrary.com/lessons/story-b/">
+                <div class="ld-item-title">গল্প খ</div>
+              </a>
+            </div>
+          </div>
+        </div>
+        """,
+        "html.parser",
+    )
+
+    # Lesson page for "উপন্যাস ক": a container lesson that ALSO has story
+    # content (like সহাবস্থান in the মুখোমুখি book).  The sidebar has two
+    # .ld-lesson-items containers: the course-level nav (with
+    # .ld-is-current-lesson) and the sub-chapter nav (without it).
+    # Story content must NOT prevent expansion.
+    novel_a_page = BeautifulSoup(
+        """
+        <article>
+          <div class="entry-content"><p>উপন্যাস ক এর নিজস্ব গল্প।</p></div>
+        </article>
+        <div class="ld-course-navigation">
+          <div class="ld-lesson-items" id="ld-lesson-list-100">
+            <div class="ld-lesson-item ld-is-current-lesson">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/novel-a/">উপন্যাস ক</a>
+              </div>
+            </div>
+            <div class="ld-lesson-item ld-is-not-current-lesson">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/story-b/">গল্প খ</a>
+              </div>
+            </div>
+          </div>
+          <div class="ld-lesson-items" id="ld-lesson-list-200">
+            <div class="ld-lesson-item">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/chapter-1/">অধ্যায় ১</a>
+              </div>
+            </div>
+            <div class="ld-lesson-item">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/chapter-2/">অধ্যায় ২</a>
+              </div>
+            </div>
+            <div class="ld-lesson-item">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/chapter-3/">অধ্যায় ৩</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        """,
+        "html.parser",
+    )
+
+    # Lesson page for "গল্প খ": a regular leaf lesson.  The sidebar has only
+    # the course-level .ld-lesson-items (with .ld-is-current-lesson), so no
+    # sub-chapter container is present — it stays a leaf node.
+    story_b_page = BeautifulSoup(
+        """
+        <article>
+          <div class="entry-content"><p>এটি একটি ছোটগল্প।</p></div>
+        </article>
+        <div class="ld-course-navigation">
+          <div class="ld-lesson-items" id="ld-lesson-list-100">
+            <div class="ld-lesson-item ld-is-not-current-lesson">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/novel-a/">উপন্যাস ক</a>
+              </div>
+            </div>
+            <div class="ld-lesson-item ld-is-current-lesson">
+              <div class="ld-lesson-item-preview">
+                <a href="https://www.ebanglalibrary.com/lessons/story-b/">গল্প খ</a>
+              </div>
+            </div>
+          </div>
+        </div>
+        """,
+        "html.parser",
+    )
+
+    lesson_pages = {
+        "https://www.ebanglalibrary.com/lessons/novel-a/": novel_a_page,
+        "https://www.ebanglalibrary.com/lessons/story-b/": story_b_page,
+    }
+
+    class FakeContext:
+        def __init__(self):
+            self.fetched_urls = []
+
+        def fetch_soup(self, url, **_kwargs):
+            self.fetched_urls.append(url)
+            return lesson_pages.get(url)
+
+    ctx = FakeContext()
+    toc_nodes, _meta = book_manifest.collect_learndash_toc(
+        landing,
+        source_url,
+        ctx,
+        book_manifest.normalize_manifest_limits(),
+    )
+
+    # Both lesson URLs are fetched to probe for embedded sub-chapter TOC.
+    assert "https://www.ebanglalibrary.com/lessons/novel-a/" in ctx.fetched_urls
+    assert "https://www.ebanglalibrary.com/lessons/story-b/" in ctx.fetched_urls
+
+    # The container lesson is expanded even though it also has story content.
+    novel_a = next(n for n in toc_nodes if n["title"] == "উপন্যাস ক")
+    assert [child["title"] for child in novel_a["children"]] == [
+        "অধ্যায় ১",
+        "অধ্যায় ২",
+        "অধ্যায় ৩",
+    ]
+    assert novel_a["children"][0]["type"] == "topic"
+    assert novel_a["children"][0]["url"] == "https://www.ebanglalibrary.com/lessons/chapter-1/"
+
+    # The regular leaf lesson (only course-level nav, no sub-chapter list) stays
+    # a leaf node regardless of story content.
+    story_b = next(n for n in toc_nodes if n["title"] == "গল্প খ")
+    assert story_b["children"] == []

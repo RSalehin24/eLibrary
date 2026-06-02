@@ -23,8 +23,20 @@ from apps.ingestion.services.normalization import (
 
 def _drop_blank_content_items(items):
     """Remove content items whose body is whitespace-only so the EPUB does
-    not include empty chapters in the spine, NAV, or printed TOC."""
-    return [item for item in items if not html_is_blank((item or {}).get("content", ""))]
+    not include empty chapters in the spine, NAV, or printed TOC.
+
+    Exception: items explicitly marked ``has_content=None`` are empty-source
+    placeholders (the source page was reachable but had no text). These are
+    kept so the chapter still appears in the EPUB TOC, rendered as an
+    "unavailable" notice by the EPUB builder.
+    """
+    def _keep(item):
+        d = item or {}
+        if d.get("has_content") is None and "source_url" in d:
+            # Empty-source placeholder — keep regardless of blank content.
+            return True
+        return not html_is_blank(d.get("content", ""))
+    return [item for item in items if _keep(item)]
 
 
 def display_value(value):

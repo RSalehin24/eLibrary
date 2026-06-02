@@ -18,6 +18,8 @@ import json
 import logging
 from pathlib import Path
 
+from django.conf import settings
+
 _scrape_cache_logger = logging.getLogger(__name__)
 
 _SCRAPE_CACHE_SUBDIR = "processing/scrape_cache"

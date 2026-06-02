@@ -765,6 +765,7 @@ def prune_toc_entries_without_content(toc_entries, content_items, parent_path=()
         tuple(item.get("path") or [])
         for item in content_items
         if plain_text_from_html(item.get("content", ""))
+        or (item.get("has_content") is None and "has_content" in item and "source_url" in item)
     }
 
     def prune(entries, base_path=()):
@@ -1010,6 +1011,7 @@ def extract_boundary_sections_from_content_items(content_items, toc, *, trust_so
         item
         for item in normalized_items
         if plain_text_from_html(item.get("content", ""))
+        or (item.get("has_content") is None and "has_content" in item and "source_url" in item)
     ]
 
     normalized_toc = toc or build_flat_toc_from_content_items(normalized_items)

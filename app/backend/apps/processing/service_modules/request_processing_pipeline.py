@@ -229,6 +229,11 @@ def _process_request_once(processing_request):
             raw_scraped_data = scrape_book(normalized_url)
             curated_result = curate_scraped_book_data(normalized_url, raw_scraped_data)
         else:
+            from apps.processing.service_modules.scrape_cache import (  # noqa: PLC0415
+                DiskPageCache,
+                scrape_cache_path_for_request,
+            )
+            page_cache = DiskPageCache(scrape_cache_path_for_request(processing_request.id))
             _stop_heartbeat = threading.Event()
             _heartbeat_thread = threading.Thread(
                 target=_scrape_heartbeat,
@@ -238,7 +243,7 @@ def _process_request_once(processing_request):
             )
             _heartbeat_thread.start()
             try:
-                curated_result = curate_book(normalized_url)
+                curated_result = curate_book(normalized_url, page_cache=page_cache)
             finally:
                 _stop_heartbeat.set()
                 _heartbeat_thread.join(timeout=5)

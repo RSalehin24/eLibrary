@@ -290,4 +290,14 @@ def _finalize_processing_request(processing_request, book, scraped_data):
             current_request_state=BookCreationRequestState.CREATED,
         )
     )
+    # Clean up the disk scrape-cache so it doesn't consume storage after a
+    # successful build.
+    try:
+        from apps.processing.service_modules.scrape_cache import (  # noqa: PLC0415
+            DiskPageCache,
+            scrape_cache_path_for_request,
+        )
+        DiskPageCache(scrape_cache_path_for_request(processing_request.id)).delete()
+    except Exception:
+        pass  # non-fatal
     return processing_request

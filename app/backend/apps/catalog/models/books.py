@@ -74,6 +74,7 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
     dedication_html = models.TextField(blank=True)
     toc = models.JSONField(default=list, blank=True)
     content_items = models.JSONField(default=list, blank=True)
+    empty_chapters_count = models.IntegerField(default=0)
     cover_source_url = models.URLField(max_length=1000, blank=True)
     metadata_last_reviewed_at = models.DateTimeField(blank=True, null=True)
     contributors = models.ManyToManyField(Contributor, through="BookContributor", related_name="books")

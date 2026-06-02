@@ -76,7 +76,11 @@ services:
         "--maxmemory-policy",
         "${REDIS_MAXMEMORY_POLICY:-allkeys-lru}",
       ]
-    mem_limit: ${REDIS_MEM_LIMIT:-320m}
+    deploy:
+      resources:
+        limits:
+          memory: ${REDIS_MEM_LIMIT:-320m}
+          cpus: "${REDIS_CPU_LIMIT:-0.5}"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -126,7 +130,11 @@ services:
       python manage.py collectstatic --noinput &&
       python manage.py seed_superadmin &&
       exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} --max-requests ${GUNICORN_MAX_REQUESTS:-500} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-50} --access-logfile - --error-logfile -"
-    mem_limit: ${BACKEND_MEM_LIMIT:-700m}
+    deploy:
+      resources:
+        limits:
+          memory: ${BACKEND_MEM_LIMIT:-700m}
+          cpus: "${BACKEND_CPU_LIMIT:-1.0}"
     volumes:
       - ../../app/backend/storage:/app/storage
     ports:
@@ -166,7 +174,11 @@ services:
       <<: *app_environment
       CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}
     command: celery -A config worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2} --queues=celery
-    mem_limit: ${WORKER_MEM_LIMIT:-600m}
+    deploy:
+      resources:
+        limits:
+          memory: ${WORKER_MEM_LIMIT:-600m}
+          cpus: "${WORKER_CPU_LIMIT:-0.5}"
     volumes:
       - ../../app/backend/storage:/app/storage
     depends_on:
@@ -192,7 +204,11 @@ services:
       <<: *app_environment
       CELERY_PROCESSING_CONCURRENCY: ${CELERY_PROCESSING_CONCURRENCY:-1}
     command: celery -A config worker --loglevel=info --concurrency=${CELERY_PROCESSING_CONCURRENCY:-1} --queues=processing --hostname=processing@%h
-    mem_limit: ${PROCESSING_WORKER_MEM_LIMIT:-900m}
+    deploy:
+      resources:
+        limits:
+          memory: ${PROCESSING_WORKER_MEM_LIMIT:-900m}
+          cpus: "${PROCESSING_WORKER_CPU_LIMIT:-2.0}"
     volumes:
       - ../../app/backend/storage:/app/storage
     depends_on:

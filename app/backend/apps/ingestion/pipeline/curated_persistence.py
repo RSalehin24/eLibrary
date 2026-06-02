@@ -35,6 +35,17 @@ PROJECTION_HEAVY_KEYS = {
 }
 
 
+def _count_empty_toc_chapters(toc_nodes):
+    """Recursively count non-section TOC nodes where has_content is not True."""
+    count = 0
+    for node in (toc_nodes or []):
+        if node.get("type", "lesson") != "section":
+            if node.get("has_content") is not True:
+                count += 1
+        count += _count_empty_toc_chapters(node.get("children", []))
+    return count
+
+
 def html_char_count(value):
     return len(value or "") if isinstance(value, str) else 0
 
@@ -304,6 +315,7 @@ def persist_curated_book_with_hooks(
         book.dedication_html = cleaned_dedication_html
         book.toc = projection.get("toc", [])
         book.content_items = projection.get("content_items", [])
+        book.empty_chapters_count = _count_empty_toc_chapters(book.toc)
         book.cover_source_url = (
             projection.get("cover_source_url")
             or (manifest.get("projection") or {}).get("cover_source_url")
@@ -319,7 +331,7 @@ def persist_curated_book_with_hooks(
     if existing_book:
         book = existing_book
         apply_fields(book)
-        book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "cover_source_url", "updated_at"])
+        book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "empty_chapters_count", "cover_source_url", "updated_at"])
     else:
         create_kwargs = {
             "title": projection["book_title"],
@@ -339,6 +351,7 @@ def persist_curated_book_with_hooks(
             "dedication_html": book.dedication_html,
             "toc": book.toc,
             "content_items": book.content_items,
+            "empty_chapters_count": book.empty_chapters_count,
             "cover_source_url": book.cover_source_url,
         }
         try:
@@ -352,7 +365,7 @@ def persist_curated_book_with_hooks(
             if book is None:
                 raise
             apply_fields(book)
-            book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "cover_source_url", "updated_at"])
+            book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "empty_chapters_count", "cover_source_url", "updated_at"])
 
     replace_book_relations_fn(
         book,

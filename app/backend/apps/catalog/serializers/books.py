@@ -157,6 +157,7 @@ class BookDetailSerializer(BookListSerializer):
     book_info_html = serializers.SerializerMethodField()
     dedication_html = serializers.SerializerMethodField()
     toc = serializers.JSONField()
+    empty_chapters = serializers.SerializerMethodField()
     raw_provenance = serializers.SerializerMethodField()
 
     class Meta(BookListSerializer.Meta):
@@ -169,6 +170,8 @@ class BookDetailSerializer(BookListSerializer):
             "book_info_html",
             "dedication_html",
             "toc",
+            "empty_chapters",
+            "empty_chapters_count",
             "metadata_last_reviewed_at",
             "raw_provenance",
         ]
@@ -237,3 +240,25 @@ class BookDetailSerializer(BookListSerializer):
                 "raw_scrape_payload": obj.raw_scrape_payload,
             }
         return {}
+
+    @staticmethod
+    def _collect_empty_toc_nodes(nodes):
+        """Recursively collect non-section TOC entries with no content."""
+        result = []
+        for node in nodes or []:
+            node_type = node.get("type", "lesson")
+            if node_type != "section" and node.get("has_content") is not True:
+                result.append({
+                    "title": node.get("title", ""),
+                    "type": node_type,
+                    "has_content": node.get("has_content"),  # False or None
+                    "source_url": node.get("source_url", ""),
+                    "path": node.get("path", []),
+                })
+            result.extend(
+                BookDetailSerializer._collect_empty_toc_nodes(node.get("children", []))
+            )
+        return result
+
+    def get_empty_chapters(self, obj):
+        return self._collect_empty_toc_nodes(obj.toc)

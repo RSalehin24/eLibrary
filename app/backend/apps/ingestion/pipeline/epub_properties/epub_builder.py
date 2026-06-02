@@ -696,9 +696,17 @@ class EpubBuilder:
                 title = lesson.get("title", "")
                 content = lesson.get("content", "")
                 path = content_path_tuple(lesson.get("path"))
+                is_empty_source = lesson.get("has_content") is None and not content
             else:
                 title, content = lesson
                 path = ()
+                is_empty_source = False
+
+            # For empty-source placeholder chapters (page reachable on source
+            # but has no text), render a brief "unavailable" notice so the
+            # chapter still appears as a navigable page in the EPUB.
+            if is_empty_source:
+                content = '<p class="chapter-unavailable">এই অধ্যায়ের বিষয়বস্তু উৎস ওয়েবসাইটে পাওয়া যায়নি।</p>'
 
             # Build heading hierarchy from the content path.
             # path is a tuple from the root ancestor down to the current title,
