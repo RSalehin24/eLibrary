@@ -488,7 +488,8 @@ def test_manifest_parser_preserves_paginated_sectioned_nested_toc():
 
     assert meta["has_paginated_toc"] is True
     assert ctx.urls == [
-        "https://www.ebanglalibrary.com/books/sectioned/?ld-courseinfo-lesson-page=2"
+        "https://www.ebanglalibrary.com/books/sectioned/?ld-courseinfo-lesson-page=2",
+        "https://www.ebanglalibrary.com/books/sectioned/chapter-2/",
     ]
     assert toc[0]["title"] == "প্রথম খণ্ড"
     assert [child["title"] for child in toc[0]["children"]] == ["অধ্যায় ১", "অধ্যায় ২"]

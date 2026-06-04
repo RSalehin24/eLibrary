@@ -23,6 +23,7 @@ class PermissionScope(models.TextChoices):
     METADATA_EDIT = "metadata:edit", "Edit metadata"
     PROCESSING_MANAGE = "processing:manage", "Manage processing"
     ACCESS_MANAGE = "access:manage", "Manage access"
+    VIEW_SOURCE_RECORDS = "source_records:view", "View source records"
     ADMIN_FULL_CONTROL = "admin:full_control", "Admin/full control"
 
 
@@ -33,6 +34,7 @@ ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
     PermissionScope.METADATA_EDIT,
     PermissionScope.PROCESSING_MANAGE,
     PermissionScope.ACCESS_MANAGE,
+    PermissionScope.VIEW_SOURCE_RECORDS,
 )
 
 SCOPED_PERMISSION_SCOPES = (

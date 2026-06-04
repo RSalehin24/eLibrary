@@ -121,6 +121,7 @@ class User(AbstractUser, TimeStampedModel):
                 "metadata:edit",
                 "processing:manage",
                 "access:manage",
+                "source_records:view",
                 "admin:full_control",
             ]
 

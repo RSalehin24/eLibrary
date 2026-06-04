@@ -32,7 +32,7 @@ def _drop_blank_content_items(items):
     """
     def _keep(item):
         d = item or {}
-        if d.get("has_content") is None and "source_url" in d:
+        if "has_content" in d and d.get("has_content") is None and "source_url" in d:
             # Empty-source placeholder — keep regardless of blank content.
             return True
         return not html_is_blank(d.get("content", ""))
@@ -281,6 +281,7 @@ def create_epub(book_data):
     _empty_ci = sum(
         1 for item in content_items
         if isinstance(item, dict)
+        and "has_content" in item
         and item.get("has_content") is None
         and "source_url" in item
     )

@@ -56,10 +56,10 @@ export class BookDetailPageModel {
   }
 
   async removeBookmark(label) {
-    const card = this.page.locator(".queue-card", {
+    const card = this.page.locator(".notes-item", {
       has: this.page.getByText(label, { exact: true }),
     });
-    await card.getByRole("button", { name: "Remove" }).click();
+    await card.getByRole("button", { name: "Delete bookmark" }).click();
   }
 
   htmlPreviewButton() {

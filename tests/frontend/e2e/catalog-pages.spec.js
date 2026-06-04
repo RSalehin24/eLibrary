@@ -31,7 +31,7 @@ test.describe("Catalog Navigation Pages", () => {
     const seriesPage = new CatalogPropertyPageModel(page, {
       path: "/series",
       heading: "Series",
-      searchPlaceholder: "Search series...",
+      searchPlaceholder: "Search series or codes...",
     });
 
     await seriesPage.goto();

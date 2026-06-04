@@ -4,7 +4,8 @@ from rest_framework import serializers
 
 from apps.catalog.models import Book, ContributorRole, GeneratedAssetStatus, GeneratedAssetType
 from apps.catalog.services import normalize_book_contributors
-from apps.common.permissions import user_can_view_book_cover
+from apps.common.permissions import user_can_view_book_cover, user_has_scope
+from apps.access.models import PermissionScope
 from apps.common.url_utils import public_api_url
 from apps.ingestion.services.normalization import (
     clean_extracted_dedication_html,
@@ -194,10 +195,16 @@ class BookDetailSerializer(BookListSerializer):
         return self.build_contributors_payload(obj)
 
     def get_source_urls(self, obj):
-        return [source.normalized_source_url for source in obj.source_urls.all()]
+        request = self.context.get("request")
+        if request and user_has_scope(request.user, [PermissionScope.VIEW_SOURCE_RECORDS], book=obj):
+            return [source.normalized_source_url for source in obj.source_urls.all()]
+        return []
 
     def get_source_records(self, obj):
-        return [self.serialize_source_record(source) for source in obj.source_urls.all()]
+        request = self.context.get("request")
+        if request and user_has_scope(request.user, [PermissionScope.VIEW_SOURCE_RECORDS], book=obj):
+            return [self.serialize_source_record(source) for source in obj.source_urls.all()]
+        return []
 
     def get_front_matter(self, obj):
         html = combined_front_matter_html(obj.book_info_html, obj.main_content_html)

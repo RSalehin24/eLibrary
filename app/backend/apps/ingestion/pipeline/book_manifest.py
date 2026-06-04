@@ -4,7 +4,7 @@ import os
 import re
 import time
 import unicodedata
-from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
+from urllib.parse import parse_qs, quote, urlencode, urljoin, urlparse, urlunparse
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -67,6 +67,11 @@ def normalize_manifest_limits(content_limits=None):
         "max_topic_pages": None,
         "max_content_chars": None,
         "disable_recursive": False,
+        # Optional title of the expected final chapter.  When provided,
+        # classify_manifest_structure() will verify the chapter is present in
+        # the fetched TOC; if it is absent the book is marked content_incomplete
+        # regardless of the numeric coverage threshold.
+        "last_chapter_title": "",
     }
     if not isinstance(content_limits, dict):
         return limits
@@ -84,6 +89,8 @@ def normalize_manifest_limits(content_limits=None):
         limits[key] = parsed if parsed > 0 else None
 
     limits["disable_recursive"] = _as_bool(content_limits.get("disable_recursive", False))
+    raw_last = content_limits.get("last_chapter_title", "")
+    limits["last_chapter_title"] = clean_display_text(str(raw_last)) if raw_last else ""
     return limits
 
 
@@ -174,6 +181,7 @@ class SourceFetchContext:
                     page["status"] = "fetched"
                     if not page["title"]:
                         page["title"] = page_title_from_soup(soup)
+                    logger.info("Successfully fetched %s page %d: %s", kind, len(self.pages) + 1, url)
                     self.pages.append(page)
                     if cache:
                         self.cache[url] = soup
@@ -505,16 +513,29 @@ def extract_topic_entries_from_lesson(lesson_item, *, base_url, seen_urls):
         )
         if not title:
             continue
+        post_id = None
+        item_id = topic_item.get("id") or ""
+        match = re.search(r"ld-table-list-item-(\d+)", item_id)
+        if match:
+            post_id = match.group(1)
+        else:
+            for cls in topic_item.get("class", []):
+                match2 = re.search(r"ld-topic-item-(\d+)", cls)
+                if match2:
+                    post_id = match2.group(1)
+                    break
         topics.append(
             {
                 "title": title,
                 "url": topic_url,
                 "type": "topic",
                 "has_content": True,
+                "post_id": post_id,
                 "children": [],
             }
         )
     return topics
+
 
 
 def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None):
@@ -531,6 +552,7 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None)
     ):
         paged_lesson_item = lesson_item
         topic_page_url = page_url
+        topic_soup = None
         if page_number > 1:
             if _meta is not None:
                 _meta["has_topic_pagination"] = True
@@ -538,9 +560,11 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None)
             # not the full expand_id string (e.g. "216992-2", not "ld-expand-216992-2").
             lesson_id = expand_id[len("ld-expand-"):] if expand_id.startswith("ld-expand-") else expand_id
             topic_page_url = build_query_url(page_url, {"ld-topic-page": f"{lesson_id}-{page_number}"})
-            topic_soup = ctx.fetch_soup(topic_page_url, kind="topic_toc_page")
+            topic_soup = ctx.fetch_soup(topic_page_url, kind="topic_toc_page", cache=False)
             paged_lesson_item = find_lesson_item_by_expand_id(topic_soup, expand_id)
             if paged_lesson_item is None:
+                if topic_soup is not None:
+                    topic_soup.decompose()
                 continue
 
         topics.extend(
@@ -550,6 +574,8 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None)
                 seen_urls=seen_urls,
             )
         )
+        if topic_soup is not None:
+            topic_soup.decompose()
     return topics
 
 
@@ -603,7 +629,7 @@ def _scrape_embedded_lesson_page_toc(lesson_url, ctx, limits):
     Returns a list of ``topic``-typed nodes when a sub-chapter container is
     found, or an empty list in all other cases.
     """
-    lesson_soup = ctx.fetch_soup(lesson_url, kind="lesson_toc_check")
+    lesson_soup = ctx.fetch_soup(lesson_url, kind="lesson_toc_check", cache=False)
     if not lesson_soup:
         return []
 
@@ -635,12 +661,24 @@ def _scrape_embedded_lesson_page_toc(lesson_url, ctx, limits):
             seen_urls.add(url)
             if not title:
                 continue
+            post_id = None
+            item_id = item.get("id") or item.get("data-ld-expand-id") or ""
+            match = re.search(r"ld-expand-(\d+)", str(item_id))
+            if match:
+                post_id = match.group(1)
+            else:
+                for cls in item.get("class", []):
+                    match2 = re.search(r"ld-lesson-item-(\d+)", str(cls))
+                    if match2:
+                        post_id = match2.group(1)
+                        break
             topics.append(
                 {
                     "title": title,
                     "url": url,
                     "type": "topic",
                     "has_content": True,
+                    "post_id": post_id,
                     "children": [],
                 }
             )
@@ -663,11 +701,23 @@ def parse_lesson_node(lesson_item, page_url, ctx, limits, *, _meta=None):
     # because scrape_nested_topic_nodes returns a non-empty list for them.
     if not topics and url:
         topics = _scrape_embedded_lesson_page_toc(url, ctx, limits)
+    post_id = None
+    expand_id = lesson_item.get("id") or lesson_item.get("data-ld-expand-id") or ""
+    match = re.search(r"ld-expand-(\d+)", str(expand_id))
+    if match:
+        post_id = match.group(1)
+    else:
+        for cls in lesson_item.get("class", []):
+            match2 = re.search(r"ld-lesson-item-(\d+)", str(cls))
+            if match2:
+                post_id = match2.group(1)
+                break
     return {
         "title": title or url,
         "url": url,
         "type": "lesson",
         "has_content": True,
+        "post_id": post_id,
         "children": topics,
     }
 
@@ -805,6 +855,19 @@ def append_toc_node(target, node, seen_lesson_keys, current_section):
     return current_section
 
 
+def _safe_referer(url):
+    """Return a percent-encoded version of *url* safe for use as an HTTP Referer header.
+
+    Python's ``http.client`` encodes header values as ``latin-1``, which raises
+    ``UnicodeEncodeError`` for URLs that contain non-ASCII characters (e.g. Bengali
+    script slugs).  Passing the URL through ``urllib.parse.quote`` first ensures
+    the header value is pure ASCII.
+    """
+    # quote() leaves already-encoded percent-sequences and safe chars intact;
+    # we keep the common URL punctuation unencoded so the header remains readable.
+    return quote(url, safe=":/?=&#%@!$&'()*+,;~")
+
+
 def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
     """Fetch a LearnDash TOC page via the AJAX pager endpoint.
 
@@ -829,8 +892,15 @@ def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
     nonce = pager.get("data-pager-nonce", "")
     pager_data = pagination_data(pager)
 
-    item_list = landing_soup.select_one(".ld-item-list[data-shortcode_instance]") if landing_soup else None
-    shortcode_raw = item_list.get("data-shortcode_instance", "{}") if item_list else "{}"
+    # Try both hyphenated and underscored attribute name variants.
+    item_list = (
+        landing_soup.select_one(".ld-item-list[data-shortcode_instance]")
+        or landing_soup.select_one(".ld-item-list[data-shortcode-instance]")
+    ) if landing_soup else None
+    shortcode_raw = (
+        (item_list.get("data-shortcode_instance") or item_list.get("data-shortcode-instance") or "{}")
+        if item_list else "{}"
+    )
     try:
         shortcode = json.loads(shortcode_raw.replace("&quot;", '"'))
     except (ValueError, json.JSONDecodeError):
@@ -858,17 +928,35 @@ def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
         "shortcode_instance[wrapper]": "true",
         "shortcode_instance[user_id]": shortcode.get("user_id", 0),
     }
-    headers = {**HEADERS, "X-Requested-With": "XMLHttpRequest", "Referer": course_url}
+    # Use a percent-encoded Referer — Python's http.client encodes header values
+    # as latin-1, which raises UnicodeEncodeError on Bengali-script URL slugs.
+    headers = {
+        **HEADERS,
+        "X-Requested-With": "XMLHttpRequest",
+        "Referer": _safe_referer(course_url),
+    }
     try:
         resp = ctx.session.get(ajax_url, params=params, headers=headers, timeout=60)
         if resp.status_code != 200:
+            logger.warning(
+                "LearnDash AJAX pager returned HTTP %s for page %s of %s",
+                resp.status_code, page_number, course_url,
+            )
             return None
         payload = resp.json()
         markup = (payload.get("data") or {}).get("markup") or ""
         if not markup:
+            logger.debug(
+                "LearnDash AJAX pager: empty markup for page %s of %s (payload keys: %s)",
+                page_number, course_url, list(payload.keys()),
+            )
             return None
         return BeautifulSoup(markup, "html.parser")
-    except (requests.RequestException, ValueError):
+    except (requests.RequestException, ValueError, UnicodeError) as exc:
+        logger.warning(
+            "LearnDash AJAX pager failed for page %s of %s: %s",
+            page_number, course_url, exc,
+        )
         return None
 
 
@@ -903,7 +991,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
             soup = _fetch_learndash_toc_page_ajax(ctx, landing_soup, canonical_url, page_number)
             if soup is None:
                 # Fallback to the GET parameter (may work on some configurations)
-                soup = ctx.fetch_soup(page_url, kind="toc_page")
+                soup = ctx.fetch_soup(page_url, kind="toc_page", cache=False)
         if not soup:
             continue
         page_count += 1
@@ -915,6 +1003,8 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
             current_section = append_toc_node(collected, node, seen_lesson_keys, current_section)
         if len(seen_lesson_keys) > keys_before:
             pages_with_content += 1
+        if page_number > 1 and soup is not None:
+            soup.decompose()
 
     has_sections = any(node.get("type") == "section" for node in collected)
     has_topic_pagination = bool(_meta.get("has_topic_pagination"))
@@ -951,6 +1041,8 @@ def assign_paths_to_toc(nodes, parent_path=()):
         }
         if node.get("url"):
             normalized["source_url"] = node["url"]
+        if node.get("post_id"):
+            normalized["post_id"] = node["post_id"]
         if children:
             normalized["children"] = children
         normalized_nodes.append(normalized)
@@ -961,7 +1053,8 @@ def iter_content_nodes(nodes, parent_path=()):
     for node in nodes or []:
         title = clean_display_text(node.get("title", ""))
         path = [*parent_path, title] if title else list(parent_path)
-        yield node, path
+        if not node.get("children"):
+            yield node, path
         yield from iter_content_nodes(node.get("children", []), tuple(path))
 
 
@@ -1081,6 +1174,199 @@ def disambiguate_duplicate_content_paths(toc, content_items):
 _EMPTY_SOURCE_PAGE = object()
 
 
+# LearnDash AJAX endpoint used for mark-complete submissions.
+_LD_AJAX_URL = "https://www.ebanglalibrary.com/wp-admin/admin-ajax.php"
+
+
+def _extract_mark_complete_params(soup):
+    """Extract LearnDash mark-complete form inputs from a lesson/topic page soup.
+
+    LearnDash gates sequential chapters behind a server-side check: lesson N+1
+    is inaccessible until lesson N has been submitted via the ``sfwd_mark_complete``
+    form.  This helper finds that form so the scraper can submit it.
+
+    Returns a dict with ``post``, ``course_id``, ``nonce``, ``form_action``,
+    and ``already_complete`` (True when the lesson has already been marked
+    complete and the form field is ``sfwd_mark_incomplete`` instead).  Returns
+    None when no LearnDash completion form is present on the page.
+    """
+    if not soup:
+        return None
+    for form in soup.find_all("form"):
+        inputs = {
+            inp.get("name"): inp.get("value", "")
+            for inp in form.find_all("input")
+            if inp.get("name")
+        }
+        # Capture the form's action URL so _submit_mark_complete can use it
+        # as a fallback when the AJAX endpoint doesn't respond as expected.
+        form_action = (form.get("action") or "").strip()
+        if "sfwd_mark_complete" in inputs:
+            return {
+                "post": inputs.get("post", ""),
+                "course_id": inputs.get("course_id", ""),
+                "nonce": inputs["sfwd_mark_complete"],
+                "form_action": form_action,
+                "already_complete": False,
+            }
+        if "sfwd_mark_incomplete" in inputs:
+            return {
+                "post": inputs.get("post", ""),
+                "course_id": inputs.get("course_id", ""),
+                "nonce": inputs["sfwd_mark_incomplete"],
+                "form_action": form_action,
+                "already_complete": True,
+            }
+    return None
+
+
+def _submit_mark_complete(session, lesson_url, mc_params):
+    """Submit the LearnDash mark-complete action for ``lesson_url``.
+
+    Submitting this tells the server that the user has read the chapter, which
+    unlocks the next sequential chapter.  Only submits when the lesson has not
+    already been marked complete (i.e. ``mc_params['already_complete']`` is
+    False).
+
+    LearnDash 3.x/4.x handles mark-complete exclusively via an AJAX POST to
+    ``wp-admin/admin-ajax.php`` with ``action=sfwd_mark_complete`` and the
+    ``X-Requested-With: XMLHttpRequest`` header.  A direct form POST to the
+    lesson page URL (what was done previously) returns HTTP 200 but is silently
+    ignored by the server — leaving the next chapter locked.
+
+    Strategy:
+    1. AJAX POST to ``_LD_AJAX_URL`` — primary path, validates JSON response.
+    2. Direct form POST to ``lesson_url`` (or ``mc_params['form_action']`` if
+       present) — fallback for older LearnDash configurations.
+
+    Returns True when at least one approach appeared to succeed.
+    """
+    if not mc_params or mc_params.get("already_complete"):
+        return False
+    post_id = mc_params.get("post", "")
+    course_id = mc_params.get("course_id", "")
+    nonce = mc_params.get("nonce", "")
+    if not (post_id and course_id and nonce):
+        return False
+
+    common_data = {
+        "post": str(post_id),
+        "course_id": str(course_id),
+        "sfwd_mark_complete": nonce,
+    }
+    safe_referer = _safe_referer(lesson_url)
+
+    # ------------------------------------------------------------------
+    # Approach 1: LearnDash AJAX endpoint (primary)
+    # LearnDash JS sends:  POST wp-admin/admin-ajax.php
+    #   action=sfwd_mark_complete, post=<id>, course_id=<id>,
+    #   sfwd_mark_complete=<nonce>
+    # with X-Requested-With: XMLHttpRequest.
+    # A successful response is JSON  {"success": true, ...}.
+    # ------------------------------------------------------------------
+    try:
+        ajax_data = {"action": "sfwd_mark_complete", **common_data}
+        resp = session.post(
+            _LD_AJAX_URL,
+            data=ajax_data,
+            headers={
+                **HEADERS,
+                "Referer": safe_referer,
+                "X-Requested-With": "XMLHttpRequest",
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout=60,
+            allow_redirects=False,
+        )
+        if resp.status_code == 200:
+            try:
+                payload = resp.json()
+                if payload.get("success"):
+                    logger.info(
+                        "Marked complete via AJAX: %s (post=%s)", lesson_url, post_id
+                    )
+                    return True
+                # success=False means the server processed the request but
+                # rejected it (e.g. bad nonce, wrong user).  Log and fall
+                # through to the form-POST fallback.
+                logger.warning(
+                    "AJAX mark-complete returned success=False for %s — data=%s",
+                    lesson_url,
+                    payload,
+                )
+            except ValueError:
+                # Non-JSON body: the AJAX endpoint may not recognise this
+                # action on this site config.  Fall through to form POST.
+                logger.debug(
+                    "AJAX mark-complete returned non-JSON for %s (HTTP %s)",
+                    lesson_url,
+                    resp.status_code,
+                )
+        else:
+            logger.warning(
+                "AJAX mark-complete returned HTTP %s for %s",
+                resp.status_code,
+                lesson_url,
+            )
+    except (requests.exceptions.RequestException, UnicodeError) as exc:
+        logger.warning("AJAX mark-complete request failed for %s: %s", lesson_url, exc)
+
+    # ------------------------------------------------------------------
+    # Approach 2: Direct form POST (fallback for older LearnDash configs)
+    # Use the form's own action URL if available, otherwise the lesson URL.
+    # ------------------------------------------------------------------
+    form_action = (mc_params.get("form_action") or "").strip() or lesson_url
+    try:
+        resp = session.post(
+            form_action,
+            data=common_data,
+            headers={
+                **HEADERS,
+                # Use a percent-encoded Referer so Bengali-script URLs don't
+                # trigger a UnicodeEncodeError in Python's http.client.
+                "Referer": safe_referer,
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            timeout=60,
+            allow_redirects=True,
+        )
+        success = resp.status_code == 200
+        if success:
+            logger.info(
+                "Marked complete via form POST: %s (post=%s)", lesson_url, post_id
+            )
+        else:
+            logger.warning(
+                "Form-POST mark-complete returned HTTP %s for %s",
+                resp.status_code,
+                lesson_url,
+            )
+        return success
+    except (requests.exceptions.RequestException, UnicodeError) as exc:
+        logger.warning("Form-POST mark-complete failed for %s: %s", lesson_url, exc)
+        return False
+
+
+def _fetch_via_wp_rest_api(session, post_id, post_type="lesson"):
+    """Fetch lesson or topic content via the WordPress REST API to bypass LearnDash lock."""
+    segment = "sfwd-lessons" if post_type == "lesson" else "sfwd-topic"
+    api_url = f"https://www.ebanglalibrary.com/wp-json/ldlms/v2/{segment}/{post_id}"
+    try:
+        logger.info("Fetching locked content via WP REST API: %s (%s)", api_url, post_type)
+        resp = session.get(api_url, headers=HEADERS, timeout=30)
+        if resp.status_code == 200:
+            data = resp.json()
+            rendered = (data.get("content") or {}).get("rendered") or ""
+            if rendered:
+                wrapped_html = f'<div class="entry-content">{rendered}</div>'
+                return BeautifulSoup(wrapped_html, "html.parser")
+        else:
+            logger.warning("WP REST API returned HTTP %s for post %s", resp.status_code, post_id)
+    except Exception as exc:
+        logger.warning("WP REST API query failed for post %s: %s", post_id, exc)
+    return None
+
+
 def fetch_content_item(node, path, ctx, limits):
     url = node.get("url", "")
     if not url:
@@ -1092,6 +1378,11 @@ def fetch_content_item(node, path, ctx, limits):
         cache=False,
     )
     page_fetched = soup is not None
+
+    # Extract mark-complete form params BEFORE decomposing the soup so we can
+    # submit them after content extraction.
+    mc_params = _extract_mark_complete_params(soup) if soup else None
+
     try:
         html = truncate_html(
             extract_entry_content_html(soup, node.get("title", "")),
@@ -1100,9 +1391,60 @@ def fetch_content_item(node, path, ctx, limits):
     finally:
         if soup is not None:
             soup.decompose()
+
     if not html_text(html):
-        # Distinguish: page fetched OK but source has no text vs page unreachable.
-        return _EMPTY_SOURCE_PAGE if page_fetched else None
+        # Try WP REST API fallback if content is empty (locked) and post_id is present
+        post_id = node.get("post_id")
+        if post_id:
+            rest_soup = _fetch_via_wp_rest_api(ctx.session, post_id, node.get("type", "lesson"))
+            if rest_soup:
+                try:
+                    html = truncate_html(
+                        extract_entry_content_html(rest_soup, node.get("title", "")),
+                        limits.get("max_content_chars"),
+                    )
+                finally:
+                    rest_soup.decompose()
+
+    if not html_text(html):
+        # Content is empty (e.g. a locked/unread lesson that shows only the
+        # "Bookmark" tab).  If the page exposed a ``sfwd_mark_complete`` form
+        # the lesson IS accessible — submit the form so the next lesson unlocks,
+        # then re-fetch to get the actual content.
+        if mc_params and not mc_params.get("already_complete"):
+            logger.info(
+                "Content empty but mark-complete form found for %s — submitting and retrying.",
+                url,
+            )
+            _submit_mark_complete(ctx.session, url, mc_params)
+            time.sleep(1.0)  # brief pause for the server to record the change
+            retry_soup = ctx.fetch_soup(
+                url,
+                kind=node.get("type", "content"),
+                title=node.get("title", ""),
+                cache=False,
+            )
+            retry_fetched = retry_soup is not None
+            try:
+                html = truncate_html(
+                    extract_entry_content_html(retry_soup, node.get("title", "")),
+                    limits.get("max_content_chars"),
+                )
+            finally:
+                if retry_soup is not None:
+                    retry_soup.decompose()
+            if not html_text(html):
+                return _EMPTY_SOURCE_PAGE if retry_fetched else None
+        else:
+            # Distinguish: page fetched OK but source has no text vs page unreachable.
+            return _EMPTY_SOURCE_PAGE if page_fetched else None
+
+    # Lesson has real content.  If it has not yet been marked complete, submit
+    # the form now so that the next sequential lesson becomes accessible before
+    # we attempt to fetch it.
+    if mc_params and not mc_params.get("already_complete"):
+        _submit_mark_complete(ctx.session, url, mc_params)
+
     return {
         "title": clean_display_text(node.get("title", "")),
         "content": html,
@@ -1124,7 +1466,10 @@ def collect_content_items(nodes, ctx, limits, *, page_cache=None):
                 "Resuming content scrape: %d pages already cached from previous run.",
                 len(cached),
             )
-    for node, path in iter_content_nodes(nodes):
+    import gc
+    for idx, (node, path) in enumerate(iter_content_nodes(nodes)):
+        if idx > 0 and idx % 20 == 0:
+            gc.collect()
         if isinstance(max_nodes, int) and max_nodes > 0 and len(content_items) >= max_nodes:
             break
         url = node.get("url", "")
@@ -1206,7 +1551,18 @@ def list_toc_structure_traits(nodes):
     }
 
 
-def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta):
+def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta, limits=None):
+    """Classify the structural shape of a fetched book and compute completeness.
+
+    ``limits`` is the normalised content-limits dict produced by
+    :func:`normalize_manifest_limits`.  When ``limits['last_chapter_title']``
+    is set the function verifies that the named chapter appears somewhere in
+    the fetched TOC or content items; if it is absent ``content_incomplete`` is
+    forced to ``True`` regardless of the numeric coverage threshold.  This
+    allows callers to pin a known terminal chapter (e.g. "স্বর্গ নরক" for
+    রম্যরচনা ৩৬৫) so the system can reliably detect a partial fetch even when
+    the missing tail falls inside the 5 % tolerance band.
+    """
     traits = list_toc_structure_traits(toc_nodes)
     if not toc_nodes:
         if content_items:
@@ -1251,6 +1607,36 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
         allowed_missing = max(1, int(topics_expected * 0.05))
         content_incomplete = topics_missing > allowed_missing
 
+    # --- last_chapter_title guard ------------------------------------------
+    # When the caller specifies the title of the expected final chapter,
+    # independently verify that it is present in the fetched data.  This
+    # catches cases where the missing chapters fall within the 5 % tolerance
+    # band (e.g. a book with 365 chapters where the last ~40 are missing but
+    # numeric coverage happens to round above the threshold).
+    if not content_incomplete and limits:
+        last_chapter_title = clean_display_text(limits.get("last_chapter_title") or "")
+        if last_chapter_title:
+            normalized_target = normalize_catalog_text(last_chapter_title)
+            # Build a set of all normalised chapter titles from both the TOC
+            # node list and the fetched content items.
+            fetched_titles = set()
+            for _node, _path in iter_content_nodes(toc_nodes or []):
+                t = normalize_catalog_text(clean_display_text(_node.get("title", "")))
+                if t:
+                    fetched_titles.add(t)
+            for _item in content_items or []:
+                t = normalize_catalog_text(clean_display_text(_item.get("title", "")))
+                if t:
+                    fetched_titles.add(t)
+            if normalized_target and normalized_target not in fetched_titles:
+                logger.warning(
+                    "Expected last chapter %r not found in fetched TOC — "
+                    "marking book as content_incomplete.",
+                    last_chapter_title,
+                )
+                content_incomplete = True
+    # -----------------------------------------------------------------------
+
     return {
         "type": structure_type,
         "traits": traits,
@@ -1264,6 +1650,7 @@ def classify_manifest_structure(toc_nodes, content_items, main_content, toc_meta
         "content_incomplete": content_incomplete,
         "topics_expected": topics_expected,
         "topics_fetched": topics_fetched,
+        "last_chapter_title": clean_display_text(limits.get("last_chapter_title") or "") if limits else "",
     }
 
 
@@ -1557,6 +1944,8 @@ def normalize_body_sections(
     toc_nodes,
     content_items,
     author="",
+    series="",
+    book_type="",
 ):
     book_info, dedication, residual_main = extract_main_content_segments(landing_main_content or "")
     book_info = dedupe_html_fragment_blocks(book_info)
@@ -1662,7 +2051,28 @@ def normalize_body_sections(
         book_info_html=book_info or "",
     )
 
-    if book_info:
+    if not book_info:
+        fallback_lines = []
+        if language == "en":
+            if book_title:
+                fallback_lines.append(f"<p>Title: {book_title}</p>")
+            if author:
+                fallback_lines.append(f"<p>Author: {author}</p>")
+            if series:
+                fallback_lines.append(f"<p>Series: {series}</p>")
+            if book_type:
+                fallback_lines.append(f"<p>Type: {book_type}</p>")
+        else:
+            if book_title:
+                fallback_lines.append(f"<p>শিরোনাম: {book_title}</p>")
+            if author:
+                fallback_lines.append(f"<p>লেখক: {author}</p>")
+            if series:
+                fallback_lines.append(f"<p>সিরিজ: {series}</p>")
+            if book_type:
+                fallback_lines.append(f"<p>বইয়ের ধরন: {book_type}</p>")
+        book_info = "\n".join(fallback_lines)
+    else:
         book_info = format_book_info_html_ordered(
             book_info, book_title=book_title, language=language
         )
@@ -1793,6 +2203,7 @@ def build_manifest_source_pages(source_url, *, content_limits=None, page_cache=N
         landing_main_content = extract_entry_content_html(landing_soup, title)
 
         toc_nodes, toc_meta = collect_learndash_toc(landing_soup, canonical_url, ctx, limits)
+        landing_soup.decompose()
         content_items = collect_content_items(toc_nodes, ctx, limits, page_cache=page_cache) if toc_nodes else []
         sections_payload = normalize_body_sections(
             book_title=title,
@@ -1800,12 +2211,15 @@ def build_manifest_source_pages(source_url, *, content_limits=None, page_cache=N
             toc_nodes=toc_nodes,
             content_items=content_items,
             author=author,
+            series=series,
+            book_type=book_type,
         )
         source_structure = classify_manifest_structure(
             toc_nodes,
             sections_payload["content_items"],
             sections_payload["main_content"],
             toc_meta,
+            limits=limits,
         )
         projection = projection_from_manifest_parts(
             canonical_url=canonical_url,

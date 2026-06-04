@@ -128,6 +128,12 @@ def login_source_session(session):
 
     logger = logging.getLogger(__name__)
 
+    if not hasattr(session, "cookies"):
+        logger.debug(
+            "Session object does not have cookies attribute; ebanglalibrary.com auth skipped."
+        )
+        return False
+
     from django.conf import settings
 
     state_path = (getattr(settings, "EBANGLA_AUTH_STATE_PATH", "") or "").strip()

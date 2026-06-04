@@ -40,7 +40,7 @@ def generated_toc_from_content_items(content_items):
         {
             "title": item.get("title", ""),
             "type": item.get("type", "lesson"),
-            "has_content": bool(plain_text_from_html(item.get("content", ""))),
+            "has_content": None if item.get("has_content") is None else bool(plain_text_from_html(item.get("content", ""))),
             "path": list(path_tuple(item.get("path")) or (item.get("title", ""),)),
         }
         for item in content_items or []
@@ -65,7 +65,7 @@ def dead_toc_leaves(toc, content_items):
     content_paths = {
         path_tuple(item.get("path")) or (clean_display_text(item.get("title", "")),)
         for item in content_items or []
-        if plain_text_from_html(item.get("content", ""))
+        if plain_text_from_html(item.get("content", "")) or item.get("has_content") is None
     }
     dead = []
     for entry, path in iter_toc_entries(toc):
@@ -194,7 +194,7 @@ def validate_document(document, snapshot):
         label = " / ".join(path) if path else str(index + 1)
         if not path:
             errors.append(f"Content item {index + 1} is missing a title/path.")
-        if not plain_text_from_html(item.get("content", "")):
+        if not plain_text_from_html(item.get("content", "")) and item.get("has_content") is not None:
             errors.append(f"Content item has no body: {label}.")
     for duplicate_path in duplicate_paths(content_items):
         errors.append(f"Duplicate content path: {duplicate_path}.")

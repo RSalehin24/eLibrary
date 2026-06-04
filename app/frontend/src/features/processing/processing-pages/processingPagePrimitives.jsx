@@ -103,7 +103,11 @@ export function ButtonSkeleton({ testId, label, className = "" }) {
       tabIndex={-1}
       data-testid={testId}
     >
-      {label}
+      <span className="button-label button-label--stable">
+        <span className="button-label-spinner-slot" />
+        <span className="button-label-text">{label}</span>
+        <span className="button-label-spinner-slot" aria-hidden="true" />
+      </span>
     </button>
   );
 }

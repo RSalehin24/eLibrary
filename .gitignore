@@ -66,3 +66,5 @@ logs/**/*.log
 migration/env/migrate.env
 migration/runtime/*
 !migration/runtime/.gitkeep
+
+.antigravitycli/

@@ -25,6 +25,7 @@ export default function BookDetailPage() {
   const toast = useToast();
   const { slug } = useParams();
   const canEditMetadata = hasCapability(user, "metadata:edit");
+  const canViewSourceRecords = hasCapability(user, "source_records:view");
   const currentDetailPath = getCurrentRoutePath(location);
   const returnTarget = getBookReturnTarget(location);
   const detailState = useBookDetailData({
@@ -118,7 +119,7 @@ export default function BookDetailPage() {
         readerState={readerState}
       />
 
-      {detail.sourceRecords.length ? (
+      {canViewSourceRecords && detail.sourceRecords.length ? (
         <section className="detail-card">
           <div className="panel-header">
             <div className="section-title-block">

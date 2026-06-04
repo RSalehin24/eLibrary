@@ -9,8 +9,11 @@ const baseURL = process.env.PLAYWRIGHT_BASE_URL || "http://127.0.0.1:5173";
 const configDir = path.dirname(fileURLToPath(import.meta.url));
 const authStatePath = path.join(configDir, ".auth", "superadmin.json");
 
+const runLiveProcessing = process.env.PLAYWRIGHT_RUN_LIVE_PROCESSING === "1";
+
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: runLiveProcessing ? [] : ["**/processing-pages-live*"],
   timeout: 45_000,
   fullyParallel: false,
   workers: 1,

@@ -92,13 +92,13 @@ SPEC_BOOKS = [
     },
     {
         "id": "hat_chuye",
-        "url": "https://www.ebanglalibrary.com/books/হাত-ছুঁয়ে-ছুঁয়ে-দিয়েছি-সব/",
+        "url": "https://www.ebanglalibrary.com/books/হাত-ছুঁয়ে-ছুঁয়ে-দিয়েছ/",
         "name": "হাত ছুঁয়ে-ছুঁয়ে দিয়েছি সব",
         "checks": ["toc_not_empty", "has_book_info"],
     },
     {
         "id": "durga_rahasya",
-        "url": "https://www.ebanglalibrary.com/books/দুর্গরহস্য-শরদিন্দু-বন্দ্যোপাধ্যায়/",
+        "url": "https://www.ebanglalibrary.com/books/দুর্গরহস্য-শরদিন্দু-বন্/",
         "name": "দুর্গরহস্য — শরদিন্দু বন্দ্যোপাধ্যায়",
         "checks": ["toc_not_empty", "has_book_info"],
     },

@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import BookRouteLink from "../components/BookRouteLink";
-import { apiFetch } from "../api/client";
+import {
+  deleteReprocessJob,
+  getReprocessJobs,
+  getReprocessSummary,
+  resumeReprocessJob,
+  stopReprocessJob,
+} from "../features/processing/api";
 import { SearchIcon } from "../components/catalog-toolbar/icons";
 import {
   OverviewPanel,
@@ -29,8 +35,8 @@ function useReprocessData() {
   const load = useCallback(async () => {
     try {
       const [jobsData, summaryData] = await Promise.all([
-        apiFetch("/ingestion/jobs/?job_type=reprocess&limit=200"),
-        apiFetch("/ingestion/jobs/reprocess/summary/"),
+        getReprocessJobs(),
+        getReprocessSummary(),
       ]);
       setJobs(jobsData);
       setSummary(summaryData);
@@ -112,10 +118,10 @@ function useJobActions(onDone) {
   const [pending, setPending] = useState(new Set());
 
   const act = useCallback(
-    async (method, url, id) => {
+    async (actionFn, id) => {
       setPending((p) => new Set([...p, id]));
       try {
-        await apiFetch(url, { method });
+        await actionFn();
         onDone?.();
       } finally {
         setPending((p) => {
@@ -236,7 +242,7 @@ function ActiveTable({ jobs, onRefresh }) {
   async function stopSelected() {
     const ids = [...selected].filter((id) => jobs.some((j) => j.id === id));
     await Promise.all(
-      ids.map((id) => act("POST", `/ingestion/jobs/${id}/stop/`, id)),
+      ids.map((id) => act(() => stopReprocessJob(id), id)),
     );
     clearSelection();
   }
@@ -246,7 +252,7 @@ function ActiveTable({ jobs, onRefresh }) {
       jobs.some((j) => j.id === id && j.status === "queued"),
     );
     await Promise.all(
-      ids.map((id) => act("DELETE", `/ingestion/jobs/${id}/`, id)),
+      ids.map((id) => act(() => deleteReprocessJob(id), id)),
     );
     clearSelection();
   }
@@ -376,11 +382,7 @@ function ActiveTable({ jobs, onRefresh }) {
                           className="ghost-button reprocess-action-btn"
                           disabled={pending.has(job.id)}
                           onClick={() =>
-                            act(
-                              "POST",
-                              `/ingestion/jobs/${job.id}/stop/`,
-                              job.id,
-                            )
+                            act(() => stopReprocessJob(job.id), job.id)
                           }
                         >
                           Stop
@@ -392,7 +394,7 @@ function ActiveTable({ jobs, onRefresh }) {
                           className="ghost-button reprocess-action-btn reprocess-action-btn--danger"
                           disabled={pending.has(job.id)}
                           onClick={() =>
-                            act("DELETE", `/ingestion/jobs/${job.id}/`, job.id)
+                            act(() => deleteReprocessJob(job.id), job.id)
                           }
                         >
                           Delete
@@ -445,7 +447,7 @@ function HistoryTable({ jobs, onRefresh }) {
       ),
     );
     await Promise.all(
-      ids.map((id) => act("POST", `/ingestion/jobs/${id}/resume/`, id)),
+      ids.map((id) => act(() => resumeReprocessJob(id), id)),
     );
     clearSelection();
   }
@@ -453,7 +455,7 @@ function HistoryTable({ jobs, onRefresh }) {
   async function deleteSelected() {
     const ids = [...selected].filter((id) => jobs.some((j) => j.id === id));
     await Promise.all(
-      ids.map((id) => act("DELETE", `/ingestion/jobs/${id}/`, id)),
+      ids.map((id) => act(() => deleteReprocessJob(id), id)),
     );
     clearSelection();
   }
@@ -601,11 +603,7 @@ function HistoryTable({ jobs, onRefresh }) {
                           className="ghost-button reprocess-action-btn"
                           disabled={pending.has(job.id)}
                           onClick={() =>
-                            act(
-                              "POST",
-                              `/ingestion/jobs/${job.id}/resume/`,
-                              job.id,
-                            )
+                            act(() => resumeReprocessJob(job.id), job.id)
                           }
                         >
                           Resume
@@ -616,7 +614,7 @@ function HistoryTable({ jobs, onRefresh }) {
                         className="ghost-button reprocess-action-btn reprocess-action-btn--danger"
                         disabled={pending.has(job.id)}
                         onClick={() =>
-                          act("DELETE", `/ingestion/jobs/${job.id}/`, job.id)
+                          act(() => deleteReprocessJob(job.id), job.id)
                         }
                       >
                         Delete

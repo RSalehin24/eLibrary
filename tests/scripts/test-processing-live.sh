@@ -73,5 +73,6 @@ print_info "Running live processing Playwright suite"
   PLAYWRIGHT_BASE_URL="${FRONTEND_URL}" \
   PLAYWRIGHT_SKIP_STACK_START=1 \
   PLAYWRIGHT_SKIP_E2E_SEED=1 \
-  npm run test:e2e -- processing-pages-live.spec.js --workers=1 "$@"
+  PLAYWRIGHT_RUN_LIVE_PROCESSING=1 \
+  npm run test:e2e -- processing-pages-live --workers=1 "$@"
 )

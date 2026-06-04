@@ -43,15 +43,21 @@ export function humanizeError(error, fallback = GENERIC_FALLBACK) {
     return FRIENDLY_BY_CODE[code];
   }
 
+  const message = error?.message || error?.payload?.detail || "";
+
   const status = Number(error?.status ?? error?.payload?.status);
   if (status === 401) return FRIENDLY_BY_CODE.unauthorized;
   if (status === 403) return FRIENDLY_BY_CODE.forbidden;
-  if (status === 404) return FRIENDLY_BY_CODE.not_found;
+  if (status === 404) {
+    if (message && !looksLikeRawError(message) && message.toLowerCase() !== "not found") {
+      return message;
+    }
+    return FRIENDLY_BY_CODE.not_found;
+  }
   if (status === 409) return FRIENDLY_BY_CODE.conflict;
   if (status === 429) return FRIENDLY_BY_CODE.rate_limited;
   if (status >= 500) return FRIENDLY_BY_CODE.server_error;
 
-  const message = error?.message || error?.payload?.detail || "";
   if (!message) return fallback;
   if (looksLikeRawError(message)) return fallback;
   return message;

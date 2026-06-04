@@ -218,6 +218,11 @@ class Command(BaseCommand):
             help="Require validated extraction, catalog metadata match, strict persistence verification, and generated assets.",
         )
         parser.add_argument("--report-path", default="")
+        parser.add_argument(
+            "--last-chapter-title",
+            default="",
+            help="Expected title of the final chapter. When set, curation fails if this chapter is absent from the fetched TOC.",
+        )
 
     def source_urls(self, options):
         explicit_urls = [normalize_source_url(url) for url in options["source_url"]]
@@ -346,8 +351,17 @@ class Command(BaseCommand):
                     self.stdout.write(f"Skipping existing curated source {normalized_source_url}")
                     continue
 
+                import hashlib
+                from apps.processing.service_modules.scrape_cache import DiskPageCache, _get_scrape_cache_root
+                url_hash = hashlib.md5(normalized_source_url.encode("utf-8")).hexdigest()
+                page_cache = DiskPageCache(_get_scrape_cache_root() / f"curate_cmd_{url_hash}.jsonl")
+
                 self.stdout.write(f"Curating {normalized_source_url}")
-                curated = curate_book_document(normalized_source_url)
+                content_limits = {}
+                last_chapter_title = (options.get("last_chapter_title") or "").strip()
+                if last_chapter_title:
+                    content_limits["last_chapter_title"] = last_chapter_title
+                curated = curate_book_document(normalized_source_url, content_limits=content_limits or None, page_cache=page_cache)
                 document = curated["document"]
                 validation = curated["validation"]
                 status = str(document.get("status", ""))
@@ -444,6 +458,7 @@ class Command(BaseCommand):
                             generate_exports(document)
                             sync_assets(book, None, curated["projection"])
                             summary["assets_generated"] += 1
+                            page_cache.delete()
                         except Exception as exc:
                             summary["asset_failures"] += 1
                             book.state = LifecycleState.NEEDS_REVIEW

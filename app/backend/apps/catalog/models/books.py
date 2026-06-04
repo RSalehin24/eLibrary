@@ -176,6 +176,7 @@ class BookSource(UUIDPrimaryKeyModel, TimeStampedModel):
 
     class Meta:
         ordering = ["-created_at"]
+        unique_together = ("book",)
 
     def __str__(self):
         return self.normalized_source_url

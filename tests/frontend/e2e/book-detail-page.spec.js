@@ -45,7 +45,7 @@ test.describe("Book Detail Page", () => {
     await expect(
       page.getByRole("heading", { name: "Entities and Details", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("Chapter 1", { exact: true })).toBeVisible();
+    await expect(page.getByText("Chapter 1", { exact: true }).first()).toBeVisible();
   });
 
   test("open reader launches the reader route from the book detail page", async ({

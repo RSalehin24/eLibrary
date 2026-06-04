@@ -66,7 +66,7 @@ export default function AccessPage() {
         <PageLoader
           label="Loading users and access"
           detail="Fetching accounts, permissions, and reference data."
-          variant="table"
+          variant="management"
         />
       </div>
     );

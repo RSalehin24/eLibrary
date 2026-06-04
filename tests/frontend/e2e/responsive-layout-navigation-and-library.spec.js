@@ -256,7 +256,10 @@ test.describe("responsive layout navigation and library coverage", () => {
         extraWidth: Math.round(extraBox.width),
         filterGap: getComputedStyle(filterButton).columnGap,
         filterWidth: Math.round(filterBox.width),
-        filterSortCombinedWidth: Math.round(filterBox.width + sortBox.width + (sortBox.left - filterBox.right)),
+        filterSortCombinedWidth: Math.round(
+          Math.max(filterBox.right, sortBox.right) -
+            Math.min(filterBox.left, sortBox.left)
+        ),
         filterSortTopGap: Math.abs(Math.round(filterBox.top - sortBox.top)),
         headerWidth: Math.round(headerBox.width),
         searchLeftGap: Math.round(searchBox.left - headerBox.left),

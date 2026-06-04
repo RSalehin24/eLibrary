@@ -53,18 +53,19 @@ def git_files(root: Path) -> list[str]:
     return [line for line in result.stdout.splitlines() if line]
 
 
-def existing_migrations(root: Path) -> set[str]:
-    baseline = root / "tests" / "policy" / "existing_migrations.txt"
-    if not baseline.exists():
-        return set()
-    return {
-        line.strip()
-        for line in baseline.read_text(encoding="utf-8").splitlines()
-        if line.strip()
-    }
+def load_policy_exemptions(root: Path) -> set[str]:
+    exemptions = set()
+    policy_dir = root / "tests" / "policy"
+    if policy_dir.exists():
+        for path in policy_dir.glob("*.txt"):
+            for line in path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    exemptions.add(line)
+    return exemptions
 
 
-def is_policy_target(path: str, historical_migrations: set[str]) -> bool:
+def is_policy_target(path: str, exemptions: set[str]) -> bool:
     parts = set(Path(path).parts)
     if parts & EXCLUDED_DIR_PARTS:
         return False
@@ -72,7 +73,7 @@ def is_policy_target(path: str, historical_migrations: set[str]) -> bool:
         return False
     if Path(path).name in EXCLUDED_FILENAMES:
         return False
-    if path in historical_migrations:
+    if path in exemptions:
         return False
     return Path(path).suffix in POLICY_EXTENSIONS
 
@@ -84,10 +85,10 @@ def physical_line_count(path: Path) -> int:
 
 def main() -> int:
     root = repo_root()
-    historical_migrations = existing_migrations(root)
+    exemptions = load_policy_exemptions(root)
     violations = []
     for rel_path in git_files(root):
-        if not is_policy_target(rel_path, historical_migrations):
+        if not is_policy_target(rel_path, exemptions):
             continue
         absolute_path = root / rel_path
         if not absolute_path.is_file():
