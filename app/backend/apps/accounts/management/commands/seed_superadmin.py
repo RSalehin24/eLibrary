@@ -19,6 +19,13 @@ class Command(BaseCommand):
             default="R Salehin",
             help="Optional display name for the seeded super admin.",
         )
+        parser.add_argument(
+            "--force",
+            action="store_true",
+            dest="force",
+            default=False,
+            help="Force overwrite existing super admin details.",
+        )
 
     def handle(self, *args, **options):
         email = settings.SUPER_ADMIN_EMAIL
@@ -40,12 +47,35 @@ class Command(BaseCommand):
             },
         )
 
-        user.full_name = options["full_name"]
-        user.is_staff = True
-        user.is_superuser = True
-        user.is_active = True
-        user.set_password(password)
-        user.save()
+        if created:
+            user.set_password(password)
+            user.save()
+            action = "Created"
+        else:
+            updated = False
+            if options["force"]:
+                user.full_name = options["full_name"]
+                user.set_password(password)
+                user.is_staff = True
+                user.is_superuser = True
+                user.is_active = True
+                user.save()
+                updated = True
+            else:
+                if not user.full_name:
+                    user.full_name = options["full_name"]
+                    updated = True
+                if not user.is_staff:
+                    user.is_staff = True
+                    updated = True
+                if not user.is_superuser:
+                    user.is_superuser = True
+                    updated = True
+                if not user.is_active:
+                    user.is_active = True
+                    updated = True
+                if updated:
+                    user.save()
+            action = "Updated" if updated else "Preserved existing"
 
-        action = "Created" if created else "Updated"
         self.stdout.write(f"{action} super admin: {email}")
