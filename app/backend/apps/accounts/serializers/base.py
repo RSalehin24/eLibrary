@@ -98,5 +98,5 @@ class ProfileSerializer(UserSerializer):
             getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "")
             or getattr(settings, "DEFAULT_FROM_EMAIL", "")
             or ""
-        )
+        ).strip("'\" ")
         return email.utils.parseaddr(raw_email)[1]

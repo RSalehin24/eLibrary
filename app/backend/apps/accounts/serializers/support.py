@@ -179,11 +179,11 @@ def send_link_email(
     except TemplateDoesNotExist:
         text_body = strip_tags(html_body)
 
-    raw_from_email = getattr(
-        settings,
-        "ACCOUNT_INVITE_FROM_EMAIL",
-        settings.DEFAULT_FROM_EMAIL,
-    )
+    raw_from_email = (
+        getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "")
+        or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+        or ""
+    ).strip("'\" ")
     name, email = parseaddr(raw_from_email)
     if not name:
         name = "RSalehin24 Library"

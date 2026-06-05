@@ -164,11 +164,11 @@ class BookSendToKindleView(APIView):
 
         attachment_bytes, _source_name, _path = read_asset_bytes(asset)
         filename = asset_download_filename(book, asset)
-        raw_sender = getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "") or getattr(
-            settings,
-            "DEFAULT_FROM_EMAIL",
-            "",
-        )
+        raw_sender = (
+            getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "")
+            or getattr(settings, "DEFAULT_FROM_EMAIL", "")
+            or ""
+        ).strip("'\" ")
         _name, sender = parseaddr(raw_sender)
         if not sender:
             sender = raw_sender
