@@ -9,48 +9,19 @@ import { useAsyncAction } from "../hooks/useAsyncAction";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useToast } from "../hooks/useToast";
 import { cleanQueryParams, filtersFromSearchParams } from "../utils/query";
+import { catalogFetch } from "../api/catalog";
 
 const defaultFilters = {
   q: "",
   author: "",
   series: "",
   category: "",
-  state: "",
-  review_state: "",
+  record_type: "digital",
   sort: "-requested_at",
   ownership: "mine",
 };
 
 const createdBookFilterFields = [
-  { key: "author", label: "Author" },
-  { key: "series", label: "Series" },
-  { key: "category", label: "Category" },
-  {
-    key: "state",
-    label: "State",
-    type: "select",
-    options: [
-      { value: "", label: "Any" },
-      { value: "draft", label: "Draft" },
-      { value: "processing", label: "Processing" },
-      { value: "needs_review", label: "Needs review" },
-      { value: "ready", label: "Ready" },
-      { value: "published", label: "Published" },
-      { value: "archived", label: "Archived" },
-    ],
-  },
-  {
-    key: "review_state",
-    label: "Review",
-    type: "select",
-    options: [
-      { value: "", label: "Any" },
-      { value: "pending", label: "Pending" },
-      { value: "needs_review", label: "Needs review" },
-      { value: "approved", label: "Approved" },
-      { value: "rejected", label: "Rejected" },
-    ],
-  },
   {
     key: "sort",
     label: "Sort",
@@ -82,6 +53,71 @@ export default function CreatedBooksPage() {
   );
   const [filters, setFilters] = useState(appliedFilters);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+
+  const [authors, setAuthors] = useState([]);
+  const [seriesList, setSeriesList] = useState([]);
+  const [categories, setCategories] = useState([]);
+
+  useEffect(() => {
+    async function loadOptions() {
+      try {
+        const [authorsData, seriesData, categoriesData] = await Promise.all([
+          catalogFetch("/catalog/writers/?record_type=all&sort=name"),
+          catalogFetch("/catalog/series/?record_type=all&sort=name"),
+          catalogFetch("/catalog/categories/?record_type=all&sort=name"),
+        ]);
+        setAuthors(authorsData.map(item => item.name));
+        setSeriesList(seriesData.map(item => item.name));
+        setCategories(categoriesData.map(item => item.name));
+      } catch (err) {
+        console.error("Failed to load filter options:", err);
+      }
+    }
+    loadOptions();
+  }, []);
+
+  const createdBookToolbarFields = useMemo(() => {
+    return [
+      {
+        key: "author",
+        label: "Author",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...authors.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "series",
+        label: "Series",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...seriesList.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "category",
+        label: "Category",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...categories.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "record_type",
+        label: "Type",
+        type: "select",
+        options: [
+          { value: "digital", label: "Digital" },
+          { value: "manual", label: "Manual" },
+          { value: "all", label: "All types" }
+        ]
+      }
+    ];
+  }, [authors, seriesList, categories]);
+
   const {
     books,
     totalCount,

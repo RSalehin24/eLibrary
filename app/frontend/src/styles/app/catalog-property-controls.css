@@ -162,6 +162,7 @@
   pointer-events: auto;
   transform: translateY(0);
   animation: filter-sheet-enter 220ms ease both;
+  overflow: visible;
 }
 
 .catalog-filter-actions {
@@ -252,3 +253,180 @@
   background: rgba(138, 52, 52, 0.08);
   color: var(--danger);
 }
+
+/* Custom Searchable Select Dropdown */
+.custom-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.custom-select-trigger {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 10px 14px;
+  border: 1px solid rgba(17, 70, 54, 0.14);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.44);
+  cursor: pointer;
+  font-size: 0.95rem;
+  text-align: left;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.custom-select-trigger:focus {
+  outline: none;
+  border-color: rgba(17, 70, 54, 0.3);
+}
+
+.custom-select-trigger-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-right: 8px;
+}
+
+.custom-select-trigger-arrow {
+  font-size: 0.75rem;
+  color: var(--muted);
+  opacity: 0.7;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.custom-select-container[data-expanded="true"] .custom-select-trigger-arrow {
+  transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+  background: #ffffff;
+  border: 1px solid rgba(17, 70, 54, 0.16);
+  border-radius: 14px;
+  box-shadow: 0 12px 28px rgba(12, 47, 36, 0.14);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.custom-select-search-wrapper {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(17, 70, 54, 0.08);
+  background: rgba(249, 252, 250, 0.5);
+}
+
+.custom-select-search-input {
+  width: 100%;
+  min-height: 36px !important;
+  padding: 6px 10px !important;
+  font-size: 0.9rem;
+  border: 1px solid rgba(17, 70, 54, 0.1) !important;
+  border-radius: 8px !important;
+  background: #ffffff !important;
+  color: var(--ink) !important;
+}
+
+.custom-select-search-input:focus {
+  outline: none !important;
+  border-color: rgba(17, 70, 54, 0.25) !important;
+  box-shadow: none !important;
+}
+
+.custom-select-options-list {
+  margin: 0;
+  padding: 4px 0;
+  list-style: none;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.custom-select-option-button {
+  display: block;
+  width: 100%;
+  padding: 8px 14px;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 0.15s ease;
+}
+
+.custom-select-option-button:hover {
+  background: rgba(17, 70, 54, 0.05);
+}
+
+.custom-select-option-button.is-selected {
+  background: rgba(17, 70, 54, 0.08);
+  font-weight: 700;
+  color: var(--accent-strong);
+}
+
+.custom-select-no-results {
+  padding: 12px 14px;
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* Dark Mode overrides for Custom Searchable Select */
+[data-theme="dark"] .custom-select-trigger {
+  background: rgba(22, 34, 29, 0.9);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+[data-theme="dark"] .custom-select-trigger:focus {
+  border-color: var(--line-strong);
+}
+
+[data-theme="dark"] .custom-select-dropdown {
+  background: rgba(22, 34, 29, 0.98);
+  border-color: var(--line);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.45);
+}
+
+[data-theme="dark"] .custom-select-search-wrapper {
+  border-bottom-color: var(--line);
+  background: rgba(15, 23, 20, 0.4);
+}
+
+[data-theme="dark"] .custom-select-search-input {
+  background: rgba(15, 23, 20, 0.8) !important;
+  border-color: var(--line) !important;
+  color: var(--ink) !important;
+}
+
+[data-theme="dark"] .custom-select-search-input:focus {
+  border-color: var(--line-strong) !important;
+}
+
+[data-theme="dark"] .custom-select-option-button {
+  color: var(--ink);
+}
+
+[data-theme="dark"] .custom-select-option-button:hover {
+  background: rgba(180, 220, 200, 0.08);
+}
+
+[data-theme="dark"] .custom-select-option-button.is-selected {
+  background: rgba(180, 220, 200, 0.15);
+  color: var(--ink);
+}
+
+
+
+

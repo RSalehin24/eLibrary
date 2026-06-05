@@ -38,11 +38,41 @@ function RemoveIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M10 4v12M4 10h12"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 20 20" aria-hidden="true" focusable="false">
+      <path
+        d="M4 10l4 4 8-8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export default function BookCard({
   book,
   cardRef = undefined,
   onRemoveFromMyBooks = null,
   removing = false,
+  onMyBooksToggle = null,
 }) {
   const contributorGroups = getWriterColumnGroups(book);
   const series = book.series || [];
@@ -66,6 +96,37 @@ export default function BookCard({
         </button>
       ) : null}
       <div className="book-card-art">
+        {onMyBooksToggle ? (
+          <div className="book-card-action-wrapper">
+            <button
+              type="button"
+              className={`book-card-toggle-button ${book.is_in_my_books ? "is-added" : ""}`}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onMyBooksToggle(book);
+              }}
+              disabled={removing}
+              aria-busy={removing ? "true" : undefined}
+              aria-label={
+                book.is_in_my_books
+                  ? `Remove ${book.title} from My Books`
+                  : `Add ${book.title} to My Books`
+              }
+            >
+              {removing ? (
+                <LoadingSpinner size={16} />
+              ) : book.is_in_my_books ? (
+                <CheckIcon />
+              ) : (
+                <PlusIcon />
+              )}
+            </button>
+            <span className="book-card-tooltip" role="tooltip">
+              {book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
+            </span>
+          </div>
+        ) : null}
         <BookCoverArt book={book} className="book-card-cover" ariaHidden />
       </div>
 

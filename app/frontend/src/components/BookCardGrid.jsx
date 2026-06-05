@@ -13,6 +13,8 @@ export default function BookCardGrid({
   incrementalSkeletonCount = 6,
   onRemoveFromMyBooks = null,
   removingBookIds = {},
+  onMyBooksToggle = null,
+  myBooksBusyIds = {},
 }) {
   const showInitialSkeleton = (initialLoading || refreshing) && !books?.length;
   const showIncrementalSkeleton = loadingMore && books?.length > 0;
@@ -34,7 +36,12 @@ export default function BookCardGrid({
               key={book.id}
               book={book}
               onRemoveFromMyBooks={onRemoveFromMyBooks}
-              removing={Boolean(removingBookIds[book.id] || removingBookIds[book.slug])}
+              onMyBooksToggle={onMyBooksToggle}
+              removing={Boolean(
+                removingBookIds[book.id] ||
+                  removingBookIds[book.slug] ||
+                  myBooksBusyIds[book.id]
+              )}
               cardRef={
                 hasMore &&
                 typeof observeLoadTrigger === "function" &&

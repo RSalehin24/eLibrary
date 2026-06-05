@@ -1473,16 +1473,36 @@
 /* ============================================================
    BOOK CARD REMOVE BUTTON  (my-books-actions.css)
    ============================================================ */
-[data-theme="dark"] .book-card-remove-button {
+[data-theme="dark"] .book-card-remove-button,
+[data-theme="dark"] .book-card-toggle-button {
   background: rgba(28, 42, 36, 0.92);
   border-color: var(--line);
   color: var(--ink-soft);
   box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
 }
-[data-theme="dark"] .book-card-remove-button:hover {
+[data-theme="dark"] .book-card-remove-button:hover,
+[data-theme="dark"] .book-card-toggle-button:not(.is-added):hover {
   background: rgba(38, 56, 48, 0.96);
   border-color: var(--line-strong);
   color: var(--ink);
+}
+[data-theme="dark"] .book-card-toggle-button.is-added {
+  color: #ffffff;
+  background: linear-gradient(180deg, #1b5e20 0%, #0d3c12 100%);
+  border-color: rgba(27, 94, 32, 0.6);
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .book-card-toggle-button.is-added:hover {
+  background: linear-gradient(180deg, #d84a4a 0%, #a83232 100%);
+  border-color: rgba(122, 25, 25, 0.6);
+}
+[data-theme="dark"] .book-card-tooltip {
+  background: rgba(28, 42, 36, 0.98);
+  border: 1px solid var(--line);
+  color: var(--ink-soft);
+}
+[data-theme="dark"] .book-card-tooltip::after {
+  border-color: rgba(28, 42, 36, 0.98) transparent transparent transparent;
 }
 [data-theme="dark"] .book-my-books-button.is-in-my-books,
 [data-theme="dark"] .my-books-toggle.is-in-my-books {
