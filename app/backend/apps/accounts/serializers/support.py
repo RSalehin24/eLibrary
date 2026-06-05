@@ -13,6 +13,7 @@ from django.utils.encoding import force_bytes
 from django.utils.html import strip_tags
 from django.utils.http import urlsafe_base64_encode
 from rest_framework import serializers
+from email.utils import parseaddr, formataddr
 
 from apps.access.models import ACCOUNT_MANAGEABLE_PERMISSION_SCOPES, PermissionGrant
 from apps.accounts.models import User
@@ -178,14 +179,20 @@ def send_link_email(
     except TemplateDoesNotExist:
         text_body = strip_tags(html_body)
 
+    raw_from_email = getattr(
+        settings,
+        "ACCOUNT_INVITE_FROM_EMAIL",
+        settings.DEFAULT_FROM_EMAIL,
+    )
+    name, email = parseaddr(raw_from_email)
+    if not name:
+        name = "RSalehin24 Library"
+    from_email = formataddr((name, email))
+
     message = EmailMultiAlternatives(
         subject=subject,
         body=text_body,
-        from_email=getattr(
-            settings,
-            "ACCOUNT_INVITE_FROM_EMAIL",
-            settings.DEFAULT_FROM_EMAIL,
-        ),
+        from_email=from_email,
         to=[user.email],
     )
     message.attach_alternative(html_body, "text/html")

@@ -102,11 +102,11 @@ PASSWORD_RESET_FRONTEND_PATH = env(
     "PASSWORD_RESET_FRONTEND_PATH", "/reset-password/confirm"
 )
 PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 6 * 60 * 60)
-SUPER_ADMIN_EMAIL = env("SUPER_ADMIN_EMAIL", "rsalehin24@gmail.com")
+SUPER_ADMIN_EMAIL = env("SUPER_ADMIN_EMAIL", "library@rsalehin24.me")
 SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD", "")
 EBANGLA_EMAIL = env("EBANGLA_EMAIL", "")
 EBANGLA_PASSWORD = env("EBANGLA_PASSWORD", "")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "noreply@banglalibrary.local")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "RSalehin24 Library <library@rsalehin24.me>")
 SOURCE_SITE_HOST = env("SOURCE_SITE_HOST", "www.ebanglalibrary.com").strip().lower()
 SOURCE_SITE_FALLBACK_HOSTS = env_list("SOURCE_SITE_FALLBACK_HOSTS", "ebanglalibrary.com")
 OTP_TOTP_ISSUER = env("OTP_TOTP_ISSUER", "RSalehin24 Library")

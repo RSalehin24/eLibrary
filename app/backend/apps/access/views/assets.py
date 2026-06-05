@@ -1,3 +1,4 @@
+from email.utils import parseaddr
 import logging
 from smtplib import SMTPAuthenticationError
 
@@ -163,11 +164,14 @@ class BookSendToKindleView(APIView):
 
         attachment_bytes, _source_name, _path = read_asset_bytes(asset)
         filename = asset_download_filename(book, asset)
-        sender = getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "") or getattr(
+        raw_sender = getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "") or getattr(
             settings,
             "DEFAULT_FROM_EMAIL",
             "",
         )
+        _name, sender = parseaddr(raw_sender)
+        if not sender:
+            sender = raw_sender
         connection_attempts = build_kindle_delivery_connection_attempts()
         connection_kwargs = connection_attempts[0]
         delivery_backend = connection_kwargs["backend"]

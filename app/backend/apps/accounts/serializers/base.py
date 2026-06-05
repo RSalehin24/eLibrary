@@ -1,5 +1,6 @@
 from django.conf import settings
 from rest_framework import serializers
+import email.utils
 
 from apps.accounts.models import User
 
@@ -93,8 +94,9 @@ class ProfileSerializer(UserSerializer):
         ]
 
     def get_kindle_sender_email(self, _obj):
-        return (
+        raw_email = (
             getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "")
             or getattr(settings, "DEFAULT_FROM_EMAIL", "")
             or ""
         )
+        return email.utils.parseaddr(raw_email)[1]
