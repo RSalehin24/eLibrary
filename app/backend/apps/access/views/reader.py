@@ -38,10 +38,27 @@ class ReaderLaunchView(APIView):
 
     def post(self, request, slug):
         book = get_object_or_404(Book, slug=slug)
+
+        from apps.common.permissions import user_has_read_once_limit, user_has_scope, user_owns_book
+        if not request.user.is_superuser and not user_owns_book(request.user, book):
+            if user_has_read_once_limit(request.user, book):
+                raise PermissionDenied("You have already opened this book under the Read Once permission.")
+
         allowed = user_can_launch_reader(request.user, book)
         session = get_active_preview_session(request.user, book)
         if not allowed and session is None:
             raise PermissionDenied("You do not have reader access for this book.")
+
+        from apps.access.models import PermissionScope
+        if (
+            not request.user.is_superuser
+            and not user_owns_book(request.user, book)
+            and user_has_scope(request.user, [PermissionScope.READ_ONCE], book=book)
+            and not user_has_scope(request.user, [PermissionScope.READ_DURABLE], book=book)
+        ):
+            from apps.access.models import BookOpeningRecord
+            BookOpeningRecord.objects.get_or_create(user=request.user, book=book)
+
         if session is None:
             session = PreviewAccessSession.objects.create(user=request.user, book=book)
 

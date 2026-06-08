@@ -24,13 +24,21 @@ PROSE_FRAGMENT_PATTERN = r"(^| )({})($| )".format(
 )
 
 
-def annotate_reference_counts(queryset, relation, *, record_type, contributor_roles=None):
+def annotate_reference_counts(queryset, relation, *, record_type, contributor_roles=None, author=None, series=None, category=None):
     base_filter = {f"{relation}__deleted_at__isnull": True}
     if contributor_roles:
         if len(contributor_roles) == 1:
             base_filter["book_contributions__role"] = contributor_roles[0]
         else:
             base_filter["book_contributions__role__in"] = contributor_roles
+
+    if author:
+        base_filter[f"{relation}__book_contributors__contributor__name"] = author
+        base_filter[f"{relation}__book_contributors__role"] = ContributorRole.AUTHOR
+    if series:
+        base_filter[f"{relation}__book_series__series__name"] = series
+    if category:
+        base_filter[f"{relation}__book_categories__category__name"] = category
 
     def count_filter(target_record_type=None):
         filters = dict(base_filter)
@@ -56,7 +64,15 @@ class CategoryListView(OptionalPaginationListMixin, generics.ListAPIView):
     pagination_max_limit = 100
 
     def get_queryset(self):
-        queryset = annotate_reference_counts(Category.objects.all(), "books", record_type=requested_record_type(self.request, BookRecordType.DIGITAL))
+        author = self.request.query_params.get("author", "").strip() or self.request.query_params.get("writer", "").strip()
+        series = self.request.query_params.get("series", "").strip()
+        queryset = annotate_reference_counts(
+            Category.objects.all(),
+            "books",
+            record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
+            author=author,
+            series=series,
+        )
         query = self.request.query_params.get("q", "").strip()
         if query:
             queryset = queryset.filter(
@@ -80,7 +96,15 @@ class SeriesListView(OptionalPaginationListMixin, generics.ListAPIView):
     pagination_max_limit = 100
 
     def get_queryset(self):
-        queryset = annotate_reference_counts(Series.objects.all(), "books", record_type=requested_record_type(self.request, BookRecordType.DIGITAL))
+        author = self.request.query_params.get("author", "").strip() or self.request.query_params.get("writer", "").strip()
+        category = self.request.query_params.get("category", "").strip()
+        queryset = annotate_reference_counts(
+            Series.objects.all(),
+            "books",
+            record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
+            author=author,
+            category=category,
+        )
         query = self.request.query_params.get("q", "").strip()
         if query:
             queryset = queryset.filter(
@@ -113,11 +137,15 @@ class ContributorListView(OptionalPaginationListMixin, generics.ListAPIView):
         contributors = Contributor.objects.filter(book_contributions__role__in=roles)
         if ContributorRole.PUBLISHER not in roles:
             contributors = contributors.exclude(normalized_name__iregex=PROSE_FRAGMENT_PATTERN)
+        series = self.request.query_params.get("series", "").strip()
+        category = self.request.query_params.get("category", "").strip()
         queryset = annotate_reference_counts(
             contributors.distinct(),
             "book_contributions__book",
             record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
             contributor_roles=roles,
+            series=series,
+            category=category,
         )
         query = self.request.query_params.get("q", "").strip()
         if query:

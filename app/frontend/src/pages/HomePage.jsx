@@ -9,13 +9,14 @@ import { useSessionFlag } from "../hooks/useSessionFlag";
 import { useMyBooksAction } from "../features/library/useMyBooksAction";
 import { useToast } from "../hooks/useToast";
 import { cleanQueryParams, filtersFromSearchParams } from "../utils/query";
-import { catalogFetch } from "../api/catalog";
+import { useDynamicFilterOptions } from "../hooks/useDynamicFilterOptions";
 
 const defaultFilters = {
   q: "",
   author: "",
   series: "",
   category: "",
+  ownership: "",
   record_type: "digital",
   sort: "-created_at",
 };
@@ -53,33 +54,13 @@ export default function HomePage() {
     false,
   );
 
-  const [authors, setAuthors] = useState([]);
-  const [seriesList, setSeriesList] = useState([]);
-  const [categories, setCategories] = useState([]);
-
-  useEffect(() => {
-    async function loadOptions() {
-      try {
-        const [authorsData, seriesData, categoriesData] = await Promise.all([
-          catalogFetch("/catalog/writers/?record_type=all&sort=name"),
-          catalogFetch("/catalog/series/?record_type=all&sort=name"),
-          catalogFetch("/catalog/categories/?record_type=all&sort=name"),
-        ]);
-        setAuthors(authorsData.map(item => item.name));
-        setSeriesList(seriesData.map(item => item.name));
-        setCategories(categoriesData.map(item => item.name));
-      } catch (err) {
-        console.error("Failed to load filter options:", err);
-      }
-    }
-    loadOptions();
-  }, []);
+  const { authors, seriesList, categories } = useDynamicFilterOptions(filters, setFilters);
 
   const homeToolbarFields = useMemo(() => {
     return [
       {
         key: "author",
-        label: "Author",
+        label: "Contributor",
         type: "searchable-select",
         options: [
           { value: "", label: "Any" },
@@ -102,6 +83,15 @@ export default function HomePage() {
         options: [
           { value: "", label: "Any" },
           ...categories.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        type: "select",
+        options: [
+          { value: "", label: "All books" },
+          { value: "mine", label: "My books" }
         ]
       },
       {

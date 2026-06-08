@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 from apps.catalog.models import Book, ContributorRole, GeneratedAssetStatus, GeneratedAssetType
 from apps.catalog.services import normalize_book_contributors
-from apps.common.permissions import user_can_view_book_cover, user_has_scope
+from apps.common.permissions import user_can_view_book_cover, user_has_scope, user_can_launch_reader, user_can_view_preview_html
 from apps.access.models import PermissionScope
 from apps.common.url_utils import public_api_url
 from apps.ingestion.services.normalization import (
@@ -162,6 +162,8 @@ class BookDetailSerializer(BookListSerializer):
     toc = serializers.JSONField()
     empty_chapters = serializers.SerializerMethodField()
     raw_provenance = serializers.SerializerMethodField()
+    can_launch_reader = serializers.SerializerMethodField()
+    can_view_preview_html = serializers.SerializerMethodField()
 
     class Meta(BookListSerializer.Meta):
         fields = BookListSerializer.Meta.fields + [
@@ -177,7 +179,21 @@ class BookDetailSerializer(BookListSerializer):
             "empty_chapters_count",
             "metadata_last_reviewed_at",
             "raw_provenance",
+            "can_launch_reader",
+            "can_view_preview_html",
         ]
+
+    def get_can_launch_reader(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return user_can_launch_reader(request.user, obj)
+
+    def get_can_view_preview_html(self, obj):
+        request = self.context.get("request")
+        if not request or not request.user.is_authenticated:
+            return False
+        return user_can_view_preview_html(request.user, obj)
 
     def build_contributors_payload(self, obj):
         front_matter_html = combined_front_matter_html(obj.book_info_html, obj.main_content_html)

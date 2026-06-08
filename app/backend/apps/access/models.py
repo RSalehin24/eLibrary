@@ -17,31 +17,37 @@ def default_preview_expiry():
 
 class PermissionScope(models.TextChoices):
     SUBMIT_CREATE = "submit:create", "Submit/create"
-    PREVIEW_READ_ONCE = "preview:read_once", "Preview/read once"
-    READ_DURABLE = "read:durable", "Durable read"
-    DOWNLOAD_FILE = "download:file", "Download"
-    METADATA_EDIT = "metadata:edit", "Edit metadata"
-    PROCESSING_MANAGE = "processing:manage", "Manage processing"
-    ACCESS_MANAGE = "access:manage", "Manage access"
-    VIEW_SOURCE_RECORDS = "source_records:view", "View source records"
+    PREVIEW_HTML = "preview:html", "Preview HTML"
+    READ_DURABLE = "read:durable", "Durable Read"
+    DOWNLOAD_FILE = "download:file", "Download Ebook"
+    METADATA_EDIT = "metadata:edit", "Edit Metadata"
+    PROCESSING_MANAGE = "processing:manage", "Manage Processing"
+    ACCESS_MANAGE = "access:manage", "Manage Access"
+    VIEW_SOURCE_RECORDS = "source_records:view", "View Records' Source"
     ADMIN_FULL_CONTROL = "admin:full_control", "Admin/full control"
+    SEND_KINDLE = "send:kindle", "Send to Kindle"
+    READ_ONCE = "read:once", "Read Once"
 
 
 ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
-    PermissionScope.PREVIEW_READ_ONCE,
-    PermissionScope.READ_DURABLE,
-    PermissionScope.DOWNLOAD_FILE,
-    PermissionScope.METADATA_EDIT,
-    PermissionScope.PROCESSING_MANAGE,
     PermissionScope.ACCESS_MANAGE,
+    PermissionScope.PROCESSING_MANAGE,
     PermissionScope.VIEW_SOURCE_RECORDS,
+    PermissionScope.METADATA_EDIT,
+    PermissionScope.SEND_KINDLE,
+    PermissionScope.READ_ONCE,
+    PermissionScope.READ_DURABLE,
+    PermissionScope.PREVIEW_HTML,
+    PermissionScope.DOWNLOAD_FILE,
 )
 
 SCOPED_PERMISSION_SCOPES = (
-    PermissionScope.PREVIEW_READ_ONCE,
-    PermissionScope.READ_DURABLE,
-    PermissionScope.DOWNLOAD_FILE,
     PermissionScope.METADATA_EDIT,
+    PermissionScope.SEND_KINDLE,
+    PermissionScope.READ_ONCE,
+    PermissionScope.READ_DURABLE,
+    PermissionScope.PREVIEW_HTML,
+    PermissionScope.DOWNLOAD_FILE,
 )
 
 
@@ -200,4 +206,12 @@ class Highlight(UUIDPrimaryKeyModel, TimeStampedModel):
             models.Index(fields=["user", "book"]),
             models.Index(fields=["user", "kind"]),
         ]
+
+
+class BookOpeningRecord(UUIDPrimaryKeyModel, TimeStampedModel):
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="opening_records")
+    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="opening_records")
+
+    class Meta:
+        unique_together = ("user", "book")
 

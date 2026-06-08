@@ -51,7 +51,7 @@ def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(tmp_pat
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -112,7 +112,7 @@ def test_send_to_kindle_uses_configured_smtp_credentials_for_brevo_backend(
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -157,7 +157,7 @@ def test_send_to_kindle_returns_502_when_smtp_config_is_missing(tmp_path, client
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -225,7 +225,7 @@ def test_send_to_kindle_returns_specific_502_when_smtp_authentication_fails(
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")

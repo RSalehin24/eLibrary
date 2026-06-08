@@ -64,9 +64,14 @@ export function useAccessUsers({
 
   function toggleUserScope(scopeValue) {
     setUserForm((current) => {
-      const nextScopes = current.global_scopes.includes(scopeValue)
+      let nextScopes = current.global_scopes.includes(scopeValue)
         ? current.global_scopes.filter((value) => value !== scopeValue)
         : [...current.global_scopes, scopeValue];
+      if (scopeValue === "read:once" && nextScopes.includes("read:once")) {
+        nextScopes = nextScopes.filter((value) => value !== "read:durable");
+      } else if (scopeValue === "read:durable" && nextScopes.includes("read:durable")) {
+        nextScopes = nextScopes.filter((value) => value !== "read:once");
+      }
       return {
         ...current,
         global_scopes: sortValues(nextScopes),

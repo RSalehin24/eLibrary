@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import BookTable from "../components/BookTable";
 import CatalogToolbar from "../components/CatalogToolbar";
 import { waitForExportUi, waitForMinimumLoader } from "../features/catalog/exportUiTiming";
@@ -11,8 +11,8 @@ import {
   defaultManualBookFilters,
   emptyManualBookForm,
   manualBookSortOptions,
-  manualBookToolbarFields,
 } from "../features/manual-books/manualBookFilters";
+import { useDynamicFilterOptions } from "../hooks/useDynamicFilterOptions";
 import { loadManualBookOptions } from "../features/manual-books/manualBookOptions";
 import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -35,6 +35,59 @@ export default function ManualBooksPage() {
   const [form, setForm] = useState(emptyManualBookForm);
   const [filters, setFilters] = useState(defaultManualBookFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultManualBookFilters);
+
+  const { authors, seriesList, categories } = useDynamicFilterOptions(filters, setFilters);
+
+  const toolbarFields = useMemo(() => {
+    return [
+      {
+        key: "author",
+        label: "Contributor",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...authors.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "series",
+        label: "Series",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...seriesList.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "category",
+        label: "Category",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...categories.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        type: "select",
+        options: [
+          { value: "", label: "All books" },
+          { value: "mine", label: "My books" }
+        ]
+      },
+      {
+        key: "record_type",
+        label: "Type",
+        type: "select",
+        options: [
+          { value: "digital", label: "Digital" },
+          { value: "manual", label: "Manual" },
+          { value: "all", label: "All types" }
+        ]
+      }
+    ];
+  }, [authors, seriesList, categories]);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [contributorOptions, setContributorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
@@ -237,7 +290,7 @@ export default function ManualBooksPage() {
         <CatalogToolbar
           filters={filters}
           setFilters={setFilters}
-          fields={manualBookToolbarFields}
+          fields={toolbarFields}
           defaultFilters={defaultManualBookFilters}
           filtersExpanded={filtersExpanded}
           setFiltersExpanded={setFiltersExpanded}

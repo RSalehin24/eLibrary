@@ -45,20 +45,54 @@ def user_owns_book(user, book):
     return book.user_books.filter(user=user).exists()
 
 
+def user_has_read_once_limit(user, book):
+    if not getattr(user, "is_authenticated", False) or book is None:
+        return False
+    if getattr(user, "is_superuser", False) or user_owns_book(user, book):
+        return False
+
+    has_read_once = user_has_scope(user, [PermissionScope.READ_ONCE], book=book)
+    if not has_read_once:
+        return False
+
+    if user_has_scope(user, [PermissionScope.READ_DURABLE], book=book):
+        return False
+
+    from apps.access.models import BookOpeningRecord
+    return BookOpeningRecord.objects.filter(user=user, book=book).exists()
+
+
 def user_can_download_book_assets(user, book):
     return user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=book) or user_owns_book(user, book)
 
 
+def user_can_view_preview_html(user, book):
+    if user_owns_book(user, book):
+        return True
+    if user_has_read_once_limit(user, book):
+        return False
+    return user_has_scope(user, [PermissionScope.PREVIEW_HTML], book=book)
+
+
+def user_can_send_to_kindle(user, book):
+    return user_has_scope(user, [PermissionScope.SEND_KINDLE], book=book) or user_owns_book(user, book)
+
+
 def user_can_launch_reader(user, book):
+    if user_owns_book(user, book):
+        return True
+    if user_has_read_once_limit(user, book):
+        return False
     return user_has_scope(
         user,
         [
-            PermissionScope.PREVIEW_READ_ONCE,
+            PermissionScope.PREVIEW_HTML,
             PermissionScope.READ_DURABLE,
             PermissionScope.DOWNLOAD_FILE,
+            PermissionScope.READ_ONCE,
         ],
         book=book,
-    ) or user_owns_book(user, book)
+    )
 
 
 def user_can_view_book_cover(user, book):

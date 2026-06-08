@@ -163,6 +163,7 @@ export default function BookDetailHero({
             onClick={actions.launchReader}
             loading={launchingReader}
             loadingLabel="Opening..."
+            disabled={book && book.can_launch_reader === false}
           >
             Open reader
           </AsyncButton>
@@ -196,7 +197,7 @@ export default function BookDetailHero({
             const isDownloading = Boolean(assetLoadingCounts[asset.id]);
             const isHtmlPreviewLocked =
               asset.asset_type === "html" &&
-              Boolean(htmlPreviewLockedByAssetId[asset.id]);
+              (Boolean(htmlPreviewLockedByAssetId[asset.id]) || (book && book.can_view_preview_html === false));
             return (
               <AsyncButton
                 key={asset.id}

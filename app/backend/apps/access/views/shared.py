@@ -238,9 +238,10 @@ def ensure_book_reader_access(request, book):
     allowed = user_has_scope(
         request.user,
         [
-            PermissionScope.PREVIEW_READ_ONCE,
+            PermissionScope.PREVIEW_HTML,
             PermissionScope.READ_DURABLE,
             PermissionScope.DOWNLOAD_FILE,
+            PermissionScope.READ_ONCE,
         ],
         book=book,
     )

@@ -47,7 +47,7 @@ def test_reader_token_state_and_bookmark_endpoints_work(tmp_path, client):
         file_size=epub_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_READ_ONCE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
     client.force_login(user)
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
     assert launch.status_code == 200

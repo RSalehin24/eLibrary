@@ -57,9 +57,14 @@ export function useAccessGrants({
 
   function toggleGrantScope(scopeValue) {
     setGrantForm((current) => {
-      const nextScopes = current.scopes.includes(scopeValue)
+      let nextScopes = current.scopes.includes(scopeValue)
         ? current.scopes.filter((value) => value !== scopeValue)
         : [...current.scopes, scopeValue];
+      if (scopeValue === "read:once" && nextScopes.includes("read:once")) {
+        nextScopes = nextScopes.filter((value) => value !== "read:durable");
+      } else if (scopeValue === "read:durable" && nextScopes.includes("read:durable")) {
+        nextScopes = nextScopes.filter((value) => value !== "read:once");
+      }
       return {
         ...current,
         scopes: sortValues(nextScopes),

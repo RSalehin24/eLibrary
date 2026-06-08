@@ -234,7 +234,7 @@ def test_missing_stored_asset_returns_404_and_marks_asset_failed(client):
     broken_path = Path(asset.file.path)
     broken_path.unlink()
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_READ_ONCE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
     client.force_login(user)
 
     response = client.get(f"/api/access/books/{book.slug}/download/cover/")

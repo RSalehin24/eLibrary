@@ -31,6 +31,8 @@ class ManagedUserCreateSerializer(serializers.ModelSerializer):
     def validate_global_scopes(self, value):
         if not value:
             raise serializers.ValidationError("Select at least one account permission.")
+        if "read:once" in value and "read:durable" in value:
+            raise serializers.ValidationError("Read Once and Durable Read permissions are mutually exclusive.")
         return value
 
     def validate(self, attrs):
@@ -67,6 +69,8 @@ class ManagedUserUpdateSerializer(serializers.ModelSerializer):
     def validate_global_scopes(self, value):
         if value == []:
             raise serializers.ValidationError("Select at least one account permission.")
+        if "read:once" in value and "read:durable" in value:
+            raise serializers.ValidationError("Read Once and Durable Read permissions are mutually exclusive.")
         return value
 
     def update(self, instance, validated_data):

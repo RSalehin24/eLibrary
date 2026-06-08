@@ -14,8 +14,8 @@ import {
   LIBRARY_EXPORT_STORAGE_KEY,
   defaultLibraryFilters,
   librarySortOptions,
-  libraryToolbarFields,
 } from "../features/library/libraryFilters";
+import { useDynamicFilterOptions } from "../hooks/useDynamicFilterOptions";
 import { useMyBooksAction } from "../features/library/useMyBooksAction";
 import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -45,6 +45,59 @@ export default function LibraryPage() {
     [searchParams],
   );
   const [filters, setFilters] = useState(appliedFilters);
+
+  const { authors, seriesList, categories } = useDynamicFilterOptions(filters, setFilters);
+
+  const toolbarFields = useMemo(() => {
+    return [
+      {
+        key: "author",
+        label: "Contributor",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...authors.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "series",
+        label: "Series",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...seriesList.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "category",
+        label: "Category",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...categories.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "ownership",
+        label: "Ownership",
+        type: "select",
+        options: [
+          { value: "", label: "All books" },
+          { value: "mine", label: "My books" }
+        ]
+      },
+      {
+        key: "record_type",
+        label: "Type",
+        type: "select",
+        options: [
+          { value: "digital", label: "Digital" },
+          { value: "manual", label: "Manual" },
+          { value: "all", label: "All types" }
+        ]
+      }
+    ];
+  }, [authors, seriesList, categories]);
   const [filtersExpanded, setFiltersExpanded] = useSessionFlag(
     "filters-expanded:library",
     false,
@@ -243,7 +296,7 @@ export default function LibraryPage() {
         <CatalogToolbar
           filters={filters}
           setFilters={setFilters}
-          fields={libraryToolbarFields}
+          fields={toolbarFields}
           defaultFilters={defaultLibraryFilters}
           filtersExpanded={filtersExpanded}
           setFiltersExpanded={setFiltersExpanded}

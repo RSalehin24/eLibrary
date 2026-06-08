@@ -53,6 +53,20 @@ class PermissionGrantSerializer(serializers.ModelSerializer):
         if selected_targets and scope not in {permission.value for permission in SCOPED_PERMISSION_SCOPES}:
             raise serializers.ValidationError("This permission can only be granted at the account level.")
 
+        user = attrs.get("user", getattr(self.instance, "user", None))
+        if user and scope in {"read:once", "read:durable"}:
+            opposing_scope = "read:durable" if scope == "read:once" else "read:once"
+            opposing_exists = PermissionGrant.objects.active_for_user(user).filter(
+                scope=opposing_scope,
+                book=book,
+                category=category,
+                contributor=contributor
+            ).exists()
+            if opposing_exists:
+                raise serializers.ValidationError(
+                    "Read Once and Durable Read permissions are mutually exclusive for the same target."
+                )
+
         if contributor and not contributor.book_contributions.filter(role=ContributorRole.AUTHOR).exists():
             raise serializers.ValidationError({"contributor": "Only writers can be used for writer-specific access."})
 

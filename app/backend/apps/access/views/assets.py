@@ -15,7 +15,7 @@ from rest_framework.views import APIView
 
 from apps.accounts.kindle import validate_kindle_email_address
 from apps.catalog.models import Book, GeneratedAssetType
-from apps.common.permissions import user_can_download_book_assets, user_can_view_book_cover
+from apps.common.permissions import user_can_download_book_assets, user_can_view_book_cover, user_can_view_preview_html, user_can_send_to_kindle
 
 from .preview_html import html_asset_response
 from .shared import (
@@ -119,11 +119,27 @@ class BookAssetDownloadView(APIView):
 
     def get(self, request, slug, asset_type):
         book = get_object_or_404(Book, slug=slug)
-        can_access = (
-            user_can_view_book_cover(request.user, book)
-            if asset_type == GeneratedAssetType.COVER
-            else user_can_download_book_assets(request.user, book)
-        )
+        if asset_type == GeneratedAssetType.COVER:
+            can_access = user_can_view_book_cover(request.user, book)
+        elif asset_type == GeneratedAssetType.HTML:
+            from apps.common.permissions import user_has_read_once_limit, user_has_scope, user_owns_book
+            if not request.user.is_superuser and not user_owns_book(request.user, book):
+                if user_has_read_once_limit(request.user, book):
+                    raise PermissionDenied("You have already opened this book under the Read Once permission.")
+            can_access = user_can_view_preview_html(request.user, book)
+            if can_access:
+                from apps.access.models import PermissionScope
+                if (
+                    not request.user.is_superuser
+                    and not user_owns_book(request.user, book)
+                    and user_has_scope(request.user, [PermissionScope.READ_ONCE], book=book)
+                    and not user_has_scope(request.user, [PermissionScope.READ_DURABLE], book=book)
+                ):
+                    from apps.access.models import BookOpeningRecord
+                    BookOpeningRecord.objects.get_or_create(user=request.user, book=book)
+        else:
+            can_access = user_can_download_book_assets(request.user, book)
+
         if not can_access:
             raise PermissionDenied("You do not have download access for this book.")
 
@@ -144,8 +160,8 @@ class BookSendToKindleView(APIView):
 
     def post(self, request, slug):
         book = get_object_or_404(Book, slug=slug)
-        if not user_can_download_book_assets(request.user, book):
-            raise PermissionDenied("You do not have download access for this book.")
+        if not user_can_send_to_kindle(request.user, book):
+            raise PermissionDenied("You do not have permission to send this book to Kindle.")
 
         kindle_emails = valid_kindle_delivery_addresses(
             request.user.kindle_emails or [],

@@ -115,7 +115,7 @@ class User(AbstractUser, TimeStampedModel):
         if self.is_superuser:
             return [
                 "submit:create",
-                "preview:read_once",
+                "preview:html",
                 "read:durable",
                 "download:file",
                 "metadata:edit",
@@ -123,6 +123,8 @@ class User(AbstractUser, TimeStampedModel):
                 "access:manage",
                 "source_records:view",
                 "admin:full_control",
+                "send:kindle",
+                "read:once",
             ]
 
         scopes = {"submit:create"}

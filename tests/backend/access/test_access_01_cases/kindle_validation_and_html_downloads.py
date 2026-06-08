@@ -19,7 +19,7 @@ def test_send_to_kindle_ignores_invalid_legacy_domains(tmp_path, client):
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -50,7 +50,7 @@ def test_send_to_kindle_requires_configured_emails(tmp_path, client):
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -88,7 +88,7 @@ def test_html_download_inlines_stale_relative_cover_references(tmp_path, client)
         file_size=cover_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
     client.force_login(user)
 
     response = client.get(f"/api/access/books/{book.slug}/download/html/")

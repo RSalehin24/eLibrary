@@ -16,26 +16,37 @@ export const emptyManualBookForm = {
 
 export const defaultManualBookFilters = {
   q: "",
-  book_code: "",
-  writer_code: "",
-  category_code: "",
   author: "",
   series: "",
   category: "",
-  created_after: "",
-  created_before: "",
+  ownership: "",
+  record_type: "manual",
   sort: "-created_at"
 };
 
 export const manualBookFilterFields = [
-  { key: "book_code", label: "Book code" },
-  { key: "writer_code", label: "Writer code" },
-  { key: "category_code", label: "Category code" },
-  { key: "author", label: "Writer" },
+  { key: "author", label: "Contributor" },
   { key: "series", label: "Series" },
   { key: "category", label: "Category" },
-  { key: "created_after", label: "Created after", type: "date" },
-  { key: "created_before", label: "Created before", type: "date" },
+  {
+    key: "ownership",
+    label: "Ownership",
+    type: "select",
+    options: [
+      { value: "", label: "All books" },
+      { value: "mine", label: "My books" }
+    ]
+  },
+  {
+    key: "record_type",
+    label: "Type",
+    type: "select",
+    options: [
+      { value: "digital", label: "Digital" },
+      { value: "manual", label: "Manual" },
+      { value: "all", label: "All types" }
+    ]
+  },
   {
     key: "sort",
     label: "Sort",
