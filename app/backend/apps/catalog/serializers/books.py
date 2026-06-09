@@ -36,6 +36,8 @@ class BookListSerializer(serializers.ModelSerializer):
     publisher = serializers.CharField(source="manual_publisher", read_only=True)
     price = serializers.DecimalField(source="manual_price", read_only=True, max_digits=10, decimal_places=2, allow_null=True)
     is_compilation = serializers.BooleanField(source="manual_is_compilation", read_only=True)
+    has_epub_asset = serializers.SerializerMethodField()
+    last_kindle_sent_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
         model = Book
@@ -64,6 +66,8 @@ class BookListSerializer(serializers.ModelSerializer):
             "my_books_added_at",
             "primary_source",
             "created_at",
+            "has_epub_asset",
+            "last_kindle_sent_at",
         ]
 
     def relation_contributors(self, obj):
@@ -149,6 +153,12 @@ class BookListSerializer(serializers.ModelSerializer):
 
     def get_binding(self, obj):
         return obj.get_manual_binding_display() if obj.manual_binding else ""
+
+    def get_has_epub_asset(self, obj):
+        return obj.generated_assets.filter(
+            asset_type=GeneratedAssetType.EPUB,
+            status=GeneratedAssetStatus.READY,
+        ).exists()
 
 
 class BookDetailSerializer(BookListSerializer):

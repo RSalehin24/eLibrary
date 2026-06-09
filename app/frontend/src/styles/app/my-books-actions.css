@@ -62,6 +62,12 @@
   top: 14px;
   right: 14px;
   z-index: 3;
+  display: flex;
+  gap: 10px;
+}
+
+.book-card-action-slot {
+  position: relative;
   display: inline-block;
 }
 
@@ -114,40 +120,84 @@
   transform: none;
 }
 
-/* Premium Tooltip */
-.book-card-tooltip {
-  position: absolute;
-  bottom: 100%;
-  right: 0;
-  margin-bottom: 8px;
-  padding: 6px 10px;
-  background: rgba(11, 61, 46, 0.95);
+/* Kindle send button */
+.book-card-kindle-button {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(17, 70, 54, 0.16);
+  border-radius: 12px;
+  color: rgba(11, 61, 46, 0.72);
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8px 18px rgba(12, 47, 36, 0.12);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.book-card-kindle-button svg {
+  display: block;
+  width: 21px;
+  height: 21px;
+}
+
+.book-card-kindle-button:hover {
+  transform: translateY(-1px);
+  color: var(--accent-strong);
+  border-color: rgba(17, 70, 54, 0.28);
+}
+
+.book-card-kindle-button.is-sent {
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 500;
+  background: linear-gradient(180deg, #d84a4a 0%, #a83232 100%);
+  border: 1px solid rgba(122, 25, 25, 0.5);
+  box-shadow: 0 8px 18px rgba(138, 52, 52, 0.24);
+}
+
+.book-card-kindle-button.is-sent:hover {
+  background: linear-gradient(180deg, #e05555 0%, #b83838 100%);
+  border-color: rgba(138, 52, 52, 0.6);
+}
+
+.book-card-kindle-button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+  transform: none;
+}
+
+/* Resend to Kindle button (detail page) */
+.resend-kindle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 0 14px;
+  font-size: 0.94rem;
+  font-weight: 600;
   white-space: nowrap;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  transform: translateY(4px);
-  z-index: 10;
+  border: 1px solid rgba(122, 25, 25, 0.5);
+  border-radius: 12px;
+  color: #ffffff;
+  background: linear-gradient(180deg, #d84a4a 0%, #a83232 100%);
+  box-shadow: 0 10px 18px rgba(138, 52, 52, 0.24);
+  cursor: pointer;
 }
 
-.book-card-tooltip::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  right: 14px;
-  border-width: 5px;
-  border-style: solid;
-  border-color: rgba(11, 61, 46, 0.95) transparent transparent transparent;
+.resend-kindle-button:hover {
+  transform: translateY(-1px);
+  border-color: rgba(138, 52, 52, 0.6);
+  box-shadow: 0 10px 16px rgba(138, 52, 52, 0.3);
 }
 
-.book-card-action-wrapper:hover .book-card-tooltip {
-  opacity: 1;
-  transform: translateY(0);
+.resend-kindle-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+  transform: none;
+}
+
+.resend-kindle-button:disabled:has(.loading-spinner) {
+  cursor: wait;
 }
 
 @media (max-width: 1024px) {
@@ -172,12 +222,19 @@
     height: 18px;
   }
 
-  .book-card-tooltip {
-    margin-bottom: 6px;
+  .book-card-kindle-button {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
   }
 
-  .book-card-tooltip::after {
-    right: 12px;
+  .book-card-kindle-button svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .book-card-tooltip {
+    margin-bottom: 6px;
   }
 }
 
@@ -201,6 +258,18 @@
     width: 19px;
     height: 19px;
   }
+
+  .book-card-kindle-button {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
+  .book-card-kindle-button svg {
+    width: 19px;
+    height: 19px;
+  }
+
   .book-card-tooltip {
     display: none;
   }

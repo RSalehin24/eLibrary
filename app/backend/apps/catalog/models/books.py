@@ -77,6 +77,7 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
     empty_chapters_count = models.IntegerField(default=0)
     cover_source_url = models.URLField(max_length=1000, blank=True)
     metadata_last_reviewed_at = models.DateTimeField(blank=True, null=True)
+    last_kindle_sent_at = models.DateTimeField(blank=True, null=True)
     contributors = models.ManyToManyField(Contributor, through="BookContributor", related_name="books")
     series_entries = models.ManyToManyField(Series, through="BookSeries", related_name="books")
     categories = models.ManyToManyField(Category, through="BookCategory", related_name="books")

@@ -15,6 +15,9 @@ export default function BookCardGrid({
   removingBookIds = {},
   onMyBooksToggle = null,
   myBooksBusyIds = {},
+  onSendToKindle = null,
+  sendingBookKindleIds = {},
+  hasKindleEmail = false,
 }) {
   const showInitialSkeleton = (initialLoading || refreshing) && !books?.length;
   const showIncrementalSkeleton = loadingMore && books?.length > 0;
@@ -37,6 +40,9 @@ export default function BookCardGrid({
               book={book}
               onRemoveFromMyBooks={onRemoveFromMyBooks}
               onMyBooksToggle={onMyBooksToggle}
+              onSendToKindle={onSendToKindle}
+              sendingToKindle={Boolean(sendingBookKindleIds[book.id])}
+              hasKindleEmail={hasKindleEmail}
               removing={Boolean(
                 removingBookIds[book.id] ||
                   removingBookIds[book.slug] ||

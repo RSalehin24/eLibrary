@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import BookRouteLink from "./BookRouteLink";
 import BookCoverArt from "./BookCoverArt";
 import LoadingSpinner from "./LoadingSpinner";
+import { SendToKindleIcon, SentToKindleIcon } from "./KindleIcons";
 import {
   formatBookDate,
   getWriterColumnGroups
@@ -73,12 +74,16 @@ export default function BookCard({
   onRemoveFromMyBooks = null,
   removing = false,
   onMyBooksToggle = null,
+  onSendToKindle = null,
+  sendingToKindle = false,
+  hasKindleEmail = false,
 }) {
   const contributorGroups = getWriterColumnGroups(book);
   const series = book.series || [];
   const categories = book.categories || [];
   const bookIdLabel = book.catalog_code || "Pending";
   const addedAt = book.my_books_added_at || book.latest_submission_at;
+  const hasSentToKindle = Boolean(book.last_kindle_sent_at);
 
   return (
     <article className="book-card" ref={cardRef}>
@@ -96,35 +101,62 @@ export default function BookCard({
         </button>
       ) : null}
       <div className="book-card-art">
-        {onMyBooksToggle ? (
+        {(onMyBooksToggle || (hasKindleEmail && book.has_epub_asset)) ? (
           <div className="book-card-action-wrapper">
-            <button
-              type="button"
-              className={`book-card-toggle-button ${book.is_in_my_books ? "is-added" : ""}`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                onMyBooksToggle(book);
-              }}
-              disabled={removing}
-              aria-busy={removing ? "true" : undefined}
-              aria-label={
-                book.is_in_my_books
-                  ? `Remove ${book.title} from My Books`
-                  : `Add ${book.title} to My Books`
-              }
-            >
-              {removing ? (
-                <LoadingSpinner size={16} />
-              ) : book.is_in_my_books ? (
-                <CheckIcon />
-              ) : (
-                <PlusIcon />
-              )}
-            </button>
-            <span className="book-card-tooltip" role="tooltip">
-              {book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
-            </span>
+            {hasKindleEmail && book.has_epub_asset ? (
+              <div className="book-card-action-slot">
+                <button
+                  type="button"
+                  className={`book-card-kindle-button${hasSentToKindle ? " is-sent" : ""}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onSendToKindle?.(book);
+                  }}
+                  disabled={sendingToKindle}
+                  aria-busy={sendingToKindle ? "true" : undefined}
+                  aria-label={hasSentToKindle ? `Resend ${book.title} to Kindle` : `Send ${book.title} to Kindle`}
+                  title={hasSentToKindle ? "Resend to Kindle" : "Send to Kindle"}
+                >
+                  {sendingToKindle ? (
+                    <LoadingSpinner size={16} />
+                  ) : hasSentToKindle ? (
+                    <SentToKindleIcon />
+                  ) : (
+                    <SendToKindleIcon />
+                  )}
+                </button>
+              </div>
+            ) : null}
+            {onMyBooksToggle ? (
+              <div className="book-card-action-slot">
+                <button
+                  type="button"
+                  className={`book-card-toggle-button ${book.is_in_my_books ? "is-added" : ""}`}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onMyBooksToggle(book);
+                  }}
+                  disabled={removing}
+                  aria-busy={removing ? "true" : undefined}
+                  aria-label={
+                    book.is_in_my_books
+                      ? `Remove ${book.title} from My Books`
+                      : `Add ${book.title} to My Books`
+                  }
+                  title={book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
+                >
+                  {removing ? (
+                    <LoadingSpinner size={16} />
+                  ) : book.is_in_my_books ? (
+                    <CheckIcon />
+                  ) : (
+                    <PlusIcon />
+                  )}
+                </button>
+              </div>
+            ) : null}
           </div>
         ) : null}
         <BookCoverArt book={book} className="book-card-cover" ariaHidden />

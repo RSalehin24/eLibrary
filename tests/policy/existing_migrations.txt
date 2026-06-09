@@ -18,6 +18,15 @@ app/backend/apps/catalog/migrations/0008_book_manual_metadata_fields.py
 app/backend/apps/catalog/migrations/0009_bookcontributor_compiler_role.py
 app/backend/apps/catalog/migrations/0010_book_content_items.py
 app/backend/apps/catalog/migrations/0011_remove_book_source_normalized_title_constraint.py
+app/backend/apps/catalog/migrations/0012_userbook.py
+app/backend/apps/catalog/migrations/0013_curated_book_documents.py
+app/backend/apps/catalog/migrations/0014_series_catalog_code.py
+app/backend/apps/catalog/migrations/0015_book_group_and_edition.py
+app/backend/apps/catalog/migrations/0016_alter_generatedasset_file.py
+app/backend/apps/catalog/migrations/0017_book_empty_chapters_count.py
+app/backend/apps/catalog/migrations/0018_add_performance_indexes.py
+app/backend/apps/catalog/migrations/0019_alter_booksource_unique_together.py
+app/backend/apps/catalog/migrations/0020_book_last_kindle_sent_at.py
 app/backend/apps/common/migrations/0001_initial.py
 app/backend/apps/common/migrations/0002_savedfilter.py
 app/backend/apps/ingestion/migrations/0001_initial.py

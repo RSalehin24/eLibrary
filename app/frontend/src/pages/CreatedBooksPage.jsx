@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { removeBookFromMyBooks } from "../api/catalog";
+import { removeBookFromMyBooks, sendBookToKindle } from "../api/catalog";
 import BookCardGrid from "../components/BookCardGrid";
 import CatalogToolbar from "../components/CatalogToolbar";
 import EmptyState from "../components/EmptyState";
 import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { useAsyncAction } from "../hooks/useAsyncAction";
 import { usePageTitle } from "../hooks/usePageTitle";
+import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
 import { cleanQueryParams, filtersFromSearchParams } from "../utils/query";
 import { catalogFetch } from "../api/catalog";
@@ -46,6 +47,8 @@ const createdBookSortOptions =
 export default function CreatedBooksPage() {
   usePageTitle("My Books");
   const toast = useToast();
+  const { user } = useSession();
+  const [sendingBookKindleIds, setSendingBookKindleIds] = useState({});
   const [searchParams, setSearchParams] = useSearchParams();
   const appliedFilters = useMemo(
     () => filtersFromSearchParams(defaultFilters, searchParams),
@@ -127,6 +130,7 @@ export default function CreatedBooksPage() {
     refreshing,
     error,
     removeEntry,
+    updateEntry,
     observeLoadTrigger,
   } = useInfiniteCatalogBooks({
     filters: appliedFilters,
@@ -162,6 +166,24 @@ export default function CreatedBooksPage() {
       })
       .catch((nextError) => toast.error(nextError.message));
   }
+
+  const handleSendToKindle = useCallback(async (book) => {
+    if (!book?.slug) return;
+    setSendingBookKindleIds((prev) => ({ ...prev, [book.id]: true }));
+    try {
+      const payload = await sendBookToKindle(book.slug);
+      toast.success(payload?.detail || "Sent to Kindle.");
+      updateEntry(book.id, { last_kindle_sent_at: new Date().toISOString() });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSendingBookKindleIds((prev) => {
+        const next = { ...prev };
+        delete next[book.id];
+        return next;
+      });
+    }
+  }, [toast, updateEntry]);
 
   const resultCount = error && !books.length ? "" : `${totalCount}`;
   const showErrorState = Boolean(error && !books.length && !initialLoading);
@@ -215,7 +237,11 @@ export default function CreatedBooksPage() {
           loadingMore={loadingMore}
           refreshing={refreshing}
           onRemoveFromMyBooks={removeFromMyBooks}
+          onMyBooksToggle={removeFromMyBooks}
           removingBookIds={{ [removeAction.pendingKey]: true }}
+          onSendToKindle={handleSendToKindle}
+          sendingBookKindleIds={sendingBookKindleIds}
+          hasKindleEmail={Boolean(user?.kindle_emails?.length)}
         />
       ) : (
         <EmptyState

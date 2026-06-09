@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import BookCardGrid from "../components/BookCardGrid";
 import CatalogToolbar from "../components/CatalogToolbar";
@@ -10,6 +10,8 @@ import { useMyBooksAction } from "../features/library/useMyBooksAction";
 import { useToast } from "../hooks/useToast";
 import { cleanQueryParams, filtersFromSearchParams } from "../utils/query";
 import { useDynamicFilterOptions } from "../hooks/useDynamicFilterOptions";
+import { sendBookToKindle } from "../api/catalog";
+import { useSession } from "../hooks/useSession";
 
 const defaultFilters = {
   q: "",
@@ -108,6 +110,8 @@ export default function HomePage() {
   }, [authors, seriesList, categories]);
 
   const toast = useToast();
+  const { user } = useSession();
+  const [sendingBookKindleIds, setSendingBookKindleIds] = useState({});
   const {
     books,
     totalCount,
@@ -122,6 +126,24 @@ export default function HomePage() {
     filters: appliedFilters,
   });
   const myBooksAction = useMyBooksAction({ toast, updateEntry });
+
+  const handleSendToKindle = useCallback(async (book) => {
+    if (!book?.slug) return;
+    setSendingBookKindleIds((prev) => ({ ...prev, [book.id]: true }));
+    try {
+      const payload = await sendBookToKindle(book.slug);
+      toast.success(payload?.detail || "Sent to Kindle.");
+      updateEntry(book.id, { last_kindle_sent_at: new Date().toISOString() });
+    } catch (err) {
+      toast.error(err.message);
+    } finally {
+      setSendingBookKindleIds((prev) => {
+        const next = { ...prev };
+        delete next[book.id];
+        return next;
+      });
+    }
+  }, [toast, updateEntry]);
 
   useEffect(() => {
     setFilters(appliedFilters);
@@ -196,6 +218,9 @@ export default function HomePage() {
           refreshing={refreshing}
           onMyBooksToggle={myBooksAction.toggleMyBooks}
           myBooksBusyIds={myBooksAction.busyIds}
+          onSendToKindle={handleSendToKindle}
+          sendingBookKindleIds={sendingBookKindleIds}
+          hasKindleEmail={Boolean(user?.kindle_emails?.length)}
         />
       ) : (
         <EmptyState

@@ -7,6 +7,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import EmailMessage, get_connection
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -271,6 +272,9 @@ class BookSendToKindleView(APIView):
                 },
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+        book.last_kindle_sent_at = timezone.now()
+        book.save(update_fields=["last_kindle_sent_at"])
 
         detail = (
             f"Sent to {len(delivered)} Kindle email(s)."

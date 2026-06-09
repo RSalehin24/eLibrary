@@ -17,6 +17,7 @@ export default function BookDetailHero({
   detail,
   epubInputRef,
   hasKindleEmail,
+  hasSentToKindle,
   htmlPreviewLockedByAssetId,
   launchingReader,
   pickingEpub,
@@ -184,13 +185,13 @@ export default function BookDetailHero({
             <AsyncButton
               type="button"
               data-testid="book-send-to-kindle-button"
-              className="ghost-button"
+              className={hasSentToKindle ? "resend-kindle-button" : "ghost-button"}
               onClick={actions.sendToKindle}
               disabled={sendingToKindle || detail.hasActiveProcessing}
               loading={sendingToKindle}
               loadingLabel="Sending..."
             >
-              Send to Kindle
+              {hasSentToKindle ? "Resend to Kindle" : "Send to Kindle"}
             </AsyncButton>
           ) : null}
           {detail.downloadableAssets.map((asset) => {
