@@ -98,7 +98,7 @@ export default function BookDetailPage() {
         detail={detail}
         epubInputRef={actions.epubInputRef}
         hasKindleEmail={Boolean(user?.kindle_emails?.length)}
-        hasSentToKindle={Boolean(book?.last_kindle_sent_at)}
+        hasSentToKindle={Boolean(book?.has_sent_to_kindle)}
         htmlPreviewLockedByAssetId={htmlPreviewLockedByAssetId}
         launchingReader={actions.launchingReader}
         pickingEpub={actions.pickingEpub}

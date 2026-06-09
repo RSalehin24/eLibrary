@@ -110,6 +110,14 @@ export function AppTopbar({
                 My Books
               </NavLink>
               <NavLink
+                to="/kindle-sent"
+                className={({ isActive }) =>
+                  isActive ? "nav-link is-active" : "nav-link"
+                }
+              >
+                Kindle
+              </NavLink>
+              <NavLink
                 to="/notes"
                 className={({ isActive }) =>
                   isActive ? "nav-link is-active" : "nav-link"

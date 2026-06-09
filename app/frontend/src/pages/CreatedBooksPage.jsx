@@ -173,7 +173,10 @@ export default function CreatedBooksPage() {
     try {
       const payload = await sendBookToKindle(book.slug);
       toast.success(payload?.detail || "Sent to Kindle.");
-      updateEntry(book.id, { last_kindle_sent_at: new Date().toISOString() });
+      updateEntry(book.id, {
+        has_sent_to_kindle: true,
+        user_kindle_sent_at: new Date().toISOString(),
+      });
     } catch (err) {
       toast.error(err.message);
     } finally {

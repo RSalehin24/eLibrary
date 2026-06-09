@@ -4,6 +4,7 @@ import BookDetailPage from "../../pages/BookDetailPage";
 import CategoryPage from "../../pages/CategoryPage";
 import CreatedBooksPage from "../../pages/CreatedBooksPage";
 import HomePage from "../../pages/HomePage";
+import KindleSentPage from "../../pages/KindleSentPage";
 import LibraryPage from "../../pages/LibraryPage";
 import LoginPage from "../../pages/LoginPage";
 import ManualBooksPage from "../../pages/ManualBooksPage";
@@ -43,6 +44,7 @@ const protectedRoutes = [
   { path: "/compilers", element: <Navigate to="/editors" replace /> },
   { path: "/manual-books", element: <ManualBooksPage /> },
   { path: "/my-books", element: <CreatedBooksPage /> },
+  { path: "/kindle-sent", element: <KindleSentPage /> },
   { path: "/books/:slug", element: <BookDetailPage /> },
   { path: "/access", element: <AccessPage /> },
   { path: "/profile", element: <ProfilePage /> },

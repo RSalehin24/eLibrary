@@ -37,7 +37,8 @@ class BookListSerializer(serializers.ModelSerializer):
     price = serializers.DecimalField(source="manual_price", read_only=True, max_digits=10, decimal_places=2, allow_null=True)
     is_compilation = serializers.BooleanField(source="manual_is_compilation", read_only=True)
     has_epub_asset = serializers.SerializerMethodField()
-    last_kindle_sent_at = serializers.DateTimeField(read_only=True)
+    has_sent_to_kindle = serializers.SerializerMethodField()
+    user_kindle_sent_at = serializers.SerializerMethodField()
 
     class Meta:
         model = Book
@@ -67,7 +68,8 @@ class BookListSerializer(serializers.ModelSerializer):
             "primary_source",
             "created_at",
             "has_epub_asset",
-            "last_kindle_sent_at",
+            "has_sent_to_kindle",
+            "user_kindle_sent_at",
         ]
 
     def relation_contributors(self, obj):
@@ -130,6 +132,12 @@ class BookListSerializer(serializers.ModelSerializer):
 
     def get_my_books_added_at(self, obj):
         return getattr(obj, "my_books_added_at", None)
+
+    def get_has_sent_to_kindle(self, obj):
+        return bool(getattr(obj, "has_sent_to_kindle", False))
+
+    def get_user_kindle_sent_at(self, obj):
+        return getattr(obj, "user_kindle_sent_at", None)
 
     def serialize_source_record(self, source):
         url = source.normalized_source_url or source.source_url

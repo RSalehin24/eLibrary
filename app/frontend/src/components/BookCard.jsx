@@ -83,7 +83,7 @@ export default function BookCard({
   const categories = book.categories || [];
   const bookIdLabel = book.catalog_code || "Pending";
   const addedAt = book.my_books_added_at || book.latest_submission_at;
-  const hasSentToKindle = Boolean(book.last_kindle_sent_at);
+  const hasSentToKindle = Boolean(book.has_sent_to_kindle);
 
   return (
     <article className="book-card" ref={cardRef}>

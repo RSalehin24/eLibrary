@@ -119,6 +119,15 @@ export function MobileNavigationPanel({
             My Books
           </NavLink>
           <NavLink
+            to="/kindle-sent"
+            className={({ isActive }) =>
+              isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+            }
+            onClick={onClose}
+          >
+            Kindle
+          </NavLink>
+          <NavLink
             to="/notes"
             className={({ isActive }) =>
               isActive ? "mobile-nav-link is-active" : "mobile-nav-link"

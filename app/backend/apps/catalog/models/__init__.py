@@ -13,6 +13,7 @@ from .books import (
     MetadataReview,
     MetadataVersion,
     UserBook,
+    UserBookKindleSend,
 )
 from .catalog_codes import (
     BOOK_PAYLOAD_TAG,
@@ -83,6 +84,7 @@ __all__ = [
     "Series",
     "UNKNOWN_RELATION_SEQUENCE",
     "UserBook",
+    "UserBookKindleSend",
     "WRITER_ENTITY_TAG",
     "build_book_catalog_code",
     "build_category_catalog_code",

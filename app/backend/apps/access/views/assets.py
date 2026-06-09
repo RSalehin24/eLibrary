@@ -7,7 +7,6 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.core.mail import EmailMessage, get_connection
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -15,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from apps.accounts.kindle import validate_kindle_email_address
-from apps.catalog.models import Book, GeneratedAssetType
+from apps.catalog.models import Book, GeneratedAssetType, UserBookKindleSend
 from apps.common.permissions import user_can_download_book_assets, user_can_view_book_cover, user_can_view_preview_html, user_can_send_to_kindle
 
 from .preview_html import html_asset_response
@@ -273,8 +272,8 @@ class BookSendToKindleView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY,
             )
 
-        book.last_kindle_sent_at = timezone.now()
-        book.save(update_fields=["last_kindle_sent_at"])
+        UserBookKindleSend.objects.filter(user=request.user, book=book).delete()
+        UserBookKindleSend.objects.create(user=request.user, book=book)
 
         detail = (
             f"Sent to {len(delivered)} Kindle email(s)."

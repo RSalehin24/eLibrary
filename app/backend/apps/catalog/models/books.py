@@ -77,7 +77,6 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
     empty_chapters_count = models.IntegerField(default=0)
     cover_source_url = models.URLField(max_length=1000, blank=True)
     metadata_last_reviewed_at = models.DateTimeField(blank=True, null=True)
-    last_kindle_sent_at = models.DateTimeField(blank=True, null=True)
     contributors = models.ManyToManyField(Contributor, through="BookContributor", related_name="books")
     series_entries = models.ManyToManyField(Series, through="BookSeries", related_name="books")
     categories = models.ManyToManyField(Category, through="BookCategory", related_name="books")
@@ -157,6 +156,18 @@ class BookCategory(UUIDPrimaryKeyModel, TimeStampedModel):
 class UserBook(UUIDPrimaryKeyModel, TimeStampedModel):
     user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="my_books")
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="user_books")
+
+    class Meta:
+        ordering = ["-created_at"]
+        unique_together = ("user", "book")
+
+    def __str__(self):
+        return f"{self.user} / {self.book}"
+
+
+class UserBookKindleSend(UUIDPrimaryKeyModel, TimeStampedModel):
+    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="kindle_sends")
+    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="kindle_sends")
 
     class Meta:
         ordering = ["-created_at"]
