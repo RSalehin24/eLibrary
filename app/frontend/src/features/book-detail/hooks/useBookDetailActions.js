@@ -57,6 +57,7 @@ export function useBookDetailActions({
   const assetActions = useBookAssetActions({
     book,
     detail,
+    fetchBook,
     htmlPreviewLockedByAssetId,
     replaceBookRoute,
     setBook,

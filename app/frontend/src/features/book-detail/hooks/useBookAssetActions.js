@@ -10,6 +10,7 @@ import { downloadBookAsset } from "./assetPreviewActions";
 export function useBookAssetActions({
   book,
   detail,
+  fetchBook,
   htmlPreviewLockedByAssetId,
   replaceBookRoute,
   setBook,
@@ -139,6 +140,10 @@ export function useBookAssetActions({
         slug,
         toast
       });
+      const updated = await fetchBook(slug);
+      if (updated) {
+        setBook(updated);
+      }
     } catch (nextError) {
       toast.error(nextError.message);
     } finally {
