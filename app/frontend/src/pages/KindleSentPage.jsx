@@ -8,6 +8,7 @@ import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
+import { useMyBooksAction } from "../features/library/useMyBooksAction";
 import { cleanQueryParams, filtersFromSearchParams } from "../utils/query";
 import { catalogFetch } from "../api/catalog";
 
@@ -172,6 +173,8 @@ export default function KindleSentPage() {
     }
   }, [toast, updateEntry]);
 
+  const myBooksAction = useMyBooksAction({ toast, updateEntry });
+
   const resultCount = error && !books.length ? "" : `${totalCount}`;
   const showErrorState = Boolean(error && !books.length && !initialLoading);
 
@@ -223,6 +226,8 @@ export default function KindleSentPage() {
           initialLoading={initialLoading}
           loadingMore={loadingMore}
           refreshing={refreshing}
+          onMyBooksToggle={myBooksAction.toggleMyBooks}
+          myBooksBusyIds={myBooksAction.busyIds}
           onSendToKindle={handleSendToKindle}
           sendingBookKindleIds={sendingBookKindleIds}
           hasKindleEmail={Boolean(user?.kindle_emails?.length)}
