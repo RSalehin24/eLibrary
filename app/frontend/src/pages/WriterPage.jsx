@@ -145,11 +145,11 @@ export default function WriterPage() {
     setSearchParams(cleanQueryParams(nextFilters));
   }
 
-  function buildBooksLink(catalogCode) {
+  function buildBooksLink(name) {
     const params =
       activeTab.role === "author"
-        ? { writer_code: catalogCode }
-        : { contributor_code: catalogCode, contributor_role: activeTab.role };
+        ? { author: name }
+        : { contributor: name, contributor_role: activeTab.role };
     if (filters.record_type && filters.record_type !== "digital") {
       params.record_type = filters.record_type;
     }
@@ -247,7 +247,7 @@ export default function WriterPage() {
               <td className="table-code-cell">{contributor.catalog_code}</td>
               <td>
                 <Link
-                  to={buildBooksLink(contributor.catalog_code)}
+                  to={buildBooksLink(contributor.name)}
                   className="table-title-link"
                 >
                   {contributor.name}
@@ -259,7 +259,7 @@ export default function WriterPage() {
               <td>{formatBookDate(contributor.created_at)}</td>
               <td className="table-action-cell">
                 <Link
-                  to={buildBooksLink(contributor.catalog_code)}
+                  to={buildBooksLink(contributor.name)}
                   className="ghost-button table-row-action"
                 >
                   Open

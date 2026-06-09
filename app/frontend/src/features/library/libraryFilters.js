@@ -5,6 +5,8 @@ export const defaultLibraryFilters = {
   author: "",
   series: "",
   category: "",
+  contributor: "",
+  contributor_role: "",
   ownership: "",
   record_type: "digital",
   sort: "-created_at"

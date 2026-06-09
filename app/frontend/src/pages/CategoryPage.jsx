@@ -99,8 +99,8 @@ export default function CategoryPage() {
     setSearchParams(cleanQueryParams(nextFilters));
   }
 
-  function buildBooksLink(catalogCode) {
-    const params = { category_code: catalogCode };
+  function buildBooksLink(name) {
+    const params = { category: name };
     if (filters.record_type && filters.record_type !== "digital") {
       params.record_type = filters.record_type;
     }
@@ -181,7 +181,7 @@ export default function CategoryPage() {
               <td className="table-code-cell">{category.catalog_code}</td>
               <td>
                 <Link
-                  to={buildBooksLink(category.catalog_code)}
+                  to={buildBooksLink(category.name)}
                   className="table-title-link"
                 >
                   {category.name}
@@ -193,7 +193,7 @@ export default function CategoryPage() {
               <td>{formatBookDate(category.created_at)}</td>
               <td className="table-action-cell">
                 <Link
-                  to={buildBooksLink(category.catalog_code)}
+                  to={buildBooksLink(category.name)}
                   className="ghost-button table-row-action"
                 >
                   Open
