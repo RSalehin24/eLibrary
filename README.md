@@ -13,6 +13,7 @@ A full-stack platform that scrapes, processes, and serves Bangla (and English) e
 
 - [Features](#features)
 - [Tech Stack](#tech-stack)
+- [Demo Access](#demo-access)
 - [Quick Start](#quick-start)
 - [Getting Started](#getting-started)
 - [Project Structure](#project-structure)
@@ -55,6 +56,20 @@ A full-stack platform that scrapes, processes, and serves Bangla (and English) e
 | Containerization | Docker Compose |
 | Edge / TLS | Nginx 1.27 + Certbot |
 | Testing | pytest · node --test · Playwright |
+
+---
+
+## Demo Access
+
+A read-only demo account is available to explore the application. The live deployment URL can be found in the **description of this repository**.
+
+| Field | Value |
+|-------|-------|
+| Email | `demo_user.library@rsalehin24.me` |
+| Password | `YCDqgDw9CwxPprt` |
+| URL | Check the **description of this repository** |
+
+> This account has **read-only access** — you can browse the library, view books, and test the reader, but cannot modify or delete any content.
 
 ---
 
