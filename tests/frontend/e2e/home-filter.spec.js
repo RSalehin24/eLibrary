@@ -15,11 +15,11 @@ test.describe("Home Page Filter Pages", () => {
     const filterToggle = page.getByRole("button", { name: /Filter/i });
     await filterToggle.click();
 
-    // 3. Find the Author dropdown trigger
+    // 3. Find the Contributor dropdown trigger
     // Since it's a SearchableSelect, the trigger shows the current label (default "Any")
     // Let's locate the triggers by label
     const authorTrigger = page.locator(".catalog-filter-field", {
-      has: page.getByText("Author", { exact: true })
+      has: page.getByText("Contributor", { exact: true })
     }).locator(".custom-select-trigger");
 
     await expect(authorTrigger).toBeVisible();
@@ -27,13 +27,13 @@ test.describe("Home Page Filter Pages", () => {
 
     // Search and select E2E Writer
     const authorSearchInput = page.locator(".catalog-filter-field", {
-      has: page.getByText("Author", { exact: true })
+      has: page.getByText("Contributor", { exact: true })
     }).locator(".custom-select-search-input");
     
     await authorSearchInput.fill(seedData.catalogFilters.writer);
     
     const authorOption = page.locator(".catalog-filter-field", {
-      has: page.getByText("Author", { exact: true })
+      has: page.getByText("Contributor", { exact: true })
     }).getByRole("button", { name: seedData.catalogFilters.writer, exact: true });
     
     await authorOption.click();

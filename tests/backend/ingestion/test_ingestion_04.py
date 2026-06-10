@@ -70,7 +70,7 @@ def test_incomplete_catalog_check_uses_book_contributors_for_author_line(client)
     book.categories.add(category)
     BookContributor.objects.create(book=book, contributor=contributor, role="author", sort_order=0)
 
-    source_url = "https://www.ebanglalibrary.com/books/incomplete-book/"
+    source_url = "https://www.example.com/books/incomplete-book/"
     BookSource.objects.create(
         book=book,
         source_url=source_url,
@@ -112,7 +112,7 @@ def test_incomplete_catalog_check_uses_book_contributors_for_author_line(client)
 @pytest.mark.django_db
 def test_title_resolver_refresh_catalog_accepts_long_source_urls():
     long_slug = "kaliguneen-" + ("rahasya-" * 24)
-    long_url = f"https://www.ebanglalibrary.com/books/{long_slug}/"
+    long_url = f"https://www.example.com/books/{long_slug}/"
     page_one = f"""
     <div class="facetwp-template" data-name="books">
       <div class="fwpl-result">
@@ -151,8 +151,8 @@ def test_title_resolver_refresh_catalog_accepts_long_source_urls():
 
 @pytest.mark.django_db
 def test_title_resolver_refresh_catalog_continues_past_existing_first_page_entries():
-    existing_url = "https://www.ebanglalibrary.com/books/existing-book/"
-    new_url = "https://www.ebanglalibrary.com/books/new-book/"
+    existing_url = "https://www.example.com/books/existing-book/"
+    new_url = "https://www.example.com/books/new-book/"
     SourceCatalogEntry.objects.create(
         source_url=existing_url,
         title="Existing Book",

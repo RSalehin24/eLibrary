@@ -34,29 +34,46 @@ All repo-facing helpers under `tests/scripts/` support `-h` or `--help` for usag
 | User Story | Coverage Layer | Main Location |
 | --- | --- | --- |
 | Sign in and search the live catalog | Playwright against Dockerized app | `tests/frontend/e2e/auth-pages.spec.js` |
-| Request a password reset email from the public reset page | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-pages.spec.js` |
-| Create a password from an invite link, see the TOTP guidance toast, and enter the forced setup gate | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-pages.spec.js` |
-| Redirect forced-TOTP users away from protected pages into the centered setup gate with the shared header visible | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-pages.spec.js` |
-| Create an invited user and show the minimal setup-email toast | Playwright with mocked API routes | `tests/frontend/e2e/access-page-mocked.spec.js` |
-| Resend setup mail for an onboarding-pending user from Users & Access | Playwright with mocked API routes | `tests/frontend/e2e/access-page-mocked.spec.js` |
-| Edit a managed user without losing filters | Playwright against Dockerized app | `tests/frontend/e2e/access-page.spec.js` |
-| Create a scoped book access rule from the browser | Playwright against Dockerized app | `tests/frontend/e2e/access-page.spec.js` |
-| Remove a bookmark while saving metadata edits | Playwright against Dockerized app | `tests/frontend/e2e/book-detail-page.spec.js` |
-| Keep EPUB actions usable when the HTML preview is already locked | Playwright against Dockerized app | `tests/frontend/e2e/book-detail-page.spec.js` |
-| Open category-filtered library results from the browser | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
-| Open series-filtered library results from the browser | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
-| Open writer-filtered library results from the browser | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
-| Search seeded owned books from the browser | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
-| Reuse an existing source URL and launch the live reader | Playwright against Dockerized app | `tests/frontend/e2e/create-books.spec.js` |
-| Reuse an existing source URL and start a protected download | Playwright against Dockerized app | `tests/frontend/e2e/create-books.spec.js` |
-| Create a manual book from the browser and find it again | Playwright against Dockerized app | `tests/frontend/e2e/manual-books.spec.js` |
-| Show no stale processing header spinner when shared activity is idle | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Keep the processing header spinner visible while activity remains active across processing routes | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Search live processing requests | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Search live source catalog entries | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Save automation settings and confirm they persist after reload | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Search shared all-activity requests in the live queue view | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
-| Reprocess an incomplete catalog record and observe the live outcome | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages.spec.js` |
+| Public login and reset request flows | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-login-and-reset-request.spec.js` |
+| Reset and password validation flows | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-reset-and-password-validation.spec.js` |
+| Forced TOTP setup gate redirect | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-forced-totp-setup.spec.js` |
+| Create password from invite link with TOTP guidance | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-create-password-totp.spec.js` |
+| Expired create-password link handling | Playwright against Dockerized app | `tests/frontend/e2e/auth-public-expired-create-password.spec.js` |
+| Edit managed user without losing filters | Playwright against Dockerized app | `tests/frontend/e2e/access-page.spec.js` |
+| Create scoped book access rule | Playwright against Dockerized app | `tests/frontend/e2e/access-page.spec.js` |
+| Mocked invitations and setup mail resend | Playwright with mocked API routes | `tests/frontend/e2e/access-page-mocked-invitations.spec.js` |
+| Mocked validation and pagination | Playwright with mocked API routes | `tests/frontend/e2e/access-page-mocked-validation-and-pagination.spec.js` |
+| Mocked permissions | Playwright with mocked API routes | `tests/frontend/e2e/access-page-mocked-permissions.spec.js` |
+| Remove bookmark while saving metadata edits | Playwright against Dockerized app | `tests/frontend/e2e/book-detail-page.spec.js` |
+| EPUB actions with HTML preview locked | Playwright against Dockerized app | `tests/frontend/e2e/book-detail-page.spec.js` |
+| Category/series/writer-filtered library results | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
+| Search seeded owned books | Playwright against Dockerized app | `tests/frontend/e2e/catalog-pages.spec.js` |
+| Catalog book table mocked flows | Playwright with mocked API routes | `tests/frontend/e2e/catalog-book-tables-mocked.spec.js` |
+| Reuse source URL and launch reader/download | Playwright against Dockerized app | `tests/frontend/e2e/create-books.spec.js` |
+| Create manual book and find it again | Playwright against Dockerized app | `tests/frontend/e2e/manual-books.spec.js` |
+| Search live processing requests | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-create-card-refreshes.spec.js` |
+| Processing header spinner idle/active state | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-create-card-refreshes.spec.js` |
+| Catalog state matrix | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-catalog-state-matrix.spec.js` |
+| Catalog loading and skeletons | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-catalog-loading-and-skeletons.spec.js` |
+| Catalog sync and record selection | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-catalog-sync-and-record-selection.spec.js` |
+| Catalog automation flow | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-catalog-automation-flow.spec.js` |
+| Live catalog runtime | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-live-catalog-runtime.spec.js` |
+| Live incomplete runtime | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-live-incomplete-runtime.spec.js` |
+| Live duplicate resolution | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-live-duplicate-resolution.spec.js` |
+| Live created lifecycle | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-live-created-lifecycle.spec.js` |
+| On-hold and incomplete actions | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-on-hold-and-incomplete-actions.spec.js` |
+| Create and on-hold actions | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-create-and-on-hold-actions.spec.js` |
+| Notifications and isolation | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-notifications-and-isolation.spec.js` |
+| Create card state | Playwright against Dockerized app | `tests/frontend/e2e/processing-pages-create-card-state.spec.js` |
+| Responsive layout: navigation and library | Playwright against Dockerized app | `tests/frontend/e2e/responsive-layout-navigation-and-library.spec.js` |
+| Responsive layout: property and access | Playwright against Dockerized app | `tests/frontend/e2e/responsive-layout-property-and-access.spec.js` |
+| Responsive layout: reader | Playwright against Dockerized app | `tests/frontend/e2e/responsive-layout-reader.spec.js` |
+| Responsive layout: manual and profile | Playwright against Dockerized app | `tests/frontend/e2e/responsive-layout-manual-and-profile.spec.js` |
+| Responsive layout: processing | Playwright against Dockerized app | `tests/frontend/e2e/responsive-layout-processing.spec.js` |
+| Page loaders mocked | Playwright with mocked API routes | `tests/frontend/e2e/page-loaders-mocked.spec.js` |
+| Profile page mocked | Playwright with mocked API routes | `tests/frontend/e2e/profile-page-mocked.spec.js` |
+| Home filter | Playwright against Dockerized app | `tests/frontend/e2e/home-filter.spec.js` |
+| Library page live | Playwright against Dockerized app | `tests/frontend/e2e/library-page-live.spec.js` |
 
 ### Runtime Data Strategy
 

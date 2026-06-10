@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Run the 300-book ebanglalibrary regression harness inside the running
+# Run the 300-book source site regression harness inside the running
 # backend container. Resumable: rerun any number of times — URLs whose audit
 # already succeeded are skipped automatically.
 #

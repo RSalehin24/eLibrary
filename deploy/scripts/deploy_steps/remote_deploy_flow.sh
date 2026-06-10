@@ -144,7 +144,7 @@ ssh -o BatchMode=yes "${TARGET}" "sudo -n true" >/dev/null 2>&1 || die "The depl
 
 sync_remote_repository
 sync_workspace_files
-sync_ebangla_auth_file
+sync_source_site_auth_file
 
 if ssh "${TARGET}" "cd '${REMOTE_APP_ABS_DIR}' && test -f '${REMOTE_SUPER_ADMIN_NOTICE_MARKER}'" >/dev/null 2>&1; then
   SHOW_REMOTE_SUPER_ADMIN_NOTICE="no"

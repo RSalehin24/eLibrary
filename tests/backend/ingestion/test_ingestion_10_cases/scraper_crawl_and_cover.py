@@ -70,9 +70,9 @@ from apps.catalog.services import find_existing_book_by_source_url
 
 
 def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_path):
-    root_url = "https://www.ebanglalibrary.com/books/root-book/"
-    child_url = "https://www.ebanglalibrary.com/books/child-book/"
-    lesson_url = "https://www.ebanglalibrary.com/books/child-book/chapter-1/"
+    root_url = "https://www.example.com/books/root-book/"
+    child_url = "https://www.example.com/books/child-book/"
+    lesson_url = "https://www.example.com/books/child-book/chapter-1/"
 
     html_map = {
         root_url: """
@@ -83,7 +83,7 @@ def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_pat
               <p>মূল বইয়ের ভূমিকা</p>
               <p><strong>সূচীপত্র</strong></p>
               <ul>
-                <li><a href="https://www.ebanglalibrary.com/books/child-book/">সংগ্রহ খণ্ড</a></li>
+                <li><a href="https://www.example.com/books/child-book/">সংগ্রহ খণ্ড</a></li>
               </ul>
             </div>
           </body>
@@ -227,11 +227,11 @@ def test_scrape_all_lessons_waits_between_pages(monkeypatch):
     seen_urls = []
     sleep_calls = []
     lesson_pages = {
-        "https://www.ebanglalibrary.com/books/example/?ld-courseinfo-lesson-page=1": {
+        "https://www.example.com/books/example/?ld-courseinfo-lesson-page=1": {
             "lessons": [{"title": "প্রথম পাঠ", "url": "lesson-1", "topics": [], "has_topics": False}],
             "total_pages": 2,
         },
-        "https://www.ebanglalibrary.com/books/example/?ld-courseinfo-lesson-page=2": {
+        "https://www.example.com/books/example/?ld-courseinfo-lesson-page=2": {
             "lessons": [{"title": "দ্বিতীয় পাঠ", "url": "lesson-2", "topics": [], "has_topics": False}],
             "total_pages": 2,
         },
@@ -255,12 +255,12 @@ def test_scrape_all_lessons_waits_between_pages(monkeypatch):
     monkeypatch.setattr(legacy_scraper.time, "sleep", sleep_calls.append)
 
     lessons = legacy_scraper.scrape_all_lessons(
-        "https://www.ebanglalibrary.com/books/example/",
+        "https://www.example.com/books/example/",
     )
 
     assert [lesson["title"] for lesson in lessons] == ["প্রথম পাঠ", "দ্বিতীয় পাঠ"]
     assert seen_urls == [
-        "https://www.ebanglalibrary.com/books/example/?ld-courseinfo-lesson-page=1",
-        "https://www.ebanglalibrary.com/books/example/?ld-courseinfo-lesson-page=2",
+        "https://www.example.com/books/example/?ld-courseinfo-lesson-page=1",
+        "https://www.example.com/books/example/?ld-courseinfo-lesson-page=2",
     ]
     assert sleep_calls == [1]

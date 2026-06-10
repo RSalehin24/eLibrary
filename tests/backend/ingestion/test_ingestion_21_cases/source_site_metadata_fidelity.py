@@ -2,8 +2,8 @@ import zipfile
 
 import pytest
 
-from apps.common.ebangla_batch_audit import compare_source_report_to_production
-from apps.common.ebangla_semantic_audit import audit_scraped_book
+from apps.common.source_site_batch_audit import compare_source_report_to_production
+from apps.common.source_site_semantic_audit import audit_scraped_book
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline import epub_book, html_book, scraper as legacy_scraper
 from apps.ingestion.pipeline.epub_properties.epub_builder import EpubBuilder
@@ -545,9 +545,9 @@ def test_dedupe_structured_sections_drops_source_navigation_link_lists():
             {
                 "title": "সূচী",
                 "html": """
-                <li><a href="https://www.ebanglalibrary.com/books/alpha/">আলফা</a></li>
-                <li><a href="https://www.ebanglalibrary.com/books/beta/">বেটা</a></li>
-                <li><a href="https://www.ebanglalibrary.com/books/gamma/">গামা</a></li>
+                <li><a href="https://www.example.com/books/alpha/">আলফা</a></li>
+                <li><a href="https://www.example.com/books/beta/">বেটা</a></li>
+                <li><a href="https://www.example.com/books/gamma/">গামা</a></li>
                 """,
             },
             {
@@ -847,7 +847,7 @@ def test_epub_builder_includes_visible_toc_page_before_lesson_navigation(tmp_pat
 
 @pytest.mark.django_db
 def test_upsert_source_catalog_entry_preserves_archive_display_title_when_page_metadata_overwrites():
-    source_url = "https://www.ebanglalibrary.com/books/example-book/"
+    source_url = "https://www.example.com/books/example-book/"
     upsert_source_catalog_entry(
         metadata_entry_defaults(
             source_url=source_url,
@@ -865,7 +865,7 @@ def test_upsert_source_catalog_entry_preserves_archive_display_title_when_page_m
         <html>
           <head>
             <title>গডফাদার – মারিয়ো পুজো / রূপান্তর: শেখ আবদুল হাকিম</title>
-            <link rel="canonical" href="https://www.ebanglalibrary.com/books/example-book/" />
+            <link rel="canonical" href="https://www.example.com/books/example-book/" />
           </head>
           <body>
             <div class="entry-meta entry-meta-after-content">
@@ -886,7 +886,7 @@ def test_upsert_source_catalog_entry_preserves_archive_display_title_when_page_m
 
 def test_audit_comparison_flags_exact_role_and_toc_deltas():
     source_report = {
-        "source_url": "https://www.ebanglalibrary.com/books/example-book/",
+        "source_url": "https://www.example.com/books/example-book/",
         "contributors": [
             {"name": "মো: রিয়াজ উদ্দিন খান", "role": "translator"},
             {"name": "বুদ্ধদেব বসু", "role": "editor"},
@@ -974,11 +974,11 @@ def test_audit_comparison_flags_exact_role_and_toc_deltas():
 
 
 def test_scrape_book_data_handles_paginated_topics_and_prunes_dead_toc_leaves(monkeypatch, tmp_path):
-    root_url = "https://www.ebanglalibrary.com/books/root-book/"
-    lesson_url = "https://www.ebanglalibrary.com/books/root-book/lesson-1/"
-    topic_one_url = "https://www.ebanglalibrary.com/books/root-book/topic-1/"
-    topic_two_url = "https://www.ebanglalibrary.com/books/root-book/topic-2/"
-    topic_three_url = "https://www.ebanglalibrary.com/books/root-book/topic-3/"
+    root_url = "https://www.example.com/books/root-book/"
+    lesson_url = "https://www.example.com/books/root-book/lesson-1/"
+    topic_one_url = "https://www.example.com/books/root-book/topic-1/"
+    topic_two_url = "https://www.example.com/books/root-book/topic-2/"
+    topic_three_url = "https://www.example.com/books/root-book/topic-3/"
     lesson_page_url = f"{root_url}?ld-courseinfo-lesson-page=1"
     topic_page_url = f"{lesson_page_url}&ld-topic-page=42-2"
 
@@ -997,12 +997,12 @@ def test_scrape_book_data_handles_paginated_topics_and_prunes_dead_toc_leaves(mo
         <html>
           <body>
             <div class="ld-item-lesson-item" data-ld-expand-id="42">
-              <a class="ld-item-name" href="https://www.ebanglalibrary.com/books/root-book/lesson-1/">
+              <a class="ld-item-name" href="https://www.example.com/books/root-book/lesson-1/">
                 <div class="ld-item-title">পাঠ 1 3 Topics</div>
               </a>
               <div id="42-container">
                 <div class="ld-table-list-item">
-                  <a class="ld-table-list-item-preview" href="https://www.ebanglalibrary.com/books/root-book/topic-1/">
+                  <a class="ld-table-list-item-preview" href="https://www.example.com/books/root-book/topic-1/">
                     <span class="ld-topic-title">1. ভূমিকা</span>
                   </a>
                 </div>
@@ -1017,17 +1017,17 @@ def test_scrape_book_data_handles_paginated_topics_and_prunes_dead_toc_leaves(mo
         <html>
           <body>
             <div class="ld-item-lesson-item" data-ld-expand-id="42">
-              <a class="ld-item-name" href="https://www.ebanglalibrary.com/books/root-book/lesson-1/">
+              <a class="ld-item-name" href="https://www.example.com/books/root-book/lesson-1/">
                 <div class="ld-item-title">পাঠ 1 3 Topics</div>
               </a>
               <div id="42-container">
                 <div class="ld-table-list-item">
-                  <a class="ld-table-list-item-preview" href="https://www.ebanglalibrary.com/books/root-book/topic-2/">
+                  <a class="ld-table-list-item-preview" href="https://www.example.com/books/root-book/topic-2/">
                     <span class="ld-topic-title">2. আলোচনা</span>
                   </a>
                 </div>
                 <div class="ld-table-list-item">
-                  <a class="ld-table-list-item-preview" href="https://www.ebanglalibrary.com/books/root-book/topic-3/">
+                  <a class="ld-table-list-item-preview" href="https://www.example.com/books/root-book/topic-3/">
                     <span class="ld-topic-title">3. ফাঁকা</span>
                   </a>
                 </div>

@@ -5,6 +5,8 @@
     EMAIL_BACKEND="anymail.backends.brevo.EmailBackend",
     EMAIL_HOST="smtp.example.com",
     EMAIL_PORT=587,
+    EMAIL_HOST_USER="kindle-sender@example.com",
+    EMAIL_HOST_PASSWORD="fake-smtp-key",
     ACCOUNT_INVITE_FROM_EMAIL="kindle-sender@example.com",
 )
 def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(tmp_path, client, monkeypatch):

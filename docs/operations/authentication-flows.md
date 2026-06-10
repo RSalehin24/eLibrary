@@ -1,6 +1,6 @@
 # Authentication Flows
 
-This document captures the intended invite, password recovery, and mandatory two-factor onboarding behavior for RSalehin24 Library.
+This document captures the intended invite, password recovery, and mandatory two-factor onboarding behavior for the Bangla Library Platform.
 
 ## User Stories
 

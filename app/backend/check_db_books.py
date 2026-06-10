@@ -6,10 +6,10 @@ from apps.catalog.models import Book, CuratedBookDocument
 from apps.processing.models import BookRecord
 
 targets = [
-    ('রম্যরচনা ৩৬৫', 'https://www.ebanglalibrary.com/books/%e0%a6%b0%e0%a6%ae%e0%a7%8d%e0%a6%af%e0%a6%b0%e0%a6%9a%e0%a6%a8%e0%a6%be-%e0%a7%a9%e0%a7%ac%e0%a7%ab-%e0%a6%a4%e0%a6%be%e0%a6%b0%e0%a6%be%e0%a6%aa%e0%a6%a6-%e0%a6%b0%e0%a6%be%e0%a6%af%e0%a6%bc/'),
-    ('বাংলা গীতা', 'https://www.ebanglalibrary.com/books/%e0%a6%ac%e0%a6%be%e0%a6%82%e0%a6%b2%e0%a6%be-%e0%a6%97%e0%a7%80%e0%a6%a4%e0%a6%be/'),
-    ('মহাভারতের চরিতাবলী', 'https://www.ebanglalibrary.com/books/%e0%a6%ae%e0%a6%b9%e0%a6%be%e0%a6%ad%e0%a6%be%e0%a6%b0%e0%a6%a4%e0%a7%87%e0%a6%b0-%e0%a6%9a%e0%a6%b0%e0%a6%bf%e0%a6%a4%e0%a6%be%e0%a6%ac%e0%a6%b2%e0%a7%80/'),
-    ('বাংলা কোরআন', 'https://www.ebanglalibrary.com/books/%e0%a6%ac%e0%a6%be%e0%a6%82%e0%a6%b2%e0%a6%be-%e0%a6%95%e0%a7%8b%e0%a6%b0%e0%a6%85%e0%a6%be%e0%a6%a8/'),
+    ('রম্যরচনা ৩৬৫', 'https://www.example.com/books/%e0%a6%b0%e0%a6%ae%e0%a7%8d%e0%a6%af%e0%a6%b0%e0%a6%9a%e0%a6%a8%e0%a6%be-%e0%a7%a9%e0%a7%ac%e0%a7%ab-%e0%a6%a4%e0%a6%be%e0%a6%b0%e0%a6%be%e0%a6%aa%e0%a6%a6-%e0%a6%b0%e0%a6%be%e0%a6%af%e0%a6%bc/'),
+    ('বাংলা গীতা', 'https://www.example.com/books/%e0%a6%ac%e0%a6%be%e0%a6%82%e0%a6%b2%e0%a6%be-%e0%a6%97%e0%a7%80%e0%a6%a4%e0%a6%be/'),
+    ('মহাভারতের চরিতাবলী', 'https://www.example.com/books/%e0%a6%ae%e0%a6%b9%e0%a6%be%e0%a6%ad%e0%a6%be%e0%a6%b0%e0%a6%a4%e0%a7%87%e0%a6%b0-%e0%a6%9a%e0%a6%b0%e0%a6%bf%e0%a6%a4%e0%a6%be%e0%a6%ac%e0%a6%b2%e0%a7%80/'),
+    ('বাংলা কোরআন', 'https://www.example.com/books/%e0%a6%ac%e0%a6%be%e0%a6%82%e0%a6%b2%e0%a6%be-%e0%a6%95%e0%a7%8b%e0%a6%b0%e0%a6%85%e0%a6%be%e0%a6%a8/'),
 ]
 
 for name_pat, url in targets:

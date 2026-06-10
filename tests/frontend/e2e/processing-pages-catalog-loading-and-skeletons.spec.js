@@ -136,8 +136,8 @@ test.describe("processing pages mocked coverage", () => {
   test("catalog records show bangla source urls as decoded text", async ({
     page
   }) => {
-    const encodedUrl = "https://www.ebanglalibrary.com/books/%E0%A6%85%E0%A6%97%E0%A7%8D%E0%A6%A8%E0%A6%BF%E0%A6%AA%E0%A6%B0%E0%A7%80%E0%A6%95%E0%A7%8D%E0%A6%B7%E0%A6%BE-%E0%A6%86%E0%A6%B6%E0%A6%BE%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3%E0%A6%BE/";
-    const decodedUrl = "https://www.ebanglalibrary.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/";
+    const encodedUrl = "https://www.example.com/books/%E0%A6%85%E0%A6%97%E0%A7%8D%E0%A6%A8%E0%A6%BF%E0%A6%AA%E0%A6%B0%E0%A7%80%E0%A6%95%E0%A7%8D%E0%A6%B7%E0%A6%BE-%E0%A6%86%E0%A6%B6%E0%A6%BE%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3%E0%A6%BE/";
+    const decodedUrl = "https://www.example.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/";
     const encodedFragment = "%E0%A6%85%E0%A6%97%E0%A7%8D%E0%A6%A8%E0%A6%BF%E0%A6%AA%E0%A6%B0";
     await boot(page, "/catalog", baseState({
       records: [record({

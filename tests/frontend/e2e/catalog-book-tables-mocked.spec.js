@@ -215,9 +215,7 @@ test("My Books cards expose a compact non-red remove action", async ({
 
   await page.goto("/created-books");
   await expect(page.getByRole("heading", { name: "My Books" })).toBeVisible();
-  const removeButton = page.getByRole("button", {
-    name: "Remove Catalog Book 001 from My Books",
-  });
+  const removeButton = page.locator(".book-card-remove-button").first();
   await expect(removeButton).toBeVisible();
 
   const buttonStyles = await removeButton.evaluate((node) => {

@@ -46,6 +46,11 @@ from apps.ingestion.services.resolution_support_network import get_with_host_fal
 from apps.ingestion.pipeline.epub_properties.labels import detect_book_language, labels_for
 
 
+def _get_source_site_host():
+    from django.conf import settings
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or "www.example.com"
+
+
 logger = logging.getLogger(__name__)
 
 CURRENT_MANIFEST_SCHEMA_VERSION = "2026-05-03.1"
@@ -140,7 +145,7 @@ def html_text(html):
 
 
 # HTTP statuses that indicate a transient/rate-limit condition where the same
-# URL is expected to succeed on a later attempt. The source site (ebanglalibrary)
+# URL is expected to succeed on a later attempt. The source site
 # intermittently throttles rapid topic requests with these codes.
 _TRANSIENT_HTTP_STATUSES = {429, 500, 502, 503, 504}
 _FETCH_MAX_ATTEMPTS = 4
@@ -586,12 +591,12 @@ def normalize_content_url(url, base_url):
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:
         return ""
-    if parsed.netloc.lower() not in {"ebanglalibrary.com", "www.ebanglalibrary.com"}:
+    if parsed.netloc.lower() not in {_get_source_site_host(), f"www.{_get_source_site_host()}"}:
         return ""
     normalized_path = parsed.path or "/"
     if normalized_path.startswith("/books/"):
         normalized_path = normalized_path.rstrip("/") + "/"
-    return urlunparse(("https", "www.ebanglalibrary.com", normalized_path, parsed.params, parsed.query, ""))
+    return urlunparse(("https", _get_source_site_host(), normalized_path, parsed.params, parsed.query, ""))
 
 
 def toc_items_container(soup):
@@ -910,7 +915,7 @@ def _fetch_learndash_toc_page_ajax(ctx, landing_soup, course_url, page_number):
     if not course_id or not nonce:
         return None
 
-    ajax_url = "https://www.ebanglalibrary.com/wp-admin/admin-ajax.php"
+    ajax_url = f"https://{_get_source_site_host()}/wp-admin/admin-ajax.php"
     params = {
         "action": "ld30_ajax_pager",
         "ld-courseinfo-lesson-page": page_number,
@@ -1010,7 +1015,7 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
     has_topic_pagination = bool(_meta.get("has_topic_pagination"))
     # A multi-page TOC is "incomplete" when one or more of the pages we attempted
     # to fetch produced no new lessons. This is the signature of the LearnDash
-    # AJAX pager being rejected (typically because the ebanglalibrary.com sign-in
+    # AJAX pager being rejected (typically because the source site sign-in
     # cookie is missing or expired), so only the first page of lessons is captured.
     toc_incomplete = total_pages > 1 and pages_with_content < total_pages
     return collected, {
@@ -1175,7 +1180,7 @@ _EMPTY_SOURCE_PAGE = object()
 
 
 # LearnDash AJAX endpoint used for mark-complete submissions.
-_LD_AJAX_URL = "https://www.ebanglalibrary.com/wp-admin/admin-ajax.php"
+_LD_AJAX_URL = f"https://{_get_source_site_host()}/wp-admin/admin-ajax.php"
 
 
 def _extract_mark_complete_params(soup):
@@ -1350,7 +1355,7 @@ def _submit_mark_complete(session, lesson_url, mc_params):
 def _fetch_via_wp_rest_api(session, post_id, post_type="lesson"):
     """Fetch lesson or topic content via the WordPress REST API to bypass LearnDash lock."""
     segment = "sfwd-lessons" if post_type == "lesson" else "sfwd-topic"
-    api_url = f"https://www.ebanglalibrary.com/wp-json/ldlms/v2/{segment}/{post_id}"
+    api_url = f"https://{_get_source_site_host()}/wp-json/ldlms/v2/{segment}/{post_id}"
     try:
         logger.info("Fetching locked content via WP REST API: %s (%s)", api_url, post_type)
         resp = session.get(api_url, headers=HEADERS, timeout=30)

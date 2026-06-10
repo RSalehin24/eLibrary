@@ -63,7 +63,7 @@ from apps.catalog.services import find_existing_book_by_source_url
 def test_find_exact_existing_book_does_not_match_when_translators_differ():
     existing_book = Book.objects.create(
         title="শ্রেষ্ঠ কবিতা",
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state="ready",
         review_state="approved",
     )
@@ -126,9 +126,9 @@ def test_process_submission_job_handles_missing_cover_url_without_db_null_violat
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/cover-null-book/",
+        original_input="https://www.example.com/books/cover-null-book/",
         normalized_input="cover null book",
-        resolved_url="https://www.ebanglalibrary.com/books/cover-null-book/",
+        resolved_url="https://www.example.com/books/cover-null-book/",
         resolution_status="resolved",
         resolution_confidence=1.0,
         status="queued",
@@ -172,11 +172,11 @@ def test_process_submission_job_handles_missing_cover_url_without_db_null_violat
 def test_successful_deleted_book_recreation_is_not_reprocessed_again(tmp_path, monkeypatch):
     user = User.objects.create_user(email="recreate-2001@example.com", password="strong-password-123")
     url = (
-        "https://www.ebanglalibrary.com/books/"
+        "https://www.example.com/books/"
         "%E0%A7%A8%E0%A7%A6%E0%A7%A6%E0%A7%A7-%E0%A6%86-%E0%A6%B8%E0%A7%8D%E0%A6%AA%E0%A7%87%E0%A6%B8-"
         "%E0%A6%93%E0%A6%A1%E0%A6%BF%E0%A6%B8%E0%A6%BF-%E0%A6%86%E0%A6%B0%E0%A7%8D%E0%A6%A5%E0%A6%BE%E0%A6%B0/"
     )
-    deleted_book = Book.objects.create(title="২০০১ : আ স্পেস ওডিসি", state="soft_deleted", review_state=ReviewState.APPROVED)
+    deleted_book = Book.objects.create(title="২০০১ : আ স্পেস ওডিসি", state="soft_deleted", review_state=ReviewState.APPROVED, source_site="example.com")
     Book.objects.filter(pk=deleted_book.pk).update(deleted_at=timezone.now())
     deleted_book.refresh_from_db()
     BookSource.objects.create(

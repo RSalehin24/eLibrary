@@ -55,7 +55,7 @@ def test_processing_runtime_tick_advances_sync_and_pipeline_without_browser(clie
     record = BookRecord.objects.create(
         id="runtime-tick-request-record",
         name="Runtime Tick Request Record",
-        url="https://www.ebanglalibrary.com/books/runtime-tick-request-record/",
+        url="https://www.example.com/books/runtime-tick-request-record/",
         category="Fiction",
         writer="Writer One",
         publisher="Example Press",

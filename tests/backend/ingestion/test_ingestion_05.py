@@ -62,7 +62,7 @@ from apps.catalog.services import find_existing_book_by_source_url
 @pytest.mark.django_db
 def test_long_source_urls_can_be_stored_across_ingestion_and_catalog_models():
     long_slug = "source-book-" + ("extended-path-" * 20)
-    long_url = f"https://www.ebanglalibrary.com/books/{long_slug}/"
+    long_url = f"https://www.example.com/books/{long_slug}/"
     book = Book.objects.create(title="Long URL Book", state="ready", review_state="pending")
 
     source_entry = SourceCatalogEntry.objects.create(
@@ -112,7 +112,7 @@ def test_long_source_urls_can_be_stored_across_ingestion_and_catalog_models():
 @pytest.mark.django_db
 def test_source_catalog_entry_snapshots_mark_new_and_ready_books():
     missing_entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/missing-book/",
+        source_url="https://www.example.com/books/missing-book/",
         title="Missing Book",
         author_line="Writer One",
         raw_data={"category": "Mystery"},
@@ -120,7 +120,7 @@ def test_source_catalog_entry_snapshots_mark_new_and_ready_books():
         normalized_display=normalize_text("Missing Book Writer One"),
     )
     ready_entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/ready-book/",
+        source_url="https://www.example.com/books/ready-book/",
         title="Ready Book",
         author_line="Writer Two",
         normalized_title=normalize_text("Ready Book"),
@@ -155,7 +155,7 @@ def test_source_catalog_entry_snapshots_preserve_results_when_processed_in_small
         1,
     )
     missing_entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/chunked-missing-book/",
+        source_url="https://www.example.com/books/chunked-missing-book/",
         title="Chunked Missing Book",
         author_line="Writer One",
         raw_data={"category": "Mystery"},
@@ -163,7 +163,7 @@ def test_source_catalog_entry_snapshots_preserve_results_when_processed_in_small
         normalized_display=normalize_text("Chunked Missing Book Writer One"),
     )
     ready_entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/chunked-ready-book/",
+        source_url="https://www.example.com/books/chunked-ready-book/",
         title="Chunked Ready Book",
         author_line="Writer Two",
         normalized_title=normalize_text("Chunked Ready Book"),
@@ -206,7 +206,7 @@ def test_source_catalog_entry_snapshots_preserve_results_when_processed_in_small
 @pytest.mark.django_db
 def test_source_catalog_entry_snapshots_surface_failed_creation_before_local_book_exists():
     entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/failed-book/",
+        source_url="https://www.example.com/books/failed-book/",
         title="Failed Book",
         author_line="Writer",
         normalized_title=normalize_text("Failed Book"),
@@ -241,7 +241,7 @@ def test_processing_manager_can_queue_selected_catalog_entries_for_creation(clie
     admin = User.objects.create_superuser(email="catalog-create-admin@example.com", password="strong-password-123")
     client.force_login(admin)
     new_entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/new-book/",
+        source_url="https://www.example.com/books/new-book/",
         title="New Book",
         author_line="Writer",
         normalized_title=normalize_text("New Book"),
@@ -276,10 +276,10 @@ def test_find_existing_book_by_source_url_ignores_soft_deleted_books():
     book.refresh_from_db()
     BookSource.objects.create(
         book=book,
-        source_url="https://www.ebanglalibrary.com/books/deleted-source-book/",
-        normalized_source_url="httpswwwebanglalibrarycombooksdeletedsourcebook",
+        source_url="https://www.example.com/books/deleted-source-book/",
+        normalized_source_url="httpswwwexamplecombooksdeletedsourcebook",
     )
 
-    existing = find_existing_book_by_source_url("httpswwwebanglalibrarycombooksdeletedsourcebook")
+    existing = find_existing_book_by_source_url("httpswwwexamplecombooksdeletedsourcebook")
 
     assert existing is None

@@ -1,7 +1,13 @@
 
 from apps.ingestion.services.resolution_support_metadata import split_display_title
+from apps.ingestion.pipeline.scraper_support.network import _get_allowed_source_hosts
 
 ASCII_TO_BANGLA_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
+
+
+def _get_source_site_host():
+    from django.conf import settings
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or "www.example.com"
 
 
 def normalize_structured_heading_title(title):
@@ -280,7 +286,7 @@ def normalize_crawl_url(url, base_url=""):
 
     if parsed.scheme not in {"http", "https"}:
         return ""
-    if parsed.netloc.lower() not in ALLOWED_SOURCE_HOSTS:
+    if parsed.netloc.lower() not in _get_allowed_source_hosts():
         return ""
 
     normalized_path = parsed.path or "/"
@@ -288,5 +294,5 @@ def normalize_crawl_url(url, base_url=""):
         normalized_path = normalized_path.rstrip("/") + "/"
 
     return urlunparse(
-        ("https", "www.ebanglalibrary.com", normalized_path, parsed.params, parsed.query, "")
+        ("https", _get_source_site_host(), normalized_path, parsed.params, parsed.query, "")
     )

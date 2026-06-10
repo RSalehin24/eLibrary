@@ -21,6 +21,11 @@ The processing section currently routes to four pages:
 - `On Hold` -> `/on-hold` (was `/processing-failed-requests` and `/processing-duplicate-requests`)
 - `Incomplete` -> `/incomplete` (was `/processing-incomplete-check`)
 
+Additionally, two standalone processing pages exist:
+
+- `/multipage-toc` — Multi-page table of contents processing
+- `/reprocessing` — Book reprocessing queue
+
 The routing is defined in [app/frontend/src/features/app/AppRoutes.jsx](../app/frontend/src/features/app/AppRoutes.jsx). Old routes redirect with `<Navigate>`.
 
 The page components are exported from [app/frontend/src/features/processing/BookProcessingPages.jsx](../app/frontend/src/features/processing/BookProcessingPages.jsx):

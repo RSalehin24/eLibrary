@@ -29,7 +29,7 @@ pytestmark = pytest.mark.django_db
 def _make_book(*, title, authors=(), translators=(), publisher="", edition=""):
     book = Book.objects.create(
         title=title,
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state=LifecycleState.READY,
         review_state=ReviewState.APPROVED,
         manual_publisher=publisher,

@@ -218,8 +218,8 @@ def test_metadata_editor_can_queue_book_regeneration_from_book_page(client, monk
     PermissionGrant.objects.create(user=editor, book=book, scope=PermissionScope.METADATA_EDIT)
     BookSource.objects.create(
         book=book,
-        source_url="https://www.ebanglalibrary.com/books/reprocess-book/",
-        normalized_source_url="https://www.ebanglalibrary.com/books/reprocess-book/",
+        source_url="https://www.example.com/books/reprocess-book/",
+        normalized_source_url="https://www.example.com/books/reprocess-book/",
         source_title="পুনর্জন্ম বই",
     )
     client.force_login(editor)
@@ -230,9 +230,9 @@ def test_metadata_editor_can_queue_book_regeneration_from_book_page(client, monk
         submission = BookSubmission.objects.create(
             submitter=actor,
             input_type="url",
-            original_input="https://www.ebanglalibrary.com/books/reprocess-book/",
-            normalized_input="https://www.ebanglalibrary.com/books/reprocess-book/",
-            resolved_url="https://www.ebanglalibrary.com/books/reprocess-book/",
+            original_input="https://www.example.com/books/reprocess-book/",
+            normalized_input="https://www.example.com/books/reprocess-book/",
+            resolved_url="https://www.example.com/books/reprocess-book/",
             resolution_status="resolved",
             resolution_confidence=1.0,
             status="queued",

@@ -65,9 +65,9 @@ def test_repeated_requests_reuse_canonical_submission_and_existing_job(monkeypat
     canonical_submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/repeat-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/repeat-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/repeat-book/",
+        original_input="https://www.example.com/books/repeat-book/",
+        normalized_input=normalize_text("https://www.example.com/books/repeat-book/"),
+        resolved_url="https://www.example.com/books/repeat-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
     )
@@ -81,7 +81,7 @@ def test_repeated_requests_reuse_canonical_submission_and_existing_job(monkeypat
 
     duplicate_submission = create_submission_records(
         submitter=user,
-        parsed_entries=[{"kind": "url", "value": "https://www.ebanglalibrary.com/books/repeat-book/"}],
+        parsed_entries=[{"kind": "url", "value": "https://www.example.com/books/repeat-book/"}],
         auto_process=False,
     )[0]
 
@@ -104,9 +104,9 @@ def test_new_url_submission_does_not_reuse_deleted_ready_submission(monkeypatch)
     BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/deleted-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/deleted-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        original_input="https://www.example.com/books/deleted-book/",
+        normalized_input=normalize_text("https://www.example.com/books/deleted-book/"),
+        resolved_url="https://www.example.com/books/deleted-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.READY,
         linked_book=deleted_book,
@@ -116,14 +116,14 @@ def test_new_url_submission_does_not_reuse_deleted_ready_submission(monkeypatch)
 
     recreated_submission = create_submission_records(
         submitter=user,
-        parsed_entries=[{"kind": "url", "value": "https://www.ebanglalibrary.com/books/deleted-book/"}],
+        parsed_entries=[{"kind": "url", "value": "https://www.example.com/books/deleted-book/"}],
         auto_process=False,
     )[0]
 
     assert recreated_submission.linked_book_id is None
     assert recreated_submission.canonical_submission_id is None
     assert recreated_submission.status == SubmissionStatus.QUEUED
-    assert recreated_submission.resolved_url == "https://www.ebanglalibrary.com/books/deleted-book/"
+    assert recreated_submission.resolved_url == "https://www.example.com/books/deleted-book/"
 
 
 @pytest.mark.django_db
@@ -132,9 +132,9 @@ def test_new_url_submission_does_not_reuse_failed_request(monkeypatch):
     failed_submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/failed-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/failed-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/failed-book/",
+        original_input="https://www.example.com/books/failed-book/",
+        normalized_input=normalize_text("https://www.example.com/books/failed-book/"),
+        resolved_url="https://www.example.com/books/failed-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.FAILED,
         error_message="Processing failed.",
@@ -144,7 +144,7 @@ def test_new_url_submission_does_not_reuse_failed_request(monkeypatch):
 
     recreated_submission = create_submission_records(
         submitter=user,
-        parsed_entries=[{"kind": "url", "value": "https://www.ebanglalibrary.com/books/failed-book/"}],
+        parsed_entries=[{"kind": "url", "value": "https://www.example.com/books/failed-book/"}],
         auto_process=False,
     )[0]
 
@@ -157,7 +157,7 @@ def test_new_url_submission_does_not_reuse_failed_request(monkeypatch):
 def test_retrying_deleted_submission_clears_reused_state_and_queues_recreation(client, monkeypatch):
     user = User.objects.create_user(email="retry-deleted@example.com", password="strong-password-123")
     url = (
-        "https://www.ebanglalibrary.com/books/"
+        "https://www.example.com/books/"
         "%E0%A7%A8%E0%A7%A6%E0%A7%A6%E0%A7%A7-%E0%A6%86-%E0%A6%B8%E0%A7%8D%E0%A6%AA%E0%A7%87%E0%A6%B8-"
         "%E0%A6%93%E0%A6%A1%E0%A6%BF%E0%A6%B8%E0%A6%BF-%E0%A6%86%E0%A6%B0%E0%A7%8D%E0%A6%A5%E0%A6%BE%E0%A6%B0/"
     )

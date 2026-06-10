@@ -87,6 +87,31 @@ export async function mockCatalogBooksApi(page, total = 24, options = {}) {
       body: JSON.stringify(savedFilters)
     });
   });
+  const filterSuggestions = [
+    { name: "Architecture" },
+    { name: "History" },
+  ];
+  await page.route("**/api/catalog/writers/**", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(filterSuggestions)
+    });
+  });
+  await page.route("**/api/catalog/series/**", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(filterSuggestions)
+    });
+  });
+  await page.route("**/api/catalog/categories/**", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(filterSuggestions)
+    });
+  });
 }
 export async function mockAccessApi(page, totalUsers = 2) {
   const users = [{
@@ -269,6 +294,13 @@ export async function mockManualBooksApi(page, total = 8) {
       status: 200,
       contentType: "application/json",
       body: JSON.stringify(suggestionPayloads.writers)
+    });
+  });
+  await page.route("**/api/catalog/series/**", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(suggestionPayloads.categories)
     });
   });
   await page.route("**/api/catalog/translators/**", async route => {

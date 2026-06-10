@@ -10,7 +10,7 @@ def test_processing_create_again_reuses_own_linked_book_and_finishes_created(
     record = BookRecord.objects.create(
         id="recreate-created-record",
         name="Recreate Created",
-        url="https://www.ebanglalibrary.com/books/recreate-created/",
+        url="https://www.example.com/books/recreate-created/",
         category="Fiction",
         writer="Writer",
         publisher="Press",

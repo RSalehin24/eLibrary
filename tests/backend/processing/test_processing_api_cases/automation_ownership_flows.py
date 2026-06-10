@@ -139,7 +139,7 @@ def test_catalog_automation_ignores_stale_remote_pages_when_overrides_are_disabl
     sync_state.save(update_fields=["remote_pages", "updated_at"])
 
     entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/fallback-live-record/",
+        source_url="https://www.example.com/books/fallback-live-record/",
         title="Fallback Live Record",
         author_line="Source Author",
         normalized_title="fallback live record",

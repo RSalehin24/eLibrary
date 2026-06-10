@@ -490,7 +490,7 @@ Overview panel: counts for Paused, Failed, Duplicate, Deleted.
   [ ] An "Error Reason" column is visible and displays errorMessage per row.
   [ ] Failure is correctly set when:
       - A retry loop exceeds the defined threshold.
-      - The external fetch (e.g., eBanglaLibrary) fails after extended retries.
+      - The external fetch (e.g., source site) fails after extended retries.
       - A runtime/code exception occurs.
       - A Celery task times out (if applicable).
       - The pipeline detects a loop for this request.
@@ -748,7 +748,7 @@ PART 7 — IMPLEMENTATION CONSTRAINTS
   Do not rewrite anything that is not part of the Book Processing pages.
 - State management: use the project's existing store pattern. Do not introduce
   a new state management library.
-- All new code must be TypeScript-strict with no implicit `any`.
+- All new code must be JavaScript with strict mode and no implicit `any`.
 - Backend (Django/Celery/PostgreSQL):
     * All state transitions must be atomic (use database transactions).
     * Celery tasks must be idempotent where possible.

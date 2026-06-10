@@ -48,7 +48,7 @@ def test_processing_create_requests_and_pipeline_are_backend_owned(client, monke
     record = BookRecord.objects.create(
         id="request-record",
         name="Request Record",
-        url="https://www.ebanglalibrary.com/books/request-record/",
+        url="https://www.example.com/books/request-record/",
         category="Fiction",
         writer="Writer One",
         translator="Translator One",
@@ -132,7 +132,7 @@ def test_processing_create_requests_and_pipeline_are_backend_owned(client, monke
     assert ProcessingJob.objects.count() == 0
     created_book = Book.objects.get(pk=request.linked_book_id, deleted_at__isnull=True)
     assert created_book.title == "Request Record"
-    assert created_book.raw_scraped_metadata["source_url"] == "https://www.ebanglalibrary.com/books/request-record/"
+    assert created_book.raw_scraped_metadata["source_url"] == "https://www.example.com/books/request-record/"
     assert record.linked_book_id == created_book.id
 
 

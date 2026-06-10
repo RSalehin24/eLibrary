@@ -52,7 +52,7 @@ from apps.ingestion.models import (
 
 E2E_TITLE_PREFIX = "E2E "
 E2E_EMAIL_DOMAIN = "@e2e.local"
-E2E_SOURCE_PREFIX = "https://www.ebanglalibrary.com/books/e2e-"
+E2E_SOURCE_PREFIX = "https://www.example.com/books/e2e-"
 DEFAULT_WRITER = "E2E Writer"
 DEFAULT_CATEGORY = "E2E Fiction"
 DEFAULT_SERIES = "E2E Starter Series"

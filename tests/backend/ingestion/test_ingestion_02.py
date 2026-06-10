@@ -65,12 +65,12 @@ def test_title_resolver_returns_ambiguous_matches_from_archive_bucket():
     <div class="facetwp-template" data-name="books">
       <div class="fwpl-result">
         <div class="fwpl-item el-97dha">
-          <a href="https://www.ebanglalibrary.com/books/malice-one/">ম্যালিস - লেখক এক</a>
+          <a href="https://www.example.com/books/malice-one/">ম্যালিস - লেখক এক</a>
         </div>
       </div>
       <div class="fwpl-result">
         <div class="fwpl-item el-97dha">
-          <a href="https://www.ebanglalibrary.com/books/malice-two/">ম্যালিস - লেখক দুই</a>
+          <a href="https://www.example.com/books/malice-two/">ম্যালিস - লেখক দুই</a>
         </div>
       </div>
     </div>
@@ -103,8 +103,8 @@ def test_title_resolver_returns_ambiguous_matches_from_archive_bucket():
     assert result.resolved_url == ""
     assert len(result.candidates) == 2
     assert {candidate["url"] for candidate in result.candidates} == {
-        "https://www.ebanglalibrary.com/books/malice-one/",
-        "https://www.ebanglalibrary.com/books/malice-two/",
+        "https://www.example.com/books/malice-one/",
+        "https://www.example.com/books/malice-two/",
     }
 
 
@@ -114,7 +114,7 @@ def test_title_resolver_enriches_candidates_from_book_page_metadata():
     <div class="facetwp-template" data-name="books">
       <div class="fwpl-result">
         <div class="fwpl-item el-97dha">
-          <a href="https://www.ebanglalibrary.com/books/malice/">ম্যালিস উপন্যাস - সৈকত মুখোপাধ্যায়</a>
+          <a href="https://www.example.com/books/malice/">ম্যালিস উপন্যাস - সৈকত মুখোপাধ্যায়</a>
         </div>
       </div>
     </div>
@@ -145,7 +145,7 @@ def test_title_resolver_enriches_candidates_from_book_page_metadata():
 
         def get(self, url, params=None, timeout=30):
             params = params or {}
-            if url == "https://www.ebanglalibrary.com/books/malice/":
+            if url == "https://www.example.com/books/malice/":
                 return FakeResponse(book_page)
             key = (params.get("_a_z", ""), params.get("_paged", 1))
             if key == ("ম", 1):
@@ -157,8 +157,8 @@ def test_title_resolver_enriches_candidates_from_book_page_metadata():
     result = resolver.resolve("ম্যালিস")
 
     assert result.status == "exact_match"
-    assert result.resolved_url == "https://www.ebanglalibrary.com/books/malice/"
-    entry = SourceCatalogEntry.objects.get(source_url="https://www.ebanglalibrary.com/books/malice/")
+    assert result.resolved_url == "https://www.example.com/books/malice/"
+    entry = SourceCatalogEntry.objects.get(source_url="https://www.example.com/books/malice/")
     assert entry.title == "ম্যালিস"
     assert entry.raw_data["metadata_source"] == "book_page"
 
@@ -166,7 +166,7 @@ def test_title_resolver_enriches_candidates_from_book_page_metadata():
 @pytest.mark.django_db
 def test_direct_url_submission_stores_source_page_metadata(monkeypatch):
     fake_metadata = {
-        "source_url": "https://www.ebanglalibrary.com/books/source-book/",
+        "source_url": "https://www.example.com/books/source-book/",
         "title": "সোর্স বুক",
         "author_line": "লেখক",
         "normalized_title": normalize_text("সোর্স বুক"),
@@ -185,7 +185,7 @@ def test_direct_url_submission_stores_source_page_metadata(monkeypatch):
 
     submissions = create_submission_records(
         submitter=None,
-        parsed_entries=[{"kind": "url", "value": "https://www.ebanglalibrary.com/books/source-book/"}],
+        parsed_entries=[{"kind": "url", "value": "https://www.example.com/books/source-book/"}],
         auto_process=False,
     )
 

@@ -18,7 +18,7 @@ def detect_book_language(book_title="", author="", book_info_html=""):
     Heuristic (in priority order):
     1. If the book title contains Latin letters and no Bengali characters,
        treat the book as English. Author is intentionally ignored because
-       on ebanglalibrary.com author names are routinely transliterated into
+       on the source site author names are routinely transliterated into
        Bengali even for English-language works (e.g. Hamlet's creator
        reads "উইলিয়াম শেক্সপিয়ার").
     2. If the title is empty or ambiguous, fall back to scanning the

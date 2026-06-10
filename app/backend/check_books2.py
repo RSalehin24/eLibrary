@@ -7,11 +7,11 @@ from apps.ingestion.services.legacy_adapter import scrape_book_high_fidelity
 
 URLS = [
     # লোহিতকিরণচ্ছটা – কোয়েল তালুকদার
-    "https://www.ebanglalibrary.com/books/%e0%a6%b2%e0%a7%8b%e0%a6%b9%e0%a6%bf%e0%a6%a4%e0%a6%95%e0%a6%bf%e0%a6%b0%e0%a6%a3%e0%a6%9a%e0%a7%8d%e0%a6%9b%e0%a6%9f%e0%a6%be-%e0%a6%95%e0%a7%8b%e0%a6%af%e0%a6%bc%e0%a7%87%e0%a6%b2-%e0%a6%a4/",
+    "https://www.example.com/books/%e0%a6%b2%e0%a7%8b%e0%a6%b9%e0%a6%bf%e0%a6%a4%e0%a6%95%e0%a6%bf%e0%a6%b0%e0%a6%a3%e0%a6%9a%e0%a7%8d%e0%a6%9b%e0%a6%9f%e0%a6%be-%e0%a6%95%e0%a7%8b%e0%a6%af%e0%a6%bc%e0%a7%87%e0%a6%b2-%e0%a6%a4/",
     # হাত ছুঁয়ে-ছুঁয়ে দিয়েছি সব
-    "https://www.ebanglalibrary.com/books/%e0%a6%b9%e0%a6%be%e0%a6%a4-%e0%a6%9b%e0%a7%81%e0%a6%81%e0%a6%af%e0%a6%bc%e0%a7%87-%e0%a6%9b%e0%a7%81%e0%a6%81%e0%a6%af%e0%a6%bc%e0%a7%87-%e0%a6%a6%e0%a6%bf%e0%a6%af%e0%a6%bc%e0%a7%87%e0%a6%9b/",
+    "https://www.example.com/books/%e0%a6%b9%e0%a6%be%e0%a6%a4-%e0%a6%9b%e0%a7%81%e0%a6%81%e0%a6%af%e0%a6%bc%e0%a7%87-%e0%a6%9b%e0%a7%81%e0%a6%81%e0%a6%af%e0%a6%bc%e0%a7%87-%e0%a6%a6%e0%a6%bf%e0%a6%af%e0%a6%bc%e0%a7%87%e0%a6%9b/",
     # দুর্গরহস্য – শরদিন্দু বন্দ্যোপাধ্যায়
-    "https://www.ebanglalibrary.com/books/%E0%A6%A6%E0%A7%81%E0%A6%B0%E0%A7%8D%E0%A6%97%E0%A6%B0%E0%A6%B9%E0%A6%B8%E0%A7%8D%E0%A6%AF-%E0%A6%B6%E0%A6%B0%E0%A6%A6%E0%A6%BF%E0%A6%A8%E0%A7%8D%E0%A6%A6%E0%A7%81-%E0%A6%AC%E0%A6%A8%E0%A7%8D/",
+    "https://www.example.com/books/%E0%A6%A6%E0%A7%81%E0%A6%B0%E0%A7%8D%E0%A6%97%E0%A6%B0%E0%A6%B9%E0%A6%B8%E0%A7%8D%E0%A6%AF-%E0%A6%B6%E0%A6%B0%E0%A6%A6%E0%A6%BF%E0%A6%A8%E0%A7%8D%E0%A6%A6%E0%A7%81-%E0%A6%AC%E0%A6%A8%E0%A7%8D/",
 ]
 
 for url in URLS:

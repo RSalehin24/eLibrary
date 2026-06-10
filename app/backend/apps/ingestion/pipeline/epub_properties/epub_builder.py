@@ -184,7 +184,7 @@ def _generate_cover_png(book_title, author, series, output_folder):
     """Generate a PNG cover image with deep-green palette and Bengali text.
 
     Produces a 1200×1800 image (standard ebook cover ratio) styled to match
-    the ebanglalibrary.com site's dark-mode look: a deep forest-green
+    the source site's dark-mode look: a deep forest-green
     background, soft cream/gold typography and a thin gold divider:
 
       [top accent bar]
@@ -214,7 +214,7 @@ def _generate_cover_png(book_title, author, series, output_folder):
     PAD = 100
     MAX_W = W - 2 * PAD
 
-    # Deep-green palette mirroring ebanglalibrary.com's dark mode.
+    # Deep-green palette mirroring the source site's dark mode.
     BG_TOP        = (15,  36,  25)   # #0f2419  – forest-green top
     BG_MID        = (29,  60,  52)   # #1d3c34  – richer green centre
     BG_BOT        = (15,  36,  25)   # #0f2419  – forest-green bottom

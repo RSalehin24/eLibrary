@@ -2,7 +2,7 @@
 import zipfile
 from pathlib import Path as _Path
 
-from apps.catalog.management.commands.repair_ebangla_metadata import repaired_opf_nav_spine
+from apps.catalog.management.commands.repair_source_site_metadata import repaired_opf_nav_spine
 from apps.ingestion.pipeline.epub_properties.epub_builder import EpubBuilder
 from apps.ingestion.services.normalization import (
     extract_main_content_segments,
@@ -12,7 +12,7 @@ from apps.ingestion.services.normalization import (
 from apps.ingestion.services.resolution_support_metadata import split_display_title
 
 _MODULE_DIR = _Path(__file__).with_name("test_ingestion_21_cases")
-_MODULE_FILES = ("ebangla_metadata_fidelity.py",)
+_MODULE_FILES = ("source_site_metadata_fidelity.py",)
 
 for _module_file in _MODULE_FILES:
     _module_path = _MODULE_DIR / _module_file

@@ -69,9 +69,9 @@ def test_process_submission_job_replaces_existing_media_assets_instead_of_creati
     submission_one = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/reprocess-book/",
+        original_input="https://www.example.com/books/reprocess-book/",
         normalized_input="reprocess book",
-        resolved_url="https://www.ebanglalibrary.com/books/reprocess-book/",
+        resolved_url="https://www.example.com/books/reprocess-book/",
         resolution_status="resolved",
         resolution_confidence=1.0,
         status="queued",
@@ -141,8 +141,8 @@ def test_url_submission_checks_database_first_and_returns_existing_book(client):
     existing_book = Book.objects.create(title="সংরক্ষিত বই", state="ready", review_state="approved")
     BookSource.objects.create(
         book=existing_book,
-        source_url="https://www.ebanglalibrary.com/books/existing-book/",
-        normalized_source_url="https://www.ebanglalibrary.com/books/existing-book/",
+        source_url="https://www.example.com/books/existing-book/",
+        normalized_source_url="https://www.example.com/books/existing-book/",
         source_title="সংরক্ষিত বই",
     )
     client.force_login(user)
@@ -152,7 +152,7 @@ def test_url_submission_checks_database_first_and_returns_existing_book(client):
         data=json.dumps(
             {
                 "input_type": "url",
-                "content": "https://www.ebanglalibrary.com/books/existing-book/",
+                "content": "https://www.example.com/books/existing-book/",
                 "auto_process": True,
             }
         ),
@@ -199,9 +199,9 @@ def test_processing_reuses_canonical_author_series_and_category_names(tmp_path, 
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/canonical-book/",
+        original_input="https://www.example.com/books/canonical-book/",
         normalized_input="canonical book",
-        resolved_url="https://www.ebanglalibrary.com/books/canonical-book/",
+        resolved_url="https://www.example.com/books/canonical-book/",
         resolution_status="resolved",
         resolution_confidence=1.0,
         status="queued",

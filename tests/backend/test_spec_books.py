@@ -1,6 +1,6 @@
 """Live integration tests for the EPUB pipeline against the spec reference books.
 
-These tests make real HTTP requests to ebanglalibrary.com.
+These tests make real HTTP requests to the source site.
 They are marked ``live`` and are excluded from the normal unit-test run.
 
 Run all live tests:
@@ -26,79 +26,79 @@ from apps.ingestion.services.normalization import plain_text_from_html
 SPEC_BOOKS = [
     {
         "id": "bhumika",
-        "url": "https://www.ebanglalibrary.com/books/ভূমিকা-প্রফুল্ল-রায়/",
+        "url": "https://www.example.com/books/ভূমিকা-প্রফুল্ল-রায়/",
         "name": "ভূমিকা — প্রফুল্ল রায়",
         "checks": ["no_cross_book_links_in_toc"],
     },
     {
         "id": "shankha_ghosh",
-        "url": "https://www.ebanglalibrary.com/books/শঙ্খ-ঘোষের-শ্রেষ্ঠ-কবিতা/",
+        "url": "https://www.example.com/books/শঙ্খ-ঘোষের-শ্রেষ্ঠ-কবিতা/",
         "name": "শঙ্খ ঘোষের শ্রেষ্ঠ কবিতা",
         "checks": ["toc_not_empty", "toc_has_parent_entries"],
     },
     {
         "id": "shopner_brishtimahal",
-        "url": "https://www.ebanglalibrary.com/books/স্বপ্নের-বৃষ্টিমহল-ওয়া/",
+        "url": "https://www.example.com/books/স্বপ্নের-বৃষ্টিমহল-ওয়া/",
         "name": "স্বপ্নের বৃষ্টিমহল — ওয়াসিকা নুযহাত",
         "checks": ["has_dedication", "dedication_not_in_front_sections"],
     },
     {
         "id": "himu_baba",
-        "url": "https://www.ebanglalibrary.com/books/হিমুর-বাবার-কথামালা/",
+        "url": "https://www.example.com/books/হিমুর-বাবার-কথামালা/",
         "name": "হিমুর বাবার কথামালা — হুমায়ূন আহমেদ",
         "checks": ["toc_not_empty", "no_artificial_chapter_split"],
     },
     {
         "id": "hamlet",
-        "url": "https://www.ebanglalibrary.com/books/hamlet-william-shakespeare/",
+        "url": "https://www.example.com/books/hamlet-william-shakespeare/",
         "name": "Hamlet — William Shakespeare",
         "checks": ["english_labels"],
     },
     {
         "id": "2001",
-        "url": "https://www.ebanglalibrary.com/books/২০০১-আ-স্পেস-ওডিসি-আর্থার/",
+        "url": "https://www.example.com/books/২০০১-আ-স্পেস-ওডিসি-আর্থার/",
         "name": "২০০১: A Space Odyssey — আর্থার ক্লার্ক",
         "checks": ["toc_not_empty", "has_book_info"],
     },
     {
         "id": "sherlock",
-        "url": "https://www.ebanglalibrary.com/books/শার্লক-হোমস-সমগ্র-১-অনুবা/",
+        "url": "https://www.example.com/books/শার্লক-হোমস-সমগ্র-১-অনুবা/",
         "name": "শার্লক হোমস সমগ্র ১",
         "checks": ["toc_not_empty", "has_book_info"],
     },
     {
         "id": "sidney_sheldon",
-        "url": "https://www.ebanglalibrary.com/books/সিডনি-সেলডন-রচনাসমগ্র-২/",
+        "url": "https://www.example.com/books/সিডনি-সেলডন-রচনাসমগ্র-২/",
         "name": "সিডনি সেলডন রচনাসমগ্র ২",
         "checks": ["toc_not_empty"],
     },
     {
         "id": "ba12_satyajit",
-        "url": "https://www.ebanglalibrary.com/books/বাঃ-১২-সত্যজিৎ-রায়/",
+        "url": "https://www.example.com/books/বাঃ-১২-সত্যজিৎ-রায়/",
         "name": "বাঃ ১২ — সত্যজিৎ রায়",
         "checks": ["toc_not_empty", "toc_has_parent_entries"],
     },
     {
         "id": "sati",
-        "url": "https://www.ebanglalibrary.com/books/সতী-দীনেশচন্দ্র-সেন/",
+        "url": "https://www.example.com/books/সতী-দীনেশচন্দ্র-সেন/",
         "name": "সতী — দীনেশচন্দ্র সেন",
         "checks": ["has_book_info", "toc_not_empty"],
     },
     {
         "id": "lohit_kiran",
-        "url": "https://www.ebanglalibrary.com/books/লোহিতকিরণচ্ছটা/",
+        "url": "https://www.example.com/books/লোহিতকিরণচ্ছটা/",
         "name": "লোহিতকিরণচ্ছটা",
         "checks": ["toc_not_empty", "has_book_info"],
     },
     {
         "id": "hat_chuye",
-        "url": "https://www.ebanglalibrary.com/books/হাত-ছুঁয়ে-ছুঁয়ে-দিয়েছ/",
+        "url": "https://www.example.com/books/হাত-ছুঁয়ে-ছুঁয়ে-দিয়েছ/",
         "name": "হাত ছুঁয়ে-ছুঁয়ে দিয়েছি সব",
         "checks": ["toc_not_empty", "has_book_info"],
     },
     {
         "id": "durga_rahasya",
-        "url": "https://www.ebanglalibrary.com/books/দুর্গরহস্য-শরদিন্দু-বন্/",
+        "url": "https://www.example.com/books/দুর্গরহস্য-শরদিন্দু-বন্/",
         "name": "দুর্গরহস্য — শরদিন্দু বন্দ্যোপাধ্যায়",
         "checks": ["toc_not_empty", "has_book_info"],
     },

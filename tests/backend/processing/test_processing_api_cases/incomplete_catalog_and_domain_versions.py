@@ -24,8 +24,8 @@ def test_parse_incomplete_catalog_page_reads_entry_title_links():
     entries = processing_services.parse_incomplete_catalog_page(soup)
 
     assert [entry["source_url"] for entry in entries] == [
-        "https://www.ebanglalibrary.com/books/sample-incomplete-book/",
-        "https://www.ebanglalibrary.com/books/second-incomplete-book/",
+        "https://www.example.com/books/sample-incomplete-book/",
+        "https://www.example.com/books/second-incomplete-book/",
     ]
     assert entries[0]["title"] == "Sample Incomplete Book"
     assert entries[0]["author_line"] == "Sample Author"

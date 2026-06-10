@@ -37,7 +37,7 @@ rows, and simulated runtime interruptions for processing scenarios.
 
 | Area | Scenario | Result handling |
 | --- | --- | --- |
-| Remote source | eBanglaLibrary outage | Verify only if naturally observed in the real run |
+| Remote source | Source site outage | Verify only if naturally observed in the real run |
 | Remote source | Rate limiting or transient omissions | Verify only if naturally observed in the real run |
 | Worker runtime | Worker crash or restart | Verify only if naturally observed in the real run |
 
@@ -45,4 +45,4 @@ rows, and simulated runtime interruptions for processing scenarios.
 
 - `tests/frontend/e2e/processing-pages-live.spec.js`
 - `tests/scripts/test-processing-live.sh`
-- Live development stack with frontend, backend, worker, processing-worker, beat, Redis, Postgres, and real eBanglaLibrary flow
+- Live development stack with frontend, backend, worker, processing-worker, beat, Redis, Postgres, and real source site flow

@@ -65,7 +65,7 @@ def test_processing_search_matches_percent_encoded_source_titles(client):
     client.force_login(admin)
 
     encoded_slug = quote("খেয়া-রবীন্দ্রনাথ-ঠাকুর", safe="")
-    source_url = f"https://www.ebanglalibrary.com/books/{encoded_slug}/"
+    source_url = f"https://www.example.com/books/{encoded_slug}/"
     submission = BookSubmission.objects.create(
         input_type="url",
         origin=SubmissionOrigin.USER,
@@ -103,9 +103,9 @@ def test_processing_manager_can_stop_queued_job(client, monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
         origin=SubmissionOrigin.USER,
-        original_input="https://www.ebanglalibrary.com/books/queued-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/queued-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/queued-book/",
+        original_input="https://www.example.com/books/queued-book/",
+        normalized_input=normalize_text("https://www.example.com/books/queued-book/"),
+        resolved_url="https://www.example.com/books/queued-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -137,9 +137,9 @@ def test_processing_manager_can_stop_processing_job(client, monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
         origin=SubmissionOrigin.USER,
-        original_input="https://www.ebanglalibrary.com/books/processing-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/processing-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/processing-book/",
+        original_input="https://www.example.com/books/processing-book/",
+        normalized_input=normalize_text("https://www.example.com/books/processing-book/"),
+        resolved_url="https://www.example.com/books/processing-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
     )

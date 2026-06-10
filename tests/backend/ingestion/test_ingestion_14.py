@@ -65,12 +65,12 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
     monkeypatch,
 ):
     user = User.objects.create_user(email="unique-title-only@example.com", password="strong-password-123")
-    existing_source_url = "https://www.ebanglalibrary.com/books/shared-title-old/"
-    incoming_source_url = "https://www.ebanglalibrary.com/books/shared-title-new/"
+    existing_source_url = "https://www.example.com/books/shared-title-old/"
+    incoming_source_url = "https://www.example.com/books/shared-title-new/"
 
     existing_book = Book.objects.create(
         title="শ্রেষ্ঠ কবিতা",
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state="ready",
         review_state="approved",
     )
@@ -146,7 +146,7 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
 def test_find_exact_existing_book_does_not_match_when_categories_differ():
     existing_book = Book.objects.create(
         title="শ্রেষ্ঠ কবিতা",
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state="ready",
         review_state="approved",
     )

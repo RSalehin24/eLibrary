@@ -137,7 +137,7 @@ Actions:
 
 ## Page Map
 
-The processing section now routes to four pages. Old `/processing-*` URLs redirect automatically to their new equivalents.
+The processing section routes to four main pages. Old `/processing-*` URLs redirect automatically to their new equivalents. Two standalone processing pages also exist.
 
 ### `/catalog`
 
@@ -293,6 +293,22 @@ How it works:
 - automation fetches the live `অসম্পূর্ণ বই` category and reconciles the local catalog
 - resolved records move to `Updated` after the run completes
 - formerly at `/processing-incomplete-check`
+
+### `/multipage-toc`
+
+Heading: `Multi-Page TOC`
+
+Cards:
+
+- Multi-page table of contents processing for books with complex TOC structures
+
+### `/reprocessing`
+
+Heading: `Reprocessing`
+
+Cards:
+
+- Book reprocessing queue for items that need to be re-processed
 
 ## REMOVED PAGES (redirect targets)
 

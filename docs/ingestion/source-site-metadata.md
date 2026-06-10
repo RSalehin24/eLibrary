@@ -1,20 +1,19 @@
-# ebanglalibrary URL Metadata
+# Source Site URL Metadata
 
 This note documents the URL patterns and metadata sources currently used by the Bangla Library ingestion flow.
 
 ## Canonical book URL
 
-- Canonical pattern: `https://www.ebanglalibrary.com/books/<slug>/`
+- Canonical pattern: `https://www.<source-site-host>/books/<slug>/`
 - Only `/books/` URLs are accepted for direct ingestion.
 - Input URLs are normalized to:
   - `https`
-  - host `www.ebanglalibrary.com`
+  - host matching `SOURCE_SITE_HOST` setting
   - trailing slash
 
 Accepted source hosts during fetch fallback:
 
-- `www.ebanglalibrary.com`
-- `ebanglalibrary.com`
+- Configured via `SOURCE_SITE_HOST` and `SOURCE_SITE_FALLBACK_HOSTS` settings
 
 ## Reliable metadata order
 
@@ -66,7 +65,7 @@ This metadata is stored into `SourceCatalogEntry.raw_data` with `metadata_source
 
 The archive listing lives at:
 
-- `https://www.ebanglalibrary.com/books/`
+- `https://www.<source-site-host>/books/`
 
 Observed query parameters:
 

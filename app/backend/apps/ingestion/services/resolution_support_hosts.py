@@ -3,16 +3,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 
 
-SOURCE_SITE_HOST = (
-    getattr(settings, "SOURCE_SITE_HOST", "www.ebanglalibrary.com")
-    or "www.ebanglalibrary.com"
-).strip().lower()
-SOURCE_SITE_FALLBACK_HOSTS = tuple(
-    host.strip().lower()
-    for host in (getattr(settings, "SOURCE_SITE_FALLBACK_HOSTS", []) or [])
-    if str(host).strip()
-)
-CATALOG_URL = f"https://{SOURCE_SITE_HOST}/books/"
+DEFAULT_SOURCE_SITE_HOST = "www.example.com"
 ARCHIVE_MAX_PAGES = 80
 SEARCH_HEADERS = {
     "User-Agent": (
@@ -21,23 +12,51 @@ SEARCH_HEADERS = {
         "Chrome/123.0.0.0 Safari/537.36"
     )
 }
-SOURCE_SITE_DNS_RESOLVERS = tuple(
-    str(resolver).strip()
-    for resolver in (
-        getattr(settings, "SOURCE_SITE_DNS_RESOLVERS", None)
-        or ("1.1.1.1", "8.8.8.8")
+
+
+def get_source_site_host():
+    return (
+        getattr(settings, "SOURCE_SITE_HOST", "")
+        or DEFAULT_SOURCE_SITE_HOST
+    ).strip().lower()
+
+
+def get_source_site_domain():
+    host = get_source_site_host()
+    if host.startswith("www."):
+        return host[4:]
+    return host
+
+
+def get_source_site_fallback_hosts():
+    return tuple(
+        host.strip().lower()
+        for host in (getattr(settings, "SOURCE_SITE_FALLBACK_HOSTS", []) or [])
+        if str(host).strip()
     )
-    if str(resolver).strip()
-)
+
+
+def get_catalog_url():
+    host = get_source_site_host()
+    return f"https://{host}/books/" if host else ""
+
+
+def get_source_site_dns_resolvers():
+    return tuple(
+        str(resolver).strip()
+        for resolver in (
+            getattr(settings, "SOURCE_SITE_DNS_RESOLVERS", None)
+            or ("1.1.1.1", "8.8.8.8")
+        )
+        if str(resolver).strip()
+    )
 
 
 def source_request_hosts(host=""):
     candidates = [
         str(host or "").strip().lower(),
-        SOURCE_SITE_HOST,
-        *SOURCE_SITE_FALLBACK_HOSTS,
-        "www.ebanglalibrary.com",
-        "ebanglalibrary.com",
+        get_source_site_host(),
+        *get_source_site_fallback_hosts(),
     ]
     ordered = []
     seen = set()

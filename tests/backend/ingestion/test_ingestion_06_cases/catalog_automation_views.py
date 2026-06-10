@@ -62,18 +62,18 @@ def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkey
     user_submission = BookSubmission.objects.create(
         input_type="url",
         origin=SubmissionOrigin.USER,
-        original_input="https://www.ebanglalibrary.com/books/user-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/user-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/user-book/",
+        original_input="https://www.example.com/books/user-book/",
+        normalized_input=normalize_text("https://www.example.com/books/user-book/"),
+        resolved_url="https://www.example.com/books/user-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
     curation_submission = BookSubmission.objects.create(
         input_type="url",
         origin=SubmissionOrigin.CURATION,
-        original_input="https://www.ebanglalibrary.com/books/source-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/source-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/source-book/",
+        original_input="https://www.example.com/books/source-book/",
+        normalized_input=normalize_text("https://www.example.com/books/source-book/"),
+        resolved_url="https://www.example.com/books/source-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )

@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# One-time helper to capture an ebanglalibrary.com login session for the scraper.
+# One-time helper to capture an example.com login session for the scraper.
 #
 # Cloudflare blocks every automated login, so we DON'T automate the login at all.
-# Instead, log in to https://www.ebanglalibrary.com once in Firefox
+# Instead, log in to https://www.example.com once in Firefox
 # (tick "Remember Me" so the cookie lasts ~1 year), then run this script. It
 # reads the wordpress_logged_in_* cookie straight out of Firefox's cookie store
-# and writes it to app/backend/storage/ebangla_auth.json, which the backend reads
+# and writes it to app/backend/storage/source_site_auth.json, which the backend reads
 # automatically (locally via the storage bind-mount, on EC2 via the deploy sync).
 #
 # If the cookie can't be read automatically from Firefox, the script falls back
 # to a manual paste prompt.
 #
 # Usage:
-#   bash local/scripts/save-ebangla-auth.sh
+#   bash local/scripts/save-source-site-auth.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
@@ -39,4 +39,4 @@ if ! "${PY}" -c "import browser_cookie3" >/dev/null 2>&1; then
     echo "(could not install browser-cookie3; manual paste mode will be used)"
 fi
 
-exec "${PY}" "${SCRIPT_DIR}/save_ebangla_auth.py"
+exec "${PY}" "${SCRIPT_DIR}/save_source_site_auth.py"

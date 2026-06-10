@@ -94,8 +94,8 @@ def _saved_curated_result_for_resume(processing_request):
 
 SIGN_IN_REQUIRED_TOC_ERROR = (
     "Sign-in required: the source table of contents spans multiple pages on "
-    "ebanglalibrary.com but only {fetched} of {source} TOC pages could be "
-    "retrieved. Update the ebanglalibrary.com auth cookie and regenerate this book."
+    "the source site but only {fetched} of {source} TOC pages could be "
+    "retrieved. Update the source site auth cookie and regenerate this book."
 )
 
 CONTENT_FETCH_INCOMPLETE_ERROR = (
@@ -121,7 +121,7 @@ def _apply_multi_page_toc_signal(processing_request, curated_result):
     """Persist multi-page TOC signals and fail the request when pages are missing.
 
     The LearnDash AJAX pager only returns later TOC pages for an authenticated
-    session. When the ebanglalibrary.com sign-in cookie is missing or expired,
+    session. When the source site sign-in cookie is missing or expired,
     pages beyond the first yield no new lessons, so the book would be created
     with only a fraction of its content. We surface that as an explicit failure
     instead of silently producing an incomplete book.
@@ -154,7 +154,7 @@ def _apply_multi_page_toc_signal(processing_request, curated_result):
     )
 
     if toc_incomplete:
-        # Message intentionally mentions "ebanglalibrary.com" so the retry loop in
+        # Message intentionally mentions "source site" so the retry loop in
         # _run_processing_request stops retrying (re-scraping cannot recover the
         # missing pages until the auth cookie is refreshed).
         raise ValueError(
@@ -168,7 +168,7 @@ def _apply_multi_page_toc_signal(processing_request, curated_result):
     topics_expected = _coerce_int(structure.get("topics_expected"), 0)
     topics_fetched = _coerce_int(structure.get("topics_fetched"), 0)
     if content_incomplete:
-        # Does NOT contain "ebanglalibrary.com" so the retry loop will attempt up
+        # Does NOT contain "source site" so the retry loop will attempt up
         # to MAX_PROCESSING_REQUEST_ATTEMPTS re-scrapes (transient rate-limiting
         # may clear between attempts). The pipeline fails *before*
         # _persist_processing_book so book.content_items is never overwritten with
@@ -390,7 +390,7 @@ def _run_processing_request(processing_request):
             )
             if (
                 isinstance(exc, ValueError)
-                and "ebanglalibrary.com" in str(exc)
+                and "source site" in str(exc).lower()
             ):
                 break
             reloaded = _reload_processing_request(processing_request.id)

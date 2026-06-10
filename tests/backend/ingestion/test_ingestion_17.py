@@ -73,22 +73,22 @@ def test_duplicate_review_list_defaults_to_pending_reviews(client):
     pending_submission = BookSubmission.objects.create(
         submitter=admin,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/pending-duplicate/",
+        original_input="https://www.example.com/books/pending-duplicate/",
         normalized_input=normalize_text(
-            "https://www.ebanglalibrary.com/books/pending-duplicate/",
+            "https://www.example.com/books/pending-duplicate/",
         ),
-        resolved_url="https://www.ebanglalibrary.com/books/pending-duplicate/",
+        resolved_url="https://www.example.com/books/pending-duplicate/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.DUPLICATE,
     )
     dismissed_submission = BookSubmission.objects.create(
         submitter=admin,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/dismissed-duplicate/",
+        original_input="https://www.example.com/books/dismissed-duplicate/",
         normalized_input=normalize_text(
-            "https://www.ebanglalibrary.com/books/dismissed-duplicate/",
+            "https://www.example.com/books/dismissed-duplicate/",
         ),
-        resolved_url="https://www.ebanglalibrary.com/books/dismissed-duplicate/",
+        resolved_url="https://www.example.com/books/dismissed-duplicate/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -127,9 +127,9 @@ def test_duplicate_review_keep_new_queues_recreate_for_deleted_existing_book(cli
     submission = BookSubmission.objects.create(
         submitter=admin,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/deleted-book/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/deleted-book/"),
-        resolved_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        original_input="https://www.example.com/books/deleted-book/",
+        normalized_input=normalize_text("https://www.example.com/books/deleted-book/"),
+        resolved_url="https://www.example.com/books/deleted-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.DUPLICATE,
         review_state="needs_review",
@@ -169,8 +169,8 @@ def test_public_submission_accepts_mixed_entries_and_reuses_existing_books(clien
     existing_book = Book.objects.create(title="সংরক্ষিত বই", state="ready", review_state="approved")
     BookSource.objects.create(
         book=existing_book,
-        source_url="https://www.ebanglalibrary.com/books/existing-book/",
-        normalized_source_url="https://www.ebanglalibrary.com/books/existing-book/",
+        source_url="https://www.example.com/books/existing-book/",
+        normalized_source_url="https://www.example.com/books/existing-book/",
         source_title="সংরক্ষিত বই",
     )
 
@@ -179,7 +179,7 @@ def test_public_submission_accepts_mixed_entries_and_reuses_existing_books(clien
         data=json.dumps(
             {
                 "entries": [
-                    "https://www.ebanglalibrary.com/books/existing-book/",
+                    "https://www.example.com/books/existing-book/",
                     "সংরক্ষিত বই",
                 ],
                 "auto_process": True,
@@ -208,14 +208,14 @@ def test_confirm_candidate_requires_manual_choice_for_ambiguous_title(client, mo
     client.force_login(user)
 
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/sample-book-one/",
+        source_url="https://www.example.com/books/sample-book-one/",
         title="স্যাম্পল বুক এক",
         author_line="লেখক",
         normalized_title=normalize_text("স্যাম্পল বুক এক"),
         normalized_display=normalize_text("স্যাম্পল বুক এক লেখক"),
     )
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/sample-book-two/",
+        source_url="https://www.example.com/books/sample-book-two/",
         title="স্যাম্পল বুক দুই",
         author_line="লেখক",
         normalized_title=normalize_text("স্যাম্পল বুক দুই"),

@@ -1,5 +1,6 @@
 from apps.catalog.models import Book, BookGroup, ContributorRole
 from apps.common.text import normalize_catalog_text
+from apps.ingestion.services.resolution_support_hosts import get_source_site_domain
 
 
 def normalized_role_names(normalized_scraped, role):
@@ -84,9 +85,10 @@ def find_exact_existing_book(scraped_data, *, normalize_scraped_book_fn):
     if not normalized_title:
         return None
 
+    source_site = get_source_site_domain()
     candidate_books = (
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site=source_site,
             normalized_title=normalized_title,
             deleted_at__isnull=True,
         )
@@ -152,9 +154,10 @@ def find_existing_matching_book(book_title, normalized_scraped):
 
     target_translator_names = normalized_role_names(normalized_scraped, ContributorRole.TRANSLATOR)
 
+    source_site = get_source_site_domain()
     candidates = (
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site=source_site,
             normalized_title=normalized_title,
             deleted_at__isnull=True,
         )
@@ -252,9 +255,10 @@ def classify_incoming_book(scraped_data, *, normalize_scraped_book_fn):
         or (normalized_scraped.get("raw_strings") or {}).get("edition", "")
     )
 
+    source_site = get_source_site_domain()
     candidates = list(
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site=source_site,
             normalized_title=normalized_title,
             deleted_at__isnull=True,
         ).prefetch_related("book_contributors__contributor", "group")

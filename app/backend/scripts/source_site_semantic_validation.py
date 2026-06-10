@@ -15,8 +15,8 @@ from bs4 import BeautifulSoup
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from apps.common.ebangla_batch_audit import refresh_source_archive
-from apps.common.ebangla_semantic_audit import audit_scraped_book
+from apps.common.source_site_batch_audit import refresh_source_archive
+from apps.common.source_site_semantic_audit import audit_scraped_book
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.services.normalization import (
     BLOCK_TAG_NAMES,
@@ -30,17 +30,17 @@ from apps.ingestion.services.normalization import (
 from apps.processing import source as processing_source
 
 
-DESIRED_SUCCESS_COUNT = int(os.environ.get("EBANGLA_DESIRED_SUCCESS_COUNT", "200") or 200)
-CANDIDATE_LIMIT = int(os.environ.get("EBANGLA_CANDIDATE_LIMIT", "260") or 260)
-ARCHIVE_REFRESH_PAGES = int(os.environ.get("EBANGLA_REFRESH_PAGES", "25") or 25)
+DESIRED_SUCCESS_COUNT = int(os.environ.get("SOURCE_SITE_DESIRED_SUCCESS_COUNT", "200") or 200)
+CANDIDATE_LIMIT = int(os.environ.get("SOURCE_SITE_CANDIDATE_LIMIT", "260") or 260)
+ARCHIVE_REFRESH_PAGES = int(os.environ.get("SOURCE_SITE_REFRESH_PAGES", "25") or 25)
 REPORT_DIR = Path("/app/storage/semantic-validation-report")
 EXPORT_ROOT = Path("/app/storage/semantic-validation")
 SOURCE_URLS_PATH = Path("/app/storage/live-validation-report/successes.json")
 PRIORITY_SOURCE_URLS = [
-    "https://www.ebanglalibrary.com/books/%e0%a6%ae%e0%a7%8b%e0%a6%95%e0%a7%8d%e0%a6%b8%e0%a6%be-%e0%a6%b0%e0%a7%87%e0%a6%a8%e0%a7%87%e0%a6%b8%e0%a6%be%e0%a6%81-%e0%a6%b0%e0%a7%8b%e0%a6%a6%e0%a7%8d%e0%a6%a6%e0%a7%82%e0%a6%b0-%e0%a6%b0/",
+    "https://www.example.com/books/example-book/",
 ]
 USE_SAVED_SOURCE_URLS = (
-    os.environ.get("EBANGLA_USE_SAVED_SOURCE_URLS", "").strip().lower()
+    os.environ.get("SOURCE_SITE_USE_SAVED_SOURCE_URLS", "").strip().lower()
     in {"1", "true", "yes", "on"}
 )
 

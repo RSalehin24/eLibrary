@@ -194,7 +194,7 @@ def test_processing_state_returns_weekly_automation_defaults_without_placeholder
 def test_processing_state_exposes_decoded_bangla_display_urls(client):
     login_processing_admin(client)
     encoded_url = (
-        "https://www.ebanglalibrary.com/books/"
+        "https://www.example.com/books/"
         "%E0%A6%85%E0%A6%97%E0%A7%8D%E0%A6%A8%E0%A6%BF%E0%A6%AA%E0%A6%B0"
         "%E0%A7%80%E0%A6%95%E0%A7%8D%E0%A6%B7%E0%A6%BE-%E0%A6%86%E0%A6%B6"
         "%E0%A6%BE%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3%E0%A6%BE/"
@@ -216,6 +216,6 @@ def test_processing_state_exposes_decoded_bangla_display_urls(client):
     assert entry["url"] == encoded_url
     assert (
         entry["displayUrl"]
-        == "https://www.ebanglalibrary.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/"
+        == "https://www.example.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/"
     )
     assert entry["displayPath"] == "books/অগ্নিপরীক্ষা-আশাপূর্ণা"

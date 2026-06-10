@@ -4,9 +4,9 @@
 def test_recover_stale_processing_jobs_requeues_stale_processing_work(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/stale-processing/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/stale-processing/"),
-        resolved_url="https://www.ebanglalibrary.com/books/stale-processing/",
+        original_input="https://www.example.com/books/stale-processing/",
+        normalized_input=normalize_text("https://www.example.com/books/stale-processing/"),
+        resolved_url="https://www.example.com/books/stale-processing/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
     )
@@ -67,9 +67,9 @@ def test_recover_stale_processing_jobs_requeues_stale_processing_work(monkeypatc
 def test_recover_stale_processing_jobs_fails_exhausted_processing_work(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/stale-processing-final/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/stale-processing-final/"),
-        resolved_url="https://www.ebanglalibrary.com/books/stale-processing-final/",
+        original_input="https://www.example.com/books/stale-processing-final/",
+        normalized_input=normalize_text("https://www.example.com/books/stale-processing-final/"),
+        resolved_url="https://www.example.com/books/stale-processing-final/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
     )

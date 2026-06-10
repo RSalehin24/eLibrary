@@ -1,4 +1,4 @@
-"""Catalogue-wide audit report for the eBangla curated dataset.
+"""Catalogue-wide audit report for the curated dataset.
 
 Run via: ``python manage.py audit_curated_catalog [--report-path=PATH]``
 
@@ -89,7 +89,7 @@ def inspect_epub(path):
 
 
 class Command(BaseCommand):
-    help = "Generate a quality-audit report for the curated eBangla catalogue."
+    help = "Generate a quality-audit report for the curated catalogue."
 
     def add_arguments(self, parser):
         parser.add_argument("--report-path", default="/app/logs/audit_curated_catalog.json")

@@ -25,7 +25,7 @@ The EPUB internal NCX/OPF spine TOC (the epub-level toc at the front) must **not
 
 ## 2. Cover Page
 
-- If the source site (ebanglalibrary.com) has a cover image for the book, use that image as the cover.
+- If the source site has a cover image for the book, use that image as the cover.
 - If the source site has **no** cover image, generate one programmatically.
 - The generated cover must:
   - Match exactly what is shown in the **dark mode** card/thumbnail on the site — same colours, same layout.
@@ -166,7 +166,7 @@ Some books include a TOC written as plain text (no hyperlinks) inside the first 
 
 The scraper must distinguish between two types:
 
-**Type A — Book with an inherent TOC** (multi-chapter books on ebanglalibrary):
+**Type A — Book with an inherent TOC** (multi-chapter books on the source site):
 
 - The source site has a TOC with linked chapters (URLs go to `/lessons/...`).
 - Use this TOC exactly as-is. Do **not** generate new chapter splits from content.
@@ -263,29 +263,29 @@ All of these must be correctly parsed into structured key-value fields and place
 
 ## 14. Reference Test Books
 
-The following books from ebanglalibrary.com are the canonical test set for this pipeline. Each book was used during development to identify and fix specific spec violations. Use these URLs when validating pipeline behaviour.
+The following books from the source site are the canonical test set for this pipeline. Each book was used during development to identify and fix specific spec violations. Use these URLs when validating pipeline behaviour.
 
 | Book                                    | URL                                                              | Spec Sections                                                                                                            |
 | --------------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| ভূমিকা — প্রফুল্ল রায়                  | https://www.ebanglalibrary.com/books/ভূমিকা-প্রফুল্ল-রায়/       | §8 — `/books/` cross-links must not appear in TOC                                                                        |
-| ২০০১ আ স্পেস ওডিসি — আর্থার ক্লার্ক     | https://www.ebanglalibrary.com/books/২০০১-আ-স্পেস-ওডিসি-আর্থার/  | §5 — unnamed front prose kept with `অন্যান্য` nav label (no heading on page); §8 — TOC structure                         |
-| শার্লক হোমস সমগ্র ১                     | https://www.ebanglalibrary.com/books/শার্লক-হোমস-সমগ্র-১-অনুবা/  | §8 — TOC structure                                                                                                       |
-| সিডনি সেলডন রচনাসমগ্র ২                 | https://www.ebanglalibrary.com/books/সিডনি-সেলডন-রচনাসমগ্র-২/    | §8 — TOC structure                                                                                                       |
-| প্রফেসর ওয়াই ৬                         | https://www.ebanglalibrary.com/books/৪৯-প্রফেসর-ওয়াই-৬-রহস্যপু/ | §8 — TOC structure _(URL currently returns 404)_                                                                         |
-| শঙ্খ ঘোষের শ্রেষ্ঠ কবিতা                | https://www.ebanglalibrary.com/books/শঙ্খ-ঘোষের-শ্রেষ্ঠ-কবিতা/   | §7, §8 — nested TOC first entry must be preserved as parent; §3 — book info embedded in first content                    |
-| স্বপ্নের বৃষ্টিমহল — ওয়াসিকা নুযহাত    | https://www.ebanglalibrary.com/books/স্বপ্নের-বৃষ্টিমহল-ওয়া/    | §4 — dedication must not appear in front sections                                                                        |
-| বাঃ ১২ — সত্যজিৎ রায়                   | https://www.ebanglalibrary.com/books/বাঃ-১২-সত্যজিৎ-রায়/        | §7 — nested TOC must show parent name in NAV                                                                             |
-| ছেড়ে আসা গ্রাম — দক্ষিণা               | https://www.ebanglalibrary.com/books/ছেড়ে-আসা-গ্রাম-দক্ষিণা/    | §5 — spurious preamble must not be created                                                                               |
-| দুজনার ঘর — আশুতোষ মুখোপাধ্যায়         | https://www.ebanglalibrary.com/books/দুজনার-ঘর-আশুতোপাধ/         | §5 — title+author-only content must go to Book Info, not preamble                                                        |
-| গল্প সমগ্র — বিভূতিভূষণ বন্দ্যোপাধ্যায় | https://www.ebanglalibrary.com/books/গল্প-সমগ্র-বিভূতিভূষণ-বন/   | §6 — multiple TOC pages must be merged into one                                                                          |
-| নির্ঝর — কাজী নজরুল ইসলাম               | https://www.ebanglalibrary.com/books/নির্ঝর-কাজী-নজরুল-ইসলা/     | §2 — generated dark-mode cover when no image exists; §5 — no preamble when not needed                                    |
-| ফ্রান্সিস সমগ্র ৪ — অনিল ভৌমিক          | https://www.ebanglalibrary.com/books/ফ্রান্সিস-সমগ্র-৪-অনিল-ভৌ/  | §3 — front section full of book info must be converted to Book Info; §6 — multiple TOCs                                  |
-| মন আয়নায় মেঘ — অর্পিতা                | https://www.ebanglalibrary.com/books/মন-আয়নায়-মেঘ-অর্পিতা-সর/  | §4 — dedication must be extracted, not placed in preamble                                                                |
-| বাউলকবি রাধারমণ গীতি সংগ্রহ             | https://www.ebanglalibrary.com/books/বাউলকবি-রাধারমণ-গীতি-সং/    | §3, §5 — book info items must not remain in preamble                                                                     |
-| রুদ্ধরাত — রবিন জামান খান               | https://www.ebanglalibrary.com/books/রুদ্ধরাত-রবিন-জামান-খা/     | §7 — nested TOC items must not be flattened in NAV                                                                       |
-| মহাপ্লাবন — অনির্বাণ বন্দ্যোপাধ্যায়    | https://www.ebanglalibrary.com/books/মহাপ্লাবন-অনির্বাণ-বন্দ/    | §5 — front items must be extracted correctly                                                                             |
-| রোল নং ১৭ — দোলা মিত্র                  | https://www.ebanglalibrary.com/books/রোল-নং-১৭-দোলা-মিত্র-গল্পগ/ | §1 — book creation must succeed                                                                                          |
-| হিমুর বাবার কথামালা — হুমায়ূন আহমেদ    | https://www.ebanglalibrary.com/books/হিমুর-বাবার-কথামালা/        | §8, §9 — no artificial chapter splits; inline numbers are prose, not chapter markers; last heading must not be split off |
-| হৃদয়ের শব্দ — ইন্দ্রনীল সেন            | https://www.ebanglalibrary.com/books/হৃদয়ের-শব্দ-ইন্দ্রনীল-স/   | §5, §8 — `. text .` is a section boundary in Bengali; content must go to correct section                                 |
-| Hamlet — William Shakespeare            | https://www.ebanglalibrary.com/books/hamlet-william-shakespeare/ | §13 — all labels must be in English for an English book                                                                  |
-| সতী — দীনেশচন্দ্র সেন                   | https://www.ebanglalibrary.com/books/সতী-দীনেশচন্দ্র-সেন/        | §3, §12 — multi-line bibliographic info must be extracted and structured as key-value                                    |
+| ভূমিকা — প্রফুল্ল রায়                  | https://www.example.com/books/ভূমিকা-প্রফুল্ল-রায়/       | §8 — `/books/` cross-links must not appear in TOC                                                                        |
+| ২০০১ আ স্পেস ওডিসি — আর্থার ক্লার্ক     | https://www.example.com/books/২০০১-আ-স্পেস-ওডিসি-আর্থার/  | §5 — unnamed front prose kept with `অন্যান্য` nav label (no heading on page); §8 — TOC structure                         |
+| শার্লক হোমস সমগ্র ১                     | https://www.example.com/books/শার্লক-হোমস-সমগ্র-১-অনুবা/  | §8 — TOC structure                                                                                                       |
+| সিডনি সেলডন রচনাসমগ্র ২                 | https://www.example.com/books/সিডনি-সেলডন-রচনাসমগ্র-২/    | §8 — TOC structure                                                                                                       |
+| প্রফেসর ওয়াই ৬                         | https://www.example.com/books/৪৯-প্রফেসর-ওয়াই-৬-রহস্যপু/ | §8 — TOC structure _(URL currently returns 404)_                                                                         |
+| শঙ্খ ঘোষের শ্রেষ্ঠ কবিতা                | https://www.example.com/books/শঙ্খ-ঘোষের-শ্রেষ্ঠ-কবিতা/   | §7, §8 — nested TOC first entry must be preserved as parent; §3 — book info embedded in first content                    |
+| স্বপ্নের বৃষ্টিমহল — ওয়াসিকা নুযহাত    | https://www.example.com/books/স্বপ্নের-বৃষ্টিমহল-ওয়া/    | §4 — dedication must not appear in front sections                                                                        |
+| বাঃ ১২ — সত্যজিৎ রায়                   | https://www.example.com/books/বাঃ-১২-সত্যজিৎ-রায়/        | §7 — nested TOC must show parent name in NAV                                                                             |
+| ছেড়ে আসা গ্রাম — দক্ষিণা               | https://www.example.com/books/ছেড়ে-আসা-গ্রাম-দক্ষিণা/    | §5 — spurious preamble must not be created                                                                               |
+| দুজনার ঘর — আশুতোষ মুখোপাধ্যায়         | https://www.example.com/books/দুজনার-ঘর-আশুতোপাধ/         | §5 — title+author-only content must go to Book Info, not preamble                                                        |
+| গল্প সমগ্র — বিভূতিভূষণ বন্দ্যোপাধ্যায় | https://www.example.com/books/গল্প-সমগ্র-বিভূতিভূষণ-বন/   | §6 — multiple TOC pages must be merged into one                                                                          |
+| নির্ঝর — কাজী নজরুল ইসলাম               | https://www.example.com/books/নির্ঝর-কাজী-নজরুল-ইসলা/     | §2 — generated dark-mode cover when no image exists; §5 — no preamble when not needed                                    |
+| ফ্রান্সিস সমগ্র ৪ — অনিল ভৌমিক          | https://www.example.com/books/ফ্রান্সিস-সমগ্র-৪-অনিল-ভৌ/  | §3 — front section full of book info must be converted to Book Info; §6 — multiple TOCs                                  |
+| মন আয়নায় মেঘ — অর্পিতা                | https://www.example.com/books/মন-আয়নায়-মেঘ-অর্পিতা-সর/  | §4 — dedication must be extracted, not placed in preamble                                                                |
+| বাউলকবি রাধারমণ গীতি সংগ্রহ             | https://www.example.com/books/বাউলকবি-রাধারমণ-গীতি-সং/    | §3, §5 — book info items must not remain in preamble                                                                     |
+| রুদ্ধরাত — রবিন জামান খান               | https://www.example.com/books/রুদ্ধরাত-রবিন-জামান-খা/     | §7 — nested TOC items must not be flattened in NAV                                                                       |
+| মহাপ্লাবন — অনির্বাণ বন্দ্যোপাধ্যায়    | https://www.example.com/books/মহাপ্লাবন-অনির্বাণ-বন্দ/    | §5 — front items must be extracted correctly                                                                             |
+| রোল নং ১৭ — দোলা মিত্র                  | https://www.example.com/books/রোল-নং-১৭-দোলা-মিত্র-গল্পগ/ | §1 — book creation must succeed                                                                                          |
+| হিমুর বাবার কথামালা — হুমায়ূন আহমেদ    | https://www.example.com/books/হিমুর-বাবার-কথামালা/        | §8, §9 — no artificial chapter splits; inline numbers are prose, not chapter markers; last heading must not be split off |
+| হৃদয়ের শব্দ — ইন্দ্রনীল সেন            | https://www.example.com/books/হৃদয়ের-শব্দ-ইন্দ্রনীল-স/   | §5, §8 — `. text .` is a section boundary in Bengali; content must go to correct section                                 |
+| Hamlet — William Shakespeare            | https://www.example.com/books/hamlet-william-shakespeare/ | §13 — all labels must be in English for an English book                                                                  |
+| সতী — দীনেশচন্দ্র সেন                   | https://www.example.com/books/সতী-দীনেশচন্দ্র-সেন/        | §3, §12 — multi-line bibliographic info must be extracted and structured as key-value                                    |

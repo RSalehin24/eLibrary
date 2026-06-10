@@ -15,7 +15,7 @@ export const seedData = {
     detail: {
       title: "E2E Detail Book",
       slug: "e2e-detail-book",
-      sourceUrl: "https://www.ebanglalibrary.com/books/e2e-detail-book/",
+      sourceUrl: "https://www.example.com/books/e2e-detail-book/",
     },
     preview: {
       title: "E2E Preview Book",

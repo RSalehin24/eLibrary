@@ -63,7 +63,7 @@ from apps.catalog.services import find_existing_book_by_source_url
 def test_find_exact_existing_book_requires_author_overlap_for_same_title():
     existing_book = Book.objects.create(
         title="শ্রেষ্ঠ কবিতা",
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state="ready",
         review_state="approved",
     )
@@ -94,10 +94,10 @@ def test_process_submission_job_recovers_when_book_create_hits_source_title_uniq
     monkeypatch,
 ):
     user = User.objects.create_user(email="unique-conflict@example.com", password="strong-password-123")
-    source_url = "https://www.ebanglalibrary.com/books/unique-conflict-book/"
+    source_url = "https://www.example.com/books/unique-conflict-book/"
     existing_book = Book.objects.create(
         title="শ্রেষ্ঠ কবিতা",
-        source_site="ebanglalibrary.com",
+        source_site="example.com",
         state="ready",
         review_state="approved",
     )

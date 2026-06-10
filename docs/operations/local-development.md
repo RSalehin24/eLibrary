@@ -68,6 +68,7 @@ This starts:
 - one-shot `backend-init` bootstrap for migrations and super admin seeding
 - `backend` with Compose sync and Django autoreload
 - `worker` with Compose sync-and-restart
+- `processing-worker` with Compose sync-and-restart (dedicated worker for CPU-heavy book scraping)
 - `beat` with Compose sync-and-restart
 - `frontend` with Compose sync and Vite hot reload
 
@@ -75,9 +76,10 @@ Watch behavior:
 
 - `backend` syncs `app/backend/` into `/app`, and Django's built-in autoreloader applies backend code changes
 - `worker` syncs `app/backend/apps/` and `app/backend/config/` into `/app`, then restarts when those Python files change
+- `processing-worker` syncs `app/backend/apps/` and `app/backend/config/` into `/app`, then restarts when those Python files change
 - `beat` syncs `app/backend/apps/` and `app/backend/config/` into `/app`, then restarts when those Python files change
 - `frontend` syncs `app/frontend/` into `/app`, and Vite hot reload applies UI changes
-- `backend`, `worker`, and `beat` rebuild when `app/backend/requirements.txt` or `app/backend/requirements-dev.txt` changes
+- `backend`, `worker`, `processing-worker`, and `beat` rebuild when `app/backend/requirements.txt` or `app/backend/requirements-dev.txt` changes
 - `frontend` rebuilds when `app/frontend/package.json` or `app/frontend/package-lock.json` changes
 
 Default URLs:

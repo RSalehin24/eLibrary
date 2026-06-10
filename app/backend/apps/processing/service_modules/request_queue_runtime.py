@@ -85,7 +85,7 @@ def queue_processing_request(processing_request):
     if not can_process_record_url(processing_request.book_record.url):
         return _fail_processing_request(
             processing_request,
-            ValueError("Only ebanglalibrary.com book URLs are allowed"),
+            ValueError("Only source site book URLs are allowed"),
         )
     if should_enqueue_processing_work():
         if enqueue_request_processing(processing_request):

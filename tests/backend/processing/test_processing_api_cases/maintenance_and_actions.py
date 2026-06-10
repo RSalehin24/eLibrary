@@ -107,7 +107,7 @@ def test_processing_duplicate_detection_is_backend_owned(client, monkeypatch):
     original_record = BookRecord.objects.create(
         id="original-record",
         name="Original Request Record",
-        url="https://www.ebanglalibrary.com/books/original-request-record/",
+        url="https://www.example.com/books/original-request-record/",
         category="Fiction",
         writer="Writer One",
         publisher="Example Press",
@@ -123,7 +123,7 @@ def test_processing_duplicate_detection_is_backend_owned(client, monkeypatch):
     duplicate_record = BookRecord.objects.create(
         id="duplicate-record",
         name="Duplicate Request Record",
-        url="https://www.ebanglalibrary.com/books/duplicate-request-record/",
+        url="https://www.example.com/books/duplicate-request-record/",
         category="Fiction",
         writer="Writer One",
         publisher="Example Press",

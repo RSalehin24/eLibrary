@@ -68,7 +68,7 @@ def test_processing_manager_can_queue_deleted_catalog_entry_for_recreation(clien
     Book.objects.filter(pk=deleted_book.pk).update(deleted_at=timezone.now())
     deleted_book.refresh_from_db()
     entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        source_url="https://www.example.com/books/deleted-book/",
         title="Deleted Book",
         author_line="Writer",
         normalized_title=normalize_text("Deleted Book"),
@@ -108,7 +108,7 @@ def test_catalog_automation_recreates_stopped_catalog_entry_without_local_book(
     monkeypatch,
 ):
     entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/stopped-missing-book/",
+        source_url="https://www.example.com/books/stopped-missing-book/",
         title="Stopped Missing Book",
         author_line="Writer",
         normalized_title=normalize_text("Stopped Missing Book"),
@@ -160,7 +160,7 @@ def test_catalog_automation_reprocesses_stopped_catalog_entry_with_local_book(
     monkeypatch,
 ):
     entry = SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/stopped-local-book/",
+        source_url="https://www.example.com/books/stopped-local-book/",
         title="Stopped Local Book",
         author_line="Writer",
         normalized_title=normalize_text("Stopped Local Book"),
@@ -223,9 +223,9 @@ def test_catalog_automation_reprocesses_stopped_catalog_entry_with_local_book(
 def test_sync_assets_marks_book_for_review_when_epub_is_missing(tmp_path):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/missing-epub/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/missing-epub/"),
-        resolved_url="https://www.ebanglalibrary.com/books/missing-epub/",
+        original_input="https://www.example.com/books/missing-epub/",
+        normalized_input=normalize_text("https://www.example.com/books/missing-epub/"),
+        resolved_url="https://www.example.com/books/missing-epub/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
     )

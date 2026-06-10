@@ -76,7 +76,7 @@ def test_get_with_host_fallback_uses_direct_ip_when_dns_resolution_fails(monkeyp
         def get(self, url, **kwargs):
             self.calls.append((url, kwargs))
             raise requests.exceptions.ConnectionError(
-                "HTTPSConnection(host='ebanglalibrary.com'): Failed to resolve host (Name resolution)"
+                "HTTPSConnection(host='example.com'): Failed to resolve host (Name resolution)"
             )
 
     session = FakeSession()
@@ -84,7 +84,7 @@ def test_get_with_host_fallback_uses_direct_ip_when_dns_resolution_fails(monkeyp
 
     monkeypatch.setattr(
         "apps.ingestion.services.resolution.resolve_host_with_dns_fallback",
-        lambda host: ["104.21.81.247"] if host == "www.ebanglalibrary.com" else [],
+        lambda host: ["104.21.81.247"] if host == "www.example.com" else [],
     )
 
     def fake_direct_ip_request(session_obj, url, host, ip, **kwargs):
@@ -98,7 +98,7 @@ def test_get_with_host_fallback_uses_direct_ip_when_dns_resolution_fails(monkeyp
 
     response = get_with_host_fallback(
         session,
-        "https://www.ebanglalibrary.com/books/",
+        "https://www.example.com/books/",
         params={"_a_z": "ম"},
         timeout=30,
     )
@@ -106,7 +106,7 @@ def test_get_with_host_fallback_uses_direct_ip_when_dns_resolution_fails(monkeyp
     assert response.text == "ok-from-direct-ip"
     assert len(session.calls) >= 1
     assert direct_calls
-    assert direct_calls[0][1] == "www.ebanglalibrary.com"
+    assert direct_calls[0][1] == "www.example.com"
     assert direct_calls[0][2] == "104.21.81.247"
 
 
@@ -124,7 +124,7 @@ def test_get_with_host_fallback_does_not_mask_non_dns_connection_errors(monkeypa
     )
 
     with pytest.raises(requests.exceptions.ConnectionError, match="Connection reset by peer"):
-        get_with_host_fallback(FakeSession(), "https://www.ebanglalibrary.com/books/", timeout=30)
+        get_with_host_fallback(FakeSession(), "https://www.example.com/books/", timeout=30)
 
 
 @pytest.mark.django_db
@@ -134,7 +134,7 @@ def test_title_submission_surfaces_exact_match_without_guessing(client, settings
     client.force_login(user)
 
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/sample-book/",
+        source_url="https://www.example.com/books/sample-book/",
         title="স্যাম্পল বুক",
         author_line="লেখক",
         normalized_title=normalize_text("স্যাম্পল বুক"),
@@ -157,7 +157,7 @@ def test_title_submission_surfaces_exact_match_without_guessing(client, settings
     payload = response.json()[0]
     assert payload["resolution_status"] == "exact_match"
     assert payload["status"] == "queued"
-    assert payload["resolved_url"] == "https://www.ebanglalibrary.com/books/sample-book/"
+    assert payload["resolved_url"] == "https://www.example.com/books/sample-book/"
 
 
 @pytest.mark.django_db
@@ -203,7 +203,7 @@ def test_title_resolver_crawls_archive_bucket_pages_and_splits_author_from_displ
     <div class="facetwp-template" data-name="books">
       <div class="fwpl-result">
         <div class="fwpl-item el-97dha">
-          <a href="https://www.ebanglalibrary.com/books/other-book/">মেঘ - লেখক এক</a>
+          <a href="https://www.example.com/books/other-book/">মেঘ - লেখক এক</a>
         </div>
       </div>
     </div>
@@ -212,7 +212,7 @@ def test_title_resolver_crawls_archive_bucket_pages_and_splits_author_from_displ
     <div class="facetwp-template" data-name="books">
       <div class="fwpl-result">
         <div class="fwpl-item el-97dha">
-          <a href="https://www.ebanglalibrary.com/books/malice/">ম্যালিস - সৈকত মুখোপাধ্যায়</a>
+          <a href="https://www.example.com/books/malice/">ম্যালিস - সৈকত মুখোপাধ্যায়</a>
         </div>
       </div>
     </div>
@@ -248,9 +248,9 @@ def test_title_resolver_crawls_archive_bucket_pages_and_splits_author_from_displ
     result = resolver.resolve("ম্যালিস")
 
     assert result.status == "exact_match"
-    assert result.resolved_url == "https://www.ebanglalibrary.com/books/malice/"
-    entry = SourceCatalogEntry.objects.get(source_url="https://www.ebanglalibrary.com/books/malice/")
+    assert result.resolved_url == "https://www.example.com/books/malice/"
+    entry = SourceCatalogEntry.objects.get(source_url="https://www.example.com/books/malice/")
     assert entry.title == "ম্যালিস"
     assert entry.author_line == "সৈকত মুখোপাধ্যায়"
-    assert ("https://www.ebanglalibrary.com/books/", {"_a_z": "ম"}) in session.calls
-    assert ("https://www.ebanglalibrary.com/books/", {"_a_z": "ম", "_paged": 2}) in session.calls
+    assert ("https://www.example.com/books/", {"_a_z": "ম"}) in session.calls
+    assert ("https://www.example.com/books/", {"_a_z": "ম", "_paged": 2}) in session.calls

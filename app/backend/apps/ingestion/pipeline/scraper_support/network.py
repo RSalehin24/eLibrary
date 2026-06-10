@@ -15,21 +15,52 @@ HEADERS = {
     )
 }
 
-ALLOWED_SOURCE_HOSTS = {"ebanglalibrary.com", "www.ebanglalibrary.com"}
+DEFAULT_SOURCE_SITE_HOST = "www.example.com"
+
+
+def _get_allowed_source_hosts():
+    from django.conf import settings
+    host = getattr(settings, "SOURCE_SITE_HOST", "").strip().lower() or DEFAULT_SOURCE_SITE_HOST
+    fallbacks = [
+        h.strip().lower()
+        for h in (getattr(settings, "SOURCE_SITE_FALLBACK_HOSTS", []) or [])
+        if str(h).strip()
+    ]
+    hosts = set()
+    if host:
+        hosts.add(host)
+        if not host.startswith("www."):
+            hosts.add(f"www.{host}")
+        else:
+            hosts.add(host[4:])
+    for h in fallbacks:
+        hosts.add(h)
+        if not h.startswith("www."):
+            hosts.add(f"www.{h}")
+        else:
+            hosts.add(h[4:])
+    return hosts
+
+
+def _get_source_site_host():
+    from django.conf import settings
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or DEFAULT_SOURCE_SITE_HOST
 
 
 def normalize_source_url(url):
-    """Normalize externally supplied ebanglalibrary book URLs."""
+    """Normalize externally supplied source site book URLs."""
     parsed = urlparse(url.strip())
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("Book URL must start with http:// or https://")
-    if parsed.netloc.lower() not in ALLOWED_SOURCE_HOSTS:
-        raise ValueError("Only ebanglalibrary.com book URLs are allowed")
+    allowed = _get_allowed_source_hosts()
+    if allowed and parsed.netloc.lower() not in allowed:
+        raise ValueError("Only source site book URLs are allowed")
     if not parsed.path.startswith("/books/"):
-        raise ValueError("Only direct ebanglalibrary book URLs are supported")
+        raise ValueError("Only direct source site book URLs are supported")
 
     normalized_path = parsed.path.rstrip("/") + "/"
-    return urlunparse(("https", "www.ebanglalibrary.com", normalized_path, "", "", ""))
+    target_host = _get_source_site_host() or parsed.netloc.lower()
+    return urlunparse(("https", target_host, normalized_path, "", "", ""))
 
 
 def create_session_with_retries(retries=3, backoff_factor=1):
@@ -107,16 +138,16 @@ def get_soup(url, max_retries=3):
 
 
 def login_source_session(session):
-    """Load ebanglalibrary.com auth cookies from a saved session-state file.
+    """Load source site auth cookies from a saved session-state file.
 
-    The state file is generated once by running ``local/scripts/save_ebangla_auth.py``
+    The state file is generated once by running the save auth script
     on a local machine (which reads the wordpress_logged_in_* cookie straight out
     of the developer's logged-in browser, since Cloudflare blocks automated
     logins), then placed in ``app/backend/storage/`` which is mounted into all
     Docker containers.
 
-    Configure via the ``EBANGLA_AUTH_STATE_PATH`` env var (defaults to
-    ``{RUNTIME_STORAGE_DIR}/ebangla_auth.json`` when that env var is set, or
+    Configure via the ``SOURCE_SITE_AUTH_STATE_PATH`` env var (defaults to
+    ``{RUNTIME_STORAGE_DIR}/source_site_auth.json`` when that env var is set, or
     leave empty to skip authentication entirely).
 
     Mutates ``session`` in-place with the resulting auth cookies.
@@ -130,25 +161,23 @@ def login_source_session(session):
 
     if not hasattr(session, "cookies"):
         logger.debug(
-            "Session object does not have cookies attribute; ebanglalibrary.com auth skipped."
+            "Session object does not have cookies attribute; source site auth skipped."
         )
         return False
 
     from django.conf import settings
 
-    state_path = (getattr(settings, "EBANGLA_AUTH_STATE_PATH", "") or "").strip()
+    state_path = (getattr(settings, "SOURCE_SITE_AUTH_STATE_PATH", "") or "").strip()
     if not state_path:
         logger.debug(
-            "EBANGLA_AUTH_STATE_PATH not set; ebanglalibrary.com auth skipped."
+            "SOURCE_SITE_AUTH_STATE_PATH not set; source site auth skipped."
         )
         return False
 
     if not os.path.exists(state_path):
         logger.warning(
-            "EBANGLA_AUTH_STATE_PATH=%r but the file does not exist. "
-            "Run local/scripts/save_ebangla_auth.py to generate it, "
-            "then for EC2: scp app/backend/storage/ebangla_auth.json "
-            "ubuntu@<EC2_IP>:~/library_app/app/backend/storage/",
+            "SOURCE_SITE_AUTH_STATE_PATH=%r but the file does not exist. "
+            "Run the save auth script to generate it.",
             state_path,
         )
         return False
@@ -157,13 +186,22 @@ def login_source_session(session):
         with open(state_path) as f:
             state = json.load(f)
     except (OSError, ValueError) as exc:
-        logger.warning("Failed to read ebangla auth state from %r: %s", state_path, exc)
+        logger.warning("Failed to read source site auth state from %r: %s", state_path, exc)
         return False
+
+    source_host = _get_source_site_host()
+    fallback_hosts = set()
+    if source_host:
+        fallback_hosts.add(source_host)
+        if not source_host.startswith("www."):
+            fallback_hosts.add(f"www.{source_host}")
+        else:
+            fallback_hosts.add(source_host[4:])
 
     domain_cookies = [
         c
         for c in state.get("cookies", [])
-        if c.get("domain", "").lstrip(".") in ("ebanglalibrary.com", "www.ebanglalibrary.com")
+        if c.get("domain", "").lstrip(".") in fallback_hosts
         and c.get("name")
     ]
 
@@ -173,16 +211,17 @@ def login_source_session(session):
     if not has_login_cookie:
         logger.warning(
             "No wordpress_logged_in_* cookies found in %r. "
-            "Re-run local/scripts/save_ebangla_auth.py to refresh the auth state.",
+            "Re-run the save auth script to refresh the auth state.",
             state_path,
         )
         return False
 
+    cookie_domain = f"www.{source_host}" if source_host and not source_host.startswith("www.") else source_host
     for c in domain_cookies:
-        session.cookies.set(c["name"], c.get("value", ""), domain="www.ebanglalibrary.com")
+        session.cookies.set(c["name"], c.get("value", ""), domain=cookie_domain or "www")
 
     logger.debug(
-        "Loaded %d ebanglalibrary.com cookie(s) from state file.",
+        "Loaded %d source site cookie(s) from state file.",
         len(domain_cookies),
     )
     return True

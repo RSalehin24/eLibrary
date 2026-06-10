@@ -104,11 +104,11 @@ PASSWORD_RESET_FRONTEND_PATH = env(
 PASSWORD_RESET_TIMEOUT = env_int("PASSWORD_RESET_TIMEOUT", 6 * 60 * 60)
 SUPER_ADMIN_EMAIL = env("SUPER_ADMIN_EMAIL", "library@rsalehin24.me")
 SUPER_ADMIN_PASSWORD = env("SUPER_ADMIN_PASSWORD", "")
-EBANGLA_EMAIL = env("EBANGLA_EMAIL", "")
-EBANGLA_PASSWORD = env("EBANGLA_PASSWORD", "")
+SOURCE_SITE_EMAIL = env("SOURCE_SITE_EMAIL", "")
+SOURCE_SITE_PASSWORD = env("SOURCE_SITE_PASSWORD", "")
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "RSalehin24 Library <library@rsalehin24.me>")
-SOURCE_SITE_HOST = env("SOURCE_SITE_HOST", "www.ebanglalibrary.com").strip().lower()
-SOURCE_SITE_FALLBACK_HOSTS = env_list("SOURCE_SITE_FALLBACK_HOSTS", "ebanglalibrary.com")
+SOURCE_SITE_HOST = env("SOURCE_SITE_HOST", "").strip().lower()
+SOURCE_SITE_FALLBACK_HOSTS = env_list("SOURCE_SITE_FALLBACK_HOSTS", "")
 OTP_TOTP_ISSUER = env("OTP_TOTP_ISSUER", "RSalehin24 Library")
 CATALOG_EXPORT_FONT_PATH = env("CATALOG_EXPORT_FONT_PATH", "")
 
@@ -217,8 +217,8 @@ REST_FRAMEWORK = {
 STATIC_URL = "/static/"
 RUNTIME_STORAGE_DIR = Path(env("RUNTIME_STORAGE_DIR", str(BASE_DIR / "storage")))
 # Auth cookie state file lives in the runtime storage dir so it always tracks the
-# mounted storage volume. An explicit EBANGLA_AUTH_STATE_PATH still overrides it.
-EBANGLA_AUTH_STATE_PATH = env("EBANGLA_AUTH_STATE_PATH", "") or str(RUNTIME_STORAGE_DIR / "ebangla_auth.json")
+# mounted storage volume. An explicit SOURCE_SITE_AUTH_STATE_PATH still overrides it.
+SOURCE_SITE_AUTH_STATE_PATH = env("SOURCE_SITE_AUTH_STATE_PATH", "") or str(RUNTIME_STORAGE_DIR / "source_site_auth.json")
 STATIC_ROOT = Path(env("STATIC_ROOT", str(RUNTIME_STORAGE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"

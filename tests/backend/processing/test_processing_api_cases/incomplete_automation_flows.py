@@ -74,7 +74,7 @@ def test_incomplete_automation_uses_incomplete_sync_remote_pages_source(client, 
             {
                 "id": "live-incomplete-record",
                 "name": "Live Incomplete Record",
-                "url": "https://www.ebanglalibrary.com/books/live-incomplete-record/",
+                "url": "https://www.example.com/books/live-incomplete-record/",
                 "category": "অসম্পূর্ণ বই",
                 "writer": "Live Writer",
                 "translator": "",
@@ -110,7 +110,7 @@ def test_incomplete_automation_live_sync_fetches_incrementally_and_resolves_stal
     BookRecord.objects.create(
         id="stale-incomplete-live",
         name="Stale Incomplete Live",
-        url="https://www.ebanglalibrary.com/books/stale-incomplete-live/",
+        url="https://www.example.com/books/stale-incomplete-live/",
         category="অসম্পূর্ণ বই",
         writer="Writer One",
         publisher="Example Press",
@@ -128,7 +128,7 @@ def test_incomplete_automation_live_sync_fetches_incrementally_and_resolves_stal
                 {
                     "id": "live-incomplete-page-1",
                     "name": "Live Incomplete Page 1",
-                    "url": "https://www.ebanglalibrary.com/books/live-incomplete-page-1/",
+                    "url": "https://www.example.com/books/live-incomplete-page-1/",
                     "category": "অসম্পূর্ণ বই",
                     "writer": "Live Writer",
                     "translator": "",
@@ -193,7 +193,7 @@ def test_incomplete_automation_live_sync_pause_and_resume_restarts_from_beginnin
                 {
                     "id": "paused-live-incomplete",
                     "name": "Paused Live Incomplete",
-                    "url": "https://www.ebanglalibrary.com/books/paused-live-incomplete/",
+                    "url": "https://www.example.com/books/paused-live-incomplete/",
                     "category": "অসম্পূর্ণ বই",
                     "writer": "Live Writer",
                     "translator": "",

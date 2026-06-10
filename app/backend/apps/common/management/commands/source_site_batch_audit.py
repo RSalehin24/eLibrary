@@ -3,7 +3,7 @@ from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.common.ebangla_batch_audit import (
+from apps.common.source_site_batch_audit import (
     build_production_session,
     build_source_report,
     compare_source_report_to_production,
@@ -18,12 +18,12 @@ from apps.common.ebangla_batch_audit import (
 
 class Command(BaseCommand):
     help = (
-        "Run a full-fidelity eBanglaLibrary source audit and optionally compare the "
+        "Run a full-fidelity source site audit and optionally compare the "
         "results against production books through an authenticated read-only session."
     )
 
     def add_arguments(self, parser):
-        parser.add_argument("--report-dir", default="tmp/ebangla-audit")
+        parser.add_argument("--report-dir", default="tmp/source-site-audit")
         parser.add_argument("--refresh-archive", action="store_true")
         parser.add_argument(
             "--max-pages",

@@ -156,8 +156,8 @@ def test_inline_toc_extraction_removes_embedded_toc_even_without_section_bodies(
           <p>উপন্যাস সমগ্র – রবীন্দ্রনাথ ঠাকুর</p>
           <p><strong>সূচীপত্র</strong></p>
           <ul>
-            <li><a href="https://www.ebanglalibrary.com/books/dui-bon/">দুই বোন – রবীন্দ্রনাথ ঠাকুর</a></li>
-            <li><a href="https://www.ebanglalibrary.com/books/chokher-bali/">চোখের বালি – রবীন্দ্রনাথ ঠাকুর</a></li>
+            <li><a href="https://www.example.com/books/dui-bon/">দুই বোন – রবীন্দ্রনাথ ঠাকুর</a></li>
+            <li><a href="https://www.example.com/books/chokher-bali/">চোখের বালি – রবীন্দ্রনাথ ঠাকুর</a></li>
           </ul>
         </div>
         """
@@ -180,8 +180,8 @@ def test_inline_toc_extraction_handles_paragraph_style_lesson_links():
         <div class="entry-content">
           <p>দুর্গরহস্য। বাক-সাহিত্য। তৃতীয় প্রকাশ, চৈত্র ১৩৭১।</p>
           <p>সূচী ॥</p>
-          <p><a href="https://www.ebanglalibrary.com/lessons/chitrachor/">চিত্রচোর</a></p>
-          <p><a href="https://www.ebanglalibrary.com/lessons/durgahasya/">দুর্গরহস্য</a></p>
+          <p><a href="https://www.example.com/lessons/chitrachor/">চিত্রচোর</a></p>
+          <p><a href="https://www.example.com/lessons/durgahasya/">দুর্গরহস্য</a></p>
         </div>
         """
     )

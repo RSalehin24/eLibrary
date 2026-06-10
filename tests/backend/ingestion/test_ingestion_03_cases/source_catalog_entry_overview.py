@@ -5,7 +5,7 @@ def test_source_catalog_entries_overview_returns_summary_and_reviewable_rows_onl
     admin = User.objects.create_superuser(email="catalog-overview@example.com", password="strong-password-123")
     client.force_login(admin)
 
-    failed_source_url = "https://www.ebanglalibrary.com/books/failed-overview/"
+    failed_source_url = "https://www.example.com/books/failed-overview/"
     failed_submission = BookSubmission.objects.create(
         submitter=admin,
         input_type="url",
@@ -30,7 +30,7 @@ def test_source_catalog_entries_overview_returns_summary_and_reviewable_rows_onl
     )
 
     ready_book = Book.objects.create(title="Ready Overview", state=LifecycleState.READY)
-    ready_source_url = "https://www.ebanglalibrary.com/books/ready-overview/"
+    ready_source_url = "https://www.example.com/books/ready-overview/"
     BookSource.objects.create(
         book=ready_book,
         source_url=ready_source_url,

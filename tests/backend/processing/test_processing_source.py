@@ -43,11 +43,11 @@ def test_processing_source_helpers_bypass_legacy_adapter(monkeypatch):
     )
 
     normalized_url = source.normalize_source_url(
-        "https://ebanglalibrary.com/books/example-book"
+        "https://example.com/books/example-book"
     )
-    assert normalized_url == "https://www.ebanglalibrary.com/books/example-book/"
+    assert normalized_url == "https://www.example.com/books/example-book/"
 
-    scraped = source.scrape_book("https://ebanglalibrary.com/books/example-book")
+    scraped = source.scrape_book("https://example.com/books/example-book")
     assert scraped == {"resolved_url": normalized_url}
     assert len(scrape_calls) == 1
     called_url, called_kwargs = scrape_calls[0]
@@ -93,10 +93,10 @@ def test_processing_source_high_fidelity_scrape_uses_large_recursive_defaults(mo
     )
 
     normalized_url = source.normalize_source_url(
-        "https://ebanglalibrary.com/books/high-fidelity-book"
+        "https://example.com/books/high-fidelity-book"
     )
     scraped = source.scrape_book_high_fidelity(
-        "https://ebanglalibrary.com/books/high-fidelity-book"
+        "https://example.com/books/high-fidelity-book"
     )
 
     assert scraped == {"resolved_url": normalized_url}
@@ -146,14 +146,14 @@ def test_get_soup_uses_host_fallback_and_decodes_bangla_html(monkeypatch):
         or FakeResponse(),
     )
 
-    soup = network.get_soup("https://www.ebanglalibrary.com/books/bangla-book/")
+    soup = network.get_soup("https://www.example.com/books/bangla-book/")
 
     assert soup is not None
     assert soup.find("h1").get_text(strip=True) == "অ-আ-ক-খুনের কাঁটা – নারায়ণ সান্যাল"
     assert calls == [
         (
             session,
-            "https://www.ebanglalibrary.com/books/bangla-book/",
+            "https://www.example.com/books/bangla-book/",
             {"headers": network.HEADERS, "timeout": 30},
         )
     ]

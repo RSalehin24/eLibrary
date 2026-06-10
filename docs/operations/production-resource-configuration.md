@@ -5,6 +5,48 @@ how to pick values for your server, and the trade-offs to expect.
 
 ---
 
+## Why `mem_limit` Was Not Working
+
+The legacy `mem_limit:` key in Compose format v2 is **silently ignored** by the modern
+`docker compose` plugin (v2+). Containers ran with no memory cap at all:
+
+```
+docker inspect <container> | grep '"Memory"'
+# "Memory": 0    ← 0 means unlimited
+```
+
+**The fix:** Replace `mem_limit:` with `deploy.resources.limits.memory:`. The `deploy.resources`
+block is honoured by `docker compose` in standalone mode (no Swarm needed):
+
+```yaml
+# ❌ WRONG — silently ignored by docker compose v2+
+mem_limit: ${BACKEND_MEM_LIMIT:-700m}
+
+# ✅ CORRECT — actually enforced via cgroups
+deploy:
+  resources:
+    limits:
+      memory: ${BACKEND_MEM_LIMIT:-700m}
+```
+
+This is already applied in `deploy/compose/docker-compose.yml`. To verify limits took effect
+after a restart:
+
+```bash
+docker inspect compose-backend-1 | grep '"Memory"'
+# Should show: "Memory": 734003200   (≈ 700 MiB, not 0)
+
+docker stats --no-stream --format "table {{.Name}}\t{{.MemUsage}}\t{{.MemPerc}}"
+# LIMIT column should now show 700MiB, 600MiB, etc. — not the host total
+```
+
+> **Note on macOS / Docker Desktop:** Docker Desktop runs containers inside a Linux VM.
+> The VM's total RAM (set in Docker Desktop → Settings → Resources) is the ceiling.
+> If the VM is given 2 GB and a container limit is 700 MB, the container sees 700 MB as
+> its limit — as expected. Set the VM size to at least the sum of all container limits (~2.5 GB).
+
+---
+
 ## Architecture overview
 
 ```
@@ -237,6 +279,6 @@ The host kernel OOM-killer fires when the entire host runs out of memory
 | ---------------------------------------- | ------------------------------------------- | --------------------------------------------------------------------- |
 | CPU stays 1–5 %, never higher            | No CPU-intensive work queued                | Normal at idle; queue a book to verify                                |
 | Processing-worker keeps restarting       | OOM kill during large book scrape           | Increase `PROCESSING_WORKER_MEM_LIMIT` or let disk-cache retry finish |
-| "Cannot build EPUB: no content chapters" | Source website has no published lessons     | Not a resource issue; the book has no content on ebangla              |
+| "Cannot build EPUB: no content chapters" | Source website has no published lessons     | Not a resource issue; the book has no content on the source site              |
 | Gunicorn 504 gateway timeout             | `GUNICORN_TIMEOUT` too low for slow queries | Increase `GUNICORN_TIMEOUT` to 360                                    |
 | Redis eviction warnings                  | `REDIS_MAXMEMORY` too low                   | Increase `REDIS_MAXMEMORY` and `REDIS_MEM_LIMIT` by 50 %              |

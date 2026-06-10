@@ -197,22 +197,22 @@ sync_workspace_files() {
   ) | ssh "${TARGET}" "tar --warning=no-unknown-keyword --no-same-owner --no-same-permissions -xzf - -C '${REMOTE_APP_ABS_DIR}'"
 }
 
-sync_ebangla_auth_file() {
+sync_source_site_auth_file() {
   # app/backend/storage is excluded from the workspace tar (it holds runtime
-  # data), so the ebanglalibrary.com auth cookies must be copied explicitly.
-  # Generated locally by: bash local/scripts/save-ebangla-auth.sh
-  local auth_file="${REPO_ROOT}/app/backend/storage/ebangla_auth.json"
+  # data), so the source site auth cookies must be copied explicitly.
+  # Generated locally by: bash local/scripts/save-source-site-auth.sh
+  local auth_file="${REPO_ROOT}/app/backend/storage/source_site_auth.json"
   local remote_dir="${REMOTE_APP_ABS_DIR}/app/backend/storage"
 
   if [[ ! -f "${auth_file}" ]]; then
-    print_info "No ebangla_auth.json found locally; skipping auth-cookie sync (multi-page TOC scraping will be limited until you run local/scripts/save-ebangla-auth.sh)."
+    print_info "No source_site_auth.json found locally; skipping auth-cookie sync (multi-page TOC scraping will be limited until you run local/scripts/save-source-site-auth.sh)."
     return 0
   fi
 
-  print_info "Syncing ebanglalibrary.com auth cookies to ${TARGET}"
+  print_info "Syncing source site auth cookies to ${TARGET}"
   ssh "${TARGET}" "mkdir -p '${remote_dir}'"
-  scp "${auth_file}" "${TARGET}:${remote_dir}/ebangla_auth.json" >/dev/null
-  print_info "Auth cookies synced to ${remote_dir}/ebangla_auth.json"
+  scp "${auth_file}" "${TARGET}:${remote_dir}/source_site_auth.json" >/dev/null
+  print_info "Auth cookies synced to ${remote_dir}/source_site_auth.json"
 }
 
 sync_remote_env_file() {
@@ -292,12 +292,13 @@ compose_args=(-f deploy/compose/docker-compose.yml)
 
 if ! "${compose_cmd[@]}" "${compose_args[@]}" exec -T worker python - <<'PY'
 import socket
-
-socket.getaddrinfo('ebanglalibrary.com', 443)
+import os
+host = os.environ.get("SOURCE_SITE_HOST", "www.example.com")
+socket.getaddrinfo(host, 443)
 print('ok')
 PY
 then
-  echo "Worker container could not resolve ebanglalibrary.com" >&2
+  echo "Worker container could not resolve source site host" >&2
   "${compose_cmd[@]}" "${compose_args[@]}" logs --tail=60 worker
   exit 1
 fi

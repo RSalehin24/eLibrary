@@ -6,7 +6,28 @@ from django.conf import settings
 from apps.ingestion.pipeline import config as legacy_config
 from apps.ingestion.pipeline import epub_book, html_book, scraper
 
-ALLOWED_HOSTS = {"ebanglalibrary.com", "www.ebanglalibrary.com"}
+
+def _get_allowed_hosts():
+    host = (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower()
+    fallbacks = [
+        h.strip().lower()
+        for h in (getattr(settings, "SOURCE_SITE_FALLBACK_HOSTS", []) or [])
+        if str(h).strip()
+    ]
+    hosts = set()
+    if host:
+        hosts.add(host)
+        if not host.startswith("www."):
+            hosts.add(f"www.{host}")
+        else:
+            hosts.add(host[4:])
+    for h in fallbacks:
+        hosts.add(h)
+        if not h.startswith("www."):
+            hosts.add(f"www.{h}")
+        else:
+            hosts.add(h[4:])
+    return hosts
 
 
 @lru_cache(maxsize=1)
@@ -21,12 +42,13 @@ def load_legacy_config_entries():
 def normalize_source_url(url):
     parsed = urlparse(url.strip())
     host = parsed.netloc.lower()
-    if host not in ALLOWED_HOSTS:
-        raise ValueError("Only ebanglalibrary.com URLs are allowed.")
+    allowed = _get_allowed_hosts()
+    if allowed and host not in allowed:
+        raise ValueError("Only source site URLs are allowed.")
     if not parsed.path.startswith("/books/"):
-        raise ValueError("Only direct ebanglalibrary book URLs are accepted.")
+        raise ValueError("Only direct source site book URLs are accepted.")
 
-    source_site_host = (getattr(settings, "SOURCE_SITE_HOST", "www.ebanglalibrary.com") or "www.ebanglalibrary.com").strip().lower()
+    source_site_host = (getattr(settings, "SOURCE_SITE_HOST", "") or parsed.netloc.lower()).strip().lower()
     normalized_path = parsed.path.rstrip("/") + "/"
     return urlunparse(("https", source_site_host, normalized_path, "", "", ""))
 

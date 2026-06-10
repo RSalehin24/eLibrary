@@ -91,7 +91,7 @@ def test_book_allows_duplicate_titles_for_same_source_site():
     assert first_book.slug != second_book.slug
     assert (
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site="",
             normalized_title="শ্রেষ্ঠ কবিতা",
         ).count()
         == 2

@@ -41,7 +41,7 @@ def test_source_catalog_refresh_ignores_completion_after_stop(monkeypatch):
         state.last_error = "Stopped by user."
         state.finished_at = timezone.now()
         state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
-        return [{"source_url": "https://www.ebanglalibrary.com/books/new-book/"}]
+        return [{"source_url": "https://www.example.com/books/new-book/"}]
 
     monkeypatch.setattr(
         "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
@@ -75,7 +75,7 @@ def test_source_catalog_refresh_ignores_completion_after_replacement(monkeypatch
         state.last_error = ""
         state.finished_at = None
         state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
-        return [{"source_url": "https://www.ebanglalibrary.com/books/new-book/"}]
+        return [{"source_url": "https://www.example.com/books/new-book/"}]
 
     monkeypatch.setattr(
         "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
@@ -131,9 +131,9 @@ def test_dispatch_processing_job_returns_failed_job_after_eager_execution_error(
     settings.CELERY_TASK_ALWAYS_EAGER = True
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/eager-job/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/eager-job/"),
-        resolved_url="https://www.ebanglalibrary.com/books/eager-job/",
+        original_input="https://www.example.com/books/eager-job/",
+        normalized_input=normalize_text("https://www.example.com/books/eager-job/"),
+        resolved_url="https://www.example.com/books/eager-job/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )

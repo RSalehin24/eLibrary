@@ -17,7 +17,7 @@ from apps.catalog.models import (
 from apps.common.models import LifecycleState, ReviewState
 from apps.ingestion.pipeline import book_manifest
 from apps.ingestion.pipeline.book_manifest import build_manifest_from_legacy_payload
-from apps.ingestion.management.commands.curate_ebangla_books import verify_curated_result
+from apps.ingestion.management.commands.curate_source_site_books import verify_curated_result
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline.curated_persistence import persist_curated_book
 from apps.ingestion.pipeline.curated_pipeline import curate_book_document
@@ -75,7 +75,7 @@ def patch_scraper(monkeypatch, payload):
 def test_curated_document_extracts_entities_sections_and_generated_toc(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
 
-    curated = curate_book_document("https://ebanglalibrary.com/books/sophie/")
+    curated = curate_book_document("https://example.com/books/sophie/")
     document = curated["document"]
 
     assert document["status"] == CuratedDocumentStatus.VALIDATED
@@ -116,7 +116,7 @@ def test_curated_document_routes_structural_failures_to_review(monkeypatch, tmp_
     ]
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items))
 
-    curated = curate_book_document("https://www.ebanglalibrary.com/books/duplicate/")
+    curated = curate_book_document("https://www.example.com/books/duplicate/")
 
     assert curated["status"] == CuratedDocumentStatus.REVIEW_REQUIRED
     assert "Duplicate content path: এক." in curated["validation"]["errors"]
@@ -162,19 +162,19 @@ def test_source_chrome_detection_allows_comment_phrase_inside_prose():
 
 def test_curated_validation_rejects_partial_source_fetches(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
-    curated = curate_book_document("https://www.ebanglalibrary.com/books/partial/")
+    curated = curate_book_document("https://www.example.com/books/partial/")
     document = curated["document"]
     snapshot = {
         **curated["source_snapshot"],
         "pages": [
             {
-                "url": "https://www.ebanglalibrary.com/books/partial/",
+                "url": "https://www.example.com/books/partial/",
                 "kind": "landing",
                 "status": "fetched",
                 "status_code": 200,
             },
             {
-                "url": "https://www.ebanglalibrary.com/books/partial/chapter/",
+                "url": "https://www.example.com/books/partial/chapter/",
                 "kind": "lesson",
                 "status": "failed",
                 "status_code": 404,
@@ -186,13 +186,13 @@ def test_curated_validation_rejects_partial_source_fetches(monkeypatch, tmp_path
 
     assert validation["status"] == CuratedDocumentStatus.REVIEW_REQUIRED
     assert validation["errors"] == [
-        "Source page was not fetched: https://www.ebanglalibrary.com/books/partial/chapter/ (404)."
+        "Source page was not fetched: https://www.example.com/books/partial/chapter/ (404)."
     ]
 
 
 def test_curated_validation_rejects_empty_discovered_toc_leaf(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
-    curated = curate_book_document("https://www.ebanglalibrary.com/books/empty-leaf/")
+    curated = curate_book_document("https://www.example.com/books/empty-leaf/")
     document = deepcopy(curated["document"])
     document["projection"]["toc"] = [
         {
@@ -200,7 +200,7 @@ def test_curated_validation_rejects_empty_discovered_toc_leaf(monkeypatch, tmp_p
             "type": "lesson",
             "has_content": False,
             "path": ["শূন্য অধ্যায়"],
-            "source_url": "https://www.ebanglalibrary.com/books/empty-leaf/chapter/",
+            "source_url": "https://www.example.com/books/empty-leaf/chapter/",
         }
     ]
     document["projection"]["content_items"] = []
@@ -214,7 +214,7 @@ def test_curated_validation_rejects_empty_discovered_toc_leaf(monkeypatch, tmp_p
 @pytest.mark.django_db
 def test_curated_persistence_writes_document_evidence_and_projection(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
-    source_url = "https://www.ebanglalibrary.com/books/sophie/"
+    source_url = "https://www.example.com/books/sophie/"
     curated = curate_book_document(source_url)
 
     book, curated_document = persist_curated_book(curated, source_url=source_url)
@@ -236,7 +236,7 @@ def test_curated_persistence_writes_document_evidence_and_projection(monkeypatch
 @pytest.mark.django_db
 def test_curated_result_verification_catches_persisted_content_mismatch(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
-    source_url = "https://www.ebanglalibrary.com/books/sophie/"
+    source_url = "https://www.example.com/books/sophie/"
     curated = curate_book_document(source_url)
     book, curated_document = persist_curated_book(curated, source_url=source_url)
 
@@ -251,7 +251,7 @@ def test_curated_result_verification_catches_persisted_content_mismatch(monkeypa
 
 @pytest.mark.django_db
 def test_curate_command_skips_existing_curated_source(monkeypatch, tmp_path):
-    source_url = "https://www.ebanglalibrary.com/books/sophie/"
+    source_url = "https://www.example.com/books/sophie/"
     SourceCatalogEntry.objects.create(
         source_url=source_url,
         title="সোফির জগৎ",
@@ -266,13 +266,13 @@ def test_curate_command_skips_existing_curated_source(monkeypatch, tmp_path):
         raise AssertionError("Existing curated sources should be skipped")
 
     monkeypatch.setattr(
-        "apps.ingestion.management.commands.curate_ebangla_books.curate_book_document",
+        "apps.ingestion.management.commands.curate_source_site_books.curate_book_document",
         fail_if_called,
     )
     report_path = tmp_path / "skip-report.json"
 
     call_command(
-        "curate_ebangla_books",
+        "curate_source_site_books",
         "--offset",
         "0",
         "--batch-size",
@@ -292,7 +292,7 @@ def test_curate_command_skips_existing_curated_source(monkeypatch, tmp_path):
 
 @pytest.mark.django_db
 def test_curate_command_reports_clean_persisted_verification(monkeypatch, tmp_path):
-    source_url = "https://www.ebanglalibrary.com/books/sophie/"
+    source_url = "https://www.example.com/books/sophie/"
     SourceCatalogEntry.objects.create(
         source_url=source_url,
         title="সোফির জগৎ",
@@ -303,7 +303,7 @@ def test_curate_command_reports_clean_persisted_verification(monkeypatch, tmp_pa
     report_path = tmp_path / "curation-report.json"
 
     call_command(
-        "curate_ebangla_books",
+        "curate_source_site_books",
         "--offset",
         "0",
         "--batch-size",
@@ -326,7 +326,7 @@ def test_curate_command_reports_clean_persisted_verification(monkeypatch, tmp_pa
 
 @pytest.mark.django_db
 def test_curate_command_can_require_validated_documents(monkeypatch, tmp_path):
-    source_url = "https://www.ebanglalibrary.com/books/review/"
+    source_url = "https://www.example.com/books/review/"
     SourceCatalogEntry.objects.create(
         source_url=source_url,
         title="রিভিউ বই",
@@ -341,7 +341,7 @@ def test_curate_command_can_require_validated_documents(monkeypatch, tmp_path):
     report_path = tmp_path / "require-validated-report.json"
 
     call_command(
-        "curate_ebangla_books",
+        "curate_source_site_books",
         "--offset",
         "0",
         "--batch-size",
@@ -363,7 +363,7 @@ def test_curate_command_can_require_validated_documents(monkeypatch, tmp_path):
 
 @pytest.mark.django_db
 def test_curate_command_can_require_catalog_metadata_match(monkeypatch, tmp_path):
-    source_url = "https://www.ebanglalibrary.com/books/sophie/"
+    source_url = "https://www.example.com/books/sophie/"
     SourceCatalogEntry.objects.create(
         source_url=source_url,
         title="ভুল বই",
@@ -376,7 +376,7 @@ def test_curate_command_can_require_catalog_metadata_match(monkeypatch, tmp_path
     report_path = tmp_path / "catalog-match-report.json"
 
     call_command(
-        "curate_ebangla_books",
+        "curate_source_site_books",
         "--offset",
         "0",
         "--batch-size",
@@ -404,11 +404,11 @@ def test_review_required_curated_book_persists_without_assets(monkeypatch, tmp_p
         {"title": "এক", "content": "<p>দ্বিতীয়</p>", "type": "lesson", "path": ["এক"]},
     ]
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items))
-    curated = curate_book_document("https://www.ebanglalibrary.com/books/review/")
+    curated = curate_book_document("https://www.example.com/books/review/")
 
     book, _curated_document = persist_curated_book(
         curated,
-        source_url="https://www.ebanglalibrary.com/books/review/",
+        source_url="https://www.example.com/books/review/",
     )
 
     assert book.state == LifecycleState.NEEDS_REVIEW
@@ -418,7 +418,7 @@ def test_review_required_curated_book_persists_without_assets(monkeypatch, tmp_p
 
 def test_generators_accept_curated_document_payload(monkeypatch, tmp_path):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
-    curated = curate_book_document("https://www.ebanglalibrary.com/books/export/")
+    curated = curate_book_document("https://www.example.com/books/export/")
 
     generate_exports(curated["document"])
 
@@ -427,7 +427,7 @@ def test_generators_accept_curated_document_payload(monkeypatch, tmp_path):
 
 
 def test_manifest_parser_preserves_paginated_sectioned_nested_toc():
-    source_url = "https://www.ebanglalibrary.com/books/sectioned/"
+    source_url = "https://www.example.com/books/sectioned/"
     landing = BeautifulSoup(
         """
         <div class="ld-item-list ld-lesson-list">
@@ -488,8 +488,8 @@ def test_manifest_parser_preserves_paginated_sectioned_nested_toc():
 
     assert meta["has_paginated_toc"] is True
     assert ctx.urls == [
-        "https://www.ebanglalibrary.com/books/sectioned/?ld-courseinfo-lesson-page=2",
-        "https://www.ebanglalibrary.com/books/sectioned/chapter-2/",
+        "https://www.example.com/books/sectioned/?ld-courseinfo-lesson-page=2",
+        "https://www.example.com/books/sectioned/chapter-2/",
     ]
     assert toc[0]["title"] == "প্রথম খণ্ড"
     assert [child["title"] for child in toc[0]["children"]] == ["অধ্যায় ১", "অধ্যায় ২"]
@@ -522,7 +522,7 @@ def test_manifest_content_fetch_does_not_retain_content_soups():
     item = book_manifest.fetch_content_item(
         {
             "title": "অধ্যায়",
-            "url": "https://www.ebanglalibrary.com/books/sample/chapter/",
+            "url": "https://www.example.com/books/sample/chapter/",
             "type": "lesson",
         },
         ["অধ্যায়"],
@@ -562,13 +562,13 @@ def test_manifest_disambiguates_duplicate_source_backed_paths():
         {
             "title": "সেইসব ঈদ",
             "path": ["সেইসব ঈদ"],
-            "source_url": "https://www.ebanglalibrary.com/lessons/eid/",
+            "source_url": "https://www.example.com/lessons/eid/",
             "has_content": True,
         },
         {
             "title": "সেইসব ঈদ",
             "path": ["সেইসব ঈদ"],
-            "source_url": "https://www.ebanglalibrary.com/lessons/eid-2/",
+            "source_url": "https://www.example.com/lessons/eid-2/",
             "has_content": True,
         },
     ]
@@ -576,13 +576,13 @@ def test_manifest_disambiguates_duplicate_source_backed_paths():
         {
             "title": "সেইসব ঈদ",
             "path": ["সেইসব ঈদ"],
-            "source_url": "https://www.ebanglalibrary.com/lessons/eid/",
+            "source_url": "https://www.example.com/lessons/eid/",
             "content": "<p>এক</p>",
         },
         {
             "title": "সেইসব ঈদ",
             "path": ["সেইসব ঈদ"],
-            "source_url": "https://www.ebanglalibrary.com/lessons/eid-2/",
+            "source_url": "https://www.example.com/lessons/eid-2/",
             "content": "<p>দুই</p>",
         },
     ]
@@ -615,7 +615,7 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
     Regular leaf lessons (only the course-level nav, no sub-chapter container)
     remain as leaf nodes.
     """
-    source_url = "https://www.ebanglalibrary.com/books/container-book/"
+    source_url = "https://www.example.com/books/container-book/"
 
     # Book page: two lessons with no inline topic entries (no data-ld-expand-id
     # and no .ld-table-list-item children).
@@ -624,12 +624,12 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
         <div class="ld-item-list ld-lesson-list">
           <div class="ld-item-list-items">
             <div class="ld-item-list-item ld-item-lesson-item">
-              <a class="ld-item-name" href="https://www.ebanglalibrary.com/lessons/novel-a/">
+              <a class="ld-item-name" href="https://www.example.com/lessons/novel-a/">
                 <div class="ld-item-title">উপন্যাস ক</div>
               </a>
             </div>
             <div class="ld-item-list-item ld-item-lesson-item">
-              <a class="ld-item-name" href="https://www.ebanglalibrary.com/lessons/story-b/">
+              <a class="ld-item-name" href="https://www.example.com/lessons/story-b/">
                 <div class="ld-item-title">গল্প খ</div>
               </a>
             </div>
@@ -653,29 +653,29 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
           <div class="ld-lesson-items" id="ld-lesson-list-100">
             <div class="ld-lesson-item ld-is-current-lesson">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/novel-a/">উপন্যাস ক</a>
+                <a href="https://www.example.com/lessons/novel-a/">উপন্যাস ক</a>
               </div>
             </div>
             <div class="ld-lesson-item ld-is-not-current-lesson">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/story-b/">গল্প খ</a>
+                <a href="https://www.example.com/lessons/story-b/">গল্প খ</a>
               </div>
             </div>
           </div>
           <div class="ld-lesson-items" id="ld-lesson-list-200">
             <div class="ld-lesson-item">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/chapter-1/">অধ্যায় ১</a>
+                <a href="https://www.example.com/lessons/chapter-1/">অধ্যায় ১</a>
               </div>
             </div>
             <div class="ld-lesson-item">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/chapter-2/">অধ্যায় ২</a>
+                <a href="https://www.example.com/lessons/chapter-2/">অধ্যায় ২</a>
               </div>
             </div>
             <div class="ld-lesson-item">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/chapter-3/">অধ্যায় ৩</a>
+                <a href="https://www.example.com/lessons/chapter-3/">অধ্যায় ৩</a>
               </div>
             </div>
           </div>
@@ -696,12 +696,12 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
           <div class="ld-lesson-items" id="ld-lesson-list-100">
             <div class="ld-lesson-item ld-is-not-current-lesson">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/novel-a/">উপন্যাস ক</a>
+                <a href="https://www.example.com/lessons/novel-a/">উপন্যাস ক</a>
               </div>
             </div>
             <div class="ld-lesson-item ld-is-current-lesson">
               <div class="ld-lesson-item-preview">
-                <a href="https://www.ebanglalibrary.com/lessons/story-b/">গল্প খ</a>
+                <a href="https://www.example.com/lessons/story-b/">গল্প খ</a>
               </div>
             </div>
           </div>
@@ -711,8 +711,8 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
     )
 
     lesson_pages = {
-        "https://www.ebanglalibrary.com/lessons/novel-a/": novel_a_page,
-        "https://www.ebanglalibrary.com/lessons/story-b/": story_b_page,
+        "https://www.example.com/lessons/novel-a/": novel_a_page,
+        "https://www.example.com/lessons/story-b/": story_b_page,
     }
 
     class FakeContext:
@@ -732,8 +732,8 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
     )
 
     # Both lesson URLs are fetched to probe for embedded sub-chapter TOC.
-    assert "https://www.ebanglalibrary.com/lessons/novel-a/" in ctx.fetched_urls
-    assert "https://www.ebanglalibrary.com/lessons/story-b/" in ctx.fetched_urls
+    assert "https://www.example.com/lessons/novel-a/" in ctx.fetched_urls
+    assert "https://www.example.com/lessons/story-b/" in ctx.fetched_urls
 
     # The container lesson is expanded even though it also has story content.
     novel_a = next(n for n in toc_nodes if n["title"] == "উপন্যাস ক")
@@ -743,7 +743,7 @@ def test_manifest_parser_expands_embedded_lesson_page_toc():
         "অধ্যায় ৩",
     ]
     assert novel_a["children"][0]["type"] == "topic"
-    assert novel_a["children"][0]["url"] == "https://www.ebanglalibrary.com/lessons/chapter-1/"
+    assert novel_a["children"][0]["url"] == "https://www.example.com/lessons/chapter-1/"
 
     # The regular leaf lesson (only course-level nav, no sub-chapter list) stays
     # a leaf node regardless of story content.

@@ -27,9 +27,9 @@ def test_normalize_scraped_book_drops_author_role_when_same_person_is_translator
 def test_queue_submission_falls_back_to_inline_processing_when_celery_dispatch_fails(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/fallback/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/fallback/"),
-        resolved_url="https://www.ebanglalibrary.com/books/fallback/",
+        original_input="https://www.example.com/books/fallback/",
+        normalized_input=normalize_text("https://www.example.com/books/fallback/"),
+        resolved_url="https://www.example.com/books/fallback/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -60,9 +60,9 @@ def test_queue_submission_falls_back_to_inline_processing_when_celery_dispatch_f
 def test_queue_submission_inline_fallback_retries_up_to_three_total_attempts(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/fallback-retry/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/fallback-retry/"),
-        resolved_url="https://www.ebanglalibrary.com/books/fallback-retry/",
+        original_input="https://www.example.com/books/fallback-retry/",
+        normalized_input=normalize_text("https://www.example.com/books/fallback-retry/"),
+        resolved_url="https://www.example.com/books/fallback-retry/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -102,9 +102,9 @@ def test_queue_submission_inline_fallback_retries_up_to_three_total_attempts(mon
 def test_queue_submission_inline_fallback_stops_after_three_total_attempts(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/fallback-stop/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/fallback-stop/"),
-        resolved_url="https://www.ebanglalibrary.com/books/fallback-stop/",
+        original_input="https://www.example.com/books/fallback-stop/",
+        normalized_input=normalize_text("https://www.example.com/books/fallback-stop/"),
+        resolved_url="https://www.example.com/books/fallback-stop/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -138,9 +138,9 @@ def test_queue_submission_inline_fallback_stops_after_three_total_attempts(monke
 def test_process_submission_task_returns_serializable_job_payload(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/2001-space-odyssey/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/2001-space-odyssey/"),
-        resolved_url="https://www.ebanglalibrary.com/books/2001-space-odyssey/",
+        original_input="https://www.example.com/books/2001-space-odyssey/",
+        normalized_input=normalize_text("https://www.example.com/books/2001-space-odyssey/"),
+        resolved_url="https://www.example.com/books/2001-space-odyssey/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -168,9 +168,9 @@ def test_process_submission_task_uses_three_total_attempts():
 def test_process_submission_job_requeues_intermediate_failures_without_becoming_terminal(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/retry-intermediate/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/retry-intermediate/"),
-        resolved_url="https://www.ebanglalibrary.com/books/retry-intermediate/",
+        original_input="https://www.example.com/books/retry-intermediate/",
+        normalized_input=normalize_text("https://www.example.com/books/retry-intermediate/"),
+        resolved_url="https://www.example.com/books/retry-intermediate/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
@@ -216,9 +216,9 @@ def test_process_submission_job_requeues_intermediate_failures_without_becoming_
 def test_process_submission_job_marks_last_attempt_as_failed(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/retry-final/",
-        normalized_input=normalize_text("https://www.ebanglalibrary.com/books/retry-final/"),
-        resolved_url="https://www.ebanglalibrary.com/books/retry-final/",
+        original_input="https://www.example.com/books/retry-final/",
+        normalized_input=normalize_text("https://www.example.com/books/retry-final/"),
+        resolved_url="https://www.example.com/books/retry-final/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )

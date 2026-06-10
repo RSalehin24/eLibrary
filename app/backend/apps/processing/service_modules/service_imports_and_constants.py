@@ -120,10 +120,10 @@ INCOMPLETE_CATEGORY_KEYWORDS = (
     "অসম্পূর্ণ বই",
 )
 INCOMPLETE_CATALOG_URL = (
-    "https://www.ebanglalibrary.com/genres/"
+    "https://{}/genres/"
     "%E0%A6%85%E0%A6%B8%E0%A6%AE%E0%A7%8D%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3-"
     "%E0%A6%AC%E0%A6%87/"
-)
+).format(getattr(settings, "SOURCE_SITE_HOST", "") or "www.example.com")
 TERMINAL_STATES = {
     BookCreationRequestState.CREATED,
     BookCreationRequestState.FAILED,

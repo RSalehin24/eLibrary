@@ -82,7 +82,7 @@ def test_public_submission_detail_and_confirm_candidate_are_available_without_lo
         rank=1,
         candidate_title="ম্যালিস",
         candidate_author="সৈকত মুখোপাধ্যায়",
-        candidate_url="https://www.ebanglalibrary.com/books/malice/",
+        candidate_url="https://www.example.com/books/malice/",
         confidence=0.92,
     )
     MatchCandidate.objects.create(
@@ -90,7 +90,7 @@ def test_public_submission_detail_and_confirm_candidate_are_available_without_lo
         rank=2,
         candidate_title="ম্যালিস রিটার্নস",
         candidate_author="অন্য লেখক",
-        candidate_url="https://www.ebanglalibrary.com/books/malice-returns/",
+        candidate_url="https://www.example.com/books/malice-returns/",
         confidence=0.61,
     )
 
@@ -116,7 +116,7 @@ def test_public_submission_detail_and_confirm_candidate_are_available_without_lo
     assert called["submission_id"] == str(submission.id)
     assert called["actor"] is None
     submission.refresh_from_db()
-    assert submission.resolved_url == "https://www.ebanglalibrary.com/books/malice/"
+    assert submission.resolved_url == "https://www.example.com/books/malice/"
     assert submission.resolution_status == ResolutionStatus.RESOLVED
     assert submission.status == SubmissionStatus.QUEUED
 
@@ -149,7 +149,7 @@ def test_public_submission_action_links_create_guest_preview_session(tmp_path, c
         original_input="গেস্ট বুক",
         normalized_input=normalize_text("গেস্ট বুক"),
         linked_book=book,
-        resolved_url="https://www.ebanglalibrary.com/books/guest-book/",
+        resolved_url="https://www.example.com/books/guest-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         resolution_confidence=1.0,
         status=SubmissionStatus.READY,
@@ -196,7 +196,7 @@ def test_submission_detail_marks_soft_deleted_linked_book_as_deleted(client):
         original_input="মুছে ফেলা বই",
         normalized_input=normalize_text("মুছে ফেলা বই"),
         linked_book=book,
-        resolved_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        resolved_url="https://www.example.com/books/deleted-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         resolution_confidence=1.0,
         status=SubmissionStatus.READY,
@@ -225,7 +225,7 @@ def test_submission_action_links_reject_soft_deleted_linked_book(client):
         original_input="মুছে ফেলা বই",
         normalized_input=normalize_text("মুছে ফেলা বই"),
         linked_book=book,
-        resolved_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        resolved_url="https://www.example.com/books/deleted-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         resolution_confidence=1.0,
         status=SubmissionStatus.READY,
@@ -245,7 +245,7 @@ def test_submission_action_links_reject_soft_deleted_linked_book(client):
 @pytest.mark.django_db
 def test_deleting_queued_submission_marks_it_deleted_and_retry_queues_it_again(client, monkeypatch):
     user = User.objects.create_user(email="deleted-request@example.com", password="strong-password-123")
-    source_url = "https://www.ebanglalibrary.com/books/deleted-request/"
+    source_url = "https://www.example.com/books/deleted-request/"
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",

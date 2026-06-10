@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Save ebanglalibrary.com session cookies for the backend scraper.
+"""Save example.com session cookies for the backend scraper.
 
 Why this exists
 ---------------
@@ -10,28 +10,28 @@ headed, bundled Chromium or real Chrome, with or without stealth patches).  The
 only thing Cloudflare lets through is a genuine human browser session.
 
 So instead of automating the login we simply *reuse the cookies from the real
-browser the user is already logged into*.  Log in once on ebanglalibrary.com in
+browser the user is already logged into*.  Log in once on example.com in
 **Firefox** (tick "Remember Me" so the WordPress cookie lasts ~1 year), then
 run this script.  It reads the ``wordpress_logged_in_*`` cookie straight out of
 Firefox's cookie store and writes it to
-``app/backend/storage/ebangla_auth.json`` which is mounted into every Docker
+``app/backend/storage/source_site_auth.json`` which is mounted into every Docker
 container.  The backend loads it on demand — no live login ever happens inside
 Docker or on EC2.
 
 Usage
 -----
-    bash local/scripts/save-ebangla-auth.sh      # preferred (handles deps)
+    bash local/scripts/save-source-site-auth.sh      # preferred (handles deps)
     # or directly:
-    python local/scripts/save_ebangla_auth.py
+    python local/scripts/save_source_site_auth.py
 
 If no logged-in cookie can be read automatically (e.g. the browser keychain
 prompt is declined, or you are on a headless box), the script falls back to a
-manual paste mode: open DevTools on ebanglalibrary.com, copy the
+manual paste mode: open DevTools on example.com, copy the
 ``wordpress_logged_in_*`` cookie, and paste it in.
 
 Output
 ------
-    app/backend/storage/ebangla_auth.json
+    app/backend/storage/source_site_auth.json
 
 Re-run whenever scraping stops returning pages 2+ (i.e. the cookie expired).
 """
@@ -44,9 +44,9 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
-OUTPUT_FILE = REPO_ROOT / "app" / "backend" / "storage" / "ebangla_auth.json"
-DOMAIN = "ebanglalibrary.com"
-COOKIE_DOMAIN = "www.ebanglalibrary.com"
+OUTPUT_FILE = REPO_ROOT / "app" / "backend" / "storage" / "source_site_auth.json"
+DOMAIN = "example.com"
+COOKIE_DOMAIN = "www.example.com"
 AUTH_PREFIX = "wordpress_logged_in_"
 
 
@@ -67,7 +67,7 @@ def _to_state_cookie(name, value, domain=COOKIE_DOMAIN, expires=None):
 def cookies_from_real_browsers():
     """Return (state_cookies, source_name) read from Firefox.
 
-    Reads every cookie for ebanglalibrary.com from Firefox and returns the
+    Reads every cookie for example.com from Firefox and returns the
     first profile that has a ``wordpress_logged_in_*`` cookie.
     Returns ([], None) when nothing is found / browser_cookie3 missing.
     """
@@ -95,7 +95,7 @@ def cookies_from_real_browsers():
 
     cookies = [c for c in jar if DOMAIN in (c.domain or "")]
     if not cookies:
-        print(f"  - {label}: no ebanglalibrary.com cookies found")
+        print(f"  - {label}: no example.com cookies found")
         return [], None
 
     has_auth = any((c.name or "").startswith(AUTH_PREFIX) for c in cookies)
@@ -126,10 +126,10 @@ def cookies_from_manual_paste():
         "------------------------------------------------------------\n"
         " Manual cookie entry\n"
         "------------------------------------------------------------\n"
-        " 1. Open https://www.ebanglalibrary.com in your browser and\n"
+        " 1. Open https://www.example.com in your browser and\n"
         "    make sure you are logged in (tick 'Remember Me').\n"
         " 2. Open DevTools (F12) -> Application/Storage -> Cookies ->\n"
-        "    https://www.ebanglalibrary.com\n"
+        "    https://www.example.com\n"
         " 3. Find the cookie whose name starts with\n"
         "    'wordpress_logged_in_' and copy its NAME and VALUE.\n"
         "------------------------------------------------------------\n"
@@ -146,12 +146,12 @@ def cookies_from_manual_paste():
 
 
 def main() -> None:
-    if os.environ.get("EBANGLA_SKIP_BROWSER_READ", "").strip() in ("1", "true", "yes"):
-        print("EBANGLA_SKIP_BROWSER_READ set — using manual paste mode.")
+    if os.environ.get("SOURCE_SITE_SKIP_BROWSER_READ", "").strip() in ("1", "true", "yes"):
+        print("SOURCE_SITE_SKIP_BROWSER_READ set — using manual paste mode.")
         state_cookies = cookies_from_manual_paste()
         source = "manual paste" if state_cookies else None
     else:
-        print("Reading ebanglalibrary.com session from Firefox...")
+        print("Reading example.com session from Firefox...")
         state_cookies, source = cookies_from_real_browsers()
 
         if not state_cookies:
@@ -163,7 +163,7 @@ def main() -> None:
     if not auth_cookies:
         print(
             "\nError: could not obtain a 'wordpress_logged_in_*' cookie.\n"
-            "Log in to https://www.ebanglalibrary.com in your browser (tick\n"
+            "Log in to https://www.example.com in your browser (tick\n"
             "'Remember Me') and re-run this script."
         )
         sys.exit(1)

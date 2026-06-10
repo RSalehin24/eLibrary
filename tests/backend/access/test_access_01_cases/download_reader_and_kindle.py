@@ -119,9 +119,9 @@ def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grant
     BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/owned-book/",
-        normalized_input="https://www.ebanglalibrary.com/books/owned-book/",
-        resolved_url="https://www.ebanglalibrary.com/books/owned-book/",
+        original_input="https://www.example.com/books/owned-book/",
+        normalized_input="https://www.example.com/books/owned-book/",
+        resolved_url="https://www.example.com/books/owned-book/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.READY,
         linked_book=book,

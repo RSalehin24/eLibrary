@@ -188,7 +188,7 @@ def verify_curated_result(curated, *, book=None, curated_document=None):
 
 
 class Command(BaseCommand):
-    help = "Curate eBanglaLibrary books into evidence-backed documents in resumable batches."
+    help = "Curate source site books into evidence-backed documents in resumable batches."
 
     def add_arguments(self, parser):
         parser.add_argument("--source-url", action="append", default=[])

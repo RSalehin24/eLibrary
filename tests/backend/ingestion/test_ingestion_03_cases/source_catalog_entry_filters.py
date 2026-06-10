@@ -67,21 +67,21 @@ def test_source_catalog_entries_apply_status_filter_before_pagination_and_return
     ready_book = Book.objects.create(title="A Ready Book", state=LifecycleState.READY)
     BookSource.objects.create(
         book=ready_book,
-        source_url="https://www.ebanglalibrary.com/books/ready-book/",
-        normalized_source_url="https://www.ebanglalibrary.com/books/ready-book/",
+        source_url="https://www.example.com/books/ready-book/",
+        normalized_source_url="https://www.example.com/books/ready-book/",
     )
     GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.HTML, status=GeneratedAssetStatus.READY)
     GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.EPUB, status=GeneratedAssetStatus.READY)
 
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/ready-book/",
+        source_url="https://www.example.com/books/ready-book/",
         title="A Ready Book",
         author_line="Author",
         normalized_title="a ready book",
         normalized_display="a ready book author",
     )
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/new-book/",
+        source_url="https://www.example.com/books/new-book/",
         title="Z New Book",
         author_line="Author",
         normalized_title="z new book",
@@ -110,18 +110,18 @@ def test_source_catalog_entries_can_filter_deleted_books(client):
     deleted_book.refresh_from_db()
     BookSource.objects.create(
         book=deleted_book,
-        source_url="https://www.ebanglalibrary.com/books/deleted-book/",
-        normalized_source_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        source_url="https://www.example.com/books/deleted-book/",
+        normalized_source_url="https://www.example.com/books/deleted-book/",
     )
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/deleted-book/",
+        source_url="https://www.example.com/books/deleted-book/",
         title="Deleted Book",
         author_line="Writer",
         normalized_title="deleted book",
         normalized_display="deleted book writer",
     )
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/new-book/",
+        source_url="https://www.example.com/books/new-book/",
         title="New Book",
         author_line="Writer",
         normalized_title="new book",
@@ -147,7 +147,7 @@ def test_source_catalog_entries_summary_reports_queued_and_processing_separately
     client.force_login(admin)
 
     queued_book = Book.objects.create(title="Queued Book")
-    queued_source_url = "https://www.ebanglalibrary.com/books/queued-book/"
+    queued_source_url = "https://www.example.com/books/queued-book/"
     BookSource.objects.create(
         book=queued_book,
         source_url=queued_source_url,
@@ -169,7 +169,7 @@ def test_source_catalog_entries_summary_reports_queued_and_processing_separately
     )
 
     processing_book = Book.objects.create(title="Processing Book")
-    processing_source_url = "https://www.ebanglalibrary.com/books/processing-book/"
+    processing_source_url = "https://www.example.com/books/processing-book/"
     BookSource.objects.create(
         book=processing_book,
         source_url=processing_source_url,
@@ -219,14 +219,14 @@ def test_source_catalog_entries_support_lightweight_browse_without_summary_or_sy
     client.force_login(admin)
 
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/b-title/",
+        source_url="https://www.example.com/books/b-title/",
         title="B Title",
         author_line="Writer",
         normalized_title="b title",
         normalized_display="b title writer",
     )
     SourceCatalogEntry.objects.create(
-        source_url="https://www.ebanglalibrary.com/books/a-title/",
+        source_url="https://www.example.com/books/a-title/",
         title="A Title",
         author_line="Writer",
         normalized_title="a title",

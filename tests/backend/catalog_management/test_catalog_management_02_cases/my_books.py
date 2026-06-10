@@ -50,9 +50,9 @@ def test_linked_submission_creates_my_books_ownership(client):
     BookSubmission.objects.create(
         submitter=user,
         input_type="url",
-        original_input="https://www.ebanglalibrary.com/books/submission-owned-book/",
-        normalized_input="https://www.ebanglalibrary.com/books/submission-owned-book/",
-        resolved_url="https://www.ebanglalibrary.com/books/submission-owned-book/",
+        original_input="https://www.example.com/books/submission-owned-book/",
+        normalized_input="https://www.example.com/books/submission-owned-book/",
+        resolved_url="https://www.example.com/books/submission-owned-book/",
         resolution_status="resolved",
         status="ready",
         linked_book=book,

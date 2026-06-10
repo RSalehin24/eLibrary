@@ -26,14 +26,14 @@ All scenarios below are intended for the real development application with no mo
 
 | Area           | Scenario                                       | Runtime Scope            | Result Handling                                            |
 | -------------- | ---------------------------------------------- | ------------------------ | ---------------------------------------------------------- |
-| Remote source  | eBanglaLibrary outage during sync              | `catalog` / `incomplete` | Verify behavior only if naturally observed in the live run |
+| Remote source  | Source site outage during sync                | `catalog` / `incomplete` | Verify behavior only if naturally observed in the live run |
 | Remote source  | Rate limiting or transient source failures     | `catalog` / `incomplete` | Verify behavior only if naturally observed in the live run |
 | Worker runtime | Worker crash or restart during processing      | request pipeline         | Verify behavior only if naturally observed in the live run |
 | Source drift   | Temporary omission of incomplete-category rows | `incomplete`             | Verify behavior only if naturally observed in the live run |
 
 ## 300-Book EPUB Structure Regression
 
-The harness at [tests/scripts/regression_curate_300.sh](../tests/scripts/regression_curate_300.sh) scrapes and exports up to 300 ebanglalibrary.com URLs sampled in [test-artifacts/ebangla-audit-selection.json](../test-artifacts/ebangla-audit-selection.json) and runs [apps/ingestion/pipeline/epub_structure_audit.py](../app/backend/apps/ingestion/pipeline/epub_structure_audit.py) on each produced EPUB.
+The harness at [tests/scripts/regression_curate_300.sh](../tests/scripts/regression_curate_300.sh) scrapes and exports up to 300 source site URLs sampled in [test-artifacts/source-site-audit-selection.json](../test-artifacts/source-site-audit-selection.json) and runs [apps/ingestion/pipeline/epub_structure_audit.py](../app/backend/apps/ingestion/pipeline/epub_structure_audit.py) on each produced EPUB.
 
 Asserted invariants per book:
 

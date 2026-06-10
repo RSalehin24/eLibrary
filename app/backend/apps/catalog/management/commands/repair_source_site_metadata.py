@@ -502,7 +502,7 @@ def retry_failed_epub_requests(dry_run=False):
 
 
 class Command(BaseCommand):
-    help = "Repair eBangla-derived metadata, processing rows, duplicate failed books, and failed EPUB requests."
+    help = "Repair source-site-derived metadata, processing rows, duplicate failed books, and failed EPUB requests."
 
     def add_arguments(self, parser):
         parser.add_argument("--dry-run", action="store_true")

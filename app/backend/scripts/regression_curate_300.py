@@ -1,9 +1,9 @@
 """
-End-to-end regression harness for ~300 ebanglalibrary.com books.
+End-to-end regression harness for ~300 example.com books.
 
 Driven by ``tests/scripts/regression_curate_300.sh`` (which execs this script
 inside the backend container). For each URL drawn from
-``test-artifacts/ebangla-audit-selection.json`` (or a shard file via
+``test-artifacts/source-site-audit-selection.json`` (or a shard file via
 ``--selection``) the harness:
 
 1. scrapes the book via ``processing_source.scrape_book_high_fidelity``;
@@ -45,7 +45,7 @@ from apps.ingestion.pipeline.epub_structure_audit import audit_epub_structure
 from apps.processing import source as processing_source
 
 
-DEFAULT_SELECTION = Path("/workspace/test-artifacts/ebangla-audit-selection.json")
+DEFAULT_SELECTION = Path("/workspace/test-artifacts/source-site-audit-selection.json")
 DEFAULT_EXPORT_ROOT = Path("/app/storage/regression-300/exports")
 DEFAULT_STATE_PATH = Path("/app/storage/regression-300/state.json")
 DEFAULT_LIMIT = 300

@@ -1,3 +1,5 @@
+from apps.ingestion.services.resolution_support_hosts import get_source_site_domain
+
 from apps.catalog.models import (
     Book,
     BookCategory,
@@ -118,9 +120,10 @@ def find_existing_book_by_title(title):
     normalized = normalized_book_title(title)
     if not normalized:
         return None
+    source_site = get_source_site_domain()
     return (
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site=source_site,
             normalized_title=normalized,
             deleted_at__isnull=True,
         )
@@ -133,9 +136,10 @@ def find_deleted_book_by_title(title):
     normalized = normalized_book_title(title)
     if not normalized:
         return None
+    source_site = get_source_site_domain()
     return (
         Book.objects.filter(
-            source_site="ebanglalibrary.com",
+            source_site=source_site,
             normalized_title=normalized,
             deleted_at__isnull=False,
         )

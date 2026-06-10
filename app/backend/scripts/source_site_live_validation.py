@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 django.setup()
 
-from apps.common.ebangla_batch_audit import refresh_source_archive
+from apps.common.source_site_batch_audit import refresh_source_archive
 from apps.ingestion.models import SourceCatalogEntry
 from apps.processing import source as processing_source
 

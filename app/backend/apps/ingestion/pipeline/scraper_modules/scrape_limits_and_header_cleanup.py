@@ -13,7 +13,7 @@ from django.conf import settings
 from apps.ingestion.services.normalization import extract_main_content_segments
 from apps.common.text import clean_display_text
 from .scraper_support.network import (
-    ALLOWED_SOURCE_HOSTS,
+    _get_allowed_source_hosts,
     HEADERS,
     clean_buttons,
     create_session_with_retries,

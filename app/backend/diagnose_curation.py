@@ -1,9 +1,9 @@
-"""Diagnostic: run curated pipeline against live eBangla books and report defects.
+"""Diagnostic: run curated pipeline against live source site books and report defects.
 
 Usage:
     cd app/backend && python -m diagnose_curation [N]
 
-Reads URLs from ../../test-artifacts/ebangla-audit-selection.json (first N entries).
+Reads URLs from ../../test-artifacts/source-site-audit-selection.json (first N entries).
 Writes report to tmp/curation_diagnosis.json (relative to repo root).
 """
 import json
@@ -31,7 +31,7 @@ from apps.ingestion.services.normalization import plain_text_from_html
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SELECTION = REPO_ROOT / "test-artifacts" / "ebangla-audit-selection.json"
+SELECTION = REPO_ROOT / "test-artifacts" / "source-site-audit-selection.json"
 REPORT = REPO_ROOT / "tmp" / "curation_diagnosis.json"
 
 

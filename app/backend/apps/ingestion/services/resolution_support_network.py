@@ -10,7 +10,7 @@ from requests.structures import CaseInsensitiveDict
 
 from apps.ingestion.services.resolution_support_hosts import (
     SEARCH_HEADERS,
-    SOURCE_SITE_DNS_RESOLVERS,
+    get_source_site_dns_resolvers,
     is_name_resolution_failure,
     replace_url_host,
     source_request_hosts,
@@ -165,7 +165,7 @@ def resolve_host_with_dns_fallback(host):
         seen.add(candidate)
         collected.append(candidate)
 
-    for resolver in SOURCE_SITE_DNS_RESOLVERS:
+    for resolver in get_source_site_dns_resolvers():
         try:
             udp_ips = resolve_a_records_via_udp(host, resolver)
         except Exception:
