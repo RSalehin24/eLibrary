@@ -86,6 +86,4 @@ node --test tests/playwright-smoke.test.mjs
 This project is static and can be hosted on any web server or GitHub Pages. The `CNAME` file is for custom domain support.
 For installability, serve it over HTTPS (or `http://localhost` during development).
 
-## License
 
-This project is licensed under the MIT License. See the LICENSE file for details.

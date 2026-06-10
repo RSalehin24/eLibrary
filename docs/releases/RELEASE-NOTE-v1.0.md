@@ -265,6 +265,12 @@ All scripts support `-h` / `--help`.
 
 ---
 
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](../LICENSE). Derivative works and network-hosted deployments must release their source code under the same license.
+
+---
+
 ## Credits
 
 Built with Django, React, Celery, PostgreSQL, Redis, and Docker.
