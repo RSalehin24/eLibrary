@@ -67,7 +67,7 @@ A read-only demo account is available to explore the application. The live deplo
 |-------|-------|
 | Email | `demo_user.library@rsalehin24.me` |
 | Password | `YCDqgDw9CwxPprt` |
-| URL | Check the **description of this repository** |
+| URL | `Check the description of this repository` |
 
 > This account has **read-only access** — you can browse the library, view books, and test the reader, but cannot modify or delete any content.
 
