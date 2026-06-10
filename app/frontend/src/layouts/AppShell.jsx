@@ -46,6 +46,7 @@ export default function AppShell({ children }) {
   const isLoginRoute = location.pathname === "/login";
   const useAppTopbar = authenticated && !useMinimalTopbar;
   const showMobileNav = useAppTopbar && showTopbar;
+  const isSuperUser = Boolean(user?.is_superuser);
   const displayName = user?.full_name || user?.email || "";
 
   useEffect(() => {
@@ -202,6 +203,7 @@ export default function AppShell({ children }) {
           isLoginRoute={isLoginRoute}
           isProcessingPropertiesActive={isProcessingPropertiesActive}
           isReaderRoute={isReaderRoute}
+          isSuperUser={isSuperUser}
           menuOpen={menuOpen}
           mobileNavOpen={mobileNavOpen}
           navigation={navigation}
@@ -233,6 +235,7 @@ export default function AppShell({ children }) {
           hasProcessingNav={hasProcessingNav}
           isBookPropertiesActive={isBookPropertiesActive}
           isProcessingPropertiesActive={isProcessingPropertiesActive}
+          isSuperUser={isSuperUser}
           mobileNavOpen={mobileNavOpen}
           mobileProcessingOpen={mobileProcessingOpen}
           mobilePropertiesOpen={mobilePropertiesOpen}

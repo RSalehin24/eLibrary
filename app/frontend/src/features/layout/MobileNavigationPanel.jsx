@@ -54,6 +54,7 @@ export function MobileNavigationPanel({
   hasProcessingNav,
   isBookPropertiesActive,
   isProcessingPropertiesActive,
+  isSuperUser,
   mobileNavOpen,
   mobileProcessingOpen,
   mobilePropertiesOpen,
@@ -109,33 +110,37 @@ export function MobileNavigationPanel({
               {item.label}
             </NavLink>
           ))}
-          <NavLink
-            to="/my-books"
-            className={({ isActive }) =>
-              isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
-            }
-            onClick={onClose}
-          >
-            My Books
-          </NavLink>
-          <NavLink
-            to="/kindle-sent"
-            className={({ isActive }) =>
-              isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
-            }
-            onClick={onClose}
-          >
-            Kindle
-          </NavLink>
-          <NavLink
-            to="/notes"
-            className={({ isActive }) =>
-              isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
-            }
-            onClick={onClose}
-          >
-            My Notes
-          </NavLink>
+          {isSuperUser ? (
+            <>
+              <NavLink
+                to="/my-books"
+                className={({ isActive }) =>
+                  isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+                }
+                onClick={onClose}
+              >
+                My Books
+              </NavLink>
+              <NavLink
+                to="/kindle-sent"
+                className={({ isActive }) =>
+                  isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+                }
+                onClick={onClose}
+              >
+                Kindle
+              </NavLink>
+              <NavLink
+                to="/notes"
+                className={({ isActive }) =>
+                  isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+                }
+                onClick={onClose}
+              >
+                My Notes
+              </NavLink>
+            </>
+          ) : null}
         </div>
 
         <MobileNavGroup

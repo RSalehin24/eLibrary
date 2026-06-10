@@ -65,13 +65,27 @@ export function isProcessingRoute(pathname) {
   );
 }
 
+export function getHomePath(user) {
+  return user?.is_superuser ? "/home" : "/my-books";
+}
+
 export function authenticatedNavigation(user) {
   if (!user) {
     return [];
   }
 
+  if (user.is_superuser) {
+    return [
+      { to: "/home", label: "Home" },
+      { to: "/access", label: "Users & Access" },
+    ];
+  }
+
   return [
-    { to: "/home", label: "Home" },
-    ...(user.is_superuser ? [{ to: "/access", label: "Users & Access" }] : []),
+    { to: "/my-books", label: "My Books" },
+    { to: "/kindle-sent", label: "Kindle" },
+    { to: "/home", label: "All Books" },
+    { to: "/access", label: "Users & Access" },
+    { to: "/notes", label: "My Notes" },
   ];
 }

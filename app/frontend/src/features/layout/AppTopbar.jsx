@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import NavDropdown from "./NavDropdown";
 import ProfileMenu from "./ProfileMenu";
 import { MenuIcon } from "./MobileNavigationIcons";
-import { bookPropertiesItems } from "./navigation";
+import { bookPropertiesItems, getHomePath } from "./navigation";
 
 export function AppTopbar({
   authenticated,
@@ -12,6 +12,7 @@ export function AppTopbar({
   isLoginRoute,
   isProcessingPropertiesActive,
   isReaderRoute,
+  isSuperUser,
   menuOpen,
   mobileNavOpen,
   navigation,
@@ -44,7 +45,7 @@ export function AppTopbar({
           isReaderRoute ? "brand-block brand-block-reader" : "brand-block"
         }
       >
-        <NavLink to="/home" className="brand-mark">
+        <NavLink to={getHomePath(user)} className="brand-mark">
           <span className="brand-mark-name">RSalehin24</span>
           <span className="brand-mark-suffix">Library</span>
         </NavLink>
@@ -101,30 +102,34 @@ export function AppTopbar({
         <div className="session-box">
           {authenticated ? (
             <>
-              <NavLink
-                to="/my-books"
-                className={({ isActive }) =>
-                  isActive ? "nav-link is-active" : "nav-link"
-                }
-              >
-                My Books
-              </NavLink>
-              <NavLink
-                to="/kindle-sent"
-                className={({ isActive }) =>
-                  isActive ? "nav-link is-active" : "nav-link"
-                }
-              >
-                Kindle
-              </NavLink>
-              <NavLink
-                to="/notes"
-                className={({ isActive }) =>
-                  isActive ? "nav-link is-active" : "nav-link"
-                }
-              >
-                My Notes
-              </NavLink>
+              {isSuperUser ? (
+                <>
+                  <NavLink
+                    to="/my-books"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link is-active" : "nav-link"
+                    }
+                  >
+                    My Books
+                  </NavLink>
+                  <NavLink
+                    to="/kindle-sent"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link is-active" : "nav-link"
+                    }
+                  >
+                    Kindle
+                  </NavLink>
+                  <NavLink
+                    to="/notes"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link is-active" : "nav-link"
+                    }
+                  >
+                    My Notes
+                  </NavLink>
+                </>
+              ) : null}
               <ProfileMenu
                 displayName={displayName}
                 email={user?.email}

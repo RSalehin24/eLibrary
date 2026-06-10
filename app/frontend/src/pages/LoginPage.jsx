@@ -47,7 +47,8 @@ export default function LoginPage() {
           ? "Signed in. Finish two-factor setup to continue."
           : "Signed in.",
       );
-      navigate(requiresTotpSetup ? "/two-factor-setup" : "/my-books", {
+      const homePath = user?.is_superuser ? "/home" : "/my-books";
+      navigate(requiresTotpSetup ? "/two-factor-setup" : homePath, {
         replace: true,
       });
     } catch (error) {

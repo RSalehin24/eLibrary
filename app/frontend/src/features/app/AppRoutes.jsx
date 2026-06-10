@@ -25,6 +25,13 @@ import {
   OnHoldProcessingPage,
 } from "../processing/BookProcessingPages";
 import ProtectedRoute from "./ProtectedRoute";
+import { useSession } from "../../hooks/useSession";
+import { getHomePath } from "../layout/navigation";
+
+function HomeRedirect() {
+  const { user } = useSession();
+  return <Navigate to={getHomePath(user)} replace />;
+}
 
 const protectedRoutes = [
   { path: "/home", element: <HomePage /> },
@@ -70,7 +77,7 @@ export default function AppRoutes() {
         path="/"
         element={
           <ProtectedRoute>
-            <Navigate to="/home" replace />
+            <HomeRedirect />
           </ProtectedRoute>
         }
       />
