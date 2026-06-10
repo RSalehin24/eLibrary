@@ -7,6 +7,7 @@ import { bookPropertiesItems, getHomePath } from "./navigation";
 export function AppTopbar({
   authenticated,
   displayName,
+  hasNotesLink,
   hasProcessingNav,
   isBookPropertiesActive,
   isLoginRoute,
@@ -24,11 +25,13 @@ export function AppTopbar({
   onProcessingItemClick,
   onProcessingToggle,
   onToggleMobileNav,
+  primaryNav,
   processingOpen,
   processingMenuRef,
   profileMenuRef,
   propertiesMenuRef,
   propertiesOpen,
+  secondaryNav,
   showMobileNav,
   toast,
   useAppTopbar,
@@ -65,7 +68,7 @@ export function AppTopbar({
       ) : null}
       {useAppTopbar ? (
         <nav className="topnav" aria-label="Primary">
-          {navigation.map((item) => (
+          {primaryNav.map((item) => (
             <NavLink
               key={item.to}
               to={item.to}
@@ -96,6 +99,17 @@ export function AppTopbar({
               onItemClick={onProcessingItemClick}
             />
           ) : null}
+          {secondaryNav.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              className={({ isActive }) =>
+                isActive ? "nav-link is-active" : "nav-link"
+              }
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </nav>
       ) : null}
       {!useMinimalTopbar ? (
@@ -129,6 +143,16 @@ export function AppTopbar({
                     My Notes
                   </NavLink>
                 </>
+              ) : null}
+              {hasNotesLink ? (
+                <NavLink
+                  to="/notes"
+                  className={({ isActive }) =>
+                    isActive ? "nav-link is-active" : "nav-link"
+                  }
+                >
+                  My Notes
+                </NavLink>
               ) : null}
               <ProfileMenu
                 displayName={displayName}

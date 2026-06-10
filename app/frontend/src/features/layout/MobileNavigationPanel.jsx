@@ -51,6 +51,7 @@ function MobileNavGroup({
 export function MobileNavigationPanel({
   displayName,
   email,
+  hasNotesLink,
   hasProcessingNav,
   isBookPropertiesActive,
   isProcessingPropertiesActive,
@@ -63,7 +64,9 @@ export function MobileNavigationPanel({
   onLogout,
   onProcessingToggle,
   onPropertiesToggle,
+  primaryNav,
   profileImageUrl,
+  secondaryNav,
   toast,
   visibleProcessingItems,
 }) {
@@ -98,7 +101,7 @@ export function MobileNavigationPanel({
         </div>
 
         <div className="mobile-nav-links">
-          {navigation.map((item) => (
+          {primaryNav.map((item) => (
             <NavLink
               key={`mobile-${item.to}`}
               to={item.to}
@@ -141,6 +144,18 @@ export function MobileNavigationPanel({
               </NavLink>
             </>
           ) : null}
+          {secondaryNav.map((item) => (
+            <NavLink
+              key={`mobile-${item.to}`}
+              to={item.to}
+              className={({ isActive }) =>
+                isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+              }
+              onClick={onClose}
+            >
+              {item.label}
+            </NavLink>
+          ))}
         </div>
 
         <MobileNavGroup
@@ -166,6 +181,17 @@ export function MobileNavigationPanel({
         ) : null}
 
         <div className="mobile-nav-session">
+          {hasNotesLink ? (
+            <NavLink
+              to="/notes"
+              className={({ isActive }) =>
+                isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+              }
+              onClick={onClose}
+            >
+              My Notes
+            </NavLink>
+          ) : null}
           <NavLink
             to="/profile"
             className={({ isActive }) =>

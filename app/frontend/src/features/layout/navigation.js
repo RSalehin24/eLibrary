@@ -89,3 +89,59 @@ export function authenticatedNavigation(user) {
     { to: "/notes", label: "My Notes" },
   ];
 }
+
+export function primaryNavigation(user) {
+  if (!user) {
+    return [];
+  }
+
+  if (user.is_superuser) {
+    return [
+      { to: "/home", label: "Home" },
+      { to: "/access", label: "Users & Access" },
+    ];
+  }
+
+  const items = [{ to: "/my-books", label: "My Books" }];
+
+  if (
+    user.is_superuser ||
+    (user.capabilities || []).includes("admin:full_control") ||
+    (user.capabilities || []).includes("send:kindle")
+  ) {
+    items.push({ to: "/kindle-sent", label: "Kindle" });
+  }
+
+  items.push({ to: "/home", label: "All Books" });
+
+  return items;
+}
+
+export function secondaryNavigation(user) {
+  if (!user) {
+    return [];
+  }
+
+  if (user.is_superuser) {
+    return [];
+  }
+
+  const items = [];
+
+  if (
+    user.is_superuser ||
+    (user.capabilities || []).includes("admin:full_control") ||
+    (user.capabilities || []).includes("access:manage")
+  ) {
+    items.push({ to: "/access", label: "Users & Access" });
+  }
+
+  return items;
+}
+
+export function hasNotesLink(user) {
+  if (!user) {
+    return false;
+  }
+  return !user.is_superuser;
+}

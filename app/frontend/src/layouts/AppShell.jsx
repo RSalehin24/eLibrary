@@ -5,9 +5,12 @@ import { MobileNavigationPanel } from "../features/layout/MobileNavigationPanel"
 import { ReaderTopbarHideButton } from "../features/layout/ReaderTopbarHideButton";
 import {
   authenticatedNavigation,
+  hasNotesLink as hasNotesLinkFn,
   isBookPropertiesRoute,
   isProcessingRoute,
+  primaryNavigation,
   processingItems,
+  secondaryNavigation,
 } from "../features/layout/navigation";
 import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
@@ -41,6 +44,9 @@ export default function AppShell({ children }) {
   );
   const hasProcessingNav = visibleProcessingItems.length > 0;
   const navigation = authenticated ? authenticatedNavigation(user) : [];
+  const primaryNav = authenticated ? primaryNavigation(user) : [];
+  const secondaryNav = authenticated ? secondaryNavigation(user) : [];
+  const showNotesLink = authenticated ? hasNotesLinkFn(user) : false;
   const isBookPropertiesActive = isBookPropertiesRoute(location.pathname);
   const isProcessingPropertiesActive = isProcessingRoute(location.pathname);
   const isLoginRoute = location.pathname === "/login";
@@ -198,6 +204,7 @@ export default function AppShell({ children }) {
         <AppTopbar
           authenticated={authenticated}
           displayName={displayName}
+          hasNotesLink={showNotesLink}
           hasProcessingNav={hasProcessingNav}
           isBookPropertiesActive={isBookPropertiesActive}
           isLoginRoute={isLoginRoute}
@@ -215,11 +222,13 @@ export default function AppShell({ children }) {
           onProcessingItemClick={() => setProcessingOpen(false)}
           onProcessingToggle={() => setProcessingOpen((current) => !current)}
           onToggleMobileNav={() => setMobileNavOpen((current) => !current)}
+          primaryNav={primaryNav}
           processingMenuRef={processingMenuRef}
           processingOpen={processingOpen}
           profileMenuRef={profileMenuRef}
           propertiesMenuRef={propertiesMenuRef}
           propertiesOpen={propertiesOpen}
+          secondaryNav={secondaryNav}
           showMobileNav={showMobileNav}
           toast={toast}
           useAppTopbar={useAppTopbar}
@@ -232,6 +241,7 @@ export default function AppShell({ children }) {
         <MobileNavigationPanel
           displayName={displayName}
           email={user?.email}
+          hasNotesLink={showNotesLink}
           hasProcessingNav={hasProcessingNav}
           isBookPropertiesActive={isBookPropertiesActive}
           isProcessingPropertiesActive={isProcessingPropertiesActive}
@@ -248,7 +258,9 @@ export default function AppShell({ children }) {
           onPropertiesToggle={() =>
             setMobilePropertiesOpen((current) => !current)
           }
+          primaryNav={primaryNav}
           profileImageUrl={user?.profile_image_url}
+          secondaryNav={secondaryNav}
           toast={toast}
           visibleProcessingItems={visibleProcessingItems}
         />
