@@ -180,6 +180,28 @@ export function MobileNavigationPanel({
         ) : null}
 
         <div className="mobile-nav-session">
+          {!isSuperUser ? (
+            <>
+              <NavLink
+                to="/home"
+                className={({ isActive }) =>
+                  isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+                }
+                onClick={onClose}
+              >
+                All Books
+              </NavLink>
+              <NavLink
+                to="/notes"
+                className={({ isActive }) =>
+                  isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
+                }
+                onClick={onClose}
+              >
+                My Notes
+              </NavLink>
+            </>
+          ) : null}
           <NavLink
             to="/profile"
             className={({ isActive }) =>

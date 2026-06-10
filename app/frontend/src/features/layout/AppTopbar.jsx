@@ -143,6 +143,26 @@ export function AppTopbar({
                   </NavLink>
                 </>
               ) : null}
+              {!isSuperUser ? (
+                <>
+                  <NavLink
+                    to="/home"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link is-active" : "nav-link"
+                    }
+                  >
+                    All Books
+                  </NavLink>
+                  <NavLink
+                    to="/notes"
+                    className={({ isActive }) =>
+                      isActive ? "nav-link is-active" : "nav-link"
+                    }
+                  >
+                    My Notes
+                  </NavLink>
+                </>
+              ) : null}
               <ProfileMenu
                 displayName={displayName}
                 email={user?.email}

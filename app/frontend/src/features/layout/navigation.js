@@ -112,9 +112,6 @@ export function primaryNavigation(user) {
     items.push({ to: "/kindle-sent", label: "Kindle" });
   }
 
-  items.push({ to: "/home", label: "All Books" });
-  items.push({ to: "/notes", label: "My Notes" });
-
   return items;
 }
 
