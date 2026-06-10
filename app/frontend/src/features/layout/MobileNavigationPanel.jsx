@@ -51,7 +51,6 @@ function MobileNavGroup({
 export function MobileNavigationPanel({
   displayName,
   email,
-  hasNotesLink,
   hasProcessingNav,
   isBookPropertiesActive,
   isProcessingPropertiesActive,
@@ -181,17 +180,6 @@ export function MobileNavigationPanel({
         ) : null}
 
         <div className="mobile-nav-session">
-          {hasNotesLink ? (
-            <NavLink
-              to="/notes"
-              className={({ isActive }) =>
-                isActive ? "mobile-nav-link is-active" : "mobile-nav-link"
-              }
-              onClick={onClose}
-            >
-              My Notes
-            </NavLink>
-          ) : null}
           <NavLink
             to="/profile"
             className={({ isActive }) =>

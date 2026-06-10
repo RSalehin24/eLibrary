@@ -113,6 +113,7 @@ export function primaryNavigation(user) {
   }
 
   items.push({ to: "/home", label: "All Books" });
+  items.push({ to: "/notes", label: "My Notes" });
 
   return items;
 }

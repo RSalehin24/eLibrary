@@ -7,7 +7,6 @@ import { bookPropertiesItems, getHomePath } from "./navigation";
 export function AppTopbar({
   authenticated,
   displayName,
-  hasNotesLink,
   hasProcessingNav,
   isBookPropertiesActive,
   isLoginRoute,
@@ -143,16 +142,6 @@ export function AppTopbar({
                     My Notes
                   </NavLink>
                 </>
-              ) : null}
-              {hasNotesLink ? (
-                <NavLink
-                  to="/notes"
-                  className={({ isActive }) =>
-                    isActive ? "nav-link is-active" : "nav-link"
-                  }
-                >
-                  My Notes
-                </NavLink>
               ) : null}
               <ProfileMenu
                 displayName={displayName}
