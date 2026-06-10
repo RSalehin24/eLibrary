@@ -228,8 +228,14 @@ export default function NotesPage() {
 
   const items = data[activeTab] || [];
   const groups = useMemo(() => groupByBook(items), [items]);
+  const [selectedBook, setSelectedBook] = useState(null);
   const hasSearch = query.trim().length > 0;
   const showColorFilter = activeTab === "highlights" || activeTab === "notes";
+
+  const selectedGroup = useMemo(() => {
+    if (!selectedBook) return groups.length === 1 ? groups[0] : null;
+    return groups.find((g) => g.slug === selectedBook) || null;
+  }, [selectedBook, groups]);
 
   return (
     <div className="catalog-page catalog-page-notes page-stack">
@@ -341,17 +347,70 @@ export default function NotesPage() {
         ) : groups.length === 0 ? (
           <p className="notes-empty">{EMPTY_HINTS[activeTab]}</p>
         ) : (
-          groups.map((group) => (
-            <BookGroup
-              key={group.slug}
-              group={group}
-              tab={activeTab}
-              defaultOpen={hasSearch || groups.length === 1}
-              onDelete={handleDelete}
-              onColorChange={handleColorUpdate}
-              onNoteEdit={handleNoteEdit}
-            />
-          ))
+          <div className="notes-two-col">
+            {/* ── Left: Books list ── */}
+            <aside className="notes-books-sidebar">
+              <ul className="notes-books-list">
+                {groups.map((group) => {
+                  const isActive =
+                    selectedGroup && selectedGroup.slug === group.slug;
+                  const noun =
+                    activeTab === "bookmarks"
+                      ? "bookmark"
+                      : activeTab === "quotes"
+                        ? "quote"
+                        : activeTab === "notes"
+                          ? "note"
+                          : "highlight";
+                  return (
+                    <li key={group.slug}>
+                      <button
+                        type="button"
+                        className={`notes-books-item${isActive ? " is-active" : ""}`}
+                        onClick={() => setSelectedBook(group.slug)}
+                      >
+                        <span className="notes-books-item-title">
+                          {group.slug ? (
+                            <Link
+                              to={`/books/${group.slug}`}
+                              className="notes-books-item-link"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {group.title}
+                            </Link>
+                          ) : (
+                            group.title
+                          )}
+                        </span>
+                        <span className="notes-books-item-count">
+                          {group.items.length} {noun}
+                          {group.items.length === 1 ? "" : "s"}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </aside>
+
+            {/* ── Right: Notes for selected book ── */}
+            <div className="notes-detail-panel">
+              {selectedGroup ? (
+                <BookGroup
+                  group={selectedGroup}
+                  tab={activeTab}
+                  defaultOpen={true}
+                  onDelete={handleDelete}
+                  onColorChange={handleColorUpdate}
+                  onNoteEdit={handleNoteEdit}
+                />
+              ) : (
+                <p className="notes-empty">
+                  Select a book from the left to view its notes.
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </section>
     </div>
