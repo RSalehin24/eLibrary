@@ -68,3 +68,4 @@ migration/runtime/*
 !migration/runtime/.gitkeep
 
 .antigravitycli/
+test-results/
