@@ -151,7 +151,7 @@ def queue_submission(submission, actor=None):
 
 
 def dispatch_processing_job(job, force=False, attempt_offset=None):
-    from apps.ingestion.tasks import process_submission_task
+    from apps.ingestion.engine.dispatch import dispatch_job
 
     job.refresh_from_db(fields=["status", "task_id", "queue_name", "cancel_requested", "updated_at"])
     if job.status == JobStatus.CANCELLED or job.cancel_requested:
@@ -163,36 +163,30 @@ def dispatch_processing_job(job, force=False, attempt_offset=None):
         int(attempt_offset or 0),
     )
 
-    assigned_task_id = str(uuid4())
-    job.task_id = assigned_task_id
-    job.queue_name = "celery"
+    assigned_job_id = str(uuid4())
+    job.task_id = assigned_job_id
+    job.queue_name = "engine"
     job.save(update_fields=["task_id", "queue_name", "updated_at"])
 
     try:
-        async_result = process_submission_task.apply_async(
-            args=[str(job.id)],
-            kwargs={"attempt_offset": resolved_attempt_offset},
-            task_id=assigned_task_id,
+        dispatch_job(
+            job_id=str(job.id),
+            job_type=job.job_type,
+            handler="process_submission",
+            attempt_offset=resolved_attempt_offset,
         )
-        dispatched_task_id = getattr(async_result, "id", assigned_task_id) or assigned_task_id
-        if dispatched_task_id != assigned_task_id:
-            job.task_id = dispatched_task_id
-            job.save(update_fields=["task_id", "updated_at"])
     except Exception as exc:
         job.refresh_from_db()
-        if settings.CELERY_TASK_ALWAYS_EAGER:
-            logger.warning("Processing job eager execution raised during dispatch.", exc_info=True)
-            return job
-        logger.warning("Celery dispatch failed, falling back to inline processing", exc_info=True)
+        logger.warning("Engine dispatch failed, falling back to inline processing", exc_info=True)
         job.task_id = ""
         job.queue_name = "inline-fallback"
-        job.last_error = f"Celery dispatch failed: {exc}"
+        job.last_error = f"Engine dispatch failed: {exc}"
         job.save(update_fields=["task_id", "queue_name", "last_error", "updated_at"])
         record_job_log(
             job,
             "warning",
-            "Celery dispatch failed, processing inline instead.",
-            {"error": str(exc), "always_eager": settings.CELERY_TASK_ALWAYS_EAGER},
+            "Engine dispatch failed, processing inline instead.",
+            {"error": str(exc)},
         )
         inline_retry_count = int(job.retry_count or 0)
         last_error = None

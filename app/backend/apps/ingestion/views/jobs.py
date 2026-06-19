@@ -1,14 +1,35 @@
+import json
+
 from django.db.models import Count
+from django.http import StreamingHttpResponse
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from rest_framework.renderers import BaseRenderer
+
 from apps.common.permissions import CanManageProcessing
+from apps.ingestion.engine.constants import (
+    CH_JOB_ASSIGNED,
+    CH_JOB_COMPLETED,
+    CH_JOB_REASSIGNED,
+)
+from apps.ingestion.engine.redis_client import create_redis_client
 from apps.ingestion.models import JobStatus, JobType
 from apps.ingestion.serializers import ProcessingJobSerializer, ProcessingLogSerializer
 from apps.ingestion.services.submissions import recover_stale_processing_jobs
+
+
+class EventStreamRenderer(BaseRenderer):
+    media_type = "text/event-stream"
+    format = "event-stream"
+    charset = "utf-8"
+    render_style = "binary"
+
+    def render(self, data, accepted_media_type=None, renderer_context=None):
+        return data if data is not None else b""
 
 from .filters import apply_created_at_filters, apply_limit, apply_submission_origin_filter, apply_text_search, normalize_status_filter
 from .querysets import jobs_ordered_queryset, visible_jobs_queryset
@@ -89,10 +110,53 @@ class ReprocessJobSummaryView(APIView):
         })
 
 
+class ProcessingJobStreamView(APIView):
+    """SSE endpoint that streams real-time reprocessing job updates via Engine events."""
+
+    permission_classes = [CanManageProcessing]
+    renderer_classes = [EventStreamRenderer]
+
+    def get(self, request):
+        def stream():
+            redis = create_redis_client()
+            pubsub = redis.pubsub()
+            pubsub.subscribe(CH_JOB_ASSIGNED, CH_JOB_COMPLETED, CH_JOB_REASSIGNED)
+            try:
+                yield "event: connected\ndata: {}\n\n"
+                while True:
+                    message = pubsub.get_message(timeout=5.0)
+                    if message and message["type"] == "message":
+                        try:
+                            data = json.loads(message["data"])
+                        except (json.JSONDecodeError, TypeError):
+                            data = {}
+                        yield f"event: job-update\ndata: {json.dumps(data)}\n\n"
+                    else:
+                        yield ": keepalive\n\n"
+            except GeneratorExit:
+                pass
+            finally:
+                try:
+                    pubsub.close()
+                except Exception:
+                    pass
+                try:
+                    redis.close()
+                except Exception:
+                    pass
+
+        response = StreamingHttpResponse(stream(), content_type="text/event-stream")
+        response["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response["Pragma"] = "no-cache"
+        response["X-Accel-Buffering"] = "no"
+        return response
+
+
 __all__ = [
     "ProcessingJobDetailView",
     "ProcessingJobListView",
     "ProcessingJobLogsView",
     "ProcessingJobRecoverView",
+    "ProcessingJobStreamView",
     "ReprocessJobSummaryView",
 ]

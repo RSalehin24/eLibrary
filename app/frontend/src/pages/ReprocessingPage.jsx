@@ -4,6 +4,7 @@ import {
   deleteReprocessJob,
   getReprocessJobs,
   getReprocessSummary,
+  resolveProcessingStreamUrl,
   resumeReprocessJob,
   stopReprocessJob,
 } from "../features/processing/api";
@@ -30,7 +31,8 @@ function useReprocessData() {
   const [jobs, setJobs] = useState(null);
   const [summary, setSummary] = useState(null);
   const [loadedOnce, setLoadedOnce] = useState(false);
-  const timerRef = useRef(null);
+  const [streamMode, setStreamMode] = useState("idle");
+  const eventSourceRef = useRef(null);
 
   const load = useCallback(async () => {
     try {
@@ -49,16 +51,61 @@ function useReprocessData() {
 
   useEffect(() => {
     load();
-    return () => clearTimeout(timerRef.current);
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
   }, [load]);
 
+  // SSE connection for real-time job updates
   useEffect(() => {
-    clearTimeout(timerRef.current);
-    if (jobs?.some((j) => ACTIVE_STATUSES.has(j.status))) {
-      timerRef.current = setTimeout(load, POLL_MS);
+    if (typeof EventSource === "undefined") {
+      setStreamMode("unsupported");
+      return;
     }
-    return () => clearTimeout(timerRef.current);
-  }, [jobs, load]);
+
+    let disposed = false;
+    const source = new EventSource(
+      resolveProcessingStreamUrl("/ingestion/jobs/stream/"),
+      { withCredentials: true }
+    );
+    eventSourceRef.current = source;
+    setStreamMode("connecting");
+
+    source.addEventListener("connected", () => {
+      if (disposed) return;
+      setStreamMode("connected");
+    });
+
+    source.addEventListener("job-update", () => {
+      if (disposed) return;
+      load();
+    });
+
+    source.onerror = () => {
+      if (disposed) return;
+      setStreamMode("reconnecting");
+    };
+
+    return () => {
+      disposed = true;
+      source.close();
+      if (eventSourceRef.current === source) {
+        eventSourceRef.current = null;
+      }
+      setStreamMode("idle");
+    };
+  }, [load]);
+
+  // Fallback polling when SSE is reconnecting or unsupported
+  useEffect(() => {
+    if (!["reconnecting", "unsupported"].includes(streamMode)) return;
+
+    const intervalId = window.setInterval(load, POLL_MS);
+    return () => window.clearInterval(intervalId);
+  }, [streamMode, load]);
 
   const activeJobs = (jobs ?? []).filter((j) => ACTIVE_STATUSES.has(j.status));
   const historyJobs = (jobs ?? []).filter((j) =>

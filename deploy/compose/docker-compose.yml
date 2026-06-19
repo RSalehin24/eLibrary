@@ -195,6 +195,27 @@ services:
       - public
       - internal
 
+  engine:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+    command: python manage.py run_engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    dns:
+      - ${CONTAINER_DNS:-1.1.1.1}
+      - ${CONTAINER_DNS_FALLBACK:-8.8.8.8}
+    networks:
+      - internal
+
   beat:
     build:
       context: ../..

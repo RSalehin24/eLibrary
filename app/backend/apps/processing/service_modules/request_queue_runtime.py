@@ -40,7 +40,7 @@ def record_is_selectable(record):
 
 
 def enqueue_request_processing(processing_request):
-    from .tasks import kickoff_book_creation_request_task
+    from apps.ingestion.engine.dispatch import dispatch_job
 
     processing_request = _reload_processing_request(processing_request.id)
     if processing_request.state == BookCreationRequestState.INITIAL:
@@ -55,13 +55,14 @@ def enqueue_request_processing(processing_request):
         return False
 
     try:
-        async_result = kickoff_book_creation_request_task.apply_async(
-            args=[str(processing_request.id)],
-            queue=PROCESSING_TASK_QUEUE,
+        dispatch_job(
+            job_id=str(processing_request.id),
+            job_type="pipeline",
+            handler="pipeline",
         )
     except Exception:
         logger.warning(
-            "Processing request kickoff dispatch failed for %s.",
+            "Engine pipeline dispatch failed for %s.",
             processing_request.id,
             exc_info=True,
         )
@@ -73,9 +74,6 @@ def enqueue_request_processing(processing_request):
             **_request_progress(processing_request),
             PROCESSING_DISPATCH_REQUESTED_AT_KEY: timezone.now().isoformat(),
         }
-        task_id = str(getattr(async_result, "id", "") or "").strip()
-        if task_id:
-            next_progress[PROCESSING_DISPATCH_TASK_ID_KEY] = task_id
         processing_request.progress = next_progress
         processing_request.save(update_fields=["progress", "updated_at"])
     return True

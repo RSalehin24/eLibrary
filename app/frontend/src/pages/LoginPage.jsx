@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import EmailInputFeedback from "../components/EmailInputFeedback";
 import LoadingSpinner from "../components/LoadingSpinner";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -11,7 +11,22 @@ import { humanizeError } from "../utils/humanizeError";
 export default function LoginPage() {
   usePageTitle("Sign in");
   const navigate = useNavigate();
-  const { login } = useSession();
+  const { loading, authenticated, user, login } = useSession();
+
+  if (loading) {
+    return (
+      <div className="login-shell">
+        <div className="detail-card login-card">
+          <LoadingSpinner size={24} />
+        </div>
+      </div>
+    );
+  }
+
+  if (authenticated) {
+    const homePath = user?.is_superuser ? "/home" : "/my-books";
+    return <Navigate to={homePath} replace />;
+  }
   const toast = useToast();
   const [phase, setPhase] = useState("credentials");
   const [form, setForm] = useState({ email: "", password: "", otp_token: "" });

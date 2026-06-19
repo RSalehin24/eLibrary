@@ -36,6 +36,7 @@ x-app-environment: &app_environment
   SESSION_COOKIE_SAMESITE: ${SESSION_COOKIE_SAMESITE:-Lax}
   CSRF_COOKIE_SAMESITE: ${CSRF_COOKIE_SAMESITE:-Lax}
   RUNTIME_STORAGE_DIR: ${RUNTIME_STORAGE_DIR:-/app/storage}
+  SOURCE_SITE_HOST: ${SOURCE_SITE_HOST:-}
   SOURCE_SITE_EMAIL: ${SOURCE_SITE_EMAIL:-}
   SOURCE_SITE_PASSWORD: ${SOURCE_SITE_PASSWORD:-}
   SOURCE_SITE_AUTH_STATE_PATH: ${SOURCE_SITE_AUTH_STATE_PATH:-}
@@ -237,6 +238,38 @@ services:
       backend-init:
         condition: service_completed_successfully
     networks: [public, internal]
+  engine:
+    build:
+      context: ../..
+      dockerfile: local/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+    command: >
+      sh -c "mkdir -p /logs/local/engine &&
+      python manage.py run_engine
+      2>&1 | tee -a /logs/local/engine/engine.log"
+    volumes:
+      - ../../logs:/logs
+    develop:
+      watch:
+        - action: sync+restart
+          path: ../../app/backend/apps
+          target: /app/apps
+          ignore: *backend_sync_ignore
+        - action: sync+restart
+          path: ../../app/backend/config
+          target: /app/config
+        - action: rebuild
+          path: ../../app/backend/requirements.txt
+        - action: rebuild
+          path: ../../app/backend/requirements-dev.txt
+    depends_on:
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks: [internal]
   beat:
     build:
       context: ../..

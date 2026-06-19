@@ -44,4 +44,8 @@ app.conf.beat_schedule = {
         "task": "apps.ingestion.tasks.recover_stale_processing_jobs_task",
         "schedule": crontab(),
     },
+    "send-worker-heartbeat": {
+        "task": "apps.ingestion.tasks.send_worker_heartbeat_task",
+        "schedule": 5.0,
+    },
 }

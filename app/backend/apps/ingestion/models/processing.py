@@ -13,6 +13,7 @@ class ProcessingJob(UUIDPrimaryKeyModel, TimeStampedModel):
     status = models.CharField(max_length=16, choices=JobStatus.choices, default=JobStatus.QUEUED, db_index=True)
     task_id = models.CharField(max_length=255, blank=True)
     queue_name = models.CharField(max_length=100, blank=True)
+    worker_hostname = models.CharField(max_length=255, blank=True)
     retry_count = models.PositiveIntegerField(default=0)
     cancel_requested = models.BooleanField(default=False)
     payload = models.JSONField(default=dict, blank=True)

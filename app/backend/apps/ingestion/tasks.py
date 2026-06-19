@@ -143,3 +143,31 @@ def recover_stale_processing_jobs_task():
                 limit=remaining_limit,
             )
     return {"recovered_jobs": recovered}
+
+
+@shared_task
+def send_worker_heartbeat_task():
+    """Periodic task that sends heartbeat to the Central Job Engine.
+
+    This task runs every 5 seconds via Celery Beat and publishes
+    a heartbeat event to Redis for the Engine to consume.
+    """
+    try:
+        from apps.ingestion.engine.redis_client import create_redis_client
+        from apps.ingestion.engine.constants import CH_WORKER_HEARTBEAT
+        import json
+        import socket
+        import os
+        from datetime import datetime, timezone
+
+        redis = create_redis_client()
+        try:
+            hostname = f"celery-beat-{socket.gethostname()}-{os.getpid()}@beat"
+            redis.publish(CH_WORKER_HEARTBEAT, json.dumps({
+                "hostname": hostname,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }))
+        finally:
+            redis.close()
+    except Exception:
+        logger.exception("Failed to send worker heartbeat to engine")

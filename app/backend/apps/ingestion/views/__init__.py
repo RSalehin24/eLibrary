@@ -27,7 +27,7 @@ from .job_actions import (
     ProcessingJobResumeView,
     ProcessingJobStopView,
 )
-from .jobs import ProcessingJobDetailView, ProcessingJobListView, ProcessingJobLogsView, ProcessingJobRecoverView, ReprocessJobSummaryView
+from .jobs import ProcessingJobDetailView, ProcessingJobListView, ProcessingJobLogsView, ProcessingJobRecoverView, ProcessingJobStreamView, ReprocessJobSummaryView
 from .submissions import (
     SubmissionActionLinksView,
     SubmissionBulkDeleteView,
@@ -60,6 +60,7 @@ __all__ = [
     "ProcessingJobListView",
     "ProcessingJobLogsView",
     "ProcessingJobRecoverView",
+    "ProcessingJobStreamView",
     "ReprocessJobSummaryView",
     "ProcessingJobResumeView",
     "ProcessingJobStopView",

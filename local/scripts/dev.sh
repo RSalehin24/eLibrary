@@ -9,7 +9,7 @@ export REPO_ROOT
 
 APP_ENV_FILE="${REPO_ROOT}/local/env/.env"
 COMPOSE_ARGS=(-f "${REPO_ROOT}/local/compose/docker-compose.yml")
-DEFAULT_SERVICES=(postgres redis backend worker processing-worker beat frontend)
+DEFAULT_SERVICES=(postgres redis backend worker processing-worker beat engine frontend)
 
 usage() {
   cat <<'EOF'

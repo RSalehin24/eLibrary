@@ -6,3 +6,6 @@ class IngestionConfig(AppConfig):
     name = 'apps.ingestion'
     label = 'ingestion'
     verbose_name = 'Ingestion'
+
+    def ready(self):
+        import apps.ingestion.signals  # noqa: F401
