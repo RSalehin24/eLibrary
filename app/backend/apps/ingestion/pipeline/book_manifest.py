@@ -48,7 +48,7 @@ from apps.ingestion.pipeline.epub_properties.labels import detect_book_language,
 
 def _get_source_site_host():
     from django.conf import settings
-    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or "www.example.com"
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower()
 
 
 logger = logging.getLogger(__name__)
@@ -591,12 +591,14 @@ def normalize_content_url(url, base_url):
     parsed = urlparse(candidate)
     if parsed.scheme not in {"http", "https"}:
         return ""
-    if parsed.netloc.lower() not in {_get_source_site_host(), f"www.{_get_source_site_host()}"}:
+    source_host = _get_source_site_host()
+    if source_host and parsed.netloc.lower() not in {source_host, f"www.{source_host}"}:
         return ""
+    target_host = source_host or parsed.netloc.lower()
     normalized_path = parsed.path or "/"
     if normalized_path.startswith("/books/"):
         normalized_path = normalized_path.rstrip("/") + "/"
-    return urlunparse(("https", _get_source_site_host(), normalized_path, parsed.params, parsed.query, ""))
+    return urlunparse(("https", target_host, normalized_path, parsed.params, parsed.query, ""))
 
 
 def toc_items_container(soup):

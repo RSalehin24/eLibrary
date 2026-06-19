@@ -7,7 +7,7 @@ ASCII_TO_BANGLA_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭�
 
 def _get_source_site_host():
     from django.conf import settings
-    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or "www.example.com"
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower()
 
 
 def normalize_structured_heading_title(title):
@@ -286,13 +286,16 @@ def normalize_crawl_url(url, base_url=""):
 
     if parsed.scheme not in {"http", "https"}:
         return ""
-    if parsed.netloc.lower() not in _get_allowed_source_hosts():
+    allowed = _get_allowed_source_hosts()
+    if allowed and parsed.netloc.lower() not in allowed:
         return ""
 
+    source_host = _get_source_site_host()
+    target_host = source_host or parsed.netloc.lower()
     normalized_path = parsed.path or "/"
     if normalized_path.startswith("/books/"):
         normalized_path = normalized_path.rstrip("/") + "/"
 
     return urlunparse(
-        ("https", _get_source_site_host(), normalized_path, parsed.params, parsed.query, "")
+        ("https", target_host, normalized_path, parsed.params, parsed.query, "")
     )

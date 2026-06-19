@@ -15,12 +15,9 @@ HEADERS = {
     )
 }
 
-DEFAULT_SOURCE_SITE_HOST = "www.example.com"
-
-
 def _get_allowed_source_hosts():
     from django.conf import settings
-    host = getattr(settings, "SOURCE_SITE_HOST", "").strip().lower() or DEFAULT_SOURCE_SITE_HOST
+    host = getattr(settings, "SOURCE_SITE_HOST", "").strip().lower()
     fallbacks = [
         h.strip().lower()
         for h in (getattr(settings, "SOURCE_SITE_FALLBACK_HOSTS", []) or [])
@@ -44,7 +41,7 @@ def _get_allowed_source_hosts():
 
 def _get_source_site_host():
     from django.conf import settings
-    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower() or DEFAULT_SOURCE_SITE_HOST
+    return (getattr(settings, "SOURCE_SITE_HOST", "") or "").strip().lower()
 
 
 def normalize_source_url(url):

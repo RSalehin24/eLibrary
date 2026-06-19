@@ -3,7 +3,6 @@ from urllib.parse import urlparse
 from django.conf import settings
 
 
-DEFAULT_SOURCE_SITE_HOST = "www.example.com"
 ARCHIVE_MAX_PAGES = 80
 SEARCH_HEADERS = {
     "User-Agent": (
@@ -16,8 +15,7 @@ SEARCH_HEADERS = {
 
 def get_source_site_host():
     return (
-        getattr(settings, "SOURCE_SITE_HOST", "")
-        or DEFAULT_SOURCE_SITE_HOST
+        getattr(settings, "SOURCE_SITE_HOST", "") or ""
     ).strip().lower()
 
 
