@@ -1,0 +1,244 @@
+x-app-environment: &app_environment
+  APP_ENV: ${APP_ENV:-production}
+  TIME_ZONE: ${TIME_ZONE:-Asia/Dhaka}
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-development-only-insecure-secret-key}
+  DJANGO_DEBUG: ${DJANGO_DEBUG:-0}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bangla_library_local_prod}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
+  CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+  CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-0}
+  PUBLIC_BASE_URL: http://localhost:${FRONTEND_PORT:-8001}
+  PUBLIC_API_ORIGIN: http://localhost:${BACKEND_PORT:-8002}
+  FRONTEND_BASE_URL: http://localhost:${FRONTEND_PORT:-8001}
+  FRONTEND_PORT: ${FRONTEND_PORT:-8001}
+  VITE_API_BASE_URL: /api
+  DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-noreply@banglalibrary.local}
+  EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.console.EmailBackend}
+  BREVO_API_KEY: ${BREVO_API_KEY:-}
+  BREVO_SENDER_EMAIL: ${BREVO_SENDER_EMAIL:-}
+  ACCOUNT_INVITE_FROM_EMAIL: ${ACCOUNT_INVITE_FROM_EMAIL:-}
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-1}
+  SUPER_ADMIN_EMAIL: ${SUPER_ADMIN_EMAIL:-admin@example.com}
+  SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-changeme}
+  DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,backend,library.rsalehin24.me}
+  DJANGO_CORS_ALLOWED_ORIGINS: http://localhost:${FRONTEND_PORT:-8001}
+  DJANGO_CSRF_TRUSTED_ORIGINS: http://localhost:${FRONTEND_PORT:-8001},http://localhost:${BACKEND_PORT:-8002}
+  DJANGO_CORS_ALLOW_CREDENTIALS: ${DJANGO_CORS_ALLOW_CREDENTIALS:-1}
+  DJANGO_USE_X_FORWARDED_HOST: ${DJANGO_USE_X_FORWARDED_HOST:-0}
+  DJANGO_SECURE_PROXY_SSL_HEADER: ${DJANGO_SECURE_PROXY_SSL_HEADER:-0}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-0}
+  CSRF_COOKIE_SECURE: ${CSRF_COOKIE_SECURE:-0}
+  SESSION_COOKIE_SAMESITE: Lax
+  CSRF_COOKIE_SAMESITE: Lax
+  RUNTIME_STORAGE_DIR: ${RUNTIME_STORAGE_DIR:-/app/storage}
+  SOURCE_SITE_HOST: ${SOURCE_SITE_HOST:-}
+  SOURCE_SITE_EMAIL: ${SOURCE_SITE_EMAIL:-}
+  SOURCE_SITE_PASSWORD: ${SOURCE_SITE_PASSWORD:-}
+  SOURCE_SITE_AUTH_STATE_PATH: ${SOURCE_SITE_AUTH_STATE_PATH:-}
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-bangla_library_local_prod}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-bangla_library_local_prod}
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - internal
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    volumes:
+      - redis_data:/data
+    networks:
+      - internal
+
+  backend-init:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    environment:
+      <<: *app_environment
+    command: >
+      sh -c "python manage.py migrate &&
+      python manage.py seed_superadmin"
+    volumes:
+      - local_prod_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - internal
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      GUNICORN_MAX_REQUESTS: ${GUNICORN_MAX_REQUESTS:-500}
+      GUNICORN_MAX_REQUESTS_JITTER: ${GUNICORN_MAX_REQUESTS_JITTER:-50}
+    command: >
+      sh -c "python manage.py migrate &&
+      python manage.py collectstatic --noinput &&
+      python manage.py seed_superadmin &&
+      exec gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers ${GUNICORN_WORKERS:-2} --timeout ${GUNICORN_TIMEOUT:-120} --max-requests ${GUNICORN_MAX_REQUESTS:-500} --max-requests-jitter ${GUNICORN_MAX_REQUESTS_JITTER:-50} --access-logfile - --error-logfile -"
+    volumes:
+      - local_prod_storage:/app/storage
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8002}:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/csrf/', timeout=5)"
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks:
+      - public
+      - internal
+
+  worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+      CELERY_WORKER_CONCURRENCY: ${CELERY_WORKER_CONCURRENCY:-2}
+    command: celery -A config worker --loglevel=info --concurrency=${CELERY_WORKER_CONCURRENCY:-2} --queues=celery
+    volumes:
+      - local_prod_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks:
+      - public
+      - internal
+
+  processing-worker:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+      CELERY_PROCESSING_CONCURRENCY: ${CELERY_PROCESSING_CONCURRENCY:-2}
+    command: celery -A config worker --loglevel=info --concurrency=${CELERY_PROCESSING_CONCURRENCY:-2} --queues=processing --hostname=processing@%h
+    volumes:
+      - local_prod_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks:
+      - public
+      - internal
+
+  engine:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+    command: python manage.py run_engine
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
+  beat:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/backend.Dockerfile
+    restart: unless-stopped
+    environment:
+      <<: *app_environment
+    command: celery -A config beat --loglevel=info
+    volumes:
+      - local_prod_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      backend-init:
+        condition: service_completed_successfully
+    networks:
+      - internal
+
+  frontend:
+    build:
+      context: ../..
+      dockerfile: deploy/docker/frontend.Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8001}:80"
+    depends_on:
+      - backend
+    networks:
+      - public
+
+volumes:
+  postgres_data:
+  redis_data:
+  local_prod_storage:
+
+networks:
+  public:
+  internal:
+    internal: true

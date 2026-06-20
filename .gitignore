@@ -4,6 +4,8 @@
 .env.*.local
 local/env/.env
 local/env/.compose.env
+local-production/env/app.env
+local-production/env/local_prod_config.env
 deploy/env/.host.env
 deploy/env/.production.env
 deploy/env/.test.env
