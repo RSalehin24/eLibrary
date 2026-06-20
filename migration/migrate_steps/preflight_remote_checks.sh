@@ -195,18 +195,26 @@ target_ports_check() {
   port_list="$(IFS=,; printf '%s' "${ports_to_check[*]}")"
   remote_run target "$(cat <<EOF
 python3 - "${port_list}" <<'PY'
-import socket
+import os
 import sys
 
 ports = [int(item) for item in sys.argv[1].split(",") if item]
+listening = set()
+try:
+    proc = os.popen("ss -tlnp 2>/dev/null || netstat -tlnp 2>/dev/null")
+    for line in proc:
+        parts = line.split()
+        if len(parts) >= 4:
+            addr = parts[3]
+            if ":" in addr:
+                listening.add(addr.rsplit(":", 1)[-1])
+    proc.close()
+except Exception:
+    pass
+
 for port in ports:
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        sock.bind(("0.0.0.0", port))
-    except OSError:
+    if str(port) in listening:
         raise SystemExit(f"port-in-use:{port}")
-    finally:
-        sock.close()
 print("ok")
 PY
 EOF

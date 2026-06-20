@@ -15,8 +15,8 @@ def run_du(path, exclude_storage=False):
     result = subprocess.check_output(cmd, text=True)
     return int(result.split()[0])
 
-print(f"APP_KB={run_du(app_dir, exclude_storage=True)}")
-print(f"STORAGE_KB={run_du(os.path.join(app_dir, 'app/backend/storage'))}")
+print("APP_KB={}".format(run_du(app_dir, exclude_storage=True)))
+print("STORAGE_KB={}".format(run_du(os.path.join(app_dir, "app/backend/storage"))))
 PY
 EOF
 )"
@@ -223,28 +223,18 @@ EOF
 capture_source_postgres_dump() {
   log_info "Streaming PostgreSQL cluster dump."
   run_ssh source "$(compose_remote_script "${SOURCE_REMOTE_APP_DIR}" "$(cat <<'EOF'
-tmp_dir="$(mktemp -d)"
-cleanup() {
-  rm -rf "${tmp_dir}"
-}
-trap cleanup EXIT
-
-compose "${COMPOSE_ARGS[@]}" exec -T postgres sh -lc '
-  set -e
-  pg_dumpall --globals-only -U "${POSTGRES_USER:-postgres}"
-' > "${tmp_dir}/globals.sql"
-
-compose "${COMPOSE_ARGS[@]}" exec -T postgres sh -lc '
-  set -e
-  pg_dump --clean --if-exists --create -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-bangla_library}"
-' > "${tmp_dir}/database.sql"
-
-bootstrap_role="${POSTGRES_USER:-postgres}"
-awk -v bootstrap_role="${bootstrap_role}" '
-  $0 == "CREATE ROLE " bootstrap_role ";" { next }
-  index($0, "ALTER ROLE " bootstrap_role " ") == 1 { next }
+{
+  compose "${COMPOSE_ARGS[@]}" exec -T postgres sh -c '
+    pg_dumpall --globals-only -U "${POSTGRES_USER:-postgres}"
+  '
+  compose "${COMPOSE_ARGS[@]}" exec -T postgres sh -c '
+    pg_dump --clean --if-exists --create -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-bangla_library}"
+  '
+} | awk -v bootstrap="${POSTGRES_USER:-postgres}" '
+  $0 == "CREATE ROLE " bootstrap ";" { next }
+  index($0, "ALTER ROLE " bootstrap " ") == 1 { next }
   { print }
-' "${tmp_dir}/globals.sql" "${tmp_dir}/database.sql" | gzip -1
+' | gzip -1
 EOF
 )")" >"${POSTGRES_DUMP_FILE}"
 }
