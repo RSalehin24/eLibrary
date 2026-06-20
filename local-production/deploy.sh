@@ -56,7 +56,7 @@ start_caffeinate() {
     fi
     rm -f "${CAFFEINATE_PID_FILE}"
   fi
-  caffeinate -dimsu &
+  caffeinate -i &
   local pid=$!
   echo "${pid}" > "${CAFFEINATE_PID_FILE}"
   print_info "Wake lock enabled — system will not sleep (PID ${pid})"

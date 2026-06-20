@@ -66,7 +66,7 @@ Keep macOS awake and WiFi connected while the stack is running:
 local-production/deploy.sh up --no-sleep
 ```
 
-Uses `caffeinate -dimsu` — prevents display, idle, disk, and system sleep. The wake lock stops automatically when you run:
+Uses `caffeinate -i` — prevents system idle sleep only (display turns off normally, WiFi stays alive). The wake lock stops automatically when you run:
 
 ```bash
 local-production/deploy.sh down
