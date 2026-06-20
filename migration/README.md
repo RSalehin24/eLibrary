@@ -9,7 +9,7 @@ See the full operations guide: [docs/operations/migration.md](../docs/operations
 ```bash
 # 1. Create and fill in the config
 cp migration/env/migrate.env.example migration/env/migrate.env
-# Edit migration/env/migrate.env: set TARGET_HOST and TARGET_IP
+# Edit migration/env/migrate.env: set TARGET_USER and TARGET_IP
 
 # 2. Dry run - no changes, validate config only
 migration/migrate.sh --dry-run

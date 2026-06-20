@@ -100,7 +100,7 @@ write_source_metadata() {
   : >"${METADATA_FILE}"
   append_metadata BUNDLE_ID "${BUNDLE_ID}"
   append_metadata SOURCE_HOST "${SOURCE_HOST}"
-  append_metadata TARGET_HOST "${TARGET_HOST}"
+  append_metadata TARGET_IP "${TARGET_IP}"
   append_metadata EDGE_SETUP_READY "${EDGE_SETUP_READY}"
   append_metadata EDGE_SETUP_REASON "${EDGE_SETUP_REASON}"
   append_metadata SOURCE_GIT_COMMIT "$(capture_source_git_commit)"

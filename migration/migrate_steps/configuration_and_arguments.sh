@@ -34,8 +34,7 @@ Options:
 
 Before migrating:
   1. Source server (AWS)           - deploy/env/.host.env        set DEPLOY_USER_NAME and DEPLOY_IP
-  2. Target server (Digital Ocean) - migration/env/migrate.env set TARGET_HOST and TARGET_IP
-     If the username differs on the target, also set TARGET_USER in that file.
+  2. Target server (Digital Ocean) - migration/env/migrate.env set TARGET_USER and TARGET_IP
 
 Examples:
   migration/migrate.sh --phase preflight --dry-run
@@ -261,7 +260,7 @@ validate_required_config() {
     SOURCE_HOST
     SOURCE_USER
     SOURCE_REMOTE_APP_DIR
-    TARGET_HOST
+    TARGET_IP
     TARGET_USER
     TARGET_REMOTE_APP_DIR
     TARGET_IP

@@ -30,7 +30,7 @@ cp migration/env/migrate.env.example migration/env/migrate.env
 Then fill in the new server details in `migration/env/migrate.env`:
 
 ```
-TARGET_HOST=<new-server-hostname-or-ip>
+TARGET_USER=<target-ssh-user>
 TARGET_IP=<new-server-ip>
 ```
 
@@ -40,8 +40,8 @@ TARGET_IP=<new-server-ip>
 
 | Key                           | Default                          | Description                                                                               |
 | ----------------------------- | -------------------------------- | ----------------------------------------------------------------------------------------- |
-| `TARGET_HOST`                 | —                                | **Required.** Hostname or IP of the target server.                                        |
-| `TARGET_IP`                   | —                                | **Required.** IP address of the target server (used for DNS verification).                |
+| `TARGET_USER`                 | inherits `DEPLOY_USER_NAME`      | SSH user on the target server.                                                            |
+| `TARGET_IP`                   | —                                | **Required.** IP address of the target server.                                            |
 | `TARGET_USER`                 | inherits `DEPLOY_USER_NAME`      | SSH user on the target server.                                                            |
 | `TARGET_REMOTE_APP_DIR`       | inherits `DEPLOY_REMOTE_APP_DIR` | App directory on the target server.                                                       |
 | `TARGET_PUBLIC_BASE_URL`      | inherits `PUBLIC_BASE_URL`       | Override if the domain changes.                                                           |

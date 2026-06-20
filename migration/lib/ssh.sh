@@ -24,7 +24,7 @@ role_value() {
     source:key) printf '%s' "${SOURCE_SSH_KEY_PATH:-}" ;;
     source:password) printf '%s' "${SOURCE_SSH_PASSWORD:-}" ;;
     source:sudo_password) printf '%s' "${SOURCE_SUDO_PASSWORD:-}" ;;
-    target:host) printf '%s' "${TARGET_HOST}" ;;
+    target:host) printf '%s' "${TARGET_IP}" ;;
     target:port) printf '%s' "${TARGET_PORT}" ;;
     target:user) printf '%s' "${TARGET_USER}" ;;
     target:key) printf '%s' "${TARGET_SSH_KEY_PATH:-}" ;;
