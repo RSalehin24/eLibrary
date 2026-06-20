@@ -58,6 +58,20 @@ URLs and CORS origins are derived from the ports automatically.
 | `--no-pull` | Skip `git pull` |
 | `--no-sleep` | Prevent macOS sleep and keep WiFi alive while stack runs |
 
+## Wake Lock
+
+Keep macOS awake and WiFi connected while the stack is running:
+
+```bash
+local-production/deploy.sh up --no-sleep
+```
+
+Uses `caffeinate -dimsu` — prevents display, idle, disk, and system sleep. The wake lock stops automatically when you run:
+
+```bash
+local-production/deploy.sh down
+```
+
 ## Updating
 
 ```bash
