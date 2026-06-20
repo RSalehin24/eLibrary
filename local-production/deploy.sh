@@ -11,6 +11,7 @@ LOCAL_PROD_DIR="${REPO_ROOT}/local-production"
 APP_ENV_FILE="${LOCAL_PROD_DIR}/env/app.env"
 CONFIG_ENV_FILE="${LOCAL_PROD_DIR}/env/local_prod_config.env"
 COMPOSE_FILE="${LOCAL_PROD_DIR}/compose/docker-compose.yml"
+CAFFEINATE_PID_FILE="${LOCAL_PROD_DIR}/.caffeinate.pid"
 DEFAULT_SERVICES=(postgres redis backend worker processing-worker beat engine frontend)
 
 usage() {
@@ -28,15 +29,49 @@ Commands:
 Options:
   --branch <name>  Git branch to deploy (default: main)
   --no-pull        Skip git pull
+  --no-sleep       Prevent macOS sleep & keep WiFi alive while stack is up
   -h, --help       Show this help
 
 Examples:
   local-production/deploy.sh
   local-production/deploy.sh up --branch dev
+  local-production/deploy.sh up --no-sleep
   local-production/deploy.sh down
   local-production/deploy.sh logs backend
   local-production/deploy.sh restart frontend
 EOF
+}
+
+start_caffeinate() {
+  if ! command -v caffeinate &>/dev/null; then
+    print_warn "caffeinate not found on this system"
+    return
+  fi
+  if [[ -f "${CAFFEINATE_PID_FILE}" ]]; then
+    local pid
+    pid="$(cat "${CAFFEINATE_PID_FILE}")"
+    if kill -0 "${pid}" 2>/dev/null; then
+      print_info "Wake lock already active (PID ${pid})"
+      return
+    fi
+    rm -f "${CAFFEINATE_PID_FILE}"
+  fi
+  caffeinate -dimsu &
+  local pid=$!
+  echo "${pid}" > "${CAFFEINATE_PID_FILE}"
+  print_info "Wake lock enabled — system will not sleep (PID ${pid})"
+}
+
+stop_caffeinate() {
+  if [[ -f "${CAFFEINATE_PID_FILE}" ]]; then
+    local pid
+    pid="$(cat "${CAFFEINATE_PID_FILE}")"
+    if kill -0 "${pid}" 2>/dev/null; then
+      kill "${pid}" 2>/dev/null || true
+      print_info "Wake lock disabled"
+    fi
+    rm -f "${CAFFEINATE_PID_FILE}"
+  fi
 }
 
 print_banner() {
@@ -98,6 +133,7 @@ do_build() {
 
 do_up() {
   local do_pull="${1:-1}"
+  local no_sleep="${2:-0}"
 
   print_banner \
     "${BRANCH}" \
@@ -115,6 +151,10 @@ do_up() {
   fi
 
   do_build
+
+  if [[ "${no_sleep}" == "1" ]]; then
+    start_caffeinate
+  fi
 
   print_info "[4/5] Starting services..."
   compose -f "${COMPOSE_FILE}" up -d --force-recreate "${DEFAULT_SERVICES[@]}"
@@ -157,6 +197,7 @@ do_up() {
 parse_args() {
   COMMAND="up"
   NO_PULL=0
+  NO_SLEEP=0
   BRANCH_ARG=""
 
   while [[ $# -gt 0 ]]; do
@@ -171,6 +212,10 @@ parse_args() {
         ;;
       --no-pull)
         NO_PULL=1
+        shift
+        ;;
+      --no-sleep)
+        NO_SLEEP=1
         shift
         ;;
       -h|--help)
@@ -200,11 +245,12 @@ main() {
 
   case "${COMMAND}" in
     up)
-      do_up "${NO_PULL}"
+      do_up "${NO_PULL}" "${NO_SLEEP}"
       ;;
     down)
       print_info "Stopping local production stack."
       compose -f "${COMPOSE_FILE}" down --remove-orphans
+      stop_caffeinate
       ;;
     restart)
       if [[ ${#REMAINING_ARGS[@]} -gt 0 ]]; then

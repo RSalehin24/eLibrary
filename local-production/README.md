@@ -56,6 +56,7 @@ URLs and CORS origins are derived from the ports automatically.
 |--------|-------------|
 | `--branch <name>` | Override git branch |
 | `--no-pull` | Skip `git pull` |
+| `--no-sleep` | Prevent macOS sleep and keep WiFi alive while stack runs |
 
 ## Updating
 
