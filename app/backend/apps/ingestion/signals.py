@@ -38,18 +38,20 @@ logger = logging.getLogger(__name__)
 
 _redis_client = None
 _worker_hostname = None
+_worker_pid = None
 _engine_listener_thread = None
 _engine_listener_running = False
 
 
 def _get_hostname():
     """Generate a unique worker hostname."""
-    global _worker_hostname
-    if _worker_hostname:
+    global _worker_hostname, _worker_pid
+    current_pid = os.getpid()
+    if _worker_hostname and _worker_pid == current_pid:
         return _worker_hostname
     host = socket.gethostname()
-    pid = os.getpid()
-    _worker_hostname = f"celery-{host}-{pid}@worker"
+    _worker_hostname = f"celery-{host}-{current_pid}@worker"
+    _worker_pid = current_pid
     return _worker_hostname
 
 
@@ -99,9 +101,19 @@ def _engine_listener_loop():
     """Listen for CH_JOB_ASSIGNED and execute jobs dispatched by the Engine."""
     redis = create_redis_client()
     pubsub = redis.pubsub()
+    last_heartbeat_time = 0
     try:
         pubsub.subscribe(CH_JOB_ASSIGNED)
         while _engine_listener_running:
+            # Periodically publish a heartbeat for this specific child worker process
+            now = time.time()
+            if now - last_heartbeat_time >= 5.0:
+                _publish(CH_WORKER_HEARTBEAT, {
+                    "hostname": _get_hostname(),
+                    "timestamp": _now_iso(),
+                })
+                last_heartbeat_time = now
+
             message = pubsub.get_message(timeout=1.0)
             if not message or message["type"] != "message":
                 continue
