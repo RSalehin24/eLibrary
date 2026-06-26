@@ -12,11 +12,11 @@ from .common import MetadataContributorInputSerializer, normalize_name_list
 class ManualBookCreateSerializer(serializers.Serializer):
     title = serializers.CharField()
     summary = serializers.CharField(required=False, allow_blank=True)
-    writers = serializers.ListField(child=serializers.CharField(), allow_empty=False)
+    writers = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     translators = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True)
     compilers = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True)
     editors = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True)
-    categories = serializers.ListField(child=serializers.CharField(), allow_empty=False)
+    categories = serializers.ListField(child=serializers.CharField(), allow_empty=True)
     series = serializers.ListField(child=serializers.CharField(), required=False, allow_empty=True)
     is_compilation = serializers.BooleanField(required=False, default=False)
     binding = serializers.ChoiceField(choices=ManualBindingType.choices, required=False, allow_blank=True)

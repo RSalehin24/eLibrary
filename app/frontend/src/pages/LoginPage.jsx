@@ -12,6 +12,11 @@ export default function LoginPage() {
   usePageTitle("Sign in");
   const navigate = useNavigate();
   const { loading, authenticated, user, login } = useSession();
+  const toast = useToast();
+  const [phase, setPhase] = useState("credentials");
+  const [form, setForm] = useState({ email: "", password: "", otp_token: "" });
+  const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   if (loading) {
     return (
@@ -27,11 +32,7 @@ export default function LoginPage() {
     const homePath = user?.is_superuser ? "/home" : "/my-books";
     return <Navigate to={homePath} replace />;
   }
-  const toast = useToast();
-  const [phase, setPhase] = useState("credentials");
-  const [form, setForm] = useState({ email: "", password: "", otp_token: "" });
-  const [showPassword, setShowPassword] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
   const { normalizedEmail, hasEmailInput, emailLooksValid } =
     getEmailValidationState(form.email);
   const showEmailFeedback = phase === "credentials" && hasEmailInput;

@@ -32,6 +32,42 @@ export class ManualBooksPageModel {
     await input.press("Enter");
   }
 
+  async fillTagWithoutEnter(label, value) {
+    const input = this.page
+      .locator("#manual-book-composer")
+      .locator("label.tag-field", {
+        has: this.page.getByText(label, { exact: true }),
+      })
+      .locator("input");
+    await input.fill(value);
+  }
+
+  async clickDone() {
+    await this.page
+      .locator("#manual-book-composer")
+      .getByRole("button", { name: "Done", exact: true })
+      .click();
+  }
+
+  async clickClear() {
+    await this.page
+      .locator("#manual-book-composer")
+      .getByRole("button", { name: "Clear fields" })
+      .click();
+  }
+
+  async closeComposerWithToolbar() {
+    await this.page.getByRole("button", { name: "Close add book form" }).click();
+  }
+
+  async expectComposerVisible(visible = true) {
+    if (visible) {
+      await expect(this.page.locator("#manual-book-composer")).toBeVisible();
+    } else {
+      await expect(this.page.locator("#manual-book-composer")).toBeHidden();
+    }
+  }
+
   async submit() {
     await this.page
       .locator("#manual-book-composer")

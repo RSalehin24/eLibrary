@@ -53,7 +53,10 @@ export default function TagInput({ label, values, onChange, suggestions = [], pl
             value={inputValue}
             placeholder={placeholder}
             onFocus={() => setFocused(true)}
-            onBlur={() => window.setTimeout(() => setFocused(false), 120)}
+            onBlur={() => {
+              addValue(inputValue);
+              window.setTimeout(() => setFocused(false), 120);
+            }}
             onChange={(event) => setInputValue(event.target.value)}
             onKeyDown={(event) => {
               if (event.key === "Enter" || event.key === ",") {

@@ -33,6 +33,8 @@ export default function ManualBooksPage() {
   const resumedPendingExportRef = useRef(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [form, setForm] = useState(emptyManualBookForm);
+  const formRef = useRef(form);
+  formRef.current = form;
   const [filters, setFilters] = useState(defaultManualBookFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultManualBookFilters);
 
@@ -91,6 +93,7 @@ export default function ManualBooksPage() {
   const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [contributorOptions, setContributorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
+  const [seriesOptions, setSeriesOptions] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [downloadState, setDownloadState] = useState(
@@ -120,6 +123,7 @@ export default function ManualBooksPage() {
       const options = await loadManualBookOptions();
       setCategoryOptions(options.categories);
       setContributorOptions(options.contributors);
+      setSeriesOptions(options.series);
     } catch (nextError) {
       toast.error(nextError.message);
     } finally {
@@ -188,11 +192,31 @@ export default function ManualBooksPage() {
     resumePendingExport();
   }, [toast]);
 
+  function hasManualBookFormInput(currentForm) {
+    return (
+      currentForm.title.trim() !== "" ||
+      currentForm.summary.trim() !== "" ||
+      currentForm.writers.length > 0 ||
+      currentForm.translators.length > 0 ||
+      currentForm.editors.length > 0 ||
+      currentForm.categories.length > 0 ||
+      currentForm.series.length > 0 ||
+      currentForm.publisher.trim() !== "" ||
+      currentForm.price !== "" ||
+      currentForm.binding !== "" ||
+      currentForm.is_compilation !== false
+    );
+  }
+
   async function handleCreate(event) {
     event.preventDefault();
     try {
       setSubmitting(true);
-      const payload = await createManualBook(form);
+      // Wait for any pending blur/state updates to propagate
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const currentForm = formRef.current;
+
+      const payload = await createManualBook(currentForm);
       prependEntry(payload);
       setHighlightedBookId(payload.id);
       setForm(emptyManualBookForm);
@@ -203,6 +227,35 @@ export default function ManualBooksPage() {
       );
       loadOptions();
       void reload({ preserveRows: true });
+    } catch (nextError) {
+      toast.error(nextError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function handleDone() {
+    try {
+      setSubmitting(true);
+      // Wait for any pending blur/state updates to propagate
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const currentForm = formRef.current;
+
+      if (hasManualBookFormInput(currentForm)) {
+        const payload = await createManualBook(currentForm);
+        prependEntry(payload);
+        setHighlightedBookId(payload.id);
+        setForm(emptyManualBookForm);
+        setComposerOpen(false);
+        toast.success(
+          `Added ${payload.catalog_code}.`,
+        );
+        loadOptions();
+        await reload();
+      } else {
+        setComposerOpen(false);
+        await reload();
+      }
     } catch (nextError) {
       toast.error(nextError.message);
     } finally {
@@ -278,7 +331,13 @@ export default function ManualBooksPage() {
       composerOpen={composerOpen}
       downloadState={downloadState}
       onExport={runDownload}
-      onToggleComposer={() => setComposerOpen((current) => !current)}
+      onToggleComposer={async () => {
+        if (composerOpen) {
+          await handleDone();
+        } else {
+          setComposerOpen(true);
+        }
+      }}
     />
   );
 
@@ -322,9 +381,10 @@ export default function ManualBooksPage() {
         <ManualBookComposer
           categoryOptions={categoryOptions}
           contributorOptions={contributorOptions}
+          seriesOptions={seriesOptions}
           form={form}
           loadingOptions={loadingOptions}
-          onClose={() => setComposerOpen(false)}
+          onClose={handleDone}
           onSubmit={handleCreate}
           setForm={setForm}
           submitting={submitting}

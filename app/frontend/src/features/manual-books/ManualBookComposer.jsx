@@ -5,6 +5,7 @@ import { emptyManualBookForm } from "./manualBookFilters";
 export function ManualBookComposer({
   categoryOptions,
   contributorOptions,
+  seriesOptions,
   form,
   loadingOptions,
   onClose,
@@ -67,7 +68,8 @@ export function ManualBookComposer({
             label="Series"
             values={form.series}
             onChange={(series) => setForm({ ...form, series })}
-            placeholder="Optional"
+            suggestions={seriesOptions}
+            placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
           <label>
             <span className="fact-label">Compilation</span>
