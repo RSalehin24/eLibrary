@@ -58,8 +58,44 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent.parent
 OUTPUT_FILE = REPO_ROOT / "app" / "backend" / "storage" / "source_site_auth.json"
-DOMAIN = "ebanglalibrary.com"
-COOKIE_DOMAIN = "www.ebanglalibrary.com"
+
+
+def get_domain_from_env():
+    # 1. Check active environment variables
+    val = os.environ.get("SOURCE_SITE_HOST")
+    if val:
+        val = val.strip().lower()
+        if val:
+            return val
+
+    # 2. Check local env files
+    env_paths = [
+        REPO_ROOT / "local" / "env" / ".env",
+        REPO_ROOT / "local" / "env" / "app.env",
+        REPO_ROOT / ".env",
+    ]
+    for path in env_paths:
+        if path.is_file():
+            try:
+                for line in path.read_text(encoding="utf-8").splitlines():
+                    line = line.strip()
+                    if line.startswith("SOURCE_SITE_HOST="):
+                        val = line.split("=", 1)[1].strip().strip("'\"").strip().lower()
+                        if val:
+                            return val
+            except Exception:
+                pass
+
+    return "ebanglalibrary.com"  # fallback default
+
+
+raw_domain = get_domain_from_env()
+# Strip any leading http/https:// or www. for DOMAIN
+DOMAIN = raw_domain.split("://")[-1].split("/")[0]
+if DOMAIN.startswith("www."):
+    DOMAIN = DOMAIN[4:]
+
+COOKIE_DOMAIN = f"www.{DOMAIN}"
 AUTH_PREFIX = "wordpress_logged_in_"
 
 
