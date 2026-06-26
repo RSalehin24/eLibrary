@@ -41,6 +41,7 @@ _worker_hostname = None
 _worker_pid = None
 _engine_listener_thread = None
 _engine_listener_running = False
+_heartbeat_thread = None
 
 
 def _get_hostname():
@@ -74,9 +75,22 @@ def _publish(channel, data):
         logger.exception("Failed to publish event to %s", channel)
 
 
+def _heartbeat_loop():
+    """Publish a heartbeat every 5 seconds, independent of job execution."""
+    while _engine_listener_running:
+        try:
+            _publish(CH_WORKER_HEARTBEAT, {
+                "hostname": _get_hostname(),
+                "timestamp": _now_iso(),
+            })
+        except Exception:
+            logger.exception("Failed to publish heartbeat")
+        time.sleep(5.0)
+
+
 def _start_engine_listener():
-    """Start background thread to listen for engine job assignments."""
-    global _engine_listener_thread, _engine_listener_running
+    """Start background threads: job assignment listener + heartbeat publisher."""
+    global _engine_listener_thread, _heartbeat_thread, _engine_listener_running
     if _engine_listener_thread is not None:
         return
     _engine_listener_running = True
@@ -84,36 +98,33 @@ def _start_engine_listener():
         target=_engine_listener_loop, daemon=True, name="engine-assignment-listener"
     )
     _engine_listener_thread.start()
-    logger.info("Engine assignment listener started")
+    _heartbeat_thread = threading.Thread(
+        target=_heartbeat_loop, daemon=True, name="engine-heartbeat"
+    )
+    _heartbeat_thread.start()
+    logger.info("Engine assignment listener and heartbeat thread started")
 
 
 def _stop_engine_listener():
-    """Stop the engine assignment listener thread."""
-    global _engine_listener_running, _engine_listener_thread
+    """Stop the engine assignment listener and heartbeat threads."""
+    global _engine_listener_running, _engine_listener_thread, _heartbeat_thread
     _engine_listener_running = False
     if _engine_listener_thread:
         _engine_listener_thread.join(timeout=3.0)
         _engine_listener_thread = None
-    logger.info("Engine assignment listener stopped")
+    if _heartbeat_thread:
+        _heartbeat_thread.join(timeout=6.0)
+        _heartbeat_thread = None
+    logger.info("Engine assignment listener and heartbeat thread stopped")
 
 
 def _engine_listener_loop():
     """Listen for CH_JOB_ASSIGNED and execute jobs dispatched by the Engine."""
     redis = create_redis_client()
     pubsub = redis.pubsub()
-    last_heartbeat_time = 0
     try:
         pubsub.subscribe(CH_JOB_ASSIGNED)
         while _engine_listener_running:
-            # Periodically publish a heartbeat for this specific child worker process
-            now = time.time()
-            if now - last_heartbeat_time >= 5.0:
-                _publish(CH_WORKER_HEARTBEAT, {
-                    "hostname": _get_hostname(),
-                    "timestamp": _now_iso(),
-                })
-                last_heartbeat_time = now
-
             message = pubsub.get_message(timeout=1.0)
             if not message or message["type"] != "message":
                 continue
