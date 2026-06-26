@@ -262,6 +262,12 @@ class JobEngine:
     def _update_db_job_assignment(self, job_id, worker_hostname):
         """Update the ProcessingJob record with the assigned worker."""
         try:
+            import uuid
+            try:
+                uuid.UUID(str(job_id))
+            except ValueError:
+                # Not a valid UUID, so it's a BookCreationRequest and doesn't have a ProcessingJob
+                return
             from apps.ingestion.models.processing import ProcessingJob
             ProcessingJob.objects.filter(id=job_id).update(worker_hostname=worker_hostname)
         except Exception:
@@ -270,6 +276,12 @@ class JobEngine:
     def _update_db_job_status(self, job_id, status, error_message=""):
         """Update the ProcessingJob record with completion status."""
         try:
+            import uuid
+            try:
+                uuid.UUID(str(job_id))
+            except ValueError:
+                # Not a valid UUID, so it's a BookCreationRequest and doesn't have a ProcessingJob
+                return
             from apps.ingestion.models.processing import ProcessingJob
             from django.utils import timezone
             update_fields = {

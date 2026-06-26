@@ -51,11 +51,6 @@ export function CreateProcessingPage() {
         loading={!createOverviewLoaded}
         stats={[
           {
-            id: "requests",
-            label: "Requests",
-            value: summary.requests || 0,
-          },
-          {
             id: "queue",
             label: "Queue",
             value: summary.queue || 0,
@@ -70,23 +65,14 @@ export function CreateProcessingPage() {
             label: "Created",
             value: summary.created || 0,
           },
+          {
+            id: "requests",
+            label: "Requests",
+            value: summary.requests || 0,
+          },
         ]}
       />
       <div className="processing-card-grid">
-        <CreateCard
-          cardId="requests"
-          cardKey="create-requests"
-          title="Requests"
-          description="New book creation requests."
-          actions={[
-            {
-              id: "delete",
-              label: "Delete",
-              danger: true,
-              onAction: (ids) => deleteRequests("create-requests", ids),
-            },
-          ]}
-        />
         <CreateCard
           cardId="queue"
           cardKey="create-queue"
@@ -146,6 +132,20 @@ export function CreateProcessingPage() {
                 deleteRequests("create-created", ids, {
                   deleteBook: true,
                 }),
+            },
+          ]}
+        />
+        <CreateCard
+          cardId="requests"
+          cardKey="create-requests"
+          title="Requests"
+          description="New book creation requests."
+          actions={[
+            {
+              id: "delete",
+              label: "Delete",
+              danger: true,
+              onAction: (ids) => deleteRequests("create-requests", ids),
             },
           ]}
         />
