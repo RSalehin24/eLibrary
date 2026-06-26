@@ -54,7 +54,7 @@ def _get_source_site_host():
 logger = logging.getLogger(__name__)
 
 CURRENT_MANIFEST_SCHEMA_VERSION = "2026-05-03.1"
-UNCAPPED_LIMIT_KEYS = {"max_nodes", "max_lesson_pages", "max_topic_pages", "max_content_chars"}
+UNCAPPED_LIMIT_KEYS = {"max_nodes", "max_lesson_pages", "max_topic_pages", "max_content_chars", "concurrent_fetch_workers"}
 SECTION_FALLBACK_TITLE = "অন্যান্য"
 BANGLA_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
@@ -77,6 +77,10 @@ def normalize_manifest_limits(content_limits=None):
         # the fetched TOC; if it is absent the book is marked content_incomplete
         # regardless of the numeric coverage threshold.
         "last_chapter_title": "",
+        # Number of threads used to fetch content pages in parallel.
+        # 1 = sequential (original behaviour).  Set to 5-10 for faster scraping
+        # when the source session already has all lessons accessible (admin/completed).
+        "concurrent_fetch_workers": 1,
     }
     if not isinstance(content_limits, dict):
         return limits
@@ -1463,29 +1467,101 @@ def fetch_content_item(node, path, ctx, limits):
 
 
 def collect_content_items(nodes, ctx, limits, *, page_cache=None):
-    content_items = []
+    """Fetch all content items for the book's TOC nodes.
+
+    When ``limits["concurrent_fetch_workers"] > 1`` uncached pages are fetched
+    in parallel using a ThreadPoolExecutor.  Results are always reassembled in
+    the original TOC order regardless of fetch completion order.
+
+    Parallel mode is safe when the scraping session already has all lessons
+    accessible (admin account / fully-completed student account) because the
+    mark-complete form submissions that unlock the *next* sequential lesson are
+    not needed in that case.  For accounts that require sequential lesson
+    unlocking, leave ``concurrent_fetch_workers`` at 1 (the default).
+    """
+    import gc
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
     max_nodes = limits.get("max_nodes")
-    cached = {}
+    concurrent_workers = limits.get("concurrent_fetch_workers") or 1
+
+    cached_pages = {}
     if page_cache is not None:
-        cached = page_cache.get_cached_items()
-        if cached:
+        cached_pages = page_cache.get_cached_items()
+        if cached_pages:
             logger.info(
                 "Resuming content scrape: %d pages already cached from previous run.",
-                len(cached),
+                len(cached_pages),
             )
-    import gc
-    for idx, (node, path) in enumerate(iter_content_nodes(nodes)):
+
+    # Materialise node iterator and apply max_nodes cap up front so that
+    # the parallel executor sees a fixed-size workload.
+    all_nodes = list(iter_content_nodes(nodes))
+    if isinstance(max_nodes, int) and max_nodes > 0:
+        all_nodes = all_nodes[:max_nodes]
+
+    # Partition into already-cached and needs-fetch buckets.
+    cached_results: dict[int, object] = {}   # idx -> item
+    uncached_indices: list[int] = []
+    for idx, (node, path) in enumerate(all_nodes):
+        url = node.get("url", "")
+        if url and url in cached_pages:
+            cached_results[idx] = cached_pages[url]
+        else:
+            uncached_indices.append(idx)
+
+    if concurrent_workers > 1 and uncached_indices:
+        logger.info(
+            "Fetching %d content pages with %d parallel workers.",
+            len(uncached_indices),
+            concurrent_workers,
+        )
+
+    # Fetch uncached nodes — sequentially or in parallel.
+    fetched_results: dict[int, object] = {}  # idx -> item | None | _EMPTY_SOURCE_PAGE
+    if concurrent_workers > 1 and uncached_indices:
+        def _fetch_one(idx):
+            node, path = all_nodes[idx]
+            return idx, fetch_content_item(node, path, ctx, limits)
+
+        with ThreadPoolExecutor(
+            max_workers=concurrent_workers,
+            thread_name_prefix="manifest-scrape",
+        ) as executor:
+            futures = {executor.submit(_fetch_one, idx): idx for idx in uncached_indices}
+            for future in as_completed(futures):
+                try:
+                    idx, item = future.result()
+                    fetched_results[idx] = item
+                except Exception:
+                    idx = futures[future]
+                    node, _ = all_nodes[idx]
+                    logger.exception(
+                        "Parallel content fetch failed for node %s", node.get("url", "?")
+                    )
+                    fetched_results[idx] = None
+    else:
+        for idx in uncached_indices:
+            node, path = all_nodes[idx]
+            fetched_results[idx] = fetch_content_item(node, path, ctx, limits)
+
+    # Reassemble in original TOC order.
+    content_items = []
+    for idx, (node, path) in enumerate(all_nodes):
         if idx > 0 and idx % 20 == 0:
             gc.collect()
-        if isinstance(max_nodes, int) and max_nodes > 0 and len(content_items) >= max_nodes:
-            break
+
         url = node.get("url", "")
-        if url and url in cached:
-            item = cached[url]
+
+        if idx in cached_results:
+            item = cached_results[idx]
             # Preserve original has_content from the cached item dict;
             # fall back to bool check for legacy cache entries that lack the field.
             if isinstance(item, dict):
-                cached_has_content = item.get("has_content", True) if item.get("content") else item.get("has_content")
+                cached_has_content = (
+                    item.get("has_content", True) if item.get("content")
+                    else item.get("has_content")
+                )
                 # Treat has_content=None placeholder same as truthy (reachable page)
                 node["has_content"] = cached_has_content if cached_has_content is not None else None
                 content_items.append(item)
@@ -1494,7 +1570,8 @@ def collect_content_items(nodes, ctx, limits, *, page_cache=None):
                 if item:
                     content_items.append(item)
             continue
-        item = fetch_content_item(node, path, ctx, limits)
+
+        item = fetched_results.get(idx)
         if item is _EMPTY_SOURCE_PAGE:
             # The page was reachable but has no text on the source website.
             # Keep the chapter in content_items as a placeholder so it still
@@ -1513,14 +1590,14 @@ def collect_content_items(nodes, ctx, limits, *, page_cache=None):
             if page_cache is not None:
                 page_cache.save_item(placeholder)
             content_items.append(placeholder)
-            continue
-        if item is None:
+        elif item is None:
             node["has_content"] = False
-            continue
-        node["has_content"] = True
-        if page_cache is not None:
-            page_cache.save_item(item)
-        content_items.append(item)
+        else:
+            node["has_content"] = True
+            if page_cache is not None:
+                page_cache.save_item(item)
+            content_items.append(item)
+
     return content_items
 
 

@@ -93,6 +93,9 @@ def processing_curate_limits():
         "max_lesson_pages": getattr(settings, "PROCESSING_CURATE_MAX_LESSON_PAGES", 20),
         "max_content_chars": getattr(settings, "PROCESSING_CURATE_MAX_CONTENT_CHARS", 60000),
         "disable_recursive": False,
+        # Parallel HTTP workers for content page fetching.  Safe for admin sessions
+        # where all lessons are already accessible (no sequential lock dependency).
+        "concurrent_fetch_workers": getattr(settings, "PROCESSING_CURATE_CONCURRENT_FETCH_WORKERS", 5),
     }
 
 
