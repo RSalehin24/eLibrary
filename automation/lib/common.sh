@@ -149,6 +149,11 @@ timed_prompt() {
   local prompt_out="/dev/stderr"
   local remaining
 
+  if [[ "${NON_INTERACTIVE:-}" == "1" || "${NON_INTERACTIVE:-}" == "yes" ]]; then
+    printf '%s' "${default_value}"
+    return 0
+  fi
+
   if [[ -r /dev/tty && -w /dev/tty ]]; then
     prompt_in="/dev/tty"
     prompt_out="/dev/tty"
@@ -195,6 +200,11 @@ timed_yes_no_prompt() {
       default_value="n"
       ;;
   esac
+
+  if [[ "${NON_INTERACTIVE:-}" == "1" || "${NON_INTERACTIVE:-}" == "yes" ]]; then
+    printf '%s' "${default_value}"
+    return 0
+  fi
 
   if [[ -r /dev/tty && -w /dev/tty ]]; then
     prompt_in="/dev/tty"
