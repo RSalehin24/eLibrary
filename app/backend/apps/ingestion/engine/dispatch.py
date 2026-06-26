@@ -3,7 +3,7 @@
 import json
 from datetime import datetime, timezone
 
-from .constants import CH_JOB_REQUEST
+from .constants import CH_JOB_REQUEST, PENDING_QUEUE
 from .redis_client import create_redis_client
 
 
@@ -20,6 +20,8 @@ def dispatch_job(job_id, job_type="reprocess", handler="process_submission", **k
     """
     redis = create_redis_client()
     try:
+        redis.hset("engine:job:handlers", str(job_id), handler)
+        redis.rpush(PENDING_QUEUE, str(job_id))
         redis.publish(CH_JOB_REQUEST, json.dumps({
             "job_id": str(job_id),
             "job_type": job_type,
@@ -29,3 +31,4 @@ def dispatch_job(job_id, job_type="reprocess", handler="process_submission", **k
         }))
     finally:
         redis.close()
+

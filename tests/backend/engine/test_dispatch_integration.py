@@ -159,3 +159,34 @@ class TestDispatchIntegration:
         job.refresh_from_db()
         assert job.worker_hostname == healthy_worker.hostname, \
             f"Job should be reassigned to healthy worker, got '{job.worker_hostname}'"
+
+    @DB_TRANSACTION
+    def test_robust_dispatch_with_engine_down(self, docker_redis_client, jobs_in_db):
+        """Verify that jobs dispatched while the engine is down are successfully queued and processed upon engine startup."""
+        job = jobs_in_db(job_type="reprocess", status="queued")
+
+        # Dispatch the job while the engine is down
+        from apps.ingestion.engine.dispatch import dispatch_job
+        dispatch_job(str(job.id), job_type="reprocess", handler="process_submission")
+
+        # Verify the job is immediately queued in Redis and its handler is saved
+        assert docker_redis_client.llen(PENDING_QUEUE) == 1
+        assert docker_redis_client.lindex(PENDING_QUEUE, 0) == str(job.id)
+        assert docker_redis_client.hget("engine:job:handlers", str(job.id)) == "process_submission"
+
+        # Now start the engine and register a worker
+        from apps.ingestion.engine.engine import JobEngine
+        eng = JobEngine(docker_redis_client)
+        eng.start()
+
+        try:
+            worker = FakeWorker(docker_redis_client)
+            worker.register()
+            assert wait_for_redis_key(docker_redis_client, worker.worker_key())
+
+            # Verify the engine recovers and assigns the queued job
+            assert wait_for_redis_hash_field_value(
+                docker_redis_client, ACTIVE_JOBS, str(job.id), worker.hostname, timeout=5.0,
+            )
+        finally:
+            eng.stop()

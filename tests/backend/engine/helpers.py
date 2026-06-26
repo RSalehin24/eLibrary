@@ -69,6 +69,8 @@ class FakeWorker:
 
 def publish_job_request(redis_client, job_id, job_type="reprocess", handler="process_submission", **kwargs):
     """Publish a job request as Django would after creating a ProcessingJob."""
+    redis_client.hset("engine:job:handlers", str(job_id), handler)
+    redis_client.rpush(PENDING_QUEUE, str(job_id))
     redis_client.publish(CH_JOB_REQUEST, json.dumps({
         "job_id": str(job_id),
         "job_type": job_type,

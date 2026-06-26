@@ -111,7 +111,12 @@ def _engine_listener_loop():
                 continue
             job_id = data.get("job_id", "")
             handler = data.get("handler", "process_submission")
+            assigned_worker = data.get("worker_hostname", "")
             hostname = _get_hostname()
+            
+            if assigned_worker != hostname:
+                continue
+                
             logger.info("Engine assigned job %s (handler=%s) to %s", job_id, handler, hostname)
 
             try:

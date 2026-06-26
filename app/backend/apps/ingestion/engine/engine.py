@@ -167,6 +167,7 @@ class JobEngine:
         error_message = data.get("error_message", "")
 
         jq.unassign_job(self.redis, job_id)
+        self.redis.hdel("engine:job:handlers", job_id)
 
         wr.set_worker_status(self.redis, hostname, WORKER_STATUS_IDLE)
         wr.set_worker_current_job(self.redis, hostname, "")
@@ -182,6 +183,7 @@ class JobEngine:
             self._dispatch_pending_jobs()
         except Exception:
             logger.exception("Error dispatching pending jobs after worker done")
+
     def _handle_job_request(self, message):
         data = self._decode(message)
         if not data:
@@ -190,12 +192,17 @@ class JobEngine:
         job_id = data.get("job_id")
         handler = data.get("handler", "process_submission")
 
-        assigned = self._try_assign_job(job_id, handler)
-        if not assigned:
-            jq.enqueue_job(self.redis, job_id)
+        self.redis.hset("engine:job:handlers", job_id, handler)
+
+        # Trigger dispatch of pending jobs. Since the job was already pushed to the queue
+        # by dispatch_job, we call self._dispatch_pending_jobs() to handle assignment.
+        self._dispatch_pending_jobs()
 
     def _try_assign_job(self, job_id, handler):
         """Try to assign a job to an idle worker matching the handler."""
+        if not handler:
+            handler = self.redis.hget("engine:job:handlers", job_id) or "process_submission"
+
         idle_worker = wr.find_idle_worker(self.redis, required_capability=handler)
         if not idle_worker:
             return False
@@ -204,7 +211,7 @@ class JobEngine:
 
         jq.publish_event(
             self.redis, CH_JOB_ASSIGNED,
-            job_id=job_id, worker_hostname=idle_worker,
+            job_id=job_id, worker_hostname=idle_worker, handler=handler,
         )
 
         self._update_db_job_assignment(job_id, idle_worker)
@@ -214,16 +221,42 @@ class JobEngine:
         """Try to dispatch queued jobs to idle workers."""
         dispatched = 0
         while True:
-            job_id = jq.dequeue_job(self.redis)
+            # Inspect the first job in the queue without popping it
+            job_id = self.redis.lindex(PENDING_QUEUE, 0)
             if not job_id:
                 break
 
-            assigned = self._try_assign_job(job_id, handler=None)
-            if not assigned:
-                jq.requeue_job(self.redis, job_id)
+            handler = self.redis.hget("engine:job:handlers", job_id) or "process_submission"
+            
+            # Check if there is an idle worker that can handle this job
+            idle_worker = wr.find_idle_worker(self.redis, required_capability=handler)
+            if not idle_worker:
+                # No worker available, keep the job in the queue and stop dispatching
                 break
 
+            # A worker is available! Now pop the job from the queue
+            popped_id = self.redis.lpop(PENDING_QUEUE)
+            if not popped_id:
+                break
+
+            # If the popped job changed (shouldn't happen since engine is single-threaded),
+            # but to be safe, check it.
+            if popped_id != job_id:
+                # Requeue what we popped to the front and break
+                self.redis.lpush(PENDING_QUEUE, popped_id)
+                break
+
+            # Assign the job to the worker
+            jq.assign_job(self.redis, job_id, idle_worker)
+
+            jq.publish_event(
+                self.redis, CH_JOB_ASSIGNED,
+                job_id=job_id, worker_hostname=idle_worker, handler=handler,
+            )
+
+            self._update_db_job_assignment(job_id, idle_worker)
             dispatched += 1
+
         return dispatched
 
     def _update_db_job_assignment(self, job_id, worker_hostname):

@@ -234,7 +234,14 @@ def captured_events(docker_redis_client):
     yield events
 
     thread.stop()
-    pubsub.unsubscribe()
+    try:
+        pubsub.unsubscribe()
+    except Exception:
+        pass
+    try:
+        pubsub.close()
+    except Exception:
+        pass
 
 
 

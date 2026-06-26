@@ -49,6 +49,50 @@ def recover_state(redis, heartbeat_timeout=HEARTBEAT_TIMEOUT_SECONDS):
             publish_event(redis, CH_JOB_REASSIGNED, job_id=job_id, from_worker=worker_hostname)
             recovered_jobs += 1
 
+    # 4. Recover stuck database requests/jobs that are missing from Redis
+    try:
+        from apps.processing.models import BookCreationRequest, BookCreationRequestState
+        from apps.ingestion.models import ProcessingJob
+        
+        queue_items = set(redis.lrange(PENDING_QUEUE, 0, -1))
+        
+        # Recover BookCreationRequests (QUEUED or PROCESSING but missing from Redis)
+        stuck_requests = BookCreationRequest.objects.filter(
+            state__in=[BookCreationRequestState.QUEUED, BookCreationRequestState.PROCESSING]
+        )
+        for req in stuck_requests:
+            job_id_str = str(req.id)
+            if job_id_str not in queue_items and not redis.hexists(ACTIVE_JOBS, job_id_str):
+                # If it was PROCESSING in DB, revert it to QUEUED in DB first
+                if req.state == BookCreationRequestState.PROCESSING:
+                    req.state = BookCreationRequestState.QUEUED
+                    req.save(update_fields=["state", "updated_at"])
+                
+                redis.hset("engine:job:handlers", job_id_str, "pipeline")
+                redis.rpush(PENDING_QUEUE, job_id_str)
+                queue_items.add(job_id_str)
+                recovered_jobs += 1
+
+        # Recover ProcessingJobs (queued or processing but missing from Redis)
+        stuck_jobs = ProcessingJob.objects.filter(
+            status__in=["queued", "processing"]
+        )
+        for job in stuck_jobs:
+            job_id_str = str(job.id)
+            if job_id_str not in queue_items and not redis.hexists(ACTIVE_JOBS, job_id_str):
+                # If it was processing in DB, revert it to queued in DB first
+                if job.status == "processing":
+                    job.status = "queued"
+                    job.save(update_fields=["status", "updated_at"])
+                
+                redis.hset("engine:job:handlers", job_id_str, "process_submission")
+                redis.rpush(PENDING_QUEUE, job_id_str)
+                queue_items.add(job_id_str)
+                recovered_jobs += 1
+    except Exception:
+        import logging
+        logging.getLogger(__name__).exception("Failed to recover stuck database requests/jobs on engine startup")
+
     return {
         "recovered_jobs": recovered_jobs,
         "stale_workers": stale_workers,

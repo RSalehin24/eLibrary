@@ -150,3 +150,84 @@ class TestEngineRecovery:
         queue = docker_redis_client.lrange(PENDING_QUEUE, 0, -1)
         assert job_id in queue, \
             f"Job {job_id} should be requeued after dead worker recovery"
+
+    @pytest.mark.django_db(transaction=True)
+    def test_startup_recovers_stuck_db_requests_and_jobs(self, engine, docker_redis_client):
+        from apps.processing.models import BookCreationRequest, BookCreationRequestState, BookRecord
+        from apps.ingestion.models import ProcessingJob, BookSubmission, SubmissionStatus, SubmissionInputType, ResolutionStatus
+        
+        # Stop engine to simulate it being down
+        engine.stop()
+        time.sleep(0.2)
+        
+        # Clear redis engine keys
+        for key in docker_redis_client.scan_iter("engine:*"):
+            docker_redis_client.delete(key)
+            
+        # Create a stuck BookCreationRequest in QUEUED state in DB
+        record = BookRecord.objects.create(
+            id="test-record-1",
+            name="Test Record 1",
+            url="https://example.com/books/test-1",
+        )
+        req = BookCreationRequest.objects.create(
+            id="stuck-req-001",
+            book_record=record,
+            state=BookCreationRequestState.QUEUED,
+        )
+        
+        # Create a stuck BookCreationRequest in PROCESSING state in DB
+        record2 = BookRecord.objects.create(
+            id="test-record-2",
+            name="Test Record 2",
+            url="https://example.com/books/test-2",
+        )
+        req2 = BookCreationRequest.objects.create(
+            id="stuck-req-002",
+            book_record=record2,
+            state=BookCreationRequestState.PROCESSING,
+        )
+        
+        # Create a stuck ProcessingJob in QUEUED state in DB
+        submission = BookSubmission.objects.create(
+            input_type=SubmissionInputType.URL,
+            origin="user",
+            original_input="https://example.com/books/test-job-1/",
+            normalized_input="https://example.com/books/test-job-1/",
+            resolved_url="https://example.com/books/test-job-1/",
+            resolution_status=ResolutionStatus.RESOLVED,
+            status=SubmissionStatus.QUEUED,
+        )
+        job = ProcessingJob.objects.create(
+            id="00000000-0000-0000-0000-000000000001",
+            submission=submission,
+            job_type="reprocess",
+            status="queued",
+        )
+        
+        # Start the engine
+        engine.start()
+        time.sleep(0.3)
+        
+        # Verify the stuck database requests and jobs were queued in Redis
+        queue = docker_redis_client.lrange(PENDING_QUEUE, 0, -1)
+        assert "stuck-req-001" in queue
+        assert "stuck-req-002" in queue
+        assert "00000000-0000-0000-0000-000000000001" in queue
+        
+        # Verify the PROCESSING request was reverted to QUEUED in DB
+        req2.refresh_from_db()
+        assert req2.state == BookCreationRequestState.QUEUED
+        
+        # Verify handlers were set correctly in Redis
+        assert docker_redis_client.hget("engine:job:handlers", "stuck-req-001") == "pipeline"
+        assert docker_redis_client.hget("engine:job:handlers", "stuck-req-002") == "pipeline"
+        assert docker_redis_client.hget("engine:job:handlers", "00000000-0000-0000-0000-000000000001") == "process_submission"
+        
+        # Cleanup
+        req.delete()
+        req2.delete()
+        record.delete()
+        record2.delete()
+        job.delete()
+        submission.delete()
