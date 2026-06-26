@@ -215,40 +215,92 @@ def dispatch_sync_task(sync_state, *, force=False):
     return sync_state
 
 
-def fetch_live_catalog_page(resolver, page_number):
-    response = get_with_host_fallback(
-        resolver.session,
-        CATALOG_URL,
-        params=resolver.archive_query_params(page_number=page_number),
-        timeout=30,
-    )
-    response.raise_for_status()
-    page_entries = resolver.parse_catalog_page(BeautifulSoup(response.text, "html.parser"))
-
-    normalized_entries = []
-    for entry in page_entries:
-        enriched_entry = dict(entry)
-        try:
-            metadata = fetch_source_page_metadata(entry["source_url"], session=resolver.session)
-            enriched_entry = {
-                **metadata,
-                "raw_data": {
-                    **(entry.get("raw_data") or {}),
-                    **(metadata.get("raw_data") or {}),
-                },
-            }
-        except Exception:
-            logger.warning(
-                "Catalog metadata enrichment failed for %s; falling back to archive metadata.",
-                entry.get("source_url", ""),
-                exc_info=True,
-            )
-        stored_entry = upsert_source_catalog_entry(enriched_entry)
-        normalized_entries.append(source_catalog_entry_payload(stored_entry))
-    return normalized_entries
-
 
 def incomplete_catalog_page_url(page_number):
     if page_number <= 1:
         return INCOMPLETE_CATALOG_URL
     return urljoin(INCOMPLETE_CATALOG_URL, f"page/{page_number}/")
+
+
+def refresh_catalog_parallel(concurrency=None):
+    from apps.ingestion.pipeline.scraper_support.network import create_session_with_retries
+
+    if concurrency is None:
+        concurrency = getattr(settings, "CELERY_PROCESSING_CONCURRENCY", 5)
+
+    stop_flag = threading.Event()
+    page_lock = threading.Lock()
+    seen_lock = threading.Lock()
+    count_lock = threading.Lock()
+    next_page = 1
+    seen_urls = set()
+    total_appended = 0
+    total_updated = 0
+
+    def worker():
+        nonlocal next_page, total_appended, total_updated
+
+        while not stop_flag.is_set():
+            with page_lock:
+                if stop_flag.is_set():
+                    return
+                page_number = next_page
+                next_page += 1
+
+            session = create_session_with_retries()
+            resolver = TitleResolver(session=session)
+
+            try:
+                response = get_with_host_fallback(
+                    resolver.session,
+                    CATALOG_URL,
+                    params=resolver.archive_query_params(page_number=page_number),
+                    timeout=30,
+                )
+                response.raise_for_status()
+                soup = BeautifulSoup(response.text, "html.parser")
+                entries = resolver.parse_catalog_page(soup)
+            except Exception:
+                continue
+
+            if not entries:
+                stop_flag.set()
+                return
+
+            local_appended = 0
+            local_updated = 0
+            for entry in entries:
+                if stop_flag.is_set():
+                    return
+
+                with seen_lock:
+                    if entry["source_url"] in seen_urls:
+                        continue
+                    seen_urls.add(entry["source_url"])
+
+                try:
+                    metadata = fetch_source_page_metadata(
+                        entry["source_url"], session=session
+                    )
+                    stored_entry = upsert_source_catalog_entry(metadata)
+                    payload = source_catalog_entry_payload(stored_entry)
+                    result = upsert_remote_records([payload])
+                    local_appended += result["appended_count"]
+                    local_updated += result["updated_count"]
+                except Exception:
+                    continue
+
+            with count_lock:
+                total_appended += local_appended
+                total_updated += local_updated
+
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = [executor.submit(worker) for _ in range(concurrency)]
+        for future in futures:
+            future.result()
+
+    return {
+        "appended_count": total_appended,
+        "updated_count": total_updated,
+        "total": total_appended + total_updated,
+    }

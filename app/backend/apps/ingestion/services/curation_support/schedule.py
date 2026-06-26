@@ -4,15 +4,13 @@ from datetime import datetime, timedelta
 from django.utils import timezone
 
 from apps.ingestion.models import CatalogAutomationFrequency
-from apps.ingestion.services.resolution import ARCHIVE_MAX_PAGES
 
 
 def normalize_refresh_max_pages(value):
     try:
-        page_count = int(value)
+        return max(1, int(value))
     except (TypeError, ValueError):
-        page_count = ARCHIVE_MAX_PAGES
-    return max(1, min(page_count, ARCHIVE_MAX_PAGES))
+        return None
 
 
 def combine_local_date_and_time(date_value, time_value):

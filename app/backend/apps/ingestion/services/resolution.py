@@ -9,7 +9,6 @@ from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline.scraper_support.network import _get_allowed_source_hosts
 from apps.ingestion.pipeline.scraper_support.text import normalize_text, texts_are_similar
 from apps.ingestion.services.resolution_support import (
-    ARCHIVE_MAX_PAGES,
     SEARCH_HEADERS,
     fetch_source_page_metadata,
     get_catalog_url,
@@ -84,7 +83,7 @@ class TitleResolver:
         self.session = session or requests.Session()
         self.session.headers.update(SEARCH_HEADERS)
 
-    def refresh_catalog(self, max_pages=1, bucket=""):
+    def refresh_catalog(self, max_pages=None, bucket=""):
         refreshed = []
         seen = set()
         page_signatures = set()
@@ -247,7 +246,7 @@ class TitleResolver:
             bucket = self.derive_bucket(query)
             try:
                 self.refresh_catalog(
-                    max_pages=ARCHIVE_MAX_PAGES,
+                    max_pages=None,
                     bucket=bucket,
                 )
             except Exception as exc:

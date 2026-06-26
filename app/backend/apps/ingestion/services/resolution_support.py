@@ -1,5 +1,4 @@
 from apps.ingestion.services.resolution_support_hosts import (
-    ARCHIVE_MAX_PAGES,
     SEARCH_HEADERS,
     get_catalog_url,
     get_source_site_dns_resolvers,
@@ -31,7 +30,6 @@ from apps.ingestion.services.resolution_support_network import (
 
 
 __all__ = [
-    "ARCHIVE_MAX_PAGES",
     "SEARCH_HEADERS",
     "build_response_from_urllib3",
     "collect_system_dns_ips",

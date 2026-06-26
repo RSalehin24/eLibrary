@@ -17,6 +17,7 @@ _MODULE_FILES = (
     "catalog_phase_resume_flows.py",
     "catalog_phase_matrix_tests.py",
     "catalog_phase_serialization.py",
+    "catalog_sync_parallel.py",
     "catalog_phase_pause_behaviour.py",
     "incomplete_automation_flows.py",
     "processing_pipeline_dispatch.py",

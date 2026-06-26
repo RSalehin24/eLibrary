@@ -43,8 +43,9 @@ from apps.ingestion.services.curation_support.source_refresh import (
     process_source_catalog_refresh as support_process_source_catalog_refresh,
     revoke_source_catalog_refresh_task as support_revoke_source_catalog_refresh_task,
 )
-from apps.ingestion.services.resolution import ARCHIVE_MAX_PAGES, TitleResolver
+from apps.ingestion.services.resolution import TitleResolver
 from apps.ingestion.services.submissions import create_submission_records, queue_reprocess_book
+from apps.processing.services import refresh_catalog_parallel
 
 logger = logging.getLogger(__name__)
 
@@ -117,7 +118,7 @@ def cancel_source_catalog_refresh(state=None, message=SOURCE_REFRESH_STOP_MESSAG
     return finalize_source_catalog_refresh_stop(state, message=message)
 
 
-def begin_source_catalog_refresh(*, requested_by=None, max_pages=ARCHIVE_MAX_PAGES):
+def begin_source_catalog_refresh(*, requested_by=None, max_pages=None):
     state = get_source_catalog_refresh_state()
     if state.status in ACTIVE_SOURCE_CATALOG_REFRESH_STATUSES:
         return state, False
@@ -210,7 +211,7 @@ def create_catalog_curation_run(
     trigger=CatalogCurationTrigger.MANUAL,
     requested_by=None,
     refresh_catalog=True,
-    refresh_max_pages=ARCHIVE_MAX_PAGES,
+    refresh_max_pages=None,
 ):
     run = CatalogCurationRun.objects.create(
         trigger=trigger,
@@ -218,7 +219,7 @@ def create_catalog_curation_run(
         status=JobStatus.QUEUED,
         requested_by=requested_by if getattr(requested_by, "is_authenticated", False) else None,
         refresh_catalog=refresh_catalog,
-        refresh_max_pages=normalize_refresh_max_pages(refresh_max_pages),
+        refresh_max_pages=normalize_refresh_max_pages(refresh_max_pages) or 0,
     )
     dispatch_catalog_curation_run(run)
     return run

@@ -4,8 +4,7 @@ from celery import current_app
 from django.utils import timezone
 
 from apps.ingestion.models import SourceCatalogRefreshState, SourceCatalogRefreshStatus
-from apps.ingestion.services.curation_support.schedule import normalize_refresh_max_pages
-from apps.ingestion.services.resolution import TitleResolver
+from apps.processing.services import refresh_catalog_parallel
 
 
 logger = logging.getLogger(__name__)
@@ -92,7 +91,7 @@ def process_source_catalog_refresh(retry_count=0, task_id=""):
     state.save(update_fields=["status", "retry_count", "task_id", "started_at", "finished_at", "last_error", "updated_at"])
 
     try:
-        refreshed = TitleResolver().refresh_catalog(max_pages=normalize_refresh_max_pages(state.max_pages))
+        result = refresh_catalog_parallel()
         can_finalize, state = refresh_state_can_finalize(task_id)
         if not can_finalize:
             logger.info(
@@ -105,7 +104,7 @@ def process_source_catalog_refresh(retry_count=0, task_id=""):
             )
             return state
         state.status = SourceCatalogRefreshStatus.SUCCEEDED
-        state.refreshed_entries = len(refreshed)
+        state.refreshed_entries = result["total"]
         state.finished_at = timezone.now()
         state.save(update_fields=["status", "refreshed_entries", "finished_at", "updated_at"])
         return state

@@ -20,8 +20,8 @@ def process_catalog_curation_run(run_id, retry_count=0, task_id=""):
         if run.status == JobStatus.CANCELLED or run.cancel_requested:
             return finalize_cancelled_catalog_curation_run(run)
         if run.refresh_catalog:
-            refreshed = TitleResolver().refresh_catalog(max_pages=normalize_refresh_max_pages(run.refresh_max_pages))
-            summary["refreshed_entries"] = len(refreshed)
+            result = refresh_catalog_parallel()
+            summary["refreshed_entries"] = result["total"]
 
         entry_queryset = SourceCatalogEntry.objects.order_by("title")
         summary["catalog_entries"] = entry_queryset.count()

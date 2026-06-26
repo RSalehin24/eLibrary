@@ -3,7 +3,6 @@ from urllib.parse import urlparse
 from django.conf import settings
 
 
-ARCHIVE_MAX_PAGES = 80
 SEARCH_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
