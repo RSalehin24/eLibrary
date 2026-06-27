@@ -44,6 +44,7 @@ export function formatDate(value) {
     return value;
   }
   return parsed.toLocaleString(undefined, {
+    timeZone: "Asia/Dhaka",
     month: "short",
     day: "numeric",
     hour: "2-digit",

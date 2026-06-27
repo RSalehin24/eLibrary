@@ -84,16 +84,7 @@ def annotate_record_processing_status(queryset):
 
 
 def order_catalog_records_queryset(queryset):
-    return queryset.annotate(
-        processing_status_rank=Case(
-            When(
-                processing_status=BookCreationState.NOT_CREATED,
-                then=Value(0),
-            ),
-            default=Value(1),
-            output_field=IntegerField(),
-        )
-    ).order_by("processing_status_rank", "name", "id")
+    return queryset.order_by("-updated_at")
 
 
 def processing_pagination_payload(total_count, offset, limit, returned_count):
