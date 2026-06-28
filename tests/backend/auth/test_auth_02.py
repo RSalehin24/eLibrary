@@ -8,7 +8,7 @@ from django_otp.oath import totp
 from django_otp.plugins.otp_totp.models import TOTPDevice
 from rest_framework.test import APIClient
 
-from apps.access.models import PermissionGrant
+from apps.access.models import PermissionGrant, PermissionScope
 from apps.accounts.models import User
 
 
@@ -94,6 +94,7 @@ def test_profile_exposes_and_updates_kindle_emails(settings, client):
         password="strong-password-123",
         full_name="Kindle User",
     )
+    PermissionGrant.objects.create(user=user, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.patch(
@@ -123,6 +124,7 @@ def test_profile_rejects_non_kindle_email_addresses(client):
         password="strong-password-123",
         full_name="Kindle User",
     )
+    PermissionGrant.objects.create(user=user, scope=PermissionScope.SEND_KINDLE)
     client.force_login(user)
 
     response = client.patch(

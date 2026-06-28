@@ -4,6 +4,7 @@ import { ProfilePasswordEditor } from "./ProfilePasswordEditor";
 
 export function ProfileEditorForm({
   canAddKindleEmail,
+  canSendToKindle,
   clearProfileImage,
   confirmNewPassword,
   currentPassword,
@@ -67,17 +68,19 @@ export function ProfileEditorForm({
         showCurrentPassword={showCurrentPassword}
         showNewPassword={showNewPassword}
       />
-      <ProfileKindleEditor
-        addKindleEmailField={addKindleEmailField}
-        canAddKindleEmail={canAddKindleEmail}
-        kindleEmailValidationStates={kindleEmailValidationStates}
-        kindleEmails={kindleEmails}
-        kindleSectionOpen={kindleSectionOpen}
-        kindleSenderEmail={kindleSenderEmail}
-        removeKindleEmailField={removeKindleEmailField}
-        setKindleSectionOpen={setKindleSectionOpen}
-        updateKindleEmail={updateKindleEmail}
-      />
+      {canSendToKindle ? (
+        <ProfileKindleEditor
+          addKindleEmailField={addKindleEmailField}
+          canAddKindleEmail={canAddKindleEmail}
+          kindleEmailValidationStates={kindleEmailValidationStates}
+          kindleEmails={kindleEmails}
+          kindleSectionOpen={kindleSectionOpen}
+          kindleSenderEmail={kindleSenderEmail}
+          removeKindleEmailField={removeKindleEmailField}
+          setKindleSectionOpen={setKindleSectionOpen}
+          updateKindleEmail={updateKindleEmail}
+        />
+      ) : null}
       <div className="profile-save-bar">
         <button
           type="submit"

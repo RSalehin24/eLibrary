@@ -1,6 +1,7 @@
 import { twoFactorStatusLabel } from "./profileModel";
 
 export function ProfileReadOnlyView({
+  canSendToKindle,
   configuredKindleEmails,
   profile,
   roleLabel,
@@ -47,18 +48,20 @@ export function ProfileReadOnlyView({
           <span>Two-Factor</span>
           <strong>{twoFactorStatusLabel(twoFactor)}</strong>
         </div>
-        <div className="settings-row">
-          <span>Kindle Mails</span>
-          {configuredKindleEmails.length ? (
-            <strong className="profile-multi-line-value">
-              {configuredKindleEmails.map((email) => (
-                <span key={email}>{email}</span>
-              ))}
-            </strong>
-          ) : (
-            <strong>Not set</strong>
-          )}
-        </div>
+        {canSendToKindle ? (
+          <div className="settings-row">
+            <span>Kindle Mails</span>
+            {configuredKindleEmails.length ? (
+              <strong className="profile-multi-line-value">
+                {configuredKindleEmails.map((email) => (
+                  <span key={email}>{email}</span>
+                ))}
+              </strong>
+            ) : (
+              <strong>Not set</strong>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );

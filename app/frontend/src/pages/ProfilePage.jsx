@@ -14,12 +14,14 @@ import { useProfileTwoFactorActions } from "../features/profile/useProfileTwoFac
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
+import { hasCapability } from "../utils/capabilities";
 import { humanizeError } from "../utils/humanizeError";
 
 export default function ProfilePage() {
   usePageTitle("Profile");
   const { user, refreshSession } = useSession();
   const toast = useToast();
+  const canSendToKindle = hasCapability(user, "send:kindle");
   const [profile, setProfile] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [twoFactor, setTwoFactor] = useState({
@@ -221,6 +223,7 @@ export default function ProfilePage() {
 
         {!isEditing ? (
           <ProfileReadOnlyView
+            canSendToKindle={canSendToKindle}
             configuredKindleEmails={derived.configuredKindleEmails}
             profile={profile}
             roleLabel={derived.roleLabel}
@@ -234,6 +237,7 @@ export default function ProfilePage() {
             <ProfileEditorForm
               addKindleEmailField={addKindleEmailField}
               canAddKindleEmail={derived.canAddKindleEmail}
+              canSendToKindle={canSendToKindle}
               clearProfileImage={clearProfileImage}
               confirmNewPassword={confirmNewPassword}
               currentPassword={currentPassword}

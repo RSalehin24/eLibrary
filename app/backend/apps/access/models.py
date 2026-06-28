@@ -34,8 +34,8 @@ ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
     PermissionScope.PROCESSING_MANAGE,
     PermissionScope.VIEW_SOURCE_RECORDS,
     PermissionScope.METADATA_EDIT,
-    PermissionScope.SEND_KINDLE,
     PermissionScope.READ_ONCE,
+    PermissionScope.SEND_KINDLE,
     PermissionScope.READ_DURABLE,
     PermissionScope.PREVIEW_HTML,
     PermissionScope.DOWNLOAD_FILE,
@@ -43,8 +43,8 @@ ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
 
 SCOPED_PERMISSION_SCOPES = (
     PermissionScope.METADATA_EDIT,
-    PermissionScope.SEND_KINDLE,
     PermissionScope.READ_ONCE,
+    PermissionScope.SEND_KINDLE,
     PermissionScope.READ_DURABLE,
     PermissionScope.PREVIEW_HTML,
     PermissionScope.DOWNLOAD_FILE,

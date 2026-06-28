@@ -2,8 +2,10 @@ from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
+from apps.access.models import PermissionScope
 from apps.accounts.kindle import validate_kindle_email_address
 from apps.accounts.models import User
+from apps.common.permissions import user_has_scope
 
 
 def normalize_kindle_emails(raw_value):
@@ -70,6 +72,10 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         kindle_emails_supplied = "kindle_emails" in attrs or "kindle_emails_text" in attrs
+        if kindle_emails_supplied and not user_has_scope(self.instance, [PermissionScope.SEND_KINDLE]):
+            raise serializers.ValidationError(
+                {"kindle_emails": "You do not have the Send to Kindle permission."}
+            )
         if "kindle_emails_text" in attrs:
             attrs["kindle_emails"] = normalize_kindle_emails(
                 attrs.get("kindle_emails_text", "")
