@@ -115,7 +115,7 @@ export function ManualBookComposer({
             values={form.writers}
             onChange={(writers) => setForm({ ...form, writers })}
             suggestions={contributorOptions}
-            placeholder={loadingOptions ? "Loading..." : "Select or create"}
+            placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
           <TagInput
             ref={translatorRef}

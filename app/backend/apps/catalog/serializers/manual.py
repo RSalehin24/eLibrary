@@ -30,11 +30,17 @@ class ManualBookCreateSerializer(serializers.Serializer):
             raise serializers.ValidationError("This field may not be blank.")
         return title
 
-    def validate_writers(self, value):
-        writers = normalize_name_list(value)
-        if not writers:
-            raise serializers.ValidationError("Add at least one writer.")
-        return writers
+    validate_writers = lambda self, value: normalize_name_list(value)
+
+    def validate(self, attrs):
+        writers = attrs.get("writers", [])
+        translators = attrs.get("translators", [])
+        compilers = attrs.get("compilers", [])
+        editors = attrs.get("editors", [])
+
+        if not (writers or translators or compilers or editors):
+            raise serializers.ValidationError("Add at least one writer, translator, or editor.")
+        return attrs
 
     def validate_categories(self, value):
         categories = normalize_name_list(value)
@@ -116,6 +122,13 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
             "publisher",
             "language",
         ]
+
+    def validate_contributors(self, value):
+        roles = [c.get("role") for c in value if c and c.get("name")]
+        valid_roles = {"author", "translator", "editor", "compiler"}
+        if not any(r in valid_roles for r in roles):
+            raise serializers.ValidationError("Add at least one writer, translator, or editor.")
+        return value
 
     def snapshot(self, instance):
         return {

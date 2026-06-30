@@ -399,5 +399,21 @@ test("renderWriterCell mock displays contributor fallback priority correctly whe
   );
 });
 
+function validateContributorsMock(form) {
+  const hasWriter = form.writers && form.writers.length > 0;
+  const hasTranslator = form.translators && form.translators.length > 0;
+  const hasEditor = form.editors && form.editors.length > 0;
+  return hasWriter || hasTranslator || hasEditor;
+}
+
+test("contributor validation mock allows any of writer, translator, or editor, but requires at least one", () => {
+  assert.ok(validateContributorsMock({ writers: ["Author J"], translators: [], editors: [] }));
+  assert.ok(validateContributorsMock({ writers: [], translators: ["Translator T"], editors: [] }));
+  assert.ok(validateContributorsMock({ writers: [], translators: [], editors: ["Editor E"] }));
+  assert.ok(validateContributorsMock({ writers: ["Author J"], translators: ["Translator T"], editors: ["Editor E"] }));
+
+  assert.equal(validateContributorsMock({ writers: [], translators: [], editors: [] }), false);
+});
+
 
 
