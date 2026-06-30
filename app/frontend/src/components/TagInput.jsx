@@ -5,7 +5,7 @@ function normalizeToken(value) {
 }
 
 const TagInput = forwardRef(function TagInput(
-  { label, values, onChange, suggestions = [], placeholder = "", onArrowLeft, onArrowRight },
+  { label, values, onChange, suggestions = [], placeholder = "" },
   ref
 ) {
   const inputId = useId();
@@ -23,10 +23,13 @@ const TagInput = forwardRef(function TagInput(
 
   const showSuggestions = focused && filteredSuggestions.length > 0;
 
-  // Expose a focus() method to parent via ref
+  // Expose focus() and contains() to the parent for form-level navigation.
   useImperativeHandle(ref, () => ({
     focus() {
       inputRef.current?.focus();
+    },
+    contains(el) {
+      return inputRef.current === el || inputRef.current?.contains(el);
     },
   }));
 
@@ -100,19 +103,6 @@ const TagInput = forwardRef(function TagInput(
       return;
     }
 
-    // Left/Right arrow: move to previous/next field when input is empty
-    if (event.key === "ArrowLeft" && !inputValue && onArrowLeft) {
-      event.preventDefault();
-      onArrowLeft();
-      return;
-    }
-
-    if (event.key === "ArrowRight" && !inputValue && onArrowRight) {
-      event.preventDefault();
-      onArrowRight();
-      return;
-    }
-
     if (event.key === "Backspace" && !inputValue && values?.length) {
       event.preventDefault();
       removeValue(values[values.length - 1]);
@@ -121,35 +111,7 @@ const TagInput = forwardRef(function TagInput(
 
   return (
     <label className="tag-field" htmlFor={inputId}>
-      <span className="tag-field-header">
-        <span className="fact-label">{label}</span>
-        <span className="tag-field-nav">
-          {onArrowLeft && (
-            <button
-              type="button"
-              className="tag-field-nav-btn"
-              aria-label={`Go to previous field`}
-              tabIndex={-1}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={onArrowLeft}
-            >
-              &#8592;
-            </button>
-          )}
-          {onArrowRight && (
-            <button
-              type="button"
-              className="tag-field-nav-btn"
-              aria-label={`Go to next field`}
-              tabIndex={-1}
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={onArrowRight}
-            >
-              &#8594;
-            </button>
-          )}
-        </span>
-      </span>
+      <span className="fact-label">{label}</span>
       <div className={`tag-input-shell${focused ? " is-focused" : ""}`}>
         <div className="tag-chip-list">
           {(values || []).map((value) => (

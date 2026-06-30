@@ -15,24 +15,70 @@ export function ManualBookComposer({
   submitting,
   titleInputRef
 }) {
+  // Refs for every TagInput field (expose focus() + contains() via imperative handle)
   const writerRef = useRef(null);
   const translatorRef = useRef(null);
   const editorRef = useRef(null);
   const categoryRef = useRef(null);
   const seriesRef = useRef(null);
 
-  // Ordered list of TagInput refs for ← → navigation
-  const tagFieldRefs = [writerRef, translatorRef, editorRef, categoryRef, seriesRef];
+  // Refs for plain DOM fields
+  const compilationRef = useRef(null);
+  const bindingRef = useRef(null);
+  const publisherRef = useRef(null);
+  const priceRef = useRef(null);
+  const summaryRef = useRef(null);
 
-  function makePrevNext(index) {
-    return {
-      onArrowLeft: index > 0
-        ? () => tagFieldRefs[index - 1].current?.focus()
-        : undefined,
-      onArrowRight: index < tagFieldRefs.length - 1
-        ? () => tagFieldRefs[index + 1].current?.focus()
-        : undefined,
-    };
+  /**
+   * Ordered navigation sequence for Cmd/Ctrl + Arrow field jumping.
+   * Each entry is either:
+   *   { type: "dom",        ref }  — plain input / select / textarea
+   *   { type: "imperative", ref }  — TagInput with focus() + contains()
+   */
+  const fieldSequence = [
+    { type: "dom",        ref: titleInputRef },
+    { type: "imperative", ref: writerRef },
+    { type: "imperative", ref: translatorRef },
+    { type: "imperative", ref: editorRef },
+    { type: "imperative", ref: categoryRef },
+    { type: "imperative", ref: seriesRef },
+    { type: "dom",        ref: compilationRef },
+    { type: "dom",        ref: bindingRef },
+    { type: "dom",        ref: publisherRef },
+    { type: "dom",        ref: priceRef },
+    { type: "dom",        ref: summaryRef },
+  ];
+
+  function handleFormKeyDown(event) {
+    // Cmd+Arrow (Mac) or Ctrl+Arrow (Windows/Linux)
+    const modifier = event.metaKey || event.ctrlKey;
+    if (!modifier) return;
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+
+    const activeEl = document.activeElement;
+    const direction = event.key === "ArrowRight" ? 1 : -1;
+
+    // Find which field currently has focus
+    let currentIndex = -1;
+    for (let i = 0; i < fieldSequence.length; i++) {
+      const { type, ref } = fieldSequence[i];
+      if (!ref.current) continue;
+      const matches =
+        type === "imperative"
+          ? ref.current.contains(activeEl)
+          : ref.current === activeEl;
+      if (matches) { currentIndex = i; break; }
+    }
+
+    if (currentIndex === -1) return; // focus is outside the form fields
+
+    const nextIndex = currentIndex + direction;
+    if (nextIndex < 0 || nextIndex >= fieldSequence.length) return;
+
+    event.preventDefault(); // prevent native Cmd/Ctrl+Arrow cursor jump
+
+    const next = fieldSequence[nextIndex];
+    next.ref.current?.focus();
   }
 
   return (
@@ -40,7 +86,12 @@ export function ManualBookComposer({
       id="manual-book-composer"
       className="detail-card manual-books-panel manual-book-composer"
     >
-      <form className="stack-form manual-book-form" onSubmit={onSubmit}>
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
+      <form
+        className="stack-form manual-book-form"
+        onSubmit={onSubmit}
+        onKeyDown={handleFormKeyDown}
+      >
         <label>
           <span className="fact-label">Title</span>
           <input
@@ -61,7 +112,6 @@ export function ManualBookComposer({
             onChange={(writers) => setForm({ ...form, writers })}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Select or create"}
-            {...makePrevNext(0)}
           />
           <TagInput
             ref={translatorRef}
@@ -70,7 +120,6 @@ export function ManualBookComposer({
             onChange={(translators) => setForm({ ...form, translators })}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
-            {...makePrevNext(1)}
           />
           <TagInput
             ref={editorRef}
@@ -79,7 +128,6 @@ export function ManualBookComposer({
             onChange={(editors) => setForm({ ...form, editors })}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
-            {...makePrevNext(2)}
           />
           <TagInput
             ref={categoryRef}
@@ -88,7 +136,6 @@ export function ManualBookComposer({
             onChange={(categories) => setForm({ ...form, categories })}
             suggestions={categoryOptions}
             placeholder={loadingOptions ? "Loading..." : "Select or create"}
-            {...makePrevNext(3)}
           />
         </div>
 
@@ -100,11 +147,11 @@ export function ManualBookComposer({
             onChange={(series) => setForm({ ...form, series })}
             suggestions={seriesOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
-            {...makePrevNext(4)}
           />
           <label>
             <span className="fact-label">Compilation</span>
             <select
+              ref={compilationRef}
               value={form.is_compilation ? "yes" : "no"}
               onChange={(event) =>
                 setForm({ ...form, is_compilation: event.target.value === "yes" })
@@ -117,6 +164,7 @@ export function ManualBookComposer({
           <label>
             <span className="fact-label">Binding</span>
             <select
+              ref={bindingRef}
               value={form.binding}
               onChange={(event) => setForm({ ...form, binding: event.target.value })}
             >
@@ -128,6 +176,7 @@ export function ManualBookComposer({
           <label>
             <span className="fact-label">Publisher</span>
             <input
+              ref={publisherRef}
               type="text"
               value={form.publisher}
               onChange={(event) => setForm({ ...form, publisher: event.target.value })}
@@ -141,6 +190,7 @@ export function ManualBookComposer({
           <label>
             <span className="fact-label">Price</span>
             <input
+              ref={priceRef}
               type="number"
               min="0"
               step="0.01"
@@ -152,6 +202,7 @@ export function ManualBookComposer({
           <label className="manual-book-form-span-3">
             <span className="fact-label">Summary</span>
             <textarea
+              ref={summaryRef}
               value={form.summary}
               onChange={(event) => setForm({ ...form, summary: event.target.value })}
               placeholder="Optional"

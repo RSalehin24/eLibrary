@@ -120,45 +120,6 @@
   position: relative;
 }
 
-.tag-field-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 4px;
-}
-
-.tag-field-header .fact-label {
-  margin-bottom: 0;
-}
-
-.tag-field-nav {
-  display: flex;
-  gap: 2px;
-}
-
-.tag-field-nav-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: 0.85rem;
-  line-height: 1;
-  cursor: pointer;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
-}
-
-.tag-field-nav-btn:hover {
-  background: rgba(15, 75, 56, 0.08);
-  border-color: rgba(15, 75, 56, 0.2);
-  color: var(--accent-strong);
-}
-
 .tag-input-shell {
   position: relative;
 }
