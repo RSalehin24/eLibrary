@@ -485,6 +485,9 @@ export default function ManualBooksPage() {
           refreshing={refreshing}
           showPublisher={true}
           onEditBook={handleEditBook}
+          hideSeries={true}
+          hideType={true}
+          showTime={true}
         />
       )}
     </div>

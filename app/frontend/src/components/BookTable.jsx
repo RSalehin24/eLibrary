@@ -4,6 +4,7 @@ import AsyncButton from "./AsyncButton";
 import BookRouteLink from "./BookRouteLink";
 import {
   formatBookDate,
+  formatBookDateTime,
   getWriterColumnGroups,
   getContributorNamesByRole,
 } from "../utils/bookPresentation";
@@ -53,6 +54,8 @@ function BookTableSkeletonRows({
   incremental = false,
   showMyBooksAction = false,
   showPublisher = false,
+  hideSeries = false,
+  hideType = false,
 }) {
   return Array.from({ length: count }, (_, index) => (
     <tr
@@ -82,17 +85,21 @@ function BookTableSkeletonRows({
       <td>
         <span className="skeleton-line skeleton-line-sm" />
       </td>
-      <td>
-        <span className="skeleton-line skeleton-line-sm" />
-      </td>
+      {!hideSeries ? (
+        <td>
+          <span className="skeleton-line skeleton-line-sm" />
+        </td>
+      ) : null}
       {showPublisher ? (
         <td>
           <span className="skeleton-line skeleton-line-sm" />
         </td>
       ) : null}
-      <td>
-        <span className="skeleton-pill skeleton-pill-sm" />
-      </td>
+      {!hideType ? (
+        <td>
+          <span className="skeleton-pill skeleton-pill-sm" />
+        </td>
+      ) : null}
       <td>
         <span className="skeleton-line skeleton-line-sm" />
       </td>
@@ -124,12 +131,20 @@ export default function BookTable({
   showPublisher = false,
   onMyBooksToggle = null,
   onEditBook = null,
+  hideSeries = false,
+  hideType = false,
+  showTime = false,
   myBooksBusyIds = {},
   sortValue = "",
 }) {
   const showInitialSkeleton = (initialLoading || refreshing) && !books?.length;
   const showIncrementalSkeleton = loadingMore && books?.length > 0;
-  const columnCount = 8 + (showMyBooksAction ? 1 : 0) + (showPublisher ? 1 : 0);
+  const columnCount =
+    8 +
+    (showMyBooksAction ? 1 : 0) +
+    (showPublisher ? 1 : 0) -
+    (hideSeries ? 1 : 0) -
+    (hideType ? 1 : 0);
 
   const sortKey = sortValue?.replace(/^-/, "") || "";
   const sortDirection = sortValue?.startsWith("-") ? "desc" : "asc";
@@ -170,9 +185,9 @@ export default function BookTable({
           <col className="book-table-col-title" />
           <col className="book-table-col-writer" />
           <col className="book-table-col-category" />
-          <col className="book-table-col-series" />
+          {!hideSeries ? <col className="book-table-col-series" /> : null}
           {showPublisher ? <col className="book-table-col-publisher" /> : null}
-          <col className="book-table-col-type" />
+          {!hideType ? <col className="book-table-col-type" /> : null}
           <col className="book-table-col-created" />
           {showMyBooksAction ? <col className="book-table-col-action" /> : null}
           <col className="book-table-col-action" />
@@ -187,9 +202,9 @@ export default function BookTable({
             </th>
             <th>Contributors</th>
             <th>Category</th>
-            <th>Series</th>
+            {!hideSeries ? <th>Series</th> : null}
             {showPublisher ? <th>Publisher</th> : null}
-            <th>Type</th>
+            {!hideType ? <th>Type</th> : null}
             <th aria-sort={sortAriaSort("created")}>
               Created{sortIndicator("created")}
             </th>
@@ -200,8 +215,11 @@ export default function BookTable({
         <tbody>
           {showInitialSkeleton ? (
             <BookTableSkeletonRows
+              count={5}
               showMyBooksAction={showMyBooksAction}
               showPublisher={showPublisher}
+              hideSeries={hideSeries}
+              hideType={hideType}
             />
           ) : books?.length ? (
             books.map((book, rowIndex) => {
@@ -255,13 +273,15 @@ export default function BookTable({
                       <span className="table-muted">Unsorted</span>
                     )}
                   </td>
-                  <td data-label="Series">
-                    {series.length ? (
-                      renderLinkedValues(series, "series", linkFilters)
-                    ) : (
-                      <span className="table-muted">Standalone</span>
-                    )}
-                  </td>
+                  {!hideSeries ? (
+                    <td data-label="Series">
+                      {series.length ? (
+                        renderLinkedValues(series, "series", linkFilters)
+                      ) : (
+                        <span className="table-muted">Standalone</span>
+                      )}
+                    </td>
+                  ) : null}
                   {showPublisher ? (
                     <td data-label="Publisher">
                       {(() => {
@@ -279,15 +299,17 @@ export default function BookTable({
                       })()}
                     </td>
                   ) : null}
-                  <td data-label="Type">
-                    <span
-                      className={`table-type-pill table-type-pill-${book.record_type || "digital"}`}
-                    >
-                      {book.record_type === "manual" ? "Manual" : "Digital"}
-                    </span>
-                  </td>
+                  {!hideType ? (
+                    <td data-label="Type">
+                      <span
+                        className={`table-type-pill table-type-pill-${book.record_type || "digital"}`}
+                      >
+                        {book.record_type === "manual" ? "Manual" : "Digital"}
+                      </span>
+                    </td>
+                  ) : null}
                   <td data-label="Created">
-                    {formatBookDate(book.created_at)}
+                    {showTime ? formatBookDateTime(book.created_at) : formatBookDate(book.created_at)}
                   </td>
                   {showMyBooksAction ? (
                     <td className="table-action-cell" data-label="My Books">
@@ -351,10 +373,12 @@ export default function BookTable({
           )}
           {showIncrementalSkeleton ? (
             <BookTableSkeletonRows
-              count={3}
-              incremental
+              count={5}
+              incremental={true}
               showMyBooksAction={showMyBooksAction}
               showPublisher={showPublisher}
+              hideSeries={hideSeries}
+              hideType={hideType}
             />
           ) : null}
         </tbody>
