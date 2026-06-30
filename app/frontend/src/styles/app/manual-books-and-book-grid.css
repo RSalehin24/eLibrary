@@ -196,7 +196,8 @@
   font-weight: 600;
 }
 
-.tag-suggestion:hover {
+.tag-suggestion:hover,
+.tag-suggestion.is-highlighted {
   background: rgba(15, 75, 56, 0.08);
   color: var(--accent-strong);
 }

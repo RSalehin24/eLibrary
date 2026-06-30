@@ -60,6 +60,7 @@ function preparePdfCellMap(row) {
     contributors: row.contributors || "Contributor unavailable",
     categories: row.categories || "Unsorted",
     series: row.series || "Standalone",
+    price: row.price || "",
     type: row.type || "",
     createdAt: row.createdAt || "",
   };

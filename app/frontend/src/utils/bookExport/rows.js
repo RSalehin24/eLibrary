@@ -16,6 +16,7 @@ export function bookExportRows(books) {
     categories: (book.categories || []).join(", "),
     series: (book.series || []).join(", "),
     type: bookTypeLabel(book),
+    price: book.price != null && book.price !== "" ? String(book.price) : "",
     state: book.state || "",
     review: book.review_state || "",
     createdAt: formatBookDate(book.created_at),
