@@ -287,12 +287,11 @@ export default function BookTable({
                     >
                       {book.title}
                     </BookRouteLink>
-                    <span className="table-secondary-line">
-                      {book.primary_source?.display_path ||
-                        (book.record_type === "manual"
-                          ? "Manual entry"
-                          : "Library record")}
-                    </span>
+                    {book.record_type !== "manual" ? (
+                      <span className="table-secondary-line">
+                        {book.primary_source?.display_path || "Library record"}
+                      </span>
+                    ) : null}
                   </td>
                   <td data-label="Contributors">
                     {renderWriterCell(book, linkFilters, limitContributorRole)}
