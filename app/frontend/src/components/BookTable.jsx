@@ -314,14 +314,14 @@ export default function BookTable({
                     </td>
                   ) : null}
                   <td className="table-action-cell" data-label="Action">
-                    <div className="table-actions-group">
-                      <BookRouteLink
-                        slug={book.slug}
-                        className="ghost-button table-row-action"
-                      >
-                        Open
-                      </BookRouteLink>
-                      {onEditBook ? (
+                    {onEditBook ? (
+                      <div className="table-actions-group">
+                        <BookRouteLink
+                          slug={book.slug}
+                          className="ghost-button table-row-action"
+                        >
+                          Open
+                        </BookRouteLink>
                         <button
                           type="button"
                           className="ghost-button table-row-action"
@@ -329,8 +329,15 @@ export default function BookTable({
                         >
                           Edit
                         </button>
-                      ) : null}
-                    </div>
+                      </div>
+                    ) : (
+                      <BookRouteLink
+                        slug={book.slug}
+                        className="ghost-button table-row-action"
+                      >
+                        Open
+                      </BookRouteLink>
+                    )}
                   </td>
                 </tr>
               );

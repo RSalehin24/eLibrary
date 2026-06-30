@@ -57,6 +57,16 @@ function getContributorNamesByRole(book, role) {
 // ---------------------------------------------------------------------------
 
 function mapBookToComposerForm(book) {
+  let bindingValue = "";
+  const rawBinding = book.binding || book.manual_binding || "";
+  if (rawBinding === "Hard Cover" || rawBinding === "hard_cover") {
+    bindingValue = "hard_cover";
+  } else if (rawBinding === "Paper Back" || rawBinding === "paper_back") {
+    bindingValue = "paper_back";
+  }
+
+  const priceVal = book.price !== undefined && book.price !== null ? book.price : book.manual_price;
+
   return {
     title: book.title || "",
     summary: book.summary || "",
@@ -65,10 +75,10 @@ function mapBookToComposerForm(book) {
     editors: getContributorNamesByRole(book, "editor") || [],
     categories: book.categories || [],
     series: book.series || [],
-    is_compilation: book.manual_is_compilation || false,
-    binding: book.manual_binding || "",
-    publisher: book.manual_publisher || "",
-    price: book.manual_price ? String(book.manual_price) : "",
+    is_compilation: book.is_compilation || book.manual_is_compilation || false,
+    binding: bindingValue,
+    publisher: book.publisher || book.manual_publisher || "",
+    price: priceVal ? String(priceVal) : "",
   };
 }
 
@@ -267,13 +277,37 @@ test("mapComposerFormToPayload normalizes spaces inside contributor names when c
 
   const payload = mapComposerFormToPayload(form);
 
-  // Normalization logic during creation:
-  // The frontend form values are already trimmed/cleaned by TagInput,
-  // but if names have leading/trailing spaces we verify the mapping.
   assert.deepEqual(payload.contributors, [
     { name: "  Alice   Name  ", role: "author" },
     { name: "  Bob   Translator  ", role: "translator" },
     { name: "  Prothoma   Publishers  ", role: "publisher" },
   ]);
 });
+
+test("mapBookToComposerForm correctly maps standard serialized API fields", () => {
+  const serializedBook = {
+    title: "Serialized Book Title",
+    summary: "Serialized Summary",
+    contributors: [
+      { name: "Some Author", role: "author" }
+    ],
+    categories: ["Fiction"],
+    series: [],
+    is_compilation: true,
+    binding: "Hard Cover",
+    publisher: "Prothoma Publishers",
+    price: "450.00",
+  };
+
+  const form = mapBookToComposerForm(serializedBook);
+
+  assert.equal(form.title, "Serialized Book Title");
+  assert.equal(form.summary, "Serialized Summary");
+  assert.deepEqual(form.writers, ["Some Author"]);
+  assert.equal(form.is_compilation, true);
+  assert.equal(form.binding, "hard_cover");
+  assert.equal(form.publisher, "Prothoma Publishers");
+  assert.equal(form.price, "450.00");
+});
+
 

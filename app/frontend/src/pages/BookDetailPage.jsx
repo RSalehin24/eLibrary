@@ -11,6 +11,7 @@ import BookDetailHero from "../features/book-detail/components/BookDetailHero";
 import BookMetadataWorkspace from "../features/book-detail/components/BookMetadataWorkspace";
 import BookReaderSections from "../features/book-detail/components/BookReaderSections";
 import BookTocSummary from "../features/book-detail/components/BookTocSummary";
+import PhysicalBookWorkspace from "../features/book-detail/components/PhysicalBookWorkspace";
 import { useBookDetailActions } from "../features/book-detail/hooks/useBookDetailActions";
 import { useBookDetailData } from "../features/book-detail/hooks/useBookDetailData";
 import { usePageTitle } from "../hooks/usePageTitle";
@@ -92,6 +93,17 @@ export default function BookDetailPage() {
   function handleStartEdit() {
     if (!detailState.book) return;
     loadOptionsForEdit();
+
+    let bindingValue = "";
+    const rawBinding = detailState.book.binding || detailState.book.manual_binding || "";
+    if (rawBinding === "Hard Cover" || rawBinding === "hard_cover") {
+      bindingValue = "hard_cover";
+    } else if (rawBinding === "Paper Back" || rawBinding === "paper_back") {
+      bindingValue = "paper_back";
+    }
+
+    const priceVal = detailState.book.price !== undefined && detailState.book.price !== null ? detailState.book.price : detailState.book.manual_price;
+
     setComposerForm({
       title: detailState.book.title || "",
       summary: detailState.book.summary || "",
@@ -100,10 +112,10 @@ export default function BookDetailPage() {
       editors: getContributorNamesByRole(detailState.book, "editor"),
       categories: detailState.book.categories || [],
       series: detailState.book.series || [],
-      is_compilation: detailState.book.manual_is_compilation || false,
-      binding: detailState.book.manual_binding || "",
-      publisher: detailState.book.manual_publisher || "",
-      price: detailState.book.manual_price ? String(detailState.book.manual_price) : "",
+      is_compilation: detailState.book.is_compilation || detailState.book.manual_is_compilation || false,
+      binding: bindingValue,
+      publisher: detailState.book.publisher || detailState.book.manual_publisher || "",
+      price: priceVal ? String(priceVal) : "",
     });
     setComposerOpen(true);
   }
@@ -223,148 +235,154 @@ export default function BookDetailPage() {
         supportingContributorGroups={detail.supportingContributorGroups}
       />
 
-      {/* ── Reading notes: shown right after the hero for logged-in users ── */}
-      <BookReaderSections
-        bookmarks={bookmarks}
-        bookSlug={book?.slug || slug}
-        deletingBookmarkId={actions.deletingBookmarkId}
-        onDeleteBookmark={actions.deleteBookmark}
-        progressPercent={detail.progressPercent}
-        readerAccess={readerAccess}
-        readerState={readerState}
-      />
-
-      {canViewSourceRecords && detail.sourceRecords.length ? (
-        <section className="detail-card">
-          <div className="panel-header">
-            <div className="section-title-block">
-              <p className="eyebrow">Source</p>
-              <h2>Source Records</h2>
-            </div>
-          </div>
-          <div className="source-record-list">
-            {detail.sourceRecords.map((source, index) => (
-              <article
-                key={`${source.url}-${index}`}
-                className="source-record-card"
-              >
-                <div className="source-record-copy">
-                  <span className="fact-label">
-                    {source.is_primary ? "Primary" : "Linked"}
-                  </span>
-                  <strong>{getSourceLabel(source) || "Source page"}</strong>
-                  <a
-                    className="source-link"
-                    href={source.url}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    {source.display_url || source.url}
-                  </a>
-                </div>
-                <a
-                  className="ghost-button"
-                  href={source.url}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  Open
-                </a>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      {detail.hasFrontMatter ? (
-        <section className="detail-card">
-          <div className="section-title-block">
-            <p className="eyebrow">Extracted</p>
-            <h2>Entities and Details</h2>
-          </div>
-          {detail.extractedEntries.length ? (
-            <div className="metadata-list">
-              {detail.extractedEntries.map((entry, index) => (
-                <div
-                  key={`${entry.key}-${entry.value}-${index}`}
-                  className="metadata-row"
-                >
-                  <span className="fact-label">{entry.label}</span>
-                  <strong className="metadata-value">{entry.value}</strong>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div
-              className="rich-content-block"
-              dangerouslySetInnerHTML={{
-                __html: DOMPurify.sanitize(book.book_info_html),
-              }}
-            />
-          )}
-        </section>
-      ) : null}
-
-      {detail.hasDedication ? (
-        <section className="detail-card">
-          <div className="section-title-block">
-            <p className="eyebrow">Extracted</p>
-            <h2>Dedication</h2>
-          </div>
-          <div
-            className="rich-content-block"
-            dangerouslySetInnerHTML={{
-              __html: DOMPurify.sanitize(book.dedication_html),
-            }}
+      {book.record_type === "manual" ? (
+        <PhysicalBookWorkspace book={book} />
+      ) : (
+        <>
+          {/* ── Reading notes: shown right after the hero for logged-in users ── */}
+          <BookReaderSections
+            bookmarks={bookmarks}
+            bookSlug={book?.slug || slug}
+            deletingBookmarkId={actions.deletingBookmarkId}
+            onDeleteBookmark={actions.deleteBookmark}
+            progressPercent={detail.progressPercent}
+            readerAccess={readerAccess}
+            readerState={readerState}
           />
-        </section>
-      ) : null}
 
-      {detail.hasToc ? (
-        <section className="detail-card">
-          <div className="section-title-block">
-            <p className="eyebrow">Structure</p>
-            <h2>Table of Contents</h2>
-          </div>
-          <BookTocSummary toc={book.toc || []} />
-        </section>
-      ) : null}
-
-      {book.empty_chapters?.length > 0 ? (
-        <section className="detail-card">
-          <div className="section-title-block">
-            <p className="eyebrow">Attention required</p>
-            <h2>Chapters without content ({book.empty_chapters.length})</h2>
-          </div>
-          <p className="detail-description">
-            The following chapters are in the table of contents but have no
-            content in the generated book. Regenerate the book to retry fetching
-            them.
-          </p>
-          <div className="toc-record-list">
-            {book.empty_chapters.map((ch, i) => (
-              <article
-                key={i}
-                className="toc-record-card toc-record-card--empty"
-              >
-                <div className="toc-record-copy">
-                  <strong>{ch.title || `Chapter ${i + 1}`}</strong>
-                  <div className="inline-pills toc-record-pills">
-                    {ch.type ? (
-                      <span className="status-pill">{ch.type}</span>
-                    ) : null}
-                    <span className="status-pill status-needs_review">
-                      {ch.has_content === null
-                        ? "No content on source"
-                        : "Fetch failed"}
-                    </span>
-                  </div>
+          {canViewSourceRecords && detail.sourceRecords.length ? (
+            <section className="detail-card">
+              <div className="panel-header">
+                <div className="section-title-block">
+                  <p className="eyebrow">Source</p>
+                  <h2>Source Records</h2>
                 </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+              </div>
+              <div className="source-record-list">
+                {detail.sourceRecords.map((source, index) => (
+                  <article
+                    key={`${source.url}-${index}`}
+                    className="source-record-card"
+                  >
+                    <div className="source-record-copy">
+                      <span className="fact-label">
+                        {source.is_primary ? "Primary" : "Linked"}
+                      </span>
+                      <strong>{getSourceLabel(source) || "Source page"}</strong>
+                      <a
+                        className="source-link"
+                        href={source.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {source.display_url || source.url}
+                      </a>
+                    </div>
+                    <a
+                      className="ghost-button"
+                      href={source.url}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      Open
+                    </a>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+
+          {detail.hasFrontMatter ? (
+            <section className="detail-card">
+              <div className="section-title-block">
+                <p className="eyebrow">Extracted</p>
+                <h2>Entities and Details</h2>
+              </div>
+              {detail.extractedEntries.length ? (
+                <div className="metadata-list">
+                  {detail.extractedEntries.map((entry, index) => (
+                    <div
+                      key={`${entry.key}-${entry.value}-${index}`}
+                      className="metadata-row"
+                    >
+                      <span className="fact-label">{entry.label}</span>
+                      <strong className="metadata-value">{entry.value}</strong>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className="rich-content-block"
+                  dangerouslySetInnerHTML={{
+                    __html: DOMPurify.sanitize(book.book_info_html),
+                  }}
+                />
+              )}
+            </section>
+          ) : null}
+
+          {detail.hasDedication ? (
+            <section className="detail-card">
+              <div className="section-title-block">
+                <p className="eyebrow">Extracted</p>
+                <h2>Dedication</h2>
+              </div>
+              <div
+                className="rich-content-block"
+                dangerouslySetInnerHTML={{
+                  __html: DOMPurify.sanitize(book.dedication_html),
+                }}
+              />
+            </section>
+          ) : null}
+
+          {detail.hasToc ? (
+            <section className="detail-card">
+              <div className="section-title-block">
+                <p className="eyebrow">Structure</p>
+                <h2>Table of Contents</h2>
+              </div>
+              <BookTocSummary toc={book.toc || []} />
+            </section>
+          ) : null}
+
+          {book.empty_chapters?.length > 0 ? (
+            <section className="detail-card">
+              <div className="section-title-block">
+                <p className="eyebrow">Attention required</p>
+                <h2>Chapters without content ({book.empty_chapters.length})</h2>
+              </div>
+              <p className="detail-description">
+                The following chapters are in the table of contents but have no
+                content in the generated book. Regenerate the book to retry fetching
+                them.
+              </p>
+              <div className="toc-record-list">
+                {book.empty_chapters.map((ch, i) => (
+                  <article
+                    key={i}
+                    className="toc-record-card toc-record-card--empty"
+                  >
+                    <div className="toc-record-copy">
+                      <strong>{ch.title || `Chapter ${i + 1}`}</strong>
+                      <div className="inline-pills toc-record-pills">
+                        {ch.type ? (
+                          <span className="status-pill">{ch.type}</span>
+                        ) : null}
+                        <span className="status-pill status-needs_review">
+                          {ch.has_content === null
+                            ? "No content on source"
+                            : "Fetch failed"}
+                        </span>
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </>
+      )}
 
       {canEditMetadata ? (
         <BookMetadataWorkspace

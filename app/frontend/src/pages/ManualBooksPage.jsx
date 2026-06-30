@@ -274,6 +274,17 @@ export default function ManualBooksPage() {
 
   function handleEditBook(book) {
     setEditingBook(book);
+
+    let bindingValue = "";
+    const rawBinding = book.binding || book.manual_binding || "";
+    if (rawBinding === "Hard Cover" || rawBinding === "hard_cover") {
+      bindingValue = "hard_cover";
+    } else if (rawBinding === "Paper Back" || rawBinding === "paper_back") {
+      bindingValue = "paper_back";
+    }
+
+    const priceVal = book.price !== undefined && book.price !== null ? book.price : book.manual_price;
+
     setForm({
       title: book.title || "",
       summary: book.summary || "",
@@ -282,10 +293,10 @@ export default function ManualBooksPage() {
       editors: getContributorNamesByRole(book, "editor"),
       categories: book.categories || [],
       series: book.series || [],
-      is_compilation: book.manual_is_compilation || false,
-      binding: book.manual_binding || "",
-      publisher: book.manual_publisher || "",
-      price: book.manual_price ? String(book.manual_price) : "",
+      is_compilation: book.is_compilation || book.manual_is_compilation || false,
+      binding: bindingValue,
+      publisher: book.publisher || book.manual_publisher || "",
+      price: priceVal ? String(priceVal) : "",
     });
     setComposerOpen(true);
   }
