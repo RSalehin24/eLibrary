@@ -36,6 +36,7 @@ class BookListSerializer(serializers.ModelSerializer):
     publisher = serializers.CharField(source="manual_publisher", read_only=True)
     price = serializers.DecimalField(source="manual_price", read_only=True, max_digits=10, decimal_places=2, allow_null=True)
     is_compilation = serializers.BooleanField(source="manual_is_compilation", read_only=True)
+    language = serializers.CharField(source="manual_language", read_only=True)
     has_epub_asset = serializers.SerializerMethodField()
     has_sent_to_kindle = serializers.SerializerMethodField()
     user_kindle_sent_at = serializers.SerializerMethodField()
@@ -61,6 +62,7 @@ class BookListSerializer(serializers.ModelSerializer):
             "publisher",
             "price",
             "is_compilation",
+            "language",
             "cover_download_url",
             "latest_submission_at",
             "is_in_my_books",

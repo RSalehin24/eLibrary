@@ -11,7 +11,8 @@ export const emptyManualBookForm = {
   is_compilation: false,
   binding: "hard_cover",
   publisher: "",
-  price: ""
+  price: "",
+  language: "bn",
 };
 
 export const defaultManualBookFilters = {

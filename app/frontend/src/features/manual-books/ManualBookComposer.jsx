@@ -29,6 +29,7 @@ export function ManualBookComposer({
   const compilationRef = useRef(null);
   const bindingRef = useRef(null);
   const priceRef = useRef(null);
+  const languageRef = useRef(null);
   const summaryRef = useRef(null);
 
   /**
@@ -48,6 +49,7 @@ export function ManualBookComposer({
     { type: "dom",        ref: bindingRef },
     { type: "imperative", ref: publisherRef },
     { type: "dom",        ref: priceRef },
+    { type: "dom",        ref: languageRef },
     { type: "dom",        ref: summaryRef },
   ];
 
@@ -187,7 +189,7 @@ export function ManualBookComposer({
           />
         </div>
 
-        <div className="manual-book-form-grid">
+         <div className="manual-book-form-grid">
           <label>
             <span className="fact-label">Price</span>
             <input
@@ -200,7 +202,18 @@ export function ManualBookComposer({
               placeholder="Optional"
             />
           </label>
-          <label className="manual-book-form-span-3">
+          <label>
+            <span className="fact-label">Language</span>
+            <select
+              ref={languageRef}
+              value={form.language || "bn"}
+              onChange={(event) => setForm({ ...form, language: event.target.value })}
+            >
+              <option value="bn">বাংলা</option>
+              <option value="en">English</option>
+            </select>
+          </label>
+          <label className="manual-book-form-span-2">
             <span className="fact-label">Summary</span>
             <textarea
               ref={summaryRef}

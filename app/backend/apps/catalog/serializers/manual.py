@@ -22,6 +22,7 @@ class ManualBookCreateSerializer(serializers.Serializer):
     binding = serializers.ChoiceField(choices=ManualBindingType.choices, required=False, allow_blank=True)
     publisher = serializers.CharField(required=False, allow_blank=True)
     price = serializers.DecimalField(required=False, allow_null=True, max_digits=10, decimal_places=2)
+    language = serializers.ChoiceField(choices=[("bn", "বাংলা"), ("en", "English")], default="bn", required=False, allow_blank=True)
 
     def validate_title(self, value):
         title = value.strip()
@@ -64,6 +65,7 @@ class ManualBookCreateSerializer(serializers.Serializer):
             manual_binding=validated_data.get("binding", ""),
             manual_publisher=validated_data.get("publisher", ""),
             manual_price=validated_data.get("price"),
+            manual_language=validated_data.get("language", "bn"),
             source_site=f"manual-library:{uuid4().hex}",
             raw_scraped_metadata={"manual_entry": True},
             raw_scrape_payload={"manual_entry": True},
@@ -91,6 +93,7 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
     binding = serializers.ChoiceField(source="manual_binding", choices=ManualBindingType.choices, required=False, allow_blank=True)
     is_compilation = serializers.BooleanField(source="manual_is_compilation", required=False)
     publisher = serializers.CharField(source="manual_publisher", required=False, allow_blank=True)
+    language = serializers.ChoiceField(source="manual_language", choices=[("bn", "বাংলা"), ("en", "English")], required=False, default="bn", allow_blank=True)
 
     class Meta:
         model = Book
@@ -111,6 +114,7 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
             "binding",
             "is_compilation",
             "publisher",
+            "language",
         ]
 
     def snapshot(self, instance):
@@ -133,6 +137,7 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
             "binding": instance.manual_binding,
             "is_compilation": instance.manual_is_compilation,
             "publisher": instance.manual_publisher,
+            "language": instance.manual_language,
         }
 
     def update(self, instance, validated_data):

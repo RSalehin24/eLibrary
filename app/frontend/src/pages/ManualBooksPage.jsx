@@ -239,6 +239,7 @@ export default function ManualBooksPage() {
           binding: currentForm.binding,
           publisher: currentForm.publisher,
           price: currentForm.price === "" ? null : currentForm.price,
+          language: currentForm.language,
         };
 
         await catalogFetch(`/catalog/books/${editingBook.slug}/metadata/`, {
@@ -297,6 +298,7 @@ export default function ManualBooksPage() {
       binding: bindingValue,
       publisher: book.publisher || book.manual_publisher || "",
       price: priceVal ? String(priceVal) : "",
+      language: book.language || "bn",
     });
     setComposerOpen(true);
   }

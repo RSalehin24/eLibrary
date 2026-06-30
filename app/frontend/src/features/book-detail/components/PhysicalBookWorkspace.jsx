@@ -152,6 +152,10 @@ export default function PhysicalBookWorkspace({ book }) {
             <span className="spec-label">Compilation</span>
             <span className="spec-value">{book.is_compilation ? "Yes" : "No"}</span>
           </div>
+          <div className="spec-item">
+            <span className="spec-label">Language</span>
+            <span className="spec-value">{book.language === "en" ? "English" : "বাংলা"}</span>
+          </div>
         </div>
       </section>
 

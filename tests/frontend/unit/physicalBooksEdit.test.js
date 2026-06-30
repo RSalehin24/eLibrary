@@ -79,6 +79,7 @@ function mapBookToComposerForm(book) {
     binding: bindingValue,
     publisher: book.publisher || book.manual_publisher || "",
     price: priceVal ? String(priceVal) : "",
+    language: book.language || book.manual_language || "bn",
   };
 }
 
@@ -100,6 +101,7 @@ function mapComposerFormToPayload(form) {
     binding: form.binding,
     publisher: form.publisher,
     price: form.price === "" ? null : form.price,
+    language: form.language || "bn",
   };
 }
 
@@ -124,6 +126,7 @@ function makeBackendBook(overrides = {}) {
     manual_binding: "hard_cover",
     manual_publisher: "Ananda Publishers",
     manual_price: "350.00",
+    manual_language: "bn",
     ...overrides,
   };
 }
@@ -147,6 +150,7 @@ test("mapBookToComposerForm correctly maps standard book properties", () => {
   assert.equal(form.binding, "hard_cover");
   assert.equal(form.publisher, "Ananda Publishers");
   assert.equal(form.price, "350.00");
+  assert.equal(form.language, "bn");
 });
 
 test("mapBookToComposerForm handles missing/falsy optional values", () => {
@@ -165,6 +169,7 @@ test("mapBookToComposerForm handles missing/falsy optional values", () => {
   assert.equal(form.binding, "");
   assert.equal(form.publisher, "");
   assert.equal(form.price, "");
+  assert.equal(form.language, "bn");
 });
 
 test("mapComposerFormToPayload constructs unified contributors array with roles", () => {
@@ -199,6 +204,7 @@ test("mapComposerFormToPayload constructs unified contributors array with roles"
   assert.equal(payload.binding, "paper_back");
   assert.equal(payload.publisher, "Seba Prokashoni");
   assert.equal(payload.price, "120.00");
+  assert.equal(payload.language, "bn");
 });
 
 test("mapComposerFormToPayload handles empty publisher and price formatting", () => {

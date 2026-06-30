@@ -116,6 +116,7 @@ export default function BookDetailPage() {
       binding: bindingValue,
       publisher: detailState.book.publisher || detailState.book.manual_publisher || "",
       price: priceVal ? String(priceVal) : "",
+      language: detailState.book.language || "bn",
     });
     setComposerOpen(true);
   }
@@ -141,6 +142,7 @@ export default function BookDetailPage() {
         binding: composerForm.binding,
         publisher: composerForm.publisher,
         price: composerForm.price === "" ? null : composerForm.price,
+        language: composerForm.language,
       };
 
       const updatedBook = await bookDetailFetch(`/catalog/books/${detailState.book.slug}/metadata/`, {

@@ -52,6 +52,7 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
     manual_binding = models.CharField(max_length=32, choices=ManualBindingType.choices, blank=True)
     manual_publisher = models.CharField(max_length=255, blank=True)
     manual_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
+    manual_language = models.CharField(max_length=16, default="bn", blank=True)
     edition = models.CharField(max_length=120, blank=True)
     normalized_edition = models.CharField(
         max_length=120, db_index=True, editable=False, blank=True, default=""
