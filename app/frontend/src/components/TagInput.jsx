@@ -121,7 +121,35 @@ const TagInput = forwardRef(function TagInput(
 
   return (
     <label className="tag-field" htmlFor={inputId}>
-      <span className="fact-label">{label}</span>
+      <span className="tag-field-header">
+        <span className="fact-label">{label}</span>
+        <span className="tag-field-nav">
+          {onArrowLeft && (
+            <button
+              type="button"
+              className="tag-field-nav-btn"
+              aria-label={`Go to previous field`}
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onArrowLeft}
+            >
+              &#8592;
+            </button>
+          )}
+          {onArrowRight && (
+            <button
+              type="button"
+              className="tag-field-nav-btn"
+              aria-label={`Go to next field`}
+              tabIndex={-1}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={onArrowRight}
+            >
+              &#8594;
+            </button>
+          )}
+        </span>
+      </span>
       <div className={`tag-input-shell${focused ? " is-focused" : ""}`}>
         <div className="tag-chip-list">
           {(values || []).map((value) => (
