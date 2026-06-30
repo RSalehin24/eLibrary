@@ -113,10 +113,12 @@ export default function BookDetailHero({
           <p className="detail-lead">Contributor unavailable</p>
         )}
 
-        <div className="detail-statuses">
-          <StatusPill value={book.state} />
-          <StatusPill value={book.review_state} />
-        </div>
+        {book.record_type !== "manual" ? (
+          <div className="detail-statuses">
+            <StatusPill value={book.state} />
+            <StatusPill value={book.review_state} />
+          </div>
+        ) : null}
 
         {supportingContributorGroups.length ||
         book.series?.length ||

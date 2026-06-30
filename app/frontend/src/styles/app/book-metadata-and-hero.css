@@ -237,7 +237,14 @@
   pointer-events: none;
 }
 
-.book-meta-stack,
+.book-meta-stack {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 24px;
+  margin-top: 16px;
+}
+
 .metadata-list,
 .reader-stats-grid {
   display: grid;
