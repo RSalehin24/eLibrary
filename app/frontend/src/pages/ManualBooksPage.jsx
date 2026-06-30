@@ -276,10 +276,10 @@ export default function ManualBooksPage() {
     setEditingBook(book);
 
     let bindingValue = "";
-    const rawBinding = book.binding || book.manual_binding || "";
-    if (rawBinding === "Hard Cover" || rawBinding === "hard_cover") {
+    const rawBinding = (book.binding || book.manual_binding || "").toLowerCase().trim().replace(/[\s_-]+/g, "");
+    if (rawBinding === "hardcover") {
       bindingValue = "hard_cover";
-    } else if (rawBinding === "Paper Back" || rawBinding === "paper_back") {
+    } else if (rawBinding === "paperback") {
       bindingValue = "paper_back";
     }
 
@@ -488,6 +488,7 @@ export default function ManualBooksPage() {
           hideSeries={true}
           hideType={true}
           showTime={true}
+          limitContributorRole={true}
         />
       )}
     </div>

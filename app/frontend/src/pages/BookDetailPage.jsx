@@ -95,10 +95,10 @@ export default function BookDetailPage() {
     loadOptionsForEdit();
 
     let bindingValue = "";
-    const rawBinding = detailState.book.binding || detailState.book.manual_binding || "";
-    if (rawBinding === "Hard Cover" || rawBinding === "hard_cover") {
+    const rawBinding = (detailState.book.binding || detailState.book.manual_binding || "").toLowerCase().trim().replace(/[\s_-]+/g, "");
+    if (rawBinding === "hardcover") {
       bindingValue = "hard_cover";
-    } else if (rawBinding === "Paper Back" || rawBinding === "paper_back") {
+    } else if (rawBinding === "paperback") {
       bindingValue = "paper_back";
     }
 
@@ -384,7 +384,7 @@ export default function BookDetailPage() {
         </>
       )}
 
-      {canEditMetadata ? (
+      {canEditMetadata && book.record_type !== "manual" ? (
         <BookMetadataWorkspace
           editor={editor}
           metadataReviews={metadataReviews}
@@ -401,7 +401,7 @@ export default function BookDetailPage() {
         />
       ) : null}
 
-      {book.raw_provenance && Object.keys(book.raw_provenance).length ? (
+      {book.record_type !== "manual" && book.raw_provenance && Object.keys(book.raw_provenance).length ? (
         <section className="detail-card raw-provenance-card">
           <div className="section-title-block">
             <p className="eyebrow">Staff</p>

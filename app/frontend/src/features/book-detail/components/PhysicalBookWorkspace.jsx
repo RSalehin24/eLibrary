@@ -166,21 +166,21 @@ export default function PhysicalBookWorkspace({ book }) {
             <div className="reading-status-group">
               <button
                 type="button"
-                className={`reading-status-btn ${status === "unread" ? "is-active" : ""}`}
+                className={`reading-status-btn status-unread ${status === "unread" ? "is-active" : ""}`}
                 onClick={() => handleStatusChange("unread")}
               >
-                ❌ Unread
+                Unread
               </button>
               <button
                 type="button"
-                className={`reading-status-btn ${status === "reading" ? "is-active" : ""}`}
+                className={`reading-status-btn status-reading ${status === "reading" ? "is-active" : ""}`}
                 onClick={() => handleStatusChange("reading")}
               >
                 📖 Reading
               </button>
               <button
                 type="button"
-                className={`reading-status-btn ${status === "finished" ? "is-active" : ""}`}
+                className={`reading-status-btn status-finished ${status === "finished" ? "is-active" : ""}`}
                 onClick={() => handleStatusChange("finished")}
               >
                 Finished

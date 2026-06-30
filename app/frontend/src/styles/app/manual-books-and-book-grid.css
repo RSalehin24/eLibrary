@@ -290,10 +290,27 @@
   background: var(--bg-hover);
 }
 
-.reading-status-btn.is-active {
-  background: var(--accent-strong);
-  color: #fff;
-  border-color: var(--accent-strong);
+.reading-status-btn.status-unread.is-active {
+  background: rgba(100, 116, 139, 0.12) !important;
+  color: var(--ink) !important;
+  border-color: var(--muted) !important;
+}
+
+.reading-status-btn.status-reading.is-active {
+  background: rgba(234, 179, 8, 0.14) !important;
+  color: #b45309 !important;
+  border-color: #f59e0b !important;
+}
+
+.reading-status-btn.status-finished.is-active {
+  background: rgba(16, 185, 129, 0.14) !important;
+  color: var(--accent-strong) !important;
+  border-color: var(--accent-strong) !important;
+}
+
+[data-theme="dark"] .reading-status-btn.status-reading.is-active {
+  color: #fbbf24 !important;
+  border-color: #fbbf24 !important;
 }
 
 .reading-log-grid {
@@ -408,5 +425,14 @@
   display: flex;
   gap: 12px;
   margin-top: 10px;
+}
+
+/* Compact layout for book hero when there is no cover */
+.book-hero.book-hero--no-cover {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.book-hero.book-hero--no-cover .book-hero-copy {
+  padding-right: 0 !important;
 }
 

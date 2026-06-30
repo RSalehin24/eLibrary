@@ -28,30 +28,35 @@ export default function BookDetailHero({
   supportingContributorGroups,
 }) {
   return (
-    <section className="detail-card book-hero" data-testid="book-detail-hero">
+    <section
+      className={`detail-card book-hero ${book.record_type === "manual" ? "book-hero--no-cover" : ""}`}
+      data-testid="book-detail-hero"
+    >
       {canEditMetadata ? (
         <div className="book-hero-controls">
-          <button
-            type="button"
-            data-testid="book-regenerate-button"
-            className="book-refresh-control"
-            onClick={actions.regenerateBook}
-            aria-label={
-              detail.hasActiveProcessing
-                ? "Book regeneration in progress"
-                : "Regenerate book"
-            }
-            title={
-              detail.hasActiveProcessing
-                ? "Book regeneration in progress"
-                : "Regenerate book"
-            }
-            disabled={regenerating || detail.hasActiveProcessing}
-          >
-            <RefreshIcon
-              spinning={regenerating || detail.hasActiveProcessing}
-            />
-          </button>
+          {book.record_type !== "manual" ? (
+            <button
+              type="button"
+              data-testid="book-regenerate-button"
+              className="book-refresh-control"
+              onClick={actions.regenerateBook}
+              aria-label={
+                detail.hasActiveProcessing
+                  ? "Book regeneration in progress"
+                  : "Regenerate book"
+              }
+              title={
+                detail.hasActiveProcessing
+                  ? "Book regeneration in progress"
+                  : "Regenerate book"
+              }
+              disabled={regenerating || detail.hasActiveProcessing}
+            >
+              <RefreshIcon
+                spinning={regenerating || detail.hasActiveProcessing}
+              />
+            </button>
+          ) : null}
           <button
             type="button"
             data-testid="book-delete-button"
@@ -66,13 +71,15 @@ export default function BookDetailHero({
         </div>
       ) : null}
 
-      <div className="book-hero-cover">
-        <BookCoverArt
-          book={book}
-          className="book-cover-large book-hero-placeholder"
-          ariaHidden
-        />
-      </div>
+      {book.record_type !== "manual" ? (
+        <div className="book-hero-cover">
+          <BookCoverArt
+            book={book}
+            className="book-cover-large book-hero-placeholder"
+            ariaHidden
+          />
+        </div>
+      ) : null}
 
       <div className="book-hero-copy">
         <strong className="book-hero-id">{bookIdValue}</strong>
@@ -157,103 +164,133 @@ export default function BookDetailHero({
         ) : null}
 
         <div className="book-hero-actions">
-          <AsyncButton
-            type="button"
-            data-testid="book-open-reader-button"
-            className="primary-button"
-            onClick={actions.launchReader}
-            loading={launchingReader}
-            loadingLabel="Opening..."
-            disabled={book && book.can_launch_reader === false}
-          >
-            Open reader
-          </AsyncButton>
-          <AsyncButton
-            data-testid="book-my-books-button"
-            className={
-              book.is_in_my_books
-                ? "ghost-button book-my-books-button is-in-my-books"
-                : "primary-button book-my-books-button"
-            }
-            onClick={actions.toggleMyBooks}
-            loading={actions.togglingMyBooks}
-            loadingLabel={book.is_in_my_books ? "Removing..." : "Adding..."}
-          >
-            {book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
-          </AsyncButton>
-          {detail.epubAsset && hasKindleEmail ? (
-            <AsyncButton
-              type="button"
-              data-testid="book-send-to-kindle-button"
-              className={hasSentToKindle ? "resend-kindle-button" : "ghost-button"}
-              onClick={actions.sendToKindle}
-              disabled={sendingToKindle || detail.hasActiveProcessing}
-              loading={sendingToKindle}
-              loadingLabel="Sending..."
-            >
-              {hasSentToKindle ? "Resend to Kindle" : "Send to Kindle"}
-            </AsyncButton>
-          ) : null}
-          {book.record_type === "manual" && canEditMetadata ? (
-            <button
-              type="button"
-              data-testid="book-edit-hero-button"
-              className="ghost-button book-edit-button"
-              onClick={actions.onStartEdit}
-            >
-              Edit Book
-            </button>
-          ) : null}
-          {detail.downloadableAssets.map((asset) => {
-            const isDownloading = Boolean(assetLoadingCounts[asset.id]);
-            const isHtmlPreviewLocked =
-              asset.asset_type === "html" &&
-              (Boolean(htmlPreviewLockedByAssetId[asset.id]) || (book && book.can_view_preview_html === false));
-            return (
-              <AsyncButton
-                key={asset.id}
-                type="button"
-                data-testid={`book-asset-${asset.asset_type}`}
-                className="ghost-button asset-link"
-                onClick={() => actions.downloadAsset(asset)}
-                disabled={isDownloading || isHtmlPreviewLocked}
-                loading={isDownloading}
-                loadingLabel="Preparing..."
-              >
-                {isHtmlPreviewLocked
-                  ? "Preview Open"
-                  : assetLabels[asset.asset_type] ||
-                    `Download ${asset.asset_type.toUpperCase()}`}
-              </AsyncButton>
-            );
-          })}
-          {canEditMetadata ? (
+          {book.record_type === "manual" ? (
             <>
-              <input
-                ref={epubInputRef}
-                type="file"
-                accept=".epub,application/epub+zip"
-                hidden
-                onChange={actions.replaceEpub}
-              />
+              <AsyncButton
+                data-testid="book-my-books-button"
+                className={
+                  book.is_in_my_books
+                    ? "ghost-button book-my-books-button is-in-my-books"
+                    : "primary-button book-my-books-button"
+                }
+                onClick={actions.toggleMyBooks}
+                loading={actions.togglingMyBooks}
+                loadingLabel={book.is_in_my_books ? "Removing..." : "Adding..."}
+              >
+                {book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
+              </AsyncButton>
+              {canEditMetadata ? (
+                <button
+                  type="button"
+                  data-testid="book-edit-hero-button"
+                  className="ghost-button book-edit-button"
+                  onClick={actions.onStartEdit}
+                >
+                  Edit Book
+                </button>
+              ) : null}
+            </>
+          ) : (
+            <>
               <AsyncButton
                 type="button"
-                data-testid="book-replace-epub-button"
-                className="ghost-button"
-                onClick={actions.openEpubPicker}
-                disabled={
-                  pickingEpub ||
-                  replacingEpub ||
-                  regenerating ||
-                  detail.hasActiveProcessing
-                }
-                loading={pickingEpub || replacingEpub}
-                loadingLabel={pickingEpub ? "Selecting..." : "Uploading..."}
+                data-testid="book-open-reader-button"
+                className="primary-button"
+                onClick={actions.launchReader}
+                loading={launchingReader}
+                loadingLabel="Opening..."
+                disabled={book && book.can_launch_reader === false}
               >
-                {detail.epubAsset ? "Replace EPUB" : "Upload EPUB"}
+                Open reader
               </AsyncButton>
+              <AsyncButton
+                data-testid="book-my-books-button"
+                className={
+                  book.is_in_my_books
+                    ? "ghost-button book-my-books-button is-in-my-books"
+                    : "primary-button book-my-books-button"
+                }
+                onClick={actions.toggleMyBooks}
+                loading={actions.togglingMyBooks}
+                loadingLabel={book.is_in_my_books ? "Removing..." : "Adding..."}
+              >
+                {book.is_in_my_books ? "Remove from My Books" : "Add to My Books"}
+              </AsyncButton>
+              {detail.epubAsset && hasKindleEmail ? (
+                <AsyncButton
+                  type="button"
+                  data-testid="book-send-to-kindle-button"
+                  className={hasSentToKindle ? "resend-kindle-button" : "ghost-button"}
+                  onClick={actions.sendToKindle}
+                  disabled={sendingToKindle || detail.hasActiveProcessing}
+                  loading={sendingToKindle}
+                  loadingLabel="Sending..."
+                >
+                  {hasSentToKindle ? "Resend to Kindle" : "Send to Kindle"}
+                </AsyncButton>
+              ) : null}
+              {canEditMetadata ? (
+                <button
+                  type="button"
+                  data-testid="book-edit-hero-button"
+                  className="ghost-button book-edit-button"
+                  onClick={actions.onStartEdit}
+                >
+                  Edit Book
+                </button>
+              ) : null}
+              {detail.downloadableAssets.map((asset) => {
+                const isDownloading = Boolean(assetLoadingCounts[asset.id]);
+                const isHtmlPreviewLocked =
+                  asset.asset_type === "html" &&
+                  (Boolean(htmlPreviewLockedByAssetId[asset.id]) || (book && book.can_view_preview_html === false));
+                return (
+                  <AsyncButton
+                    key={asset.id}
+                    type="button"
+                    data-testid={`book-asset-${asset.asset_type}`}
+                    className="ghost-button asset-link"
+                    onClick={() => actions.downloadAsset(asset)}
+                    disabled={isDownloading || isHtmlPreviewLocked}
+                    loading={isDownloading}
+                    loadingLabel="Preparing..."
+                  >
+                    {isHtmlPreviewLocked
+                      ? "Preview Open"
+                      : assetLabels[asset.asset_type] ||
+                        `Download ${asset.asset_type.toUpperCase()}`}
+                  </AsyncButton>
+                );
+              })}
+              {canEditMetadata ? (
+                <>
+                  <input
+                    ref={epubInputRef}
+                    type="file"
+                    accept=".epub,application/epub+zip"
+                    hidden
+                    onChange={actions.replaceEpub}
+                  />
+                  <AsyncButton
+                    type="button"
+                    data-testid="book-replace-epub-button"
+                    className="ghost-button"
+                    onClick={actions.openEpubPicker}
+                    disabled={
+                      pickingEpub ||
+                      replacingEpub ||
+                      regenerating ||
+                      detail.hasActiveProcessing
+                    }
+                    loading={pickingEpub || replacingEpub}
+                    loadingLabel={pickingEpub ? "Selecting..." : "Uploading..."}
+                  >
+                    {detail.epubAsset ? "Replace EPUB" : "Upload EPUB"}
+                  </AsyncButton>
+                </>
+              ) : null}
             </>
-          ) : null}
+          )}
         </div>
 
         {detail.latestProcessingJob &&

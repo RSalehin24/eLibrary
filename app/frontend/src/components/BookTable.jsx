@@ -27,7 +27,37 @@ function renderLinkedValues(values, queryKey, linkFilters) {
   ));
 }
 
-function renderWriterCell(book, linkFilters) {
+function renderWriterCell(book, linkFilters, limitContributorRole = false) {
+  if (limitContributorRole) {
+    const writers = getContributorNamesByRole(book, "author");
+    const translators = getContributorNamesByRole(book, "translator");
+    const editors = getContributorNamesByRole(book, "editor");
+
+    let selectedGroup = null;
+    if (writers.length) {
+      selectedGroup = { label: "Writer", names: writers, queryKey: "author" };
+    } else if (translators.length) {
+      selectedGroup = { label: "Translator", names: translators, queryKey: "contributor" };
+    } else if (editors.length) {
+      selectedGroup = { label: "Editor", names: editors, queryKey: "contributor" };
+    }
+
+    if (!selectedGroup) {
+      return <span className="table-muted">—</span>;
+    }
+
+    return (
+      <div className="table-writer-stack">
+        <div className="table-writer-line">
+          <span className="table-role-label">{selectedGroup.label}</span>
+          <span>
+            {renderLinkedValues(selectedGroup.names, selectedGroup.queryKey, linkFilters)}
+          </span>
+        </div>
+      </div>
+    );
+  }
+
   const groups = getWriterColumnGroups(book);
   if (!groups.length) {
     return <span className="table-muted">Contributor unavailable</span>;
@@ -134,6 +164,7 @@ export default function BookTable({
   hideSeries = false,
   hideType = false,
   showTime = false,
+  limitContributorRole = false,
   myBooksBusyIds = {},
   sortValue = "",
 }) {
@@ -264,7 +295,7 @@ export default function BookTable({
                     </span>
                   </td>
                   <td data-label="Contributors">
-                    {renderWriterCell(book, linkFilters)}
+                    {renderWriterCell(book, linkFilters, limitContributorRole)}
                   </td>
                   <td data-label="Category">
                     {categories.length ? (

@@ -325,3 +325,16 @@
   color: var(--accent);
   vertical-align: baseline;
 }
+
+/* Override column widths specifically for Physical Books table to make it compact */
+.catalog-table-shell--incremental .book-table-col-title {
+  width: 190px !important;
+}
+
+.catalog-table-shell--incremental .book-table-col-writer {
+  width: 190px !important;
+}
+
+.catalog-table-shell--incremental .book-table-col-publisher {
+  width: 130px !important;
+}
