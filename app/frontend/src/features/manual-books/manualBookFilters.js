@@ -9,7 +9,7 @@ export const emptyManualBookForm = {
   categories: [],
   series: [],
   is_compilation: false,
-  binding: "",
+  binding: "hard_cover",
   publisher: "",
   price: ""
 };
