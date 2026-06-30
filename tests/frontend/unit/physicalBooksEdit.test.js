@@ -310,4 +310,88 @@ test("mapBookToComposerForm correctly maps standard serialized API fields", () =
   assert.equal(form.price, "450.00");
 });
 
+// Helper mock of production renderWriterCell logic
+function renderWriterCellMock(book, limitContributorRole = false) {
+  if (limitContributorRole) {
+    const writers = getContributorNamesByRole(book, "author");
+    const translators = getContributorNamesByRole(book, "translator");
+    const editors = getContributorNamesByRole(book, "editor");
+
+    let selectedGroup = null;
+    if (writers.length) {
+      selectedGroup = { label: "Writer", names: writers };
+    } else if (translators.length) {
+      selectedGroup = { label: "Translator", names: translators };
+    } else if (editors.length) {
+      selectedGroup = { label: "Editor", names: editors };
+    }
+
+    if (!selectedGroup) {
+      return "—";
+    }
+    return `${selectedGroup.label}: ${selectedGroup.names.join(", ")}`;
+  }
+
+  const writers = getContributorNamesByRole(book, "author");
+  const translators = getContributorNamesByRole(book, "translator");
+  const editors = getContributorNamesByRole(book, "editor");
+  const parts = [];
+  if (writers.length) parts.push(`Writer: ${writers.join(", ")}`);
+  if (translators.length) parts.push(`Translator: ${translators.join(", ")}`);
+  if (editors.length) parts.push(`Editor: ${editors.join(", ")}`);
+  return parts.join(", ") || "Contributor unavailable";
+}
+
+test("binding mapping handles variations case-insensitively with space or underscore", () => {
+  const b1 = makeBackendBook({ manual_binding: "HARD_COVER" });
+  assert.equal(mapBookToComposerForm(b1).binding, "hard_cover");
+
+  const b2 = makeBackendBook({ manual_binding: "paper_back" });
+  assert.equal(mapBookToComposerForm(b2).binding, "paper_back");
+
+  const b3 = makeBackendBook({ manual_binding: "  Hard   Cover " });
+  assert.equal(mapBookToComposerForm(b3).binding, "hard_cover");
+
+  const b4 = makeBackendBook({ manual_binding: "Paper Back" });
+  assert.equal(mapBookToComposerForm(b4).binding, "paper_back");
+
+  const b5 = makeBackendBook({ manual_binding: "paperback" });
+  assert.equal(mapBookToComposerForm(b5).binding, "paper_back");
+});
+
+test("renderWriterCell mock displays contributor fallback priority correctly when limitContributorRole is true", () => {
+  const book1 = {
+    contributors: [
+      { name: "Author J", role: "author" },
+      { name: "Translator T", role: "translator" },
+      { name: "Editor E", role: "editor" },
+    ]
+  };
+  assert.equal(renderWriterCellMock(book1, true), "Writer: Author J");
+
+  const book2 = {
+    contributors: [
+      { name: "Translator T", role: "translator" },
+      { name: "Editor E", role: "editor" },
+    ]
+  };
+  assert.equal(renderWriterCellMock(book2, true), "Translator: Translator T");
+
+  const book3 = {
+    contributors: [
+      { name: "Editor E", role: "editor" },
+    ]
+  };
+  assert.equal(renderWriterCellMock(book3, true), "Editor: Editor E");
+
+  const book4 = { contributors: [] };
+  assert.equal(renderWriterCellMock(book4, true), "—");
+
+  assert.equal(
+    renderWriterCellMock(book1, false),
+    "Writer: Author J, Translator: Translator T, Editor: Editor E"
+  );
+});
+
+
 
