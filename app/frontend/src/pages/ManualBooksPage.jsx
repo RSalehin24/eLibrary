@@ -405,9 +405,11 @@ export default function ManualBooksPage() {
       composerOpen={composerOpen}
       downloadState={downloadState}
       onExport={runDownload}
-      onToggleComposer={async () => {
+      onToggleComposer={() => {
         if (composerOpen) {
-          await handleDone();
+          setForm(emptyManualBookForm);
+          setEditingBook(null);
+          setComposerOpen(false);
         } else {
           setComposerOpen(true);
         }
@@ -459,7 +461,11 @@ export default function ManualBooksPage() {
           publisherOptions={publisherOptions}
           form={form}
           loadingOptions={loadingOptions}
-          onClose={handleDone}
+          onClose={() => {
+            setForm(emptyManualBookForm);
+            setEditingBook(null);
+            setComposerOpen(false);
+          }}
           onSubmit={handleCreate}
           setForm={setForm}
           submitting={submitting}
