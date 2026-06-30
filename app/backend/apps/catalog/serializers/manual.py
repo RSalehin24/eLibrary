@@ -87,6 +87,10 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
     series = serializers.ListField(child=serializers.CharField(), required=False)
     categories = serializers.ListField(child=serializers.CharField(), required=False)
     notes = serializers.CharField(required=False, allow_blank=True, write_only=True)
+    price = serializers.DecimalField(source="manual_price", required=False, allow_null=True, max_digits=10, decimal_places=2)
+    binding = serializers.ChoiceField(source="manual_binding", choices=ManualBindingType.choices, required=False, allow_blank=True)
+    is_compilation = serializers.BooleanField(source="manual_is_compilation", required=False)
+    publisher = serializers.CharField(source="manual_publisher", required=False, allow_blank=True)
 
     class Meta:
         model = Book
@@ -103,6 +107,10 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
             "series",
             "categories",
             "notes",
+            "price",
+            "binding",
+            "is_compilation",
+            "publisher",
         ]
 
     def snapshot(self, instance):
@@ -121,6 +129,10 @@ class BookMetadataUpdateSerializer(serializers.ModelSerializer):
             ],
             "series": [relation.series.name for relation in instance.book_series.all()],
             "categories": [relation.category.name for relation in instance.book_categories.all()],
+            "price": str(instance.manual_price) if instance.manual_price else None,
+            "binding": instance.manual_binding,
+            "is_compilation": instance.manual_is_compilation,
+            "publisher": instance.manual_publisher,
         }
 
     def update(self, instance, validated_data):

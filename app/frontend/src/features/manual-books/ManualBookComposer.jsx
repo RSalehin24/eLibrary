@@ -7,13 +7,15 @@ export function ManualBookComposer({
   categoryOptions,
   contributorOptions,
   seriesOptions,
+  publisherOptions,
   form,
   loadingOptions,
   onClose,
   onSubmit,
   setForm,
   submitting,
-  titleInputRef
+  titleInputRef,
+  isEditing = false
 }) {
   // Refs for every TagInput field (expose focus() + contains() via imperative handle)
   const writerRef = useRef(null);
@@ -21,11 +23,11 @@ export function ManualBookComposer({
   const editorRef = useRef(null);
   const categoryRef = useRef(null);
   const seriesRef = useRef(null);
+  const publisherRef = useRef(null);
 
   // Refs for plain DOM fields
   const compilationRef = useRef(null);
   const bindingRef = useRef(null);
-  const publisherRef = useRef(null);
   const priceRef = useRef(null);
   const summaryRef = useRef(null);
 
@@ -44,7 +46,7 @@ export function ManualBookComposer({
     { type: "imperative", ref: seriesRef },
     { type: "dom",        ref: compilationRef },
     { type: "dom",        ref: bindingRef },
-    { type: "dom",        ref: publisherRef },
+    { type: "imperative", ref: publisherRef },
     { type: "dom",        ref: priceRef },
     { type: "dom",        ref: summaryRef },
   ];
@@ -173,17 +175,16 @@ export function ManualBookComposer({
               <option value="paper_back">Paper Back</option>
             </select>
           </label>
-          <label>
-            <span className="fact-label">Publisher</span>
-            <input
-              ref={publisherRef}
-              type="text"
-              value={form.publisher}
-              onChange={(event) => setForm({ ...form, publisher: event.target.value })}
-              placeholder="Optional"
-              autoComplete="off"
-            />
-          </label>
+          <TagInput
+            ref={publisherRef}
+            label="Publisher"
+            values={form.publisher ? [form.publisher] : []}
+            onChange={(publishers) =>
+              setForm({ ...form, publisher: publishers[publishers.length - 1] || "" })
+            }
+            suggestions={publisherOptions}
+            placeholder={loadingOptions ? "Loading..." : "Optional"}
+          />
         </div>
 
         <div className="manual-book-form-grid">
@@ -211,8 +212,14 @@ export function ManualBookComposer({
         </div>
 
         <div className="inline-pills manual-book-form-actions">
-          <AsyncButton type="submit" className="primary-button" loading={submitting} loadingLabel="Adding..." spinnerSize={14}>
-            Add &amp; next
+          <AsyncButton
+            type="submit"
+            className="primary-button"
+            loading={submitting}
+            loadingLabel={isEditing ? "Saving..." : "Adding..."}
+            spinnerSize={14}
+          >
+            {isEditing ? "Save" : "Add & next"}
           </AsyncButton>
           <button
             type="button"

@@ -68,7 +68,7 @@ function handleKeyDown(state, key, { onArrowLeft, onArrowRight } = {}) {
   const showSuggestions = filteredSuggestions.length > 0;
 
   function addValue(nextValue) {
-    const trimmedValue = (nextValue || "").trim();
+    const trimmedValue = (nextValue || "").trim().replace(/\s+/g, " ");
     if (!trimmedValue) return { values, inputValue, highlightedIndex: -1 };
     const normalized = normalizeToken(trimmedValue);
     if (normalizedValues.has(normalized)) {
@@ -439,7 +439,7 @@ test("Tab on first suggestion when none highlighted adds first match", () => {
 
 function simulateBlur(state) {
   // mirrors the fixed onBlur: addValue(inputValue) runs synchronously
-  const trimmedValue = (state.inputValue || "").trim();
+  const trimmedValue = (state.inputValue || "").trim().replace(/\s+/g, " ");
   if (!trimmedValue) return state;
   const normalizedValues = new Set((state.values || []).map((v) => normalizeToken(v)));
   const normalized = normalizeToken(trimmedValue);
@@ -515,3 +515,30 @@ test("ArrowRight navigates after blur commits the text (input becomes empty)", (
   assert.ok(rightCalled,
     "onArrowRight should fire once the input is empty after blur");
 });
+
+// ---------------------------------------------------------------------------
+// 13. Internal whitespace normalization
+// ---------------------------------------------------------------------------
+
+test("internal extra spaces are collapsed when confirming text via Enter", () => {
+  const state = makeState({
+    inputValue: "ফারসীম  মান্নান  মহাম্মাদী",
+    values: [],
+    suggestions: [],
+  });
+  const next = handleKeyDown(state, "Enter");
+  assert.ok(next.values.includes("ফারসীম মান্নান মহাম্মাদী"));
+  assert.ok(!next.values.includes("ফারসীম  মান্নান  মহাম্মাদী"));
+});
+
+test("internal extra spaces are collapsed when committing text via blur", () => {
+  const state = makeState({
+    inputValue: "ফারসীম  মান্নান  মহাম্মাদী",
+    values: [],
+    suggestions: [],
+  });
+  const after = simulateBlur(state);
+  assert.ok(after.values.includes("ফারসীম মান্নান মহাম্মাদী"));
+  assert.ok(!after.values.includes("ফারসীম  মান্নান  মহাম্মাদী"));
+});
+

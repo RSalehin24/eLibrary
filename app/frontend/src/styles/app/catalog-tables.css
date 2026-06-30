@@ -41,7 +41,8 @@
 }
 
 .book-table-col-category,
-.book-table-col-series {
+.book-table-col-series,
+.book-table-col-publisher {
   width: 156px;
 }
 
@@ -54,7 +55,12 @@
 }
 
 .book-table-col-action {
-  width: 124px;
+  width: 160px;
+}
+
+.table-actions-group {
+  display: flex;
+  gap: 8px;
 }
 
 .catalog-table th,

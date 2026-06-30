@@ -17,6 +17,8 @@ import { loadManualBookOptions } from "../features/manual-books/manualBookOption
 import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useToast } from "../hooks/useToast";
+import { getContributorNamesByRole } from "../utils/bookPresentation";
+import { catalogFetch } from "../api/catalog";
 import { exportBooksToCsv, exportBooksToPdf } from "../utils/bookExport";
 import { getExportBlockState } from "../utils/export";
 import {
@@ -94,8 +96,10 @@ export default function ManualBooksPage() {
   const [contributorOptions, setContributorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [seriesOptions, setSeriesOptions] = useState([]);
+  const [publisherOptions, setPublisherOptions] = useState([]);
   const [loadingOptions, setLoadingOptions] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [editingBook, setEditingBook] = useState(null);
   const [downloadState, setDownloadState] = useState(
     () => pendingExportRef.current?.mode || "",
   );
@@ -124,6 +128,7 @@ export default function ManualBooksPage() {
       setCategoryOptions(options.categories);
       setContributorOptions(options.contributors);
       setSeriesOptions(options.series);
+      setPublisherOptions(options.publishers);
     } catch (nextError) {
       toast.error(nextError.message);
     } finally {
@@ -216,17 +221,50 @@ export default function ManualBooksPage() {
       await new Promise((resolve) => setTimeout(resolve, 50));
       const currentForm = formRef.current;
 
-      const payload = await createManualBook(currentForm);
-      prependEntry(payload);
-      setHighlightedBookId(payload.id);
-      setForm(emptyManualBookForm);
-      setComposerOpen(true);
-      titleInputRef.current?.focus();
-      toast.success(
-        `Added ${payload.catalog_code}. Ready for the next manual book.`,
-      );
-      loadOptions();
-      void reload({ preserveRows: true });
+      if (editingBook) {
+        const contributorsInput = [
+          ...currentForm.writers.map(name => ({ name, role: "author" })),
+          ...currentForm.translators.map(name => ({ name, role: "translator" })),
+          ...currentForm.editors.map(name => ({ name, role: "editor" })),
+          ...(currentForm.publisher ? [{ name: currentForm.publisher, role: "publisher" }] : [])
+        ];
+
+        const body = {
+          title: currentForm.title,
+          summary: currentForm.summary,
+          contributors: contributorsInput,
+          categories: currentForm.categories,
+          series: currentForm.series,
+          is_compilation: currentForm.is_compilation,
+          binding: currentForm.binding,
+          publisher: currentForm.publisher,
+          price: currentForm.price === "" ? null : currentForm.price,
+        };
+
+        await catalogFetch(`/catalog/books/${editingBook.slug}/metadata/`, {
+          method: "PATCH",
+          body,
+        });
+
+        setForm(emptyManualBookForm);
+        setEditingBook(null);
+        setComposerOpen(false);
+        toast.success("Book updated successfully.");
+        loadOptions();
+        await reload();
+      } else {
+        const payload = await createManualBook(currentForm);
+        prependEntry(payload);
+        setHighlightedBookId(payload.id);
+        setForm(emptyManualBookForm);
+        setComposerOpen(true);
+        titleInputRef.current?.focus();
+        toast.success(
+          `Added ${payload.catalog_code}. Ready for the next manual book.`,
+        );
+        loadOptions();
+        void reload({ preserveRows: true });
+      }
     } catch (nextError) {
       toast.error(nextError.message);
     } finally {
@@ -234,8 +272,33 @@ export default function ManualBooksPage() {
     }
   }
 
+  function handleEditBook(book) {
+    setEditingBook(book);
+    setForm({
+      title: book.title || "",
+      summary: book.summary || "",
+      writers: getContributorNamesByRole(book, "author"),
+      translators: getContributorNamesByRole(book, "translator"),
+      editors: getContributorNamesByRole(book, "editor"),
+      categories: book.categories || [],
+      series: book.series || [],
+      is_compilation: book.manual_is_compilation || false,
+      binding: book.manual_binding || "",
+      publisher: book.manual_publisher || "",
+      price: book.manual_price ? String(book.manual_price) : "",
+    });
+    setComposerOpen(true);
+  }
+
   async function handleDone() {
     try {
+      if (editingBook) {
+        setEditingBook(null);
+        setForm(emptyManualBookForm);
+        setComposerOpen(false);
+        return;
+      }
+
       setSubmitting(true);
       // Wait for any pending blur/state updates to propagate
       await new Promise((resolve) => setTimeout(resolve, 50));
@@ -382,6 +445,7 @@ export default function ManualBooksPage() {
           categoryOptions={categoryOptions}
           contributorOptions={contributorOptions}
           seriesOptions={seriesOptions}
+          publisherOptions={publisherOptions}
           form={form}
           loadingOptions={loadingOptions}
           onClose={handleDone}
@@ -389,6 +453,7 @@ export default function ManualBooksPage() {
           setForm={setForm}
           submitting={submitting}
           titleInputRef={titleInputRef}
+          isEditing={Boolean(editingBook)}
         />
       ) : null}
 
@@ -407,6 +472,8 @@ export default function ManualBooksPage() {
           initialLoading={initialLoading}
           loadingMore={loadingMore}
           refreshing={refreshing}
+          showPublisher={true}
+          onEditBook={handleEditBook}
         />
       )}
     </div>

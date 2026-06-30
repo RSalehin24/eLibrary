@@ -6,13 +6,15 @@ export async function loadManualBookOptions() {
     writerPayload,
     translatorPayload,
     editorPayload,
-    seriesPayload
+    seriesPayload,
+    publisherPayload
   ] = await Promise.all([
     catalogFetch("/catalog/categories/?record_type=all&sort=name"),
     catalogFetch("/catalog/writers/?record_type=all&sort=name"),
     catalogFetch("/catalog/translators/?record_type=all&sort=name"),
     catalogFetch("/catalog/editors/?record_type=all&sort=name"),
-    catalogFetch("/catalog/series/?record_type=all&sort=name")
+    catalogFetch("/catalog/series/?record_type=all&sort=name"),
+    catalogFetch("/catalog/publishers/?record_type=all&sort=name")
   ]);
 
   return {
@@ -22,7 +24,8 @@ export async function loadManualBookOptions() {
       translatorPayload,
       editorPayload
     ]),
-    series: seriesPayload.map((entry) => entry.name)
+    series: seriesPayload.map((entry) => entry.name),
+    publishers: publisherPayload.map((entry) => entry.name)
   };
 }
 

@@ -1,3 +1,4 @@
+import { useState, useRef } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import DOMPurify from "dompurify";
 import {
@@ -15,8 +16,12 @@ import { useBookDetailData } from "../features/book-detail/hooks/useBookDetailDa
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useSession } from "../hooks/useSession";
 import { useToast } from "../hooks/useToast";
-import { getSourceLabel } from "../utils/bookPresentation";
+import { getSourceLabel, getContributorNamesByRole } from "../utils/bookPresentation";
 import { hasCapability } from "../utils/capabilities";
+import { ManualBookComposer } from "../features/manual-books/ManualBookComposer";
+import { loadManualBookOptions } from "../features/manual-books/manualBookOptions";
+import { emptyManualBookForm } from "../features/manual-books/manualBookFilters";
+import { bookDetailFetch } from "../features/book-detail/api";
 
 export default function BookDetailPage() {
   const location = useLocation();
@@ -59,6 +64,94 @@ export default function BookDetailPage() {
     user,
   });
 
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [composerForm, setComposerForm] = useState(emptyManualBookForm);
+  const [loadingOptions, setLoadingOptions] = useState(false);
+  const [savingManualBook, setSavingManualBook] = useState(false);
+  const [categoryOptions, setCategoryOptions] = useState([]);
+  const [contributorOptions, setContributorOptions] = useState([]);
+  const [seriesOptions, setSeriesOptions] = useState([]);
+  const [publisherOptions, setPublisherOptions] = useState([]);
+  const titleInputRef = useRef(null);
+
+  async function loadOptionsForEdit() {
+    try {
+      setLoadingOptions(true);
+      const options = await loadManualBookOptions();
+      setCategoryOptions(options.categories);
+      setContributorOptions(options.contributors);
+      setSeriesOptions(options.series);
+      setPublisherOptions(options.publishers);
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setLoadingOptions(false);
+    }
+  }
+
+  function handleStartEdit() {
+    if (!detailState.book) return;
+    loadOptionsForEdit();
+    setComposerForm({
+      title: detailState.book.title || "",
+      summary: detailState.book.summary || "",
+      writers: getContributorNamesByRole(detailState.book, "author"),
+      translators: getContributorNamesByRole(detailState.book, "translator"),
+      editors: getContributorNamesByRole(detailState.book, "editor"),
+      categories: detailState.book.categories || [],
+      series: detailState.book.series || [],
+      is_compilation: detailState.book.manual_is_compilation || false,
+      binding: detailState.book.manual_binding || "",
+      publisher: detailState.book.manual_publisher || "",
+      price: detailState.book.manual_price ? String(detailState.book.manual_price) : "",
+    });
+    setComposerOpen(true);
+  }
+
+  async function handleUpdateManualBook(event) {
+    event.preventDefault();
+    try {
+      setSavingManualBook(true);
+      const contributorsInput = [
+        ...composerForm.writers.map(name => ({ name, role: "author" })),
+        ...composerForm.translators.map(name => ({ name, role: "translator" })),
+        ...composerForm.editors.map(name => ({ name, role: "editor" })),
+        ...(composerForm.publisher ? [{ name: composerForm.publisher, role: "publisher" }] : [])
+      ];
+
+      const body = {
+        title: composerForm.title,
+        summary: composerForm.summary,
+        contributors: contributorsInput,
+        categories: composerForm.categories,
+        series: composerForm.series,
+        is_compilation: composerForm.is_compilation,
+        binding: composerForm.binding,
+        publisher: composerForm.publisher,
+        price: composerForm.price === "" ? null : composerForm.price,
+      };
+
+      const updatedBook = await bookDetailFetch(`/catalog/books/${detailState.book.slug}/metadata/`, {
+        method: "PATCH",
+        body,
+      });
+
+      detailState.setBook(updatedBook);
+      setComposerOpen(false);
+      toast.success("Book updated successfully.");
+
+      if (updatedBook.slug && updatedBook.slug !== slug) {
+        detailState.replaceBookRoute(updatedBook.slug);
+      }
+    } catch (e) {
+      toast.error(e.message);
+    } finally {
+      setSavingManualBook(false);
+    }
+  }
+
+  actions.onStartEdit = handleStartEdit;
+
   if (detailState.loading) {
     return <BookDetailSkeleton />;
   }
@@ -66,6 +159,27 @@ export default function BookDetailPage() {
   if (detailState.error) {
     return (
       <div className="page-state page-state-error">{detailState.error}</div>
+    );
+  }
+
+  if (composerOpen) {
+    return (
+      <div className="book-detail-page page-stack">
+        <ManualBookComposer
+          categoryOptions={categoryOptions}
+          contributorOptions={contributorOptions}
+          seriesOptions={seriesOptions}
+          publisherOptions={publisherOptions}
+          form={composerForm}
+          loadingOptions={loadingOptions}
+          onClose={() => setComposerOpen(false)}
+          onSubmit={handleUpdateManualBook}
+          setForm={setComposerForm}
+          submitting={savingManualBook}
+          titleInputRef={titleInputRef}
+          isEditing={true}
+        />
+      </div>
     );
   }
 

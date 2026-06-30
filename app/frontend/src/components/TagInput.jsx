@@ -34,7 +34,7 @@ const TagInput = forwardRef(function TagInput(
   }));
 
   function addValue(nextValue) {
-    const trimmedValue = (nextValue || "").trim();
+    const trimmedValue = (nextValue || "").trim().replace(/\s+/g, " ");
     if (!trimmedValue) {
       return;
     }

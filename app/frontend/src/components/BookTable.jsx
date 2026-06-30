@@ -5,6 +5,7 @@ import BookRouteLink from "./BookRouteLink";
 import {
   formatBookDate,
   getWriterColumnGroups,
+  getContributorNamesByRole,
 } from "../utils/bookPresentation";
 import { CATALOG_TABLE_PREFETCH_TRIGGER } from "../utils/catalogBooks";
 import { toQueryString } from "../utils/query";
@@ -51,6 +52,7 @@ function BookTableSkeletonRows({
   count = 5,
   incremental = false,
   showMyBooksAction = false,
+  showPublisher = false,
 }) {
   return Array.from({ length: count }, (_, index) => (
     <tr
@@ -83,6 +85,11 @@ function BookTableSkeletonRows({
       <td>
         <span className="skeleton-line skeleton-line-sm" />
       </td>
+      {showPublisher ? (
+        <td>
+          <span className="skeleton-line skeleton-line-sm" />
+        </td>
+      ) : null}
       <td>
         <span className="skeleton-pill skeleton-pill-sm" />
       </td>
@@ -114,13 +121,15 @@ export default function BookTable({
   loadingMore = false,
   refreshing = false,
   showMyBooksAction = false,
+  showPublisher = false,
   onMyBooksToggle = null,
+  onEditBook = null,
   myBooksBusyIds = {},
   sortValue = "",
 }) {
   const showInitialSkeleton = (initialLoading || refreshing) && !books?.length;
   const showIncrementalSkeleton = loadingMore && books?.length > 0;
-  const columnCount = showMyBooksAction ? 9 : 8;
+  const columnCount = 8 + (showMyBooksAction ? 1 : 0) + (showPublisher ? 1 : 0);
 
   const sortKey = sortValue?.replace(/^-/, "") || "";
   const sortDirection = sortValue?.startsWith("-") ? "desc" : "asc";
@@ -162,6 +171,7 @@ export default function BookTable({
           <col className="book-table-col-writer" />
           <col className="book-table-col-category" />
           <col className="book-table-col-series" />
+          {showPublisher ? <col className="book-table-col-publisher" /> : null}
           <col className="book-table-col-type" />
           <col className="book-table-col-created" />
           {showMyBooksAction ? <col className="book-table-col-action" /> : null}
@@ -178,6 +188,7 @@ export default function BookTable({
             <th>Contributors</th>
             <th>Category</th>
             <th>Series</th>
+            {showPublisher ? <th>Publisher</th> : null}
             <th>Type</th>
             <th aria-sort={sortAriaSort("created")}>
               Created{sortIndicator("created")}
@@ -188,7 +199,10 @@ export default function BookTable({
         </thead>
         <tbody>
           {showInitialSkeleton ? (
-            <BookTableSkeletonRows showMyBooksAction={showMyBooksAction} />
+            <BookTableSkeletonRows
+              showMyBooksAction={showMyBooksAction}
+              showPublisher={showPublisher}
+            />
           ) : books?.length ? (
             books.map((book, rowIndex) => {
               const categories = book.categories || [];
@@ -248,6 +262,23 @@ export default function BookTable({
                       <span className="table-muted">Standalone</span>
                     )}
                   </td>
+                  {showPublisher ? (
+                    <td data-label="Publisher">
+                      {(() => {
+                        const publisherNames = book.publisher
+                          ? [book.publisher]
+                          : getContributorNamesByRole(book, "publisher");
+                        return publisherNames.length ? (
+                          renderLinkedValues(publisherNames, "contributor", {
+                            ...(linkFilters || {}),
+                            contributor_role: "publisher",
+                          })
+                        ) : (
+                          <span className="table-muted">—</span>
+                        );
+                      })()}
+                    </td>
+                  ) : null}
                   <td data-label="Type">
                     <span
                       className={`table-type-pill table-type-pill-${book.record_type || "digital"}`}
@@ -283,12 +314,23 @@ export default function BookTable({
                     </td>
                   ) : null}
                   <td className="table-action-cell" data-label="Action">
-                    <BookRouteLink
-                      slug={book.slug}
-                      className="ghost-button table-row-action"
-                    >
-                      Open
-                    </BookRouteLink>
+                    <div className="table-actions-group">
+                      <BookRouteLink
+                        slug={book.slug}
+                        className="ghost-button table-row-action"
+                      >
+                        Open
+                      </BookRouteLink>
+                      {onEditBook ? (
+                        <button
+                          type="button"
+                          className="ghost-button table-row-action"
+                          onClick={() => onEditBook(book)}
+                        >
+                          Edit
+                        </button>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               );
@@ -305,6 +347,7 @@ export default function BookTable({
               count={3}
               incremental
               showMyBooksAction={showMyBooksAction}
+              showPublisher={showPublisher}
             />
           ) : null}
         </tbody>

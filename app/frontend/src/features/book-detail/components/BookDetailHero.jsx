@@ -194,6 +194,16 @@ export default function BookDetailHero({
               {hasSentToKindle ? "Resend to Kindle" : "Send to Kindle"}
             </AsyncButton>
           ) : null}
+          {book.record_type === "manual" && canEditMetadata ? (
+            <button
+              type="button"
+              data-testid="book-edit-hero-button"
+              className="ghost-button book-edit-button"
+              onClick={actions.onStartEdit}
+            >
+              Edit Book
+            </button>
+          ) : null}
           {detail.downloadableAssets.map((asset) => {
             const isDownloading = Boolean(assetLoadingCounts[asset.id]);
             const isHtmlPreviewLocked =
