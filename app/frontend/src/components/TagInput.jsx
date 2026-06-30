@@ -139,6 +139,9 @@ const TagInput = forwardRef(function TagInput(
             autoComplete="off"
             onFocus={() => setFocused(true)}
             onBlur={() => {
+              // Commit any typed-but-not-yet-confirmed text immediately,
+              // so clicking "Add & next" (or any submit) still captures the value.
+              addValue(inputValue);
               window.setTimeout(() => {
                 setFocused(false);
                 setHighlightedIndex(-1);

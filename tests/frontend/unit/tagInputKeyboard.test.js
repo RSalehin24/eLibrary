@@ -427,3 +427,91 @@ test("Tab on first suggestion when none highlighted adds first match", () => {
   // 'b' matches 'Bob'
   assert.ok(next.values.includes("Bob"));
 });
+
+// ---------------------------------------------------------------------------
+// 11. Blur-commit regression (bug: typed text not committed on form submit)
+// ---------------------------------------------------------------------------
+
+// The onBlur handler must call addValue(inputValue) immediately so that
+// clicking "Add & next" (which blurs the input) captures the typed text.
+// We model blur as a direct addValue() call since the setTimeout wrapper
+// is a React/DOM side-effect we can't exercise here.
+
+function simulateBlur(state) {
+  // mirrors the fixed onBlur: addValue(inputValue) runs synchronously
+  const trimmedValue = (state.inputValue || "").trim();
+  if (!trimmedValue) return state;
+  const normalizedValues = new Set((state.values || []).map((v) => normalizeToken(v)));
+  const normalized = normalizeToken(trimmedValue);
+  if (normalizedValues.has(normalized)) {
+    return { ...state, inputValue: "" };
+  }
+  return { ...state, values: [...(state.values || []), trimmedValue], inputValue: "" };
+}
+
+test("blur commits typed text to values (form-submit regression)", () => {
+  const state = makeState({
+    inputValue: "ফারসীম মান্নান মহাম্মাদী",
+    values: [],
+    suggestions: [],
+  });
+  const after = simulateBlur(state);
+  assert.ok(after.values.includes("ফারসীম মান্নান মহাম্মাদী"),
+    "Writer name should be in values after blur");
+  assert.equal(after.inputValue, "", "inputValue should be cleared after blur");
+});
+
+test("blur on empty input does not add an empty tag", () => {
+  const state = makeState({ inputValue: "", values: [] });
+  const after = simulateBlur(state);
+  assert.deepEqual(after.values, []);
+});
+
+test("blur on whitespace-only input does not add a tag", () => {
+  const state = makeState({ inputValue: "   ", values: [] });
+  const after = simulateBlur(state);
+  assert.deepEqual(after.values, []);
+});
+
+test("blur does not add a duplicate that is already in values", () => {
+  const state = makeState({
+    inputValue: "Alice",
+    values: ["Alice"],
+    suggestions: [],
+  });
+  const after = simulateBlur(state);
+  assert.deepEqual(after.values, ["Alice"]); // still only one entry
+  assert.equal(after.inputValue, "");
+});
+
+// ---------------------------------------------------------------------------
+// 12. Arrow-navigation blocked while input has text (expected behaviour)
+// ---------------------------------------------------------------------------
+
+test("ArrowRight does NOT navigate when input still has text (user is typing)", () => {
+  let rightCalled = false;
+  const state = makeState({
+    inputValue: "ফারসীম মান্নান মহাম্মাদী",
+    suggestions: [],
+  });
+  handleKeyDown(state, "ArrowRight", { onArrowRight: () => { rightCalled = true; } });
+  assert.ok(!rightCalled,
+    "onArrowRight must not fire while the writer name is still in the input");
+});
+
+test("ArrowRight navigates after blur commits the text (input becomes empty)", () => {
+  let rightCalled = false;
+  let state = makeState({
+    inputValue: "ফারসীম মান্নান মহাম্মাদী",
+    values: [],
+    suggestions: [],
+  });
+  // Simulate blur committing the text
+  state = simulateBlur(state);
+  assert.equal(state.inputValue, "");
+  assert.ok(state.values.includes("ফারসীম মান্নান মহাম্মাদী"));
+  // Now ArrowRight should navigate
+  handleKeyDown(state, "ArrowRight", { onArrowRight: () => { rightCalled = true; } });
+  assert.ok(rightCalled,
+    "onArrowRight should fire once the input is empty after blur");
+});
