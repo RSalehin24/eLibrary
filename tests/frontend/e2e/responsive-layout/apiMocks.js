@@ -324,4 +324,11 @@ export async function mockManualBooksApi(page, total = 8) {
       body: JSON.stringify(suggestionPayloads.editors)
     });
   });
+  await page.route("**/api/catalog/publishers/**", async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([{ name: "Prothoma" }, { name: "Anyaprokash" }])
+    });
+  });
 }

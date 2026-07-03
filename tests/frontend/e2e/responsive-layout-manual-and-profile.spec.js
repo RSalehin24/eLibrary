@@ -17,6 +17,7 @@ test.describe("responsive layout manual books and profile coverage", () => {
     await expect(
       page.getByRole("heading", { name: "Physical Books' List", exact: true }),
     ).toBeVisible();
+
     const manualToolbarLayout = await page
       .locator(".catalog-page-header--property-layout")
       .evaluate((header) => {
@@ -26,33 +27,47 @@ test.describe("responsive layout manual books and profile coverage", () => {
         const addButtonBox = header
           .querySelector('[aria-label="Add manual book"]')
           .getBoundingClientRect();
-        const exportButtons = [
-          ...header.querySelectorAll(".export-action-button"),
-        ].map((button) => button.getBoundingClientRect());
         return {
           addButtonRightGap: Math.round(extraBox.right - addButtonBox.right),
           addButtonWidth: Math.round(addButtonBox.width),
-          exportButtonTopGap: exportButtons.length === 2
-            ? Math.abs(Math.round(exportButtons[0].top - exportButtons[1].top))
-            : null,
-          exportButtonsCombinedWidth: exportButtons.length === 2
-            ? Math.round(
-                exportButtons[0].width +
-                  exportButtons[1].width +
-                  (exportButtons[1].left - exportButtons[0].right),
-              )
-            : 0,
           extraWidth: Math.round(extraBox.width),
         };
       });
     expect(manualToolbarLayout.addButtonRightGap).toBeLessThanOrEqual(1);
     expect(manualToolbarLayout.addButtonWidth).toBeLessThanOrEqual(48);
-    expect(manualToolbarLayout.exportButtonTopGap).toBeLessThanOrEqual(1);
-    expect(manualToolbarLayout.exportButtonsCombinedWidth).toBe(
-      manualToolbarLayout.extraWidth,
-    );
+
+    // Expand the collapsible download row
+    await page.getByRole("button", { name: "Export options" }).click();
+    await expect(page.locator(".manual-books-download-row")).toBeVisible();
+
+    // Verify all 3 export buttons (CSV, PDF, Excel) are within the download
+    // row and do not overflow the mobile viewport horizontally
+    const downloadRowLayout = await page
+      .locator(".manual-books-download-row")
+      .evaluate((row) => {
+        const rowBox = row.getBoundingClientRect();
+        const exportButtons = [...row.querySelectorAll(".export-action-button")];
+        const buttonBoxes = exportButtons.map((b) => b.getBoundingClientRect());
+        const allButtonsInRow = buttonBoxes.every(
+          (b) => b.left >= rowBox.left - 2 && b.right <= rowBox.right + 2,
+        );
+        const noHorizontalOverflow = buttonBoxes.every(
+          (b) => b.right <= window.innerWidth + 2,
+        );
+        return {
+          buttonCount: exportButtons.length,
+          allButtonsInRow,
+          noHorizontalOverflow,
+        };
+      });
+    expect(downloadRowLayout.buttonCount).toBe(3);
+    expect(downloadRowLayout.allButtonsInRow).toBe(true);
+    expect(downloadRowLayout.noHorizontalOverflow).toBe(true);
+
     await page.getByRole("button", { name: "Add manual book" }).click();
     await expect(page.locator("#manual-book-composer")).toBeVisible();
+    // Wait for the form to be fully rendered and layout to settle
+    await expect(page.locator("#manual-book-composer textarea")).toBeVisible();
     const manualFormColumns = await page
       .locator(".manual-book-form-grid")
       .evaluateAll((nodes) =>
@@ -70,6 +85,8 @@ test.describe("responsive layout manual books and profile coverage", () => {
     );
     await assertNoPageOverflow(page);
   });
+
+
 
   test("narrow phone profile editor keeps stacked sections readable at 320px", async ({
     page,

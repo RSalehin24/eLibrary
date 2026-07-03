@@ -1,6 +1,7 @@
 import { MAX_CELL_LINES, PDF_COLUMNS, PDF_LAYOUT } from "./constants";
 import { clampLines, concatUint8Arrays, downloadBlob, slugifyFilename, wrapText } from "./helpers";
 import { bookExportRows } from "./rows";
+import { getContributorNamesByRole } from "../bookPresentation";
 
 function createPdfCanvas() {
   const canvas = document.createElement("canvas");
@@ -67,6 +68,13 @@ function preparePdfCellMap(row) {
 }
 
 function preparePdfRow(context, row) {
+  if (row.isGroupHeader) {
+    return {
+      isGroupHeader: true,
+      label: row.label,
+      rowHeight: 28,
+    };
+  }
   const cellMap = preparePdfCellMap(row);
   const lineMap = {};
   let maxLines = 1;
@@ -84,8 +92,18 @@ function preparePdfRow(context, row) {
 }
 
 function drawPdfRow(context, preparedRow, startY, rowIndex) {
-  let x = PDF_LAYOUT.marginX;
   const tableWidth = PDF_LAYOUT.canvasWidth - PDF_LAYOUT.marginX * 2;
+  if (preparedRow.isGroupHeader) {
+    context.fillStyle = "#e8f2ee";
+    context.fillRect(PDF_LAYOUT.marginX, startY, tableWidth, preparedRow.rowHeight);
+    context.strokeStyle = "#cbdad3";
+    context.strokeRect(PDF_LAYOUT.marginX, startY, tableWidth, preparedRow.rowHeight);
+    context.fillStyle = "#0c3b2e";
+    context.font = '700 13px "Avenir Next", "Noto Sans Bengali", "Hind Siliguri", sans-serif';
+    context.fillText(preparedRow.label, PDF_LAYOUT.marginX + 8, startY + 6);
+    return;
+  }
+  let x = PDF_LAYOUT.marginX;
   context.fillStyle = rowIndex % 2 === 0 ? "#ffffff" : "#f7faf8";
   context.fillRect(PDF_LAYOUT.marginX, startY, tableWidth, preparedRow.rowHeight);
   PDF_COLUMNS.forEach((column) => {
@@ -101,11 +119,11 @@ function drawPdfRow(context, preparedRow, startY, rowIndex) {
   });
 }
 
-function renderPdfPages(rows, title) {
+function renderPdfPages(rows, title, bookCount) {
   const pages = [];
   let pageNumber = 1;
   let current = createPdfCanvas();
-  let currentY = drawTableHeader((drawPageChrome(current.context, title, rows.length, pageNumber), current.context), PDF_LAYOUT.tableY);
+  let currentY = drawTableHeader((drawPageChrome(current.context, title, bookCount, pageNumber), current.context), PDF_LAYOUT.tableY);
   rows.forEach((row, rowIndex) => {
     const preparedRow = preparePdfRow(current.context, row);
     const maxY = PDF_LAYOUT.canvasHeight - PDF_LAYOUT.marginY - 18;
@@ -113,7 +131,7 @@ function renderPdfPages(rows, title) {
       pages.push(current.canvas);
       pageNumber += 1;
       current = createPdfCanvas();
-      drawPageChrome(current.context, title, rows.length, pageNumber);
+      drawPageChrome(current.context, title, bookCount, pageNumber);
       currentY = drawTableHeader(current.context, PDF_LAYOUT.tableY);
     }
     drawPdfRow(current.context, preparedRow, currentY, rowIndex);
@@ -185,9 +203,83 @@ function buildPdfBlob(pages) {
   return new Blob([concatUint8Arrays(chunks)], { type: "application/pdf" });
 }
 
-export async function exportBooksToPdf(books, title) {
-  const rows = bookExportRows(books);
-  const pageCanvases = renderPdfPages(rows, title);
+function bindingLabel(value) {
+  if (!value) return "";
+  const v = String(value).toLowerCase().replace(/[\s_-]+/g, "");
+  if (v === "hardcover") return "Hardcover";
+  if (v === "paperback") return "Paperback";
+  return value;
+}
+
+function languageLabel(value) {
+  if (!value) return "";
+  const map = { bn: "Bengali", en: "English" };
+  return map[String(value).toLowerCase()] || value;
+}
+
+function groupBooks(books, groupBy) {
+  if (!groupBy) return [{ label: null, books }];
+
+  const ordered = [];
+  const map = new Map();
+  const ungroupedKey = "(None)";
+
+  for (const book of books) {
+    let keys = [];
+
+    if (groupBy === "category") {
+      keys = book.categories?.length ? book.categories : [ungroupedKey];
+    } else if (groupBy === "publisher") {
+      const pub = book.publisher || book.manual_publisher || "";
+      keys = [pub || ungroupedKey];
+    } else if (groupBy === "binding") {
+      const raw = book.binding || book.manual_binding || "";
+      keys = [bindingLabel(raw) || ungroupedKey];
+    } else if (groupBy === "language") {
+      const lang = book.language || book.manual_language || "";
+      keys = [languageLabel(lang) || ungroupedKey];
+    } else if (groupBy === "contributor") {
+      const contributors = [
+        ...getContributorNamesByRole(book, "author"),
+        ...getContributorNamesByRole(book, "translator"),
+        ...getContributorNamesByRole(book, "editor"),
+      ];
+      keys = contributors.length ? contributors : [ungroupedKey];
+    } else {
+      keys = [ungroupedKey];
+    }
+
+    const seen = new Set();
+    for (const key of keys) {
+      if (seen.has(key)) continue;
+      seen.add(key);
+      if (!map.has(key)) {
+        map.set(key, []);
+        ordered.push(key);
+      }
+      map.get(key).push(book);
+    }
+  }
+
+  return ordered.map((label) => ({ label, books: map.get(label) }));
+}
+
+export async function exportBooksToPdf(books, title, groupBy = "") {
+  let rows = [];
+  if (groupBy) {
+    const groups = groupBooks(books, groupBy);
+    for (const group of groups) {
+      rows.push({
+        isGroupHeader: true,
+        label: `${groupBy.charAt(0).toUpperCase() + groupBy.slice(1)}: ${group.label || "(None)"}`,
+      });
+      rows.push(...bookExportRows(group.books));
+    }
+  } else {
+    rows = bookExportRows(books);
+  }
+
+  const pageCanvases = renderPdfPages(rows, title, books.length);
   const pages = await Promise.all(
     pageCanvases.map(async (canvas) => ({
       width: canvas.width,

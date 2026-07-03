@@ -19,6 +19,9 @@ export async function loadManualBookOptions() {
 
   return {
     categories: categoryPayload.map((entry) => entry.name),
+    writers: writerPayload.map((entry) => entry.name),
+    translators: translatorPayload.map((entry) => entry.name),
+    editors: editorPayload.map((entry) => entry.name),
     contributors: mergeContributorSuggestions([
       writerPayload,
       translatorPayload,

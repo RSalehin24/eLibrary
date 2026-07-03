@@ -218,6 +218,47 @@ def filtered_book_queryset(queryset, request, *, default_record_type):
                 normalized_lookup="book_contributors__contributor__normalized_name",
             )
         )
+
+    translator = request.query_params.get("translator", "").strip()
+    if translator:
+        queryset = queryset.filter(book_contributors__role=ContributorRole.TRANSLATOR).filter(
+            normalized_text_search_clause(
+                translator,
+                normalize_catalog_text(translator),
+                raw_lookup="book_contributors__contributor__name",
+                normalized_lookup="book_contributors__contributor__normalized_name",
+            )
+        )
+
+    editor = request.query_params.get("editor", "").strip()
+    if editor:
+        queryset = queryset.filter(
+            book_contributors__role__in=(ContributorRole.EDITOR, ContributorRole.COMPILER)
+        ).filter(
+            normalized_text_search_clause(
+                editor,
+                normalize_catalog_text(editor),
+                raw_lookup="book_contributors__contributor__name",
+                normalized_lookup="book_contributors__contributor__normalized_name",
+            )
+        )
+
+    publisher = request.query_params.get("publisher", "").strip()
+    if publisher:
+        queryset = queryset.filter(
+            Q(book_contributors__role=ContributorRole.PUBLISHER)
+            & normalized_text_search_clause(
+                publisher,
+                normalize_catalog_text(publisher),
+                raw_lookup="book_contributors__contributor__name",
+                normalized_lookup="book_contributors__contributor__normalized_name",
+            )
+        )
+
+    binding = request.query_params.get("binding", "").strip()
+    if binding:
+        queryset = queryset.filter(manual_binding=binding)
+
     for param, filters in {
         "writer_code": {"book_contributors__role": ContributorRole.AUTHOR, "book_contributors__contributor__catalog_code": None},
         "writer_slug": {"book_contributors__role": ContributorRole.AUTHOR, "book_contributors__contributor__slug": None},
@@ -260,7 +301,16 @@ def filtered_book_queryset(queryset, request, *, default_record_type):
 
     queryset = apply_created_at_filters(queryset, request).distinct()
     sort = request.query_params.get("sort", "-requested_at" if ownership == "mine" else "-created_at")
-    sort_map = {"catalog_code": "catalog_code", "-catalog_code": "-catalog_code", "title": "title", "-title": "-title", "created_at": "created_at", "-created_at": "-created_at"}
+    sort_map = {
+        "catalog_code": "catalog_code",
+        "-catalog_code": "-catalog_code",
+        "title": "title",
+        "-title": "-title",
+        "created_at": "created_at",
+        "-created_at": "-created_at",
+        "manual_publisher": "manual_publisher",
+        "-manual_publisher": "-manual_publisher",
+    }
     if ownership == "mine":
         sort_map.update({"requested_at": "my_books_added_at", "-requested_at": "-my_books_added_at"})
     if kindle_sent == "mine":

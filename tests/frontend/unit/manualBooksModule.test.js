@@ -81,6 +81,9 @@ async function loadManualBookOptions(catalogFetchMock) {
 
   return {
     categories: categoryPayload.map((entry) => entry.name),
+    writers: writerPayload.map((entry) => entry.name),
+    translators: translatorPayload.map((entry) => entry.name),
+    editors: editorPayload.map((entry) => entry.name),
     contributors: mergeContributorSuggestions([
       writerPayload,
       translatorPayload,
@@ -162,9 +165,12 @@ test("emptyManualBookForm defaults binding to hard_cover", () => {
 test("defaultManualBookFilters default states are correct", () => {
   assert.deepEqual(defaultManualBookFilters, {
     q: "",
-    author: "",
-    series: "",
+    writer: "",
+    translator: "",
+    editor: "",
     category: "",
+    publisher: "",
+    binding: "",
     ownership: "",
     record_type: "manual",
     sort: "-created_at",

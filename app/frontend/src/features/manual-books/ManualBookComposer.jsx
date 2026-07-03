@@ -102,7 +102,7 @@ export function ManualBookComposer({
             ref={titleInputRef}
             type="text"
             value={form.title}
-            onChange={(event) => setForm({ ...form, title: event.target.value })}
+            onChange={(event) => setForm(prev => ({ ...prev, title: event.target.value }))}
             placeholder="Book title"
             autoComplete="off"
           />
@@ -113,7 +113,7 @@ export function ManualBookComposer({
             ref={writerRef}
             label="Writer"
             values={form.writers}
-            onChange={(writers) => setForm({ ...form, writers })}
+            onChange={(writers) => setForm(prev => ({ ...prev, writers }))}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
@@ -121,7 +121,7 @@ export function ManualBookComposer({
             ref={translatorRef}
             label="Translator"
             values={form.translators}
-            onChange={(translators) => setForm({ ...form, translators })}
+            onChange={(translators) => setForm(prev => ({ ...prev, translators }))}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
@@ -129,7 +129,7 @@ export function ManualBookComposer({
             ref={editorRef}
             label="Editor"
             values={form.editors}
-            onChange={(editors) => setForm({ ...form, editors })}
+            onChange={(editors) => setForm(prev => ({ ...prev, editors }))}
             suggestions={contributorOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
@@ -137,7 +137,7 @@ export function ManualBookComposer({
             ref={categoryRef}
             label="Category"
             values={form.categories}
-            onChange={(categories) => setForm({ ...form, categories })}
+            onChange={(categories) => setForm(prev => ({ ...prev, categories }))}
             suggestions={categoryOptions}
             placeholder={loadingOptions ? "Loading..." : "Select or create"}
           />
@@ -148,7 +148,7 @@ export function ManualBookComposer({
             ref={seriesRef}
             label="Series"
             values={form.series}
-            onChange={(series) => setForm({ ...form, series })}
+            onChange={(series) => setForm(prev => ({ ...prev, series }))}
             suggestions={seriesOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
           />
@@ -158,7 +158,7 @@ export function ManualBookComposer({
               ref={compilationRef}
               value={form.is_compilation ? "yes" : "no"}
               onChange={(event) =>
-                setForm({ ...form, is_compilation: event.target.value === "yes" })
+                setForm(prev => ({ ...prev, is_compilation: event.target.value === "yes" }))
               }
             >
               <option value="no">No</option>
@@ -170,7 +170,7 @@ export function ManualBookComposer({
             <select
               ref={bindingRef}
               value={form.binding}
-              onChange={(event) => setForm({ ...form, binding: event.target.value })}
+              onChange={(event) => setForm(prev => ({ ...prev, binding: event.target.value }))}
             >
               <option value="">Select</option>
               <option value="hard_cover">Hard Cover</option>
@@ -182,7 +182,7 @@ export function ManualBookComposer({
             label="Publisher"
             values={form.publisher ? [form.publisher] : []}
             onChange={(publishers) =>
-              setForm({ ...form, publisher: publishers[publishers.length - 1] || "" })
+              setForm(prev => ({ ...prev, publisher: publishers[publishers.length - 1] || "" }))
             }
             suggestions={publisherOptions}
             placeholder={loadingOptions ? "Loading..." : "Optional"}
@@ -198,7 +198,7 @@ export function ManualBookComposer({
               min="0"
               step="0.01"
               value={form.price}
-              onChange={(event) => setForm({ ...form, price: event.target.value })}
+              onChange={(event) => setForm(prev => ({ ...prev, price: event.target.value }))}
               placeholder="Optional"
             />
           </label>
@@ -207,7 +207,7 @@ export function ManualBookComposer({
             <select
               ref={languageRef}
               value={form.language || "bn"}
-              onChange={(event) => setForm({ ...form, language: event.target.value })}
+              onChange={(event) => setForm(prev => ({ ...prev, language: event.target.value }))}
             >
               <option value="bn">বাংলা</option>
               <option value="en">English</option>
@@ -218,7 +218,7 @@ export function ManualBookComposer({
             <textarea
               ref={summaryRef}
               value={form.summary}
-              onChange={(event) => setForm({ ...form, summary: event.target.value })}
+              onChange={(event) => setForm(prev => ({ ...prev, summary: event.target.value }))}
               placeholder="Optional"
             />
           </label>

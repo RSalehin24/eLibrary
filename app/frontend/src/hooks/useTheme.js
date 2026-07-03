@@ -6,9 +6,9 @@ const VALID = new Set(["light", "dark", "system"]);
 function readStoredTheme() {
   try {
     const value = window.localStorage.getItem(STORAGE_KEY);
-    return VALID.has(value) ? value : "system";
+    return VALID.has(value) ? value : "dark";
   } catch {
-    return "system";
+    return "dark";
   }
 }
 

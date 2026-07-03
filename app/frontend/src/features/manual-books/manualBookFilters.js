@@ -17,35 +17,31 @@ export const emptyManualBookForm = {
 
 export const defaultManualBookFilters = {
   q: "",
-  author: "",
-  series: "",
+  writer: "",
+  translator: "",
+  editor: "",
   category: "",
+  publisher: "",
+  binding: "",
   ownership: "",
   record_type: "manual",
   sort: "-created_at"
 };
 
 export const manualBookFilterFields = [
-  { key: "author", label: "Contributor" },
-  { key: "series", label: "Series" },
+  { key: "writer", label: "Writer" },
+  { key: "translator", label: "Translator" },
+  { key: "editor", label: "Editor" },
   { key: "category", label: "Category" },
+  { key: "publisher", label: "Publisher" },
   {
-    key: "ownership",
-    label: "Ownership",
+    key: "binding",
+    label: "Binding",
     type: "select",
     options: [
-      { value: "", label: "All books" },
-      { value: "mine", label: "My books" }
-    ]
-  },
-  {
-    key: "record_type",
-    label: "Type",
-    type: "select",
-    options: [
-      { value: "digital", label: "Digital" },
-      { value: "manual", label: "Manual" },
-      { value: "all", label: "All types" }
+      { value: "", label: "Any" },
+      { value: "hard_cover", label: "Hardcover" },
+      { value: "paper_back", label: "Paperback" }
     ]
   },
   {
@@ -55,10 +51,10 @@ export const manualBookFilterFields = [
     options: [
       { value: "-created_at", label: "Newest first" },
       { value: "created_at", label: "Oldest first" },
-      { value: "catalog_code", label: "Code ascending" },
-      { value: "-catalog_code", label: "Code descending" },
       { value: "title", label: "Title A-Z" },
-      { value: "-title", label: "Title Z-A" }
+      { value: "-title", label: "Title Z-A" },
+      { value: "manual_publisher", label: "Publisher A-Z" },
+      { value: "-manual_publisher", label: "Publisher Z-A" }
     ]
   }
 ];

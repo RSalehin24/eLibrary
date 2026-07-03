@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import BookTable from "../components/BookTable";
 import CatalogToolbar from "../components/CatalogToolbar";
 import { waitForExportUi, waitForMinimumLoader } from "../features/catalog/exportUiTiming";
@@ -12,14 +12,13 @@ import {
   emptyManualBookForm,
   manualBookSortOptions,
 } from "../features/manual-books/manualBookFilters";
-import { useDynamicFilterOptions } from "../hooks/useDynamicFilterOptions";
 import { loadManualBookOptions } from "../features/manual-books/manualBookOptions";
 import { useInfiniteCatalogBooks } from "../hooks/useInfiniteCatalogBooks";
 import { usePageTitle } from "../hooks/usePageTitle";
 import { useToast } from "../hooks/useToast";
 import { getContributorNamesByRole } from "../utils/bookPresentation";
 import { catalogFetch } from "../api/catalog";
-import { exportBooksToCsv, exportBooksToPdf } from "../utils/bookExport";
+import { exportBooksToCsv, exportBooksToPdf, exportManualBooksToExcel } from "../utils/bookExport";
 import { getExportBlockState } from "../utils/export";
 import {
   clearPendingExport,
@@ -34,65 +33,22 @@ export default function ManualBooksPage() {
   const pendingExportRef = useRef(readPendingExport(MANUAL_BOOKS_EXPORT_STORAGE_KEY));
   const resumedPendingExportRef = useRef(false);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [form, setForm] = useState(emptyManualBookForm);
+  const [exportRowExpanded, setExportRowExpanded] = useState(false);
+  const [groupByExcel, setGroupByExcel] = useState("");
+  const [form, setFormState] = useState(emptyManualBookForm);
   const formRef = useRef(form);
-  formRef.current = form;
+  const setForm = useCallback((nextForm) => {
+    const value = typeof nextForm === "function" ? nextForm(formRef.current) : nextForm;
+    formRef.current = value;
+    setFormState(value);
+  }, []);
   const [filters, setFilters] = useState(defaultManualBookFilters);
   const [appliedFilters, setAppliedFilters] = useState(defaultManualBookFilters);
 
-  const { authors, seriesList, categories } = useDynamicFilterOptions(filters, setFilters);
-
-  const toolbarFields = useMemo(() => {
-    return [
-      {
-        key: "author",
-        label: "Contributor",
-        type: "searchable-select",
-        options: [
-          { value: "", label: "Any" },
-          ...authors.map(name => ({ value: name, label: name }))
-        ]
-      },
-      {
-        key: "series",
-        label: "Series",
-        type: "searchable-select",
-        options: [
-          { value: "", label: "Any" },
-          ...seriesList.map(name => ({ value: name, label: name }))
-        ]
-      },
-      {
-        key: "category",
-        label: "Category",
-        type: "searchable-select",
-        options: [
-          { value: "", label: "Any" },
-          ...categories.map(name => ({ value: name, label: name }))
-        ]
-      },
-      {
-        key: "ownership",
-        label: "Ownership",
-        type: "select",
-        options: [
-          { value: "", label: "All books" },
-          { value: "mine", label: "My books" }
-        ]
-      },
-      {
-        key: "record_type",
-        label: "Type",
-        type: "select",
-        options: [
-          { value: "digital", label: "Digital" },
-          { value: "manual", label: "Manual" },
-          { value: "all", label: "All types" }
-        ]
-      }
-    ];
-  }, [authors, seriesList, categories]);
   const [filtersExpanded, setFiltersExpanded] = useState(false);
+  const [writerOptions, setWriterOptions] = useState([]);
+  const [translatorOptions, setTranslatorOptions] = useState([]);
+  const [editorOptions, setEditorOptions] = useState([]);
   const [contributorOptions, setContributorOptions] = useState([]);
   const [categoryOptions, setCategoryOptions] = useState([]);
   const [seriesOptions, setSeriesOptions] = useState([]);
@@ -121,12 +77,75 @@ export default function ManualBooksPage() {
     filters: appliedFilters,
   });
 
+  const toolbarFields = useMemo(() => {
+    return [
+      {
+        key: "writer",
+        label: "Writer",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...writerOptions.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "translator",
+        label: "Translator",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...translatorOptions.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "editor",
+        label: "Editor",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...editorOptions.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "category",
+        label: "Category",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...categoryOptions.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "publisher",
+        label: "Publisher",
+        type: "searchable-select",
+        options: [
+          { value: "", label: "Any" },
+          ...publisherOptions.map(name => ({ value: name, label: name }))
+        ]
+      },
+      {
+        key: "binding",
+        label: "Binding",
+        type: "select",
+        options: [
+          { value: "", label: "Any" },
+          { value: "hard_cover", label: "Hardcover" },
+          { value: "paper_back", label: "Paperback" }
+        ]
+      },
+    ];
+  }, [writerOptions, translatorOptions, editorOptions, categoryOptions, publisherOptions]);
+
   async function loadOptions() {
     try {
       setLoadingOptions(true);
       const options = await loadManualBookOptions();
       setCategoryOptions(options.categories);
       setContributorOptions(options.contributors);
+      setWriterOptions(options.writers);
+      setTranslatorOptions(options.translators);
+      setEditorOptions(options.editors);
       setSeriesOptions(options.series);
       setPublisherOptions(options.publishers);
     } catch (nextError) {
@@ -180,6 +199,7 @@ export default function ManualBooksPage() {
           await exportBooksToPdf(
             pendingExport.items,
             pendingExport.title || "Physical Books' List Export",
+            pendingExport.groupBy || "",
           );
           toast.success("PDF export downloaded.");
         }
@@ -208,7 +228,7 @@ export default function ManualBooksPage() {
       currentForm.series.length > 0 ||
       currentForm.publisher.trim() !== "" ||
       currentForm.price !== "" ||
-      currentForm.binding !== "" ||
+      currentForm.binding !== "hard_cover" ||
       currentForm.is_compilation !== false
     );
   }
@@ -376,6 +396,7 @@ export default function ManualBooksPage() {
         items: exportItems,
         title: "Physical Books' List Export",
         filename: "manual-books.csv",
+        groupBy: groupByExcel,
       });
       pendingExportRef.current = exportRequest;
       const startedAt = Date.now();
@@ -385,7 +406,7 @@ export default function ManualBooksPage() {
         exportBooksToCsv(exportRequest.items, exportRequest.filename);
         toast.success("CSV export started.");
       } else {
-        await exportBooksToPdf(exportRequest.items, exportRequest.title);
+        await exportBooksToPdf(exportRequest.items, exportRequest.title, exportRequest.groupBy || "");
         toast.success("PDF export downloaded.");
       }
 
@@ -399,19 +420,41 @@ export default function ManualBooksPage() {
     }
   }
 
+  async function runExcelDownload(groupBy) {
+    setDownloadState("excel");
+    try {
+      const exportItems = await loadManualBooksForExport(appliedFilters);
+      const blocked = getExportBlockState({
+        items: exportItems,
+        loading: initialLoading || refreshing,
+        error,
+        nounSingular: "manual book",
+        nounPlural: "manual books",
+      });
+      if (blocked) {
+        toast[blocked.type](blocked.message);
+        return;
+      }
+      exportManualBooksToExcel(exportItems, groupBy, "manual-books.xlsx");
+      toast.success("Excel export downloaded.");
+    } catch (nextError) {
+      toast.error(nextError.message);
+    } finally {
+      setDownloadState("");
+    }
+  }
+
   const resultCount =
     error && !manualBooks.length ? "" : `${totalCount}`;
   const showErrorState = Boolean(error && !manualBooks.length && !initialLoading);
   const headerActions = (
     <ManualBooksToolbarActions
       composerOpen={composerOpen}
-      downloadState={downloadState}
-      onExport={runDownload}
-      onToggleComposer={() => {
+      exportRowExpanded={exportRowExpanded}
+      onToggleExportRow={() => setExportRowExpanded(prev => !prev)}
+      onToggleComposer={async () => {
         if (composerOpen) {
-          setForm(emptyManualBookForm);
-          setEditingBook(null);
-          setComposerOpen(false);
+          await handleDone();
         } else {
           setComposerOpen(true);
         }
@@ -451,8 +494,87 @@ export default function ManualBooksPage() {
           inline
           bare
           buttonsLoading={initialLoading || refreshing}
-          buttonsDisabled={initialLoading || loadingMore || refreshing}
+          buttonsDisabled={loadingMore || refreshing}
         />
+
+        {exportRowExpanded ? (
+          <div className="manual-books-download-row">
+            {/* Grouping Dropdown */}
+            <select
+              className="catalog-toolbar-select"
+              value={groupByExcel}
+              onChange={(e) => setGroupByExcel(e.target.value)}
+              disabled={downloadState !== ""}
+              aria-label="Group Excel by"
+              title="Group Excel by"
+              style={{ minHeight: 40 }}
+            >
+              <option value="">No grouping</option>
+              <option value="category">Category</option>
+              <option value="publisher">Publisher</option>
+              <option value="binding">Binding</option>
+              <option value="language">Language</option>
+              <option value="contributor">Contributor</option>
+            </select>
+
+            {/* CSV Export */}
+            <button
+              type="button"
+              className={`toolbar-icon-button export-action-button${downloadState === "csv" ? " is-loading" : ""}`}
+              onClick={() => {
+                if (downloadState === "") {
+                  runDownload("csv");
+                }
+              }}
+              disabled={downloadState !== ""}
+              aria-label={downloadState === "csv" ? "CSV export is generating" : "CSV export"}
+              title="CSV export"
+            >
+              <span className="toolbar-icon-button-art">
+                {downloadState === "csv" ? <span className="loading-spinner" aria-hidden="true" /> : <CsvIcon />}
+              </span>
+              <span className="toolbar-icon-button-text">CSV</span>
+            </button>
+
+            {/* PDF Export */}
+            <button
+              type="button"
+              className={`toolbar-icon-button export-action-button${downloadState === "pdf" ? " is-loading" : ""}`}
+              onClick={() => {
+                if (downloadState === "") {
+                  runDownload("pdf");
+                }
+              }}
+              disabled={downloadState !== ""}
+              aria-label={downloadState === "pdf" ? "PDF export is generating" : "PDF export"}
+              title="PDF export"
+            >
+              <span className="toolbar-icon-button-art">
+                {downloadState === "pdf" ? <span className="loading-spinner" aria-hidden="true" /> : <PdfIcon />}
+              </span>
+              <span className="toolbar-icon-button-text">PDF</span>
+            </button>
+
+            {/* Excel Export */}
+            <button
+              type="button"
+              className={`toolbar-icon-button export-action-button${downloadState === "excel" ? " is-loading" : ""}`}
+              onClick={() => {
+                if (downloadState === "") {
+                  runExcelDownload(groupByExcel);
+                }
+              }}
+              disabled={downloadState !== ""}
+              aria-label={downloadState === "excel" ? "Excel export is generating" : "Excel export"}
+              title="Excel export"
+            >
+              <span className="toolbar-icon-button-art">
+                {downloadState === "excel" ? <span className="loading-spinner" aria-hidden="true" /> : <ExcelIcon />}
+              </span>
+              <span className="toolbar-icon-button-text">Excel</span>
+            </button>
+          </div>
+        ) : null}
       </header>
 
       {composerOpen ? (
@@ -463,11 +585,7 @@ export default function ManualBooksPage() {
           publisherOptions={publisherOptions}
           form={form}
           loadingOptions={loadingOptions}
-          onClose={() => {
-            setForm(emptyManualBookForm);
-            setEditingBook(null);
-            setComposerOpen(false);
-          }}
+          onClose={handleDone}
           onSubmit={handleCreate}
           setForm={setForm}
           submitting={submitting}
@@ -500,5 +618,63 @@ export default function ManualBooksPage() {
         />
       )}
     </div>
+  );
+}
+
+function ExcelIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ width: 16, height: 16 }}>
+      <path
+        d="M7.25 4.75h7.72l4.03 4.03v9.97A2.25 2.25 0 0 1 16.75 21h-9.5A2.25 2.25 0 0 1 5 18.75v-11.5A2.25 2.25 0 0 1 7.25 5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M14.75 4.75v4h4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path
+        d="M9 12l2.5 3.5L9 19M15 12l-2.5 3.5L15 19"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CsvIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ width: 16, height: 16 }}>
+      <path
+        d="M7.25 4.75h7.72l4.03 4.03v9.97A2.25 2.25 0 0 1 16.75 21h-9.5A2.25 2.25 0 0 1 5 18.75v-11.5A2.25 2.25 0 0 1 7.25 5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M14.75 4.75v4h4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path d="M8 11.5h8M8 15h8M8 18.5h5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function PdfIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ width: 16, height: 16 }}>
+      <path
+        d="M7.25 4.75h7.72l4.03 4.03v9.97A2.25 2.25 0 0 1 16.75 21h-9.5A2.25 2.25 0 0 1 5 18.75v-11.5A2.25 2.25 0 0 1 7.25 5Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path d="M14.75 4.75v4h4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+      <path
+        d="M8.1 16.7v-4.8h1.56c.92 0 1.54.56 1.54 1.43 0 .9-.62 1.47-1.54 1.47H9.4v1.9M13 16.7v-4.8h1.44c1.44 0 2.33.91 2.33 2.4 0 1.48-.89 2.4-2.33 2.4H13ZM9.4 13.75h.26c.36 0 .57-.19.57-.49 0-.28-.21-.47-.57-.47H9.4ZM14 15.63h.35c.85 0 1.38-.47 1.38-1.33 0-.88-.53-1.35-1.38-1.35H14Z"
+        fill="currentColor"
+      />
+    </svg>
   );
 }

@@ -128,4 +128,114 @@ test.describe("Manual Books Page", () => {
     await manualBooksPage.search(uniqueTitle);
     await expect(page.getByText(uniqueTitle, { exact: true })).toBeVisible();
   });
+
+  test("sort dropdown has code sort removed and publisher sort added", async ({
+    page,
+  }) => {
+    const manualBooksPage = new ManualBooksPageModel(page);
+    await loginAsSuperAdmin(page);
+    await manualBooksPage.goto();
+
+    const sortSelect = page.locator(".catalog-search-sort .catalog-toolbar-select");
+    await expect(sortSelect).toBeVisible();
+
+    const options = await sortSelect.locator("option").evaluateAll((opts) =>
+      opts.map((o) => ({ value: o.value, text: o.text }))
+    );
+
+    const values = options.map((o) => o.value);
+    
+    // Code sort options must be removed
+    expect(values).not.toContain("catalog_code");
+    expect(values).not.toContain("-catalog_code");
+
+    // Publisher sort options must be present
+    expect(values).toContain("manual_publisher");
+    expect(values).toContain("-manual_publisher");
+
+    const labels = options.map((o) => o.text);
+    expect(labels).toContain("Publisher A-Z");
+    expect(labels).toContain("Publisher Z-A");
+  });
+
+  test("filters drawer contains the correct new fields", async ({
+    page,
+  }) => {
+    const manualBooksPage = new ManualBooksPageModel(page);
+    await loginAsSuperAdmin(page);
+    await manualBooksPage.goto();
+
+    // Open filter drawer
+    const filterToggle = page.getByRole("button", { name: /Filter/i });
+    await expect(filterToggle).toBeVisible();
+    await filterToggle.click();
+
+    // Verify all expected filter fields exist in the drawer grid
+    const expectedFilters = [
+      "Writer",
+      "Translator",
+      "Editor",
+      "Category",
+      "Publisher",
+      "Binding"
+    ];
+
+    for (const label of expectedFilters) {
+      const fieldLocator = page.locator(".catalog-filter-field", {
+        has: page.getByText(label, { exact: true })
+      });
+      await expect(fieldLocator).toBeVisible();
+    }
+
+    // Verify Binding select options
+    const bindingSelect = page.locator(".catalog-filter-field", {
+      has: page.getByText("Binding", { exact: true })
+    }).locator("select");
+    
+    await expect(bindingSelect).toBeVisible();
+    const bindingOptions = await bindingSelect.locator("option").evaluateAll((opts) =>
+      opts.map((o) => o.text)
+    );
+    expect(bindingOptions).toContain("Any");
+    expect(bindingOptions).toContain("Hardcover");
+    expect(bindingOptions).toContain("Paperback");
+  });
+
+  test("Excel export with group-by select options is functional", async ({
+    page,
+  }) => {
+    const manualBooksPage = new ManualBooksPageModel(page);
+    await loginAsSuperAdmin(page);
+    await manualBooksPage.goto();
+
+    // Toggle export tools row open
+    await page.getByRole("button", { name: "Export options" }).click();
+
+    // Verify group-by select is present
+    const groupBySelect = page.locator(".manual-books-download-row select");
+    await expect(groupBySelect).toBeVisible();
+
+    const options = await groupBySelect.locator("option").evaluateAll((opts) =>
+      opts.map((o) => o.text)
+    );
+    expect(options).toContain("No grouping");
+    expect(options).toContain("Category");
+    expect(options).toContain("Publisher");
+    expect(options).toContain("Binding");
+    expect(options).toContain("Language");
+    expect(options).toContain("Contributor");
+
+    // Select Grouping and trigger download check
+    await groupBySelect.selectOption("category");
+    
+    const excelBtn = page.getByRole("button", { name: "Excel export", exact: true });
+    await expect(excelBtn).toBeVisible();
+
+    // Listen for download event
+    const downloadPromise = page.waitForEvent("download");
+    await excelBtn.click();
+    const download = await downloadPromise;
+    expect(download.suggestedFilename()).toBe("manual-books.xlsx");
+  });
 });
+
