@@ -119,6 +119,7 @@ class User(AbstractUser, TimeStampedModel):
                 "read:durable",
                 "download:file",
                 "metadata:edit",
+                "physical_books:view",
                 "processing:manage",
                 "access:manage",
                 "source_records:view",

@@ -3,7 +3,7 @@ export const bookPropertiesItems = [
   { to: "/categories", label: "Categories" },
   { to: "/series", label: "Series" },
   { to: "/writers", label: "Writers" },
-  { to: "/manual-books", label: "Physical Books' List" },
+  { to: "/manual-books", label: "Physical Books' List", capabilityRequired: true },
 ];
 
 export const processingItems = [

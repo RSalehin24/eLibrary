@@ -12,6 +12,8 @@ from apps.catalog.serializers import BookDetailSerializer, BookListSerializer, M
 from .shared import BookQueryMixin, export_record_type
 from .shared import OptionalPaginationListMixin
 
+from apps.common.permissions import CanViewPhysicalBooksList
+
 
 class BookListView(OptionalPaginationListMixin, BookQueryMixin, generics.ListAPIView):
     permission_classes = [IsAuthenticated]
@@ -74,7 +76,7 @@ class ManualBookListCreateView(
     BookQueryMixin,
     generics.ListCreateAPIView,
 ):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [CanViewPhysicalBooksList]
     default_record_type = BookRecordType.MANUAL
     pagination_default_limit = 60
     pagination_max_limit = 100

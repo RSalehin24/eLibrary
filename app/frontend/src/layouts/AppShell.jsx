@@ -5,6 +5,7 @@ import { MobileNavigationPanel } from "../features/layout/MobileNavigationPanel"
 import { ReaderTopbarHideButton } from "../features/layout/ReaderTopbarHideButton";
 import {
   authenticatedNavigation,
+  bookPropertiesItems,
   isBookPropertiesRoute,
   isProcessingRoute,
   primaryNavigation,
@@ -38,6 +39,10 @@ export default function AppShell({ children }) {
   const propertiesMenuRef = useRef(null);
   const processingMenuRef = useRef(null);
   const canManageProcessing = hasCapability(user, "processing:manage");
+  const canViewPhysicalBooks = hasCapability(user, "physical_books:view");
+  const visibleBookPropertiesItems = bookPropertiesItems.filter(
+    (item) => !item.capabilityRequired || canViewPhysicalBooks,
+  );
   const visibleProcessingItems = processingItems.filter(
     (item) => !item.capabilityRequired || canManageProcessing,
   );
@@ -203,6 +208,7 @@ export default function AppShell({ children }) {
           authenticated={authenticated}
           displayName={displayName}
           hasProcessingNav={hasProcessingNav}
+          visibleBookPropertiesItems={visibleBookPropertiesItems}
           isBookPropertiesActive={isBookPropertiesActive}
           isLoginRoute={isLoginRoute}
           isProcessingPropertiesActive={isProcessingPropertiesActive}
@@ -237,6 +243,7 @@ export default function AppShell({ children }) {
       {showMobileNav ? (
         <MobileNavigationPanel
           displayName={displayName}
+          visibleBookPropertiesItems={visibleBookPropertiesItems}
           email={user?.email}
           hasProcessingNav={hasProcessingNav}
           isBookPropertiesActive={isBookPropertiesActive}

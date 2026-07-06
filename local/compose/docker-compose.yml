@@ -111,7 +111,7 @@ services:
     environment:
       <<: *app_environment
     command: >
-      sh -c "mkdir -p /logs/local/backend &&
+      sh -c "mkdir -p /app/static /logs/local/backend &&
       python manage.py migrate &&
       python manage.py seed_superadmin &&
       python manage.py runserver 0.0.0.0:8000 --noreload

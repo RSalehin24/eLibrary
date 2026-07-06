@@ -21,6 +21,7 @@ class PermissionScope(models.TextChoices):
     READ_DURABLE = "read:durable", "Durable Read"
     DOWNLOAD_FILE = "download:file", "Download Ebook"
     METADATA_EDIT = "metadata:edit", "Edit Metadata"
+    PHYSICAL_BOOKS_VIEW = "physical_books:view", "View Physical Books List"
     PROCESSING_MANAGE = "processing:manage", "Manage Processing"
     ACCESS_MANAGE = "access:manage", "Manage Access"
     VIEW_SOURCE_RECORDS = "source_records:view", "View Records' Source"
@@ -34,6 +35,7 @@ ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
     PermissionScope.PROCESSING_MANAGE,
     PermissionScope.VIEW_SOURCE_RECORDS,
     PermissionScope.METADATA_EDIT,
+    PermissionScope.PHYSICAL_BOOKS_VIEW,
     PermissionScope.READ_ONCE,
     PermissionScope.SEND_KINDLE,
     PermissionScope.READ_DURABLE,

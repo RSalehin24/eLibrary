@@ -141,6 +141,10 @@ class CanEditMetadata(ScopePermission):
     allow_book_scoped = True
 
 
+class CanViewPhysicalBooksList(ScopePermission):
+    required_scopes = (PermissionScope.PHYSICAL_BOOKS_VIEW,)
+
+
 class IsSuperAdmin(BasePermission):
     def has_permission(self, request, view):
         user = request.user

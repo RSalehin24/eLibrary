@@ -4,7 +4,7 @@ import {
   MenuIcon,
   MobileProfileSummary,
 } from "./MobileNavigationIcons";
-import { bookPropertiesItems } from "./navigation";
+import { getHomePath } from "./navigation";
 
 function MobileNavGroup({
   active,
@@ -67,6 +67,7 @@ export function MobileNavigationPanel({
   profileImageUrl,
   secondaryNav,
   toast,
+  visibleBookPropertiesItems,
   visibleProcessingItems,
 }) {
   return (
@@ -159,7 +160,7 @@ export function MobileNavigationPanel({
 
         <MobileNavGroup
           active={isBookPropertiesActive}
-          items={bookPropertiesItems}
+          items={visibleBookPropertiesItems}
           label="Book Properties"
           onClose={onClose}
           onToggle={onPropertiesToggle}

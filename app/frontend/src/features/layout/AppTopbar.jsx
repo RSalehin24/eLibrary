@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import NavDropdown from "./NavDropdown";
 import ProfileMenu from "./ProfileMenu";
 import { MenuIcon } from "./MobileNavigationIcons";
-import { bookPropertiesItems, getHomePath } from "./navigation";
+import { getHomePath } from "./navigation";
 
 export function AppTopbar({
   authenticated,
@@ -36,6 +36,7 @@ export function AppTopbar({
   useAppTopbar,
   useMinimalTopbar,
   user,
+  visibleBookPropertiesItems,
   visibleProcessingItems,
 }) {
   return (
@@ -83,7 +84,7 @@ export function AppTopbar({
             active={isBookPropertiesActive}
             open={propertiesOpen}
             label="Book Properties"
-            items={bookPropertiesItems}
+            items={visibleBookPropertiesItems}
             onToggle={onPropertiesToggle}
             onItemClick={onPropertiesItemClick}
           />
