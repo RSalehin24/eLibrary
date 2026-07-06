@@ -3,6 +3,7 @@ import { toQueryString } from "../utils/query";
 
 export const authApi = {
   session: () => apiFetch("/auth/session/"),
+  demoLogin: () => apiFetch("/auth/demo-login/"),
   login: (body) => apiFetch("/auth/login/", { method: "POST", body }),
   logout: () => apiFetch("/auth/logout/", { method: "POST" }),
   profile: () => apiFetch("/auth/profile/"),

@@ -6,6 +6,7 @@ import CreatedBooksPage from "../../pages/CreatedBooksPage";
 import HomePage from "../../pages/HomePage";
 import KindleSentPage from "../../pages/KindleSentPage";
 import LibraryPage from "../../pages/LibraryPage";
+import DemoLoginPage from "../../pages/DemoLoginPage";
 import LoginPage from "../../pages/LoginPage";
 import ManualBooksPage from "../../pages/ManualBooksPage";
 import NotesPage from "../../pages/NotesPage";
@@ -82,6 +83,7 @@ export default function AppRoutes() {
         }
       />
       <Route path="/login" element={<LoginPage />} />
+      <Route path="/demo-login" element={<DemoLoginPage />} />
       <Route
         path="/created-books"
         element={<Navigate to="/my-books" replace />}

@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
 from django.db import transaction
 from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Prefetch, Q, Value, When
@@ -154,6 +155,33 @@ class RegisterView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsSuperAdmin]
     serializer_class = RegisterSerializer
     throttle_classes = [RegisterRateThrottle]
+
+
+class DemoLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        if request.user.is_authenticated:
+            return Response(UserSerializer(request.user, context={"request": request}).data)
+
+        User = get_user_model()
+        email = settings.DEMO_USER_EMAIL
+        password = settings.DEMO_USER_PASSWORD
+
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                "full_name": "Demo User",
+                "is_active": True,
+                "totp_required": False,
+            },
+        )
+        if created:
+            user.set_password(password)
+            user.save()
+
+        login(request, user)
+        return Response(UserSerializer(request.user, context={"request": request}).data)
 
 
 class LoginView(APIView):

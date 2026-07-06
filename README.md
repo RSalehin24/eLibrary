@@ -11,17 +11,22 @@ A full-stack platform that scrapes, processes, and serves Bangla (and English) e
 
 ## Table of Contents
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Demo Access](#demo-access)
-- [Quick Start](#quick-start)
-- [Getting Started](#getting-started)
-- [Project Structure](#project-structure)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [License](#license)
+- [Bangla Library Platform](#bangla-library-platform)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Tech Stack](#tech-stack)
+  - [Demo Access](#demo-access)
+  - [Quick Start](#quick-start)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Local Development](#local-development)
+  - [Project Structure](#project-structure)
+  - [Testing](#testing)
+  - [Deployment](#deployment)
+  - [Key Commands](#key-commands)
+  - [Documentation](#documentation)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 ---
 
@@ -61,15 +66,11 @@ A full-stack platform that scrapes, processes, and serves Bangla (and English) e
 
 ## Demo Access
 
-A read-only demo account is available to explore the application. The live deployment URL can be found in the **description of this repository**.
+A read-only demo account is available to explore the application. No credentials needed.
 
-| Field | Value |
-|-------|-------|
-| Email | `demo_user.library@rsalehin24.me` |
-| Password | `YCDqgDw9CwxPprt` |
-| URL | `Check the description of this repository` |
+> [**Click here to experience the site**](https://library.rsalehin24.me/demo-login) — you'll be logged in automatically.
 
-> This account has **read-only access** — you can browse the library, view books, and test the reader, but cannot modify or delete any content.
+This account has **read-only access** — you can browse the library, view books, and test the reader.
 
 ---
 

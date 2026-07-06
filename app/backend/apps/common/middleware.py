@@ -4,6 +4,7 @@ from django.http import JsonResponse
 class RequireTotpSetupMiddleware:
     allowed_api_paths = {
         "/api/auth/session/",
+        "/api/auth/demo-login/",
         "/api/auth/logout/",
         "/api/auth/profile/",
         "/api/auth/2fa/status/",

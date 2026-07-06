@@ -1,6 +1,7 @@
 from django.urls import path
 
 from apps.accounts.views import (
+    DemoLoginView,
     LoginView,
     LogoutView,
     ManagedUserDetailView,
@@ -21,6 +22,7 @@ from apps.accounts.views import (
 
 urlpatterns = [
     path("session/", SessionView.as_view(), name="auth-session"),
+    path("demo-login/", DemoLoginView.as_view(), name="auth-demo-login"),
     path("login/", LoginView.as_view(), name="auth-login"),
     path("logout/", LogoutView.as_view(), name="auth-logout"),
     path("profile/", ProfileView.as_view(), name="auth-profile"),
