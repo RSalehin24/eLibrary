@@ -72,3 +72,5 @@ migration/runtime/*
 
 .antigravitycli/
 test-results/
+
+AGENTS.md
