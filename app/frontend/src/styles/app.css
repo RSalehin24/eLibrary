@@ -13,10 +13,13 @@
 @import "./app/page-loaders-and-states.css";
 @import "./app/toasts-and-catalog-page.css";
 @import "./app/catalog-toolbar-primary.css";
+@import "./app/catalog-toolbar-layout.css";
 @import "./app/catalog-toolbar-secondary.css";
 @import "./app/catalog-property-controls.css";
+@import "./app/catalog-filter-controls.css";
 @import "./app/catalog-tables.css";
 @import "./app/manual-books-and-book-grid.css";
+@import "./app/physical-reading.css";
 @import "./app/book-card-and-detail-grids.css";
 @import "./app/book-metadata-and-hero.css";
 @import "./app/my-books-actions.css";

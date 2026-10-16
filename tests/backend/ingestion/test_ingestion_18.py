@@ -100,8 +100,8 @@ def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypat
         (output_dir / "টেস্ট বুক.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     processed_job = process_submission_job(str(job.id))
     submission.refresh_from_db()
@@ -168,8 +168,8 @@ def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_w
         (output_dir / "কভার টেস্ট বুক.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(job.id))
 
@@ -219,8 +219,8 @@ def test_process_submission_job_keeps_only_media_copies_of_generated_assets(tmp_
         (output_dir / "একক কপি বই.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(job.id))
 

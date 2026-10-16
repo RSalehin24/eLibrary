@@ -2,6 +2,12 @@
 
 This folder contains the production deployment definition, deploy-time env templates, and the remote automation scripts.
 
+The new Next.js/Django/RabbitMQ platform is defined in
+[`compose/platform.yml`](compose/platform.yml). Follow the
+[platform deployment guide](../docs/operations/platform-deployment.md) for its
+private environment, image approval boundary, startup, and verification status.
+The older entry points below belong to the retained Vite deployment.
+
 ## Folder Layout
 
 - `deploy/compose/`: production Docker Compose definition
@@ -13,11 +19,16 @@ This folder contains the production deployment definition, deploy-time env templ
 
 - Main deploy script: `deploy/scripts/deploy.sh`
 - Deploy env scaffolding: `deploy/scripts/generate-env.sh`
-- Host Docker install: `deploy/scripts/install-docker.sh`
+- Ubuntu/Debian Docker install: `deploy/scripts/install-docker.sh` (keep its
+  `docker_install_repository.sh` helper alongside it)
 - Host Nginx install: `deploy/scripts/install-nginx.sh`
 - Host Nginx/Certbot setup: `deploy/scripts/setup-host-nginx.sh`
 
 All repo-facing helpers in `deploy/scripts/` support `-h` or `--help`.
+
+The Docker installer passed isolated Ubuntu/Debian package-install simulations.
+See [simulator results](../docs/operations/simulator-acceptance.md) for the
+systemd simulation boundary and reproduction details.
 
 ## Common Workflow
 

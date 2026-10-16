@@ -1,11 +1,10 @@
 import time
-from urllib.parse import urlparse, urlunparse
+from urllib.parse import urljoin, urlparse, urlunparse
 
 import requests
 from bs4 import BeautifulSoup
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-
 
 HEADERS = {
     "User-Agent": (
@@ -97,7 +96,9 @@ def decode_html_response(response):
 
 def get_soup(url, max_retries=3):
     """Fetch URL and return BeautifulSoup object with retry logic."""
-    from apps.ingestion.services.resolution_support_network import get_with_host_fallback
+    from apps.ingestion.services.resolution_support_network import (
+        get_with_host_fallback,
+    )
 
     session = create_session_with_retries(retries=max_retries)
     try:
@@ -228,3 +229,27 @@ def clean_buttons(soup):
     for button in soup.find_all("button"):
         button.decompose()
     return soup
+
+
+def normalize_crawl_url(url, base_url=""):
+    if not url:
+        return ""
+
+    candidate = urljoin(base_url, str(url).strip()) if base_url else str(url).strip()
+    parsed = urlparse(candidate)
+
+    if parsed.scheme not in {"http", "https"}:
+        return ""
+    allowed = _get_allowed_source_hosts()
+    if allowed and parsed.netloc.lower() not in allowed:
+        return ""
+
+    source_host = _get_source_site_host()
+    target_host = source_host or parsed.netloc.lower()
+    normalized_path = parsed.path or "/"
+    if normalized_path.startswith("/books/"):
+        normalized_path = normalized_path.rstrip("/") + "/"
+
+    return urlunparse(
+        ("https", target_host, normalized_path, parsed.params, parsed.query, "")
+    )

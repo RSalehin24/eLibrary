@@ -101,8 +101,8 @@ def test_process_submission_job_replaces_existing_media_assets_instead_of_creati
         (output_dir / "পুনরায় বই.epub").write_bytes(b"first")
         (output_dir / "book_cover.jpg").write_bytes(b"first")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(first_job.id))
 
@@ -232,8 +232,8 @@ def test_processing_reuses_canonical_author_series_and_category_names(tmp_path, 
         (output_dir / "ক্যানোনিক্যাল বই.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(job.id))
 

@@ -1,11 +1,20 @@
-from urllib.parse import unquote, urlparse
 
 from rest_framework import serializers
 
-from apps.catalog.models import Book, ContributorRole, GeneratedAssetStatus, GeneratedAssetType
-from apps.catalog.services import normalize_book_contributors
-from apps.common.permissions import user_can_view_book_cover, user_has_scope, user_can_launch_reader, user_can_view_preview_html
 from apps.access.models import PermissionScope
+from apps.catalog.models import (
+    Book,
+    ContributorRole,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+from apps.catalog.services import normalize_book_contributors
+from apps.common.permissions import (
+    user_can_launch_reader,
+    user_can_view_book_cover,
+    user_can_view_preview_html,
+    user_has_scope,
+)
 from apps.common.url_utils import public_api_url
 from apps.ingestion.services.normalization import (
     clean_extracted_dedication_html,
@@ -16,7 +25,8 @@ from apps.ingestion.services.normalization import (
     split_contributor_value,
 )
 
-from .common import GeneratedAssetSerializer, asset_exists
+from .common import GeneratedAssetSerializer, asset_exists, serialize_source_record
+from .toc import collect_empty_toc_nodes
 
 
 class BookListSerializer(serializers.ModelSerializer):
@@ -141,18 +151,7 @@ class BookListSerializer(serializers.ModelSerializer):
     def get_user_kindle_sent_at(self, obj):
         return getattr(obj, "user_kindle_sent_at", None)
 
-    def serialize_source_record(self, source):
-        url = source.normalized_source_url or source.source_url
-        parsed = urlparse(url)
-        return {
-            "url": url,
-            "display_url": unquote(url),
-            "display_path": unquote(parsed.path).strip("/") or parsed.netloc,
-            "source_title": source.source_title,
-            "source_type": source.source_type,
-            "site": parsed.netloc,
-            "is_primary": source.is_primary,
-        }
+    serialize_source_record = staticmethod(serialize_source_record)
 
     def get_primary_source(self, obj):
         sources = list(obj.source_urls.all())
@@ -286,24 +285,7 @@ class BookDetailSerializer(BookListSerializer):
             }
         return {}
 
-    @staticmethod
-    def _collect_empty_toc_nodes(nodes):
-        """Recursively collect non-section TOC entries with no content."""
-        result = []
-        for node in nodes or []:
-            node_type = node.get("type", "lesson")
-            if node_type != "section" and node.get("has_content") is not True:
-                result.append({
-                    "title": node.get("title", ""),
-                    "type": node_type,
-                    "has_content": node.get("has_content"),  # False or None
-                    "source_url": node.get("source_url", ""),
-                    "path": node.get("path", []),
-                })
-            result.extend(
-                BookDetailSerializer._collect_empty_toc_nodes(node.get("children", []))
-            )
-        return result
+    _collect_empty_toc_nodes = staticmethod(collect_empty_toc_nodes)
 
     def get_empty_chapters(self, obj):
         return self._collect_empty_toc_nodes(obj.toc)

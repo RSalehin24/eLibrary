@@ -919,11 +919,11 @@ def metadata_label_matches(text):
 
     deduped = []
     covered_until = -1
-    for match in sorted(matches, key=lambda item: (item["start"], -(item["end"] - item["start"]))):
-        if match["start"] < covered_until:
+    for candidate in sorted(matches, key=lambda item: (item["start"], -(item["end"] - item["start"]))):
+        if candidate["start"] < covered_until:
             continue
-        deduped.append(match)
-        covered_until = max(covered_until, match["end"])
+        deduped.append(candidate)
+        covered_until = max(covered_until, candidate["end"])
     return deduped
 
 

@@ -13,7 +13,7 @@ def test_source_catalog_refresh_ignores_stale_task_after_stop(monkeypatch):
         raise AssertionError("stale source refresh task should not run")
 
     monkeypatch.setattr(
-        "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
+        "apps.ingestion.services.curation_support.source_refresh.refresh_catalog_parallel",
         fail_refresh_catalog,
     )
 
@@ -41,10 +41,10 @@ def test_source_catalog_refresh_ignores_completion_after_stop(monkeypatch):
         state.last_error = "Stopped by user."
         state.finished_at = timezone.now()
         state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
-        return [{"source_url": "https://www.example.com/books/new-book/"}]
+        return {"total": 1}
 
     monkeypatch.setattr(
-        "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
+        "apps.ingestion.services.curation_support.source_refresh.refresh_catalog_parallel",
         fake_refresh_catalog,
     )
 
@@ -75,10 +75,10 @@ def test_source_catalog_refresh_ignores_completion_after_replacement(monkeypatch
         state.last_error = ""
         state.finished_at = None
         state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
-        return [{"source_url": "https://www.example.com/books/new-book/"}]
+        return {"total": 1}
 
     monkeypatch.setattr(
-        "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
+        "apps.ingestion.services.curation_support.source_refresh.refresh_catalog_parallel",
         fake_refresh_catalog,
     )
 
@@ -112,7 +112,7 @@ def test_source_catalog_refresh_ignores_failure_after_replacement(monkeypatch):
         raise RuntimeError("old refresh failed after replacement")
 
     monkeypatch.setattr(
-        "apps.ingestion.services.curation_support.source_refresh.TitleResolver.refresh_catalog",
+        "apps.ingestion.services.curation_support.source_refresh.refresh_catalog_parallel",
         fail_refresh_catalog,
     )
 
@@ -127,7 +127,7 @@ def test_source_catalog_refresh_ignores_failure_after_replacement(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_dispatch_processing_job_returns_failed_job_after_eager_execution_error(monkeypatch, settings):
+def test_dispatch_processing_job_returns_failed_job_after_engine_execution_error(monkeypatch, settings):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     submission = BookSubmission.objects.create(
         input_type="url",
@@ -139,8 +139,9 @@ def test_dispatch_processing_job_returns_failed_job_after_eager_execution_error(
     )
     job = ProcessingJob.objects.create(submission=submission, status=JobStatus.QUEUED)
 
-    def fake_apply_async(args=None, task_id=None, **_kwargs):
-        eager_job = ProcessingJob.objects.get(pk=args[0])
+    def fake_apply_async(job_id, **_kwargs):
+        task_id = ProcessingJob.objects.get(pk=job_id).task_id
+        eager_job = ProcessingJob.objects.get(pk=job_id)
         eager_job.status = JobStatus.FAILED
         eager_job.task_id = task_id
         eager_job.queue_name = "celery"
@@ -152,9 +153,9 @@ def test_dispatch_processing_job_returns_failed_job_after_eager_execution_error(
         eager_job.submission.save(update_fields=["status", "error_message", "updated_at"])
         raise RuntimeError("eager-job-failure")
 
-    monkeypatch.setattr("apps.ingestion.tasks.process_submission_task.apply_async", fake_apply_async)
+    monkeypatch.setattr("apps.ingestion.engine.dispatch.dispatch_job", fake_apply_async)
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.process_submission_job",
+        "apps.ingestion.services.submission_modules.processing_job_runner.process_submission_job",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("inline fallback should not rerun eager job failures")),
     )
 
@@ -190,10 +191,7 @@ def test_dispatch_source_catalog_refresh_returns_failed_state_after_eager_execut
         raise RuntimeError("eager-refresh-failure")
 
     monkeypatch.setattr("apps.ingestion.tasks.refresh_source_catalog_task.apply_async", fake_apply_async)
-    monkeypatch.setattr(
-        "apps.ingestion.services.curation.process_source_catalog_refresh",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("inline fallback should not rerun eager refresh failures")),
-    )
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.process_source_catalog_refresh', lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('inline fallback should not rerun eager refresh failures')))
 
     result = dispatch_source_catalog_refresh(state)
 
@@ -220,10 +218,7 @@ def test_dispatch_catalog_curation_run_returns_failed_run_after_eager_execution_
         raise RuntimeError("eager-run-failure")
 
     monkeypatch.setattr("apps.ingestion.tasks.process_catalog_curation_run_task.apply_async", fake_apply_async)
-    monkeypatch.setattr(
-        "apps.ingestion.services.curation.process_catalog_curation_run",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("inline fallback should not rerun eager curation failures")),
-    )
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.catalog_automation_runs.process_catalog_curation_run', lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('inline fallback should not rerun eager curation failures')))
 
     result = dispatch_catalog_curation_run(run)
 

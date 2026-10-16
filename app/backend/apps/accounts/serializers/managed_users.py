@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from apps.accounts.models import User
 
-from .base import PASSWORD_MIN_LENGTH_ERROR_MESSAGES
+from .base import PASSWORD_MIN_LENGTH_MESSAGE
 from .support import MANAGEABLE_PERMISSION_SCOPES, create_managed_user, sync_global_grants
 
 
@@ -13,7 +13,7 @@ class ManagedUserCreateSerializer(serializers.ModelSerializer):
         required=False,
         allow_blank=True,
         trim_whitespace=False,
-        error_messages=PASSWORD_MIN_LENGTH_ERROR_MESSAGES,
+        error_messages={"min_length": PASSWORD_MIN_LENGTH_MESSAGE},
     )
     is_active = serializers.BooleanField(default=True)
     totp_required = serializers.BooleanField(default=False)
@@ -54,7 +54,7 @@ class ManagedUserUpdateSerializer(serializers.ModelSerializer):
         min_length=12,
         required=False,
         allow_blank=False,
-        error_messages=PASSWORD_MIN_LENGTH_ERROR_MESSAGES,
+        error_messages={"min_length": PASSWORD_MIN_LENGTH_MESSAGE},
     )
     global_scopes = serializers.ListField(
         child=serializers.ChoiceField(choices=[scope.value for scope in MANAGEABLE_PERMISSION_SCOPES]),

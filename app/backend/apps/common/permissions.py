@@ -2,7 +2,7 @@ from django.db import models
 from rest_framework.permissions import BasePermission
 
 from apps.access.models import PermissionGrant, PermissionScope
-from apps.catalog.models import ContributorRole
+from apps.catalog.models import ContributorRole, UserBook
 
 
 def granted_scope_queryset(user, book=None):
@@ -78,11 +78,32 @@ def user_can_send_to_kindle(user, book):
     return user_has_scope(user, [PermissionScope.SEND_KINDLE], book=book) or user_owns_book(user, book)
 
 
+def user_can_configure_kindle(user):
+    if not getattr(user, "is_authenticated", False):
+        return False
+    return (
+        user_has_scope(user, [PermissionScope.SEND_KINDLE])
+        or UserBook.objects.filter(user=user, book__deleted_at__isnull=True).exists()
+        or PermissionGrant.objects.active_for_user(user).filter(scope=PermissionScope.SEND_KINDLE).exists()
+    )
+
+
+def user_can_create_catalog_book(user):
+    return bool(
+        getattr(user, "is_authenticated", False) and user.is_active
+        and user_has_scope(user, [PermissionScope.METADATA_EDIT])
+    )
+
+
 def user_can_launch_reader(user, book):
-    if user_owns_book(user, book):
-        return True
     if user_has_read_once_limit(user, book):
         return False
+    return user_has_reader_access(user, book)
+
+
+def user_has_reader_access(user, book):
+    if user_owns_book(user, book):
+        return True
     return user_has_scope(
         user,
         [
@@ -100,7 +121,7 @@ def user_can_view_book_cover(user, book):
 
 
 class ScopePermission(BasePermission):
-    required_scopes = ()
+    required_scopes: tuple[PermissionScope, ...] = ()
     allow_book_scoped = False
 
     def has_permission(self, request, view):

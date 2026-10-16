@@ -120,7 +120,7 @@ def test_process_submission_job_recovers_when_book_create_hits_source_title_uniq
             return existing_book
         return None
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.find_existing_book_by_source_url", staged_source_url_lookup)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.find_existing_book_by_source_url", staged_source_url_lookup)
 
     submission = BookSubmission.objects.create(
         submitter=user,
@@ -155,8 +155,8 @@ def test_process_submission_job_recovers_when_book_create_hits_source_title_uniq
         "output_folder": str(tmp_path),
     }
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda _url: None)
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", lambda _url: sample)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda _url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", lambda _url: sample)
 
     def fake_generate_exports(book_data):
         output_dir = Path(book_data["output_folder"])
@@ -165,7 +165,7 @@ def test_process_submission_job_recovers_when_book_create_hits_source_title_uniq
         (output_dir / "শ্রেষ্ঠ কবিতা.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     original_create = Book.objects.create
     conflict_raised = {"value": False}

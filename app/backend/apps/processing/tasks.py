@@ -1,5 +1,9 @@
-from celery import shared_task
+from uuid import UUID
 
+from celery import shared_task
+from django.conf import settings
+
+from .jobs.worker import run_background_job
 from .models import BookCreationRequest, BookCreationRequestState
 from .services import (
     PROCESSING_SYNC_KEY_CATALOG,
@@ -12,6 +16,17 @@ from .services import (
 )
 
 run_processing_sync = run_processing_sync_until_blocked
+
+
+@shared_task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    ignore_result=True,
+    soft_time_limit=settings.BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS,
+    time_limit=settings.BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS + 60,
+)
+def run_background_job_task(dispatch_id):
+    run_background_job(UUID(dispatch_id))
 
 
 @shared_task(bind=True)

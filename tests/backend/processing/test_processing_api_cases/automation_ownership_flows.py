@@ -109,10 +109,7 @@ def test_catalog_automation_waits_for_manual_runtime_before_creating_requests(cl
 @pytest.mark.django_db
 def test_processing_sync_start_ignores_remote_pages_when_overrides_are_disabled(client, monkeypatch):
     login_processing_admin(client)
-    monkeypatch.setattr(
-        "apps.processing.views.allow_processing_remote_page_payloads",
-        lambda: False,
-    )
+    monkeypatch.setattr('apps.processing.view_modules.read_stream_and_sync_start_views.allow_processing_remote_page_payloads', lambda: False)
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -129,10 +126,7 @@ def test_processing_sync_start_ignores_remote_pages_when_overrides_are_disabled(
 @pytest.mark.django_db
 def test_catalog_automation_ignores_stale_remote_pages_when_overrides_are_disabled(client, monkeypatch):
     login_processing_admin(client)
-    monkeypatch.setattr(
-        "apps.processing.services.allow_processing_remote_page_payloads",
-        lambda: False,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.allow_processing_remote_page_payloads', lambda: False)
 
     sync_state = get_sync_state()
     sync_state.remote_pages = [[record_payload("stale-remote-record")], []]

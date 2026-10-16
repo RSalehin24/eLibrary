@@ -3,10 +3,7 @@
 @pytest.mark.django_db
 def test_processing_sync_serialization_repairs_stale_checkpoint_mirror(monkeypatch):
     fake_redis = FakeProcessingCheckpointRedis()
-    monkeypatch.setattr(
-        "apps.processing.services.processing_checkpoint_client",
-        lambda: fake_redis,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_redis)
 
     sync_state = get_sync_state()
     sync_state.status = ProcessingSyncStatus.PAUSED
@@ -67,10 +64,7 @@ def test_processing_sync_serialization_repairs_stale_checkpoint_mirror(monkeypat
 @pytest.mark.django_db
 def test_processing_sync_checkpoint_mirror_clears_when_runtime_returns_to_idle(monkeypatch):
     fake_redis = FakeProcessingCheckpointRedis()
-    monkeypatch.setattr(
-        "apps.processing.services.processing_checkpoint_client",
-        lambda: fake_redis,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_redis)
 
     processing_services.run_manual_catalog_sync(
         [[record_payload("mirror-stop-record")], []]
@@ -99,20 +93,14 @@ def test_processing_pipeline_does_not_reenqueue_queued_request_while_dispatch_is
     )
     dispatch_calls = []
 
-    def fake_apply_async(*, args, **kwargs):
-        dispatch_calls.append({"args": tuple(args), "kwargs": dict(kwargs)})
+    def fake_apply_async(*, job_id, **kwargs):
+        dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id=f"task-{len(dispatch_calls)}")
 
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.processing_workers_available",
-        lambda *_args, **_kwargs: True,
-    )
-    monkeypatch.setattr(
-        "apps.processing.tasks.kickoff_book_creation_request_task.apply_async",
+        "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,
     )
 
@@ -125,8 +113,9 @@ def test_processing_pipeline_does_not_reenqueue_queued_request_while_dispatch_is
     assert response.status_code == 200
     assert dispatch_calls == [
         {
-            "args": ("request-pending-dispatch-record",),
-            "kwargs": {"queue": "processing"},
+            "job_id": "request-pending-dispatch-record",
+            "job_type": "pipeline",
+            "handler": "pipeline",
         }
     ]
     processing_request = BookCreationRequest.objects.get(book_record=record)
@@ -145,8 +134,9 @@ def test_processing_pipeline_does_not_reenqueue_queued_request_while_dispatch_is
     assert processing_request.state == "queued"
     assert dispatch_calls == [
         {
-            "args": ("request-pending-dispatch-record",),
-            "kwargs": {"queue": "processing"},
+            "job_id": "request-pending-dispatch-record",
+            "job_type": "pipeline",
+            "handler": "pipeline",
         }
     ]
 
@@ -186,20 +176,14 @@ def test_processing_pipeline_dispatches_queued_request_even_with_initial_backlog
     )
     dispatch_calls = []
 
-    def fake_apply_async(*, args, **kwargs):
-        dispatch_calls.append({"args": tuple(args), "kwargs": dict(kwargs)})
+    def fake_apply_async(*, job_id, **kwargs):
+        dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id=f"task-{len(dispatch_calls)}")
 
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.processing_workers_available",
-        lambda *_args, **_kwargs: True,
-    )
-    monkeypatch.setattr(
-        "apps.processing.tasks.kickoff_book_creation_request_task.apply_async",
+        "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,
     )
 
@@ -212,7 +196,8 @@ def test_processing_pipeline_dispatches_queued_request_even_with_initial_backlog
     assert initial_request.state == "queued"
     assert dispatch_calls == [
         {
-            "args": ("queued-backlog-request",),
-            "kwargs": {"queue": "processing"},
+            "job_id": "queued-backlog-request",
+            "job_type": "pipeline",
+            "handler": "pipeline",
         }
     ]

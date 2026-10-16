@@ -1,44 +1,22 @@
+from typing import ClassVar
+
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 
 from apps.access.models import PermissionScope
-from apps.accounts.kindle import validate_kindle_email_address
+from apps.accounts.kindle import normalize_kindle_addresses
 from apps.accounts.models import User
 from apps.common.permissions import user_has_scope
 
 
 def normalize_kindle_emails(raw_value):
-    if raw_value is None:
-        return None
-
-    if isinstance(raw_value, str):
-        candidates = raw_value.replace(";", "\n").replace(",", "\n").splitlines()
-    elif isinstance(raw_value, (list, tuple)):
-        candidates = raw_value
-    else:
+    try:
+        return normalize_kindle_addresses(raw_value)
+    except DjangoValidationError as exc:
         raise serializers.ValidationError(
-            {"kindle_emails": "Enter one Kindle email per line."}
-        )
-
-    normalized = []
-    seen = set()
-    for candidate in candidates:
-        email = str(candidate or "").strip().lower()
-        if not email:
-            continue
-        try:
-            email = validate_kindle_email_address(email)
-        except DjangoValidationError as exc:
-            raise serializers.ValidationError(
-                {"kindle_emails": list(exc.messages)}
-            ) from exc
-        if email in seen:
-            continue
-        seen.add(email)
-        normalized.append(email)
-
-    return normalized
+            {"kindle_emails": list(exc.messages)}
+        ) from exc
 
 
 class ProfileUpdateSerializer(serializers.ModelSerializer):
@@ -59,7 +37,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = [
+        fields: ClassVar[list[str]] = [
             "full_name",
             "profile_image",
             "remove_profile_image",
@@ -72,7 +50,7 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         kindle_emails_supplied = "kindle_emails" in attrs or "kindle_emails_text" in attrs
-        if kindle_emails_supplied and not user_has_scope(self.instance, [PermissionScope.SEND_KINDLE]):
+        if kindle_emails_supplied and not self.can_configure_kindle():
             raise serializers.ValidationError(
                 {"kindle_emails": "You do not have the Send to Kindle permission."}
             )
@@ -95,6 +73,8 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
             return attrs
         if not current_password:
             raise serializers.ValidationError({"current_password": "Enter your current password."})
+        if self.instance is None:
+            raise serializers.ValidationError("An account is required to change a password.")
         if not self.instance.check_password(current_password):
             raise serializers.ValidationError({"current_password": "Current password is incorrect."})
         if not new_password:
@@ -110,6 +90,9 @@ class ProfileUpdateSerializer(serializers.ModelSerializer):
         except DjangoValidationError as exc:
             raise serializers.ValidationError({"new_password": list(exc.messages)}) from exc
         return attrs
+
+    def can_configure_kindle(self):
+        return user_has_scope(self.instance, [PermissionScope.SEND_KINDLE])
 
     def update(self, instance, validated_data):
         remove_profile_image = validated_data.pop("remove_profile_image", False)

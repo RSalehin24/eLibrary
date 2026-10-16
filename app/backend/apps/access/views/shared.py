@@ -1,14 +1,16 @@
 import logging
-import mimetypes
-import re
 from pathlib import Path
 
 from django.http import Http404
-from django.utils import timezone
 from rest_framework import status
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
+from apps.access.asset_names import (
+    asset_download_filename,
+    asset_source_name,
+    safe_download_stem,
+)
 from apps.access.models import (
     Bookmark,
     PermissionScope,
@@ -16,7 +18,9 @@ from apps.access.models import (
     ReadingSession,
     default_preview_expiry,
 )
-from apps.catalog.models import GeneratedAssetStatus, GeneratedAssetType
+from apps.access.reading.launch import active_reader_session
+from apps.access.storage import asset_file_exists, open_asset_stream
+from apps.catalog.models import GeneratedAssetStatus
 from apps.common.models import LifecycleState, ReviewState
 from apps.common.permissions import user_has_scope
 
@@ -31,19 +35,15 @@ def apply_no_store_headers(response):
 
 
 def get_active_preview_session(user, book):
-    return (
-        PreviewAccessSession.objects.filter(
-            user=user,
-            book=book,
-            expires_at__gt=timezone.now(),
-        )
-        .order_by("-created_at")
-        .first()
-    )
+    return active_reader_session(user, book)
 
 
 def get_token_preview_session(token):
-    session = PreviewAccessSession.objects.select_related("book", "user").filter(token=token).first()
+    session = (
+        PreviewAccessSession.objects.select_related("book", "user")
+        .filter(token=token)
+        .first()
+    )
     if session is None or not session.is_active:
         raise Http404("Reader session is unavailable.")
     return session
@@ -52,7 +52,7 @@ def get_token_preview_session(token):
 def get_authenticated_token_preview_session(request, token):
     session = get_token_preview_session(token)
     user = getattr(request, "user", None)
-    if not getattr(user, "is_authenticated", False):
+    if user is None or not getattr(user, "is_authenticated", False):
         raise PermissionDenied("Sign in is required to access the reader.")
     if session.user_id != user.id:
         raise PermissionDenied("This reader session does not belong to your account.")
@@ -60,70 +60,12 @@ def get_authenticated_token_preview_session(request, token):
 
 
 def resolve_asset(book, asset_type):
-    asset = book.generated_assets.filter(asset_type=asset_type, status=GeneratedAssetStatus.READY).first()
+    asset = book.generated_assets.filter(
+        asset_type=asset_type, status=GeneratedAssetStatus.READY
+    ).first()
     if asset is None:
         raise Http404("Requested asset does not exist.")
     return asset
-
-
-def asset_file_exists(file_field):
-    if not file_field or not getattr(file_field, "name", ""):
-        return False
-
-    storage = getattr(file_field, "storage", None)
-    if storage is not None:
-        try:
-            if storage.exists(file_field.name):
-                return True
-        except Exception:
-            logger.warning("Could not verify stored asset path %s", file_field.name, exc_info=True)
-
-    try:
-        return Path(file_field.path).exists()
-    except (AttributeError, NotImplementedError, TypeError, ValueError):
-        return False
-
-
-def open_asset_stream(asset):
-    if asset.file and asset.file.name and asset_file_exists(asset.file):
-        asset.file.open("rb")
-        return asset.file
-
-    if asset.legacy_path:
-        legacy_path = Path(asset.legacy_path)
-        if legacy_path.exists():
-            return open(legacy_path, "rb")
-
-    raise Http404("Asset file is not available.")
-
-
-def asset_source_name(asset):
-    if asset.file and asset.file.name:
-        return Path(asset.file.name).name
-    if asset.legacy_path:
-        return Path(asset.legacy_path).name
-    return ""
-
-
-def safe_download_stem(value):
-    cleaned = re.sub(r'[<>:"/\\|?*]+', "-", str(value or "")).strip().strip(".")
-    return cleaned or "book"
-
-
-def asset_download_filename(book, asset):
-    source_name = asset_source_name(asset)
-    source_suffix = Path(source_name).suffix.lower()
-
-    if asset.asset_type == GeneratedAssetType.EPUB:
-        suffix = ".epub"
-    elif asset.asset_type == GeneratedAssetType.COVER:
-        suffix = source_suffix or mimetypes.guess_extension(asset.content_type or "") or ".jpg"
-    elif asset.asset_type == GeneratedAssetType.HTML:
-        suffix = ".html"
-    else:
-        suffix = source_suffix or mimetypes.guess_extension(asset.content_type or "") or ""
-
-    return f"{safe_download_stem(book.title)}{suffix}"
 
 
 def local_asset_path(asset):
@@ -193,7 +135,10 @@ def clear_missing_asset(asset):
 
 
 def queue_missing_asset_recovery(book, actor=None):
-    from apps.ingestion.services.submissions import primary_source_url_for_book, queue_reprocess_book
+    from apps.ingestion.services.submissions import (
+        primary_source_url_for_book,
+        queue_reprocess_book,
+    )
 
     if not primary_source_url_for_book(book):
         return None, False
@@ -201,7 +146,11 @@ def queue_missing_asset_recovery(book, actor=None):
     try:
         return queue_reprocess_book(book, actor=actor)
     except Exception:
-        logger.warning("Could not queue regeneration for missing asset on book %s", book.pk, exc_info=True)
+        logger.warning(
+            "Could not queue regeneration for missing asset on book %s",
+            book.pk,
+            exc_info=True,
+        )
         return None, False
 
 
@@ -229,7 +178,9 @@ def missing_asset_response(book, asset, actor=None):
         book.save(update_fields=[*book_update_fields, "updated_at"])
 
     return Response(
-        {"detail": "This file is no longer available in storage. Please regenerate the book."},
+        {
+            "detail": "This file is no longer available in storage. Please regenerate the book."
+        },
         status=status.HTTP_404_NOT_FOUND,
     )
 
@@ -265,6 +216,7 @@ __all__ = [
     "apply_no_store_headers",
     "asset_download_filename",
     "asset_is_available",
+    "asset_source_name",
     "bookmark_queryset_for_book",
     "default_preview_expiry",
     "ensure_book_reader_access",
@@ -277,4 +229,5 @@ __all__ = [
     "read_asset_bytes",
     "reading_session_for_book",
     "resolve_asset",
+    "safe_download_stem",
 ]

@@ -150,10 +150,7 @@ def test_processing_sync_mirrors_checkpoint_progress_and_clears_it_on_stop(
             self.store.pop(key, None)
 
     fake_checkpoint_client = FakeCheckpointClient()
-    monkeypatch.setattr(
-        "apps.processing.services.processing_checkpoint_client",
-        lambda: fake_checkpoint_client,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_checkpoint_client)
 
     response = client.post(
         "/api/processing/sync/start/",

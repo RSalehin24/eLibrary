@@ -1,11 +1,22 @@
+import os
+import sys
+from urllib.parse import urljoin
+from uuid import uuid4
 
+from apps.common.identifiers import is_valid_uuid_string
+from apps.ingestion.models import SourceCatalogEntry
+from django.conf import settings
+from django.db import IntegrityError
+from django.db.models import Q
 
-def is_valid_uuid_string(value):
-    try:
-        uuid.UUID(str(value))
-    except (TypeError, ValueError, AttributeError):
-        return False
-    return True
+from ..models import BookCreationState, BookRecord
+from . import catalog_refresh as _catalog_refresh
+from . import checkpoint_and_runtime_adapters as _checkpoints
+from . import processing_state_queries as _queries
+from . import service_imports_and_constants as _constants
+from . import state_serializers as _state
+from . import sync_runner as _sync_runner
+from . import ui_domain_versions as _ui_versions
 
 
 def upsert_remote_records(records):
@@ -15,19 +26,25 @@ def upsert_remote_records(records):
     published_domains = set()
 
     for raw_record in records:
-        data = normalize_remote_record(raw_record)
+        data = _queries.normalize_remote_record(raw_record)
         if not data["url"]:
             continue
 
         source_entry_filters = Q(source_url=data["url"])
         if is_valid_uuid_string(data["id"]):
             source_entry_filters |= Q(pk=data["id"])
-        source_entry = SourceCatalogEntry.objects.filter(source_entry_filters).order_by("-updated_at").first()
-        linked_book = linked_book_for_remote_url(data["url"])
+        source_entry = (
+            SourceCatalogEntry.objects.filter(source_entry_filters)
+            .order_by("-updated_at")
+            .first()
+        )
+        linked_book = _queries.linked_book_for_remote_url(data["url"])
         desired_state = (
             data["bookCreationState"]
             if data["bookCreationState"] in BookCreationState.values
-            else BookCreationState.CREATED if linked_book else BookCreationState.NOT_CREATED
+            else BookCreationState.CREATED
+            if linked_book
+            else BookCreationState.NOT_CREATED
         )
         defaults = {
             "name": data["name"],
@@ -51,7 +68,7 @@ def upsert_remote_records(records):
             .order_by("id")
             .first()
         )
-        before_snapshot = processing_record_snapshot(record)
+        before_snapshot = _state.processing_record_snapshot(record)
         if record is None:
             preferred_id = data["id"] or None
             create_kwargs = dict(defaults)
@@ -59,11 +76,11 @@ def upsert_remote_records(records):
                 create_kwargs["id"] = preferred_id
             try:
                 record = BookRecord.objects.create(**create_kwargs)
-                sync_record_state(record)
+                _queries.sync_record_state(record)
                 published_domains.update(
-                    processing_domains_for_record_change(
+                    _ui_versions.processing_domains_for_record_change(
                         None,
-                        processing_record_snapshot(record),
+                        _state.processing_record_snapshot(record),
                     )
                 )
                 appended_count += 1
@@ -91,18 +108,18 @@ def upsert_remote_records(records):
         else:
             skipped_count += 1
 
-        sync_record_state(record)
-        after_snapshot = processing_record_snapshot(record)
+        _queries.sync_record_state(record)
+        after_snapshot = _state.processing_record_snapshot(record)
         if before_snapshot != after_snapshot:
             published_domains.update(
-                processing_domains_for_record_change(
+                _ui_versions.processing_domains_for_record_change(
                     before_snapshot,
                     after_snapshot,
                 )
             )
 
     if published_domains:
-        publish_processing_ui_domains(published_domains)
+        _ui_versions.publish_processing_ui_domains(published_domains)
     return {
         "skipped_count": skipped_count,
         "updated_count": updated_count,
@@ -115,7 +132,7 @@ def source_catalog_remote_pages(page_size=100):
     pages = []
     current_page = []
     for entry in entries.iterator(chunk_size=page_size):
-        current_page.append(source_catalog_entry_payload(entry))
+        current_page.append(_queries.source_catalog_entry_payload(entry))
         if len(current_page) >= page_size:
             pages.append(current_page)
             current_page = []
@@ -134,7 +151,7 @@ def reconcile_remote_pages(remote_pages):
     page_index = 0
     completed = False
 
-    for page in remote_pages:
+    for page_index, page in enumerate(remote_pages):
         if not page:
             completed = True
             break
@@ -144,7 +161,6 @@ def reconcile_remote_pages(remote_pages):
         skipped_count += result["skipped_count"]
         updated_count += result["updated_count"]
         appended_count += result["appended_count"]
-        page_index += 1
 
     if remote_pages and not completed:
         page_index = len(remote_pages)
@@ -166,25 +182,29 @@ def should_use_live_catalog_fetch(remote_pages, run_mode):
         and "pytest" not in sys.modules
         and not os.environ.get("PYTEST_CURRENT_TEST")
         and not remote_pages
-        and run_mode in {SYNC_RUN_MODE_MANUAL, SYNC_RUN_MODE_CATALOG_AUTOMATION}
-        and processing_workers_available()
+        and run_mode
+        in {
+            _constants.SYNC_RUN_MODE_MANUAL,
+            _constants.SYNC_RUN_MODE_CATALOG_AUTOMATION,
+        }
+        and _checkpoints.processing_workers_available()
     )
 
 
 def dispatch_sync_task(sync_state, *, force=False):
-    from .tasks import run_processing_sync_task
+    from ..tasks import run_processing_sync_task
 
     sync_state.refresh_from_db(fields=["status", "task_id", "queue_name", "updated_at"])
-    if sync_state.status not in SYNC_ACTIVE_STATUSES:
+    if sync_state.status not in _constants.SYNC_ACTIVE_STATUSES:
         return sync_state
     if not force and sync_state.task_id:
         return sync_state
 
     assigned_task_id = str(uuid4())
     sync_state.task_id = assigned_task_id
-    sync_state.queue_name = PROCESSING_TASK_QUEUE
+    sync_state.queue_name = _constants.PROCESSING_TASK_QUEUE
     sync_state.last_error = ""
-    save_sync_state(
+    _checkpoints.save_sync_state(
         sync_state,
         update_fields=["task_id", "queue_name", "last_error", "updated_at"],
     )
@@ -193,114 +213,41 @@ def dispatch_sync_task(sync_state, *, force=False):
         async_result = run_processing_sync_task.apply_async(
             args=[sync_state.singleton_key],
             task_id=assigned_task_id,
-            queue=PROCESSING_TASK_QUEUE,
+            queue=_constants.PROCESSING_TASK_QUEUE,
         )
-        dispatched_task_id = getattr(async_result, "id", assigned_task_id) or assigned_task_id
+        dispatched_task_id = (
+            getattr(async_result, "id", assigned_task_id) or assigned_task_id
+        )
         if dispatched_task_id != assigned_task_id:
             sync_state.task_id = dispatched_task_id
-            save_sync_state(sync_state, update_fields=["task_id", "updated_at"])
+            _checkpoints.save_sync_state(
+                sync_state, update_fields=["task_id", "updated_at"]
+            )
     except Exception as exc:
-        logger.warning("Processing sync task dispatch failed.", exc_info=True)
+        _constants.logger.warning(
+            "Processing sync task dispatch failed.", exc_info=True
+        )
         sync_state.task_id = ""
         sync_state.queue_name = "inline-fallback"
         sync_state.last_error = str(exc)
-        save_sync_state(
+        _checkpoints.save_sync_state(
             sync_state,
             update_fields=["task_id", "queue_name", "last_error", "updated_at"],
         )
-        run_processing_sync_until_blocked(
+        _sync_runner.run_processing_sync_until_blocked(
             singleton_key=sync_state.singleton_key,
             task_id="",
         )
     return sync_state
 
 
-
 def incomplete_catalog_page_url(page_number):
     if page_number <= 1:
-        return INCOMPLETE_CATALOG_URL
-    return urljoin(INCOMPLETE_CATALOG_URL, f"page/{page_number}/")
+        return _constants.incomplete_catalog_url()
+    return urljoin(_constants.incomplete_catalog_url(), f"page/{page_number}/")
 
 
-def refresh_catalog_parallel(concurrency=None):
-    from apps.ingestion.pipeline.scraper_support.network import create_session_with_retries
-
-    if concurrency is None:
-        concurrency = getattr(settings, "CELERY_PROCESSING_CONCURRENCY", 5)
-
-    stop_flag = threading.Event()
-    page_lock = threading.Lock()
-    seen_lock = threading.Lock()
-    count_lock = threading.Lock()
-    next_page = 1
-    seen_urls = set()
-    total_appended = 0
-    total_updated = 0
-
-    def worker():
-        nonlocal next_page, total_appended, total_updated
-
-        while not stop_flag.is_set():
-            with page_lock:
-                if stop_flag.is_set():
-                    return
-                page_number = next_page
-                next_page += 1
-
-            session = create_session_with_retries()
-            resolver = TitleResolver(session=session)
-
-            try:
-                response = get_with_host_fallback(
-                    resolver.session,
-                    CATALOG_URL,
-                    params=resolver.archive_query_params(page_number=page_number),
-                    timeout=30,
-                )
-                response.raise_for_status()
-                soup = BeautifulSoup(response.text, "html.parser")
-                entries = resolver.parse_catalog_page(soup)
-            except Exception:
-                continue
-
-            if not entries:
-                stop_flag.set()
-                return
-
-            local_appended = 0
-            local_updated = 0
-            for entry in entries:
-                if stop_flag.is_set():
-                    return
-
-                with seen_lock:
-                    if entry["source_url"] in seen_urls:
-                        continue
-                    seen_urls.add(entry["source_url"])
-
-                try:
-                    metadata = fetch_source_page_metadata(
-                        entry["source_url"], session=session
-                    )
-                    stored_entry = upsert_source_catalog_entry(metadata)
-                    payload = source_catalog_entry_payload(stored_entry)
-                    result = upsert_remote_records([payload])
-                    local_appended += result["appended_count"]
-                    local_updated += result["updated_count"]
-                except Exception:
-                    continue
-
-            with count_lock:
-                total_appended += local_appended
-                total_updated += local_updated
-
-    with ThreadPoolExecutor(max_workers=concurrency) as executor:
-        futures = [executor.submit(worker) for _ in range(concurrency)]
-        for future in futures:
-            future.result()
-
-    return {
-        "appended_count": total_appended,
-        "updated_count": total_updated,
-        "total": total_appended + total_updated,
-    }
+def __getattr__(name):
+    if name in {"refresh_catalog_parallel"}:
+        return getattr(_catalog_refresh, name)
+    raise AttributeError(f"{__name__!r} has no attribute {name!r}")

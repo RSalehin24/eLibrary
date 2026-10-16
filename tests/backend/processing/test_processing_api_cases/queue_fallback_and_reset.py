@@ -13,21 +13,15 @@ def test_processing_create_requests_dispatches_without_worker_probe(client, monk
     )
     dispatch_calls = []
 
-    def fake_apply_async(*, args, **kwargs):
-        dispatch_calls.append({"args": tuple(args), "kwargs": dict(kwargs)})
+    def fake_apply_async(*, job_id, **kwargs):
+        dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id="probe-free-task")
 
-    monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.processing_workers_available",
-        lambda *_args, **_kwargs: False,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(
-        "apps.processing.tasks.kickoff_book_creation_request_task.apply_async",
+        "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,
     )
 
@@ -40,11 +34,12 @@ def test_processing_create_requests_dispatches_without_worker_probe(client, monk
     assert response.status_code == 200
     processing_request = BookCreationRequest.objects.get(book_record=record)
     assert processing_request.state == "queued"
-    assert processing_request.progress["_dispatchTaskId"] == "probe-free-task"
+    assert processing_request.progress["_dispatchTaskId"] == "request-probe-free-dispatch-record"
     assert dispatch_calls == [
         {
-            "args": ("request-probe-free-dispatch-record",),
-            "kwargs": {"queue": "processing"},
+            "job_id": "request-probe-free-dispatch-record",
+            "job_type": "pipeline",
+            "handler": "pipeline",
         }
     ]
 
@@ -76,19 +71,13 @@ def test_processing_pipeline_falls_back_to_inline_when_dispatch_fails(
         processing_services.sync_record_state(request.book_record)
         return request
 
-    monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
     monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
     monkeypatch.setattr(
-        "apps.processing.tasks.kickoff_book_creation_request_task.apply_async",
+        "apps.ingestion.engine.dispatch.dispatch_job",
         lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("broker unavailable")),
     )
-    monkeypatch.setattr(
-        "apps.processing.services._run_processing_request",
-        fake_run_processing_request,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline._run_processing_request', fake_run_processing_request)
 
     mutation, _payload = advance_processing_pipeline(client)
 
@@ -124,20 +113,14 @@ def test_processing_pipeline_requeues_stale_dispatch_marker(client, monkeypatch)
     )
     dispatch_calls = []
 
-    def fake_apply_async(*, args, **kwargs):
-        dispatch_calls.append({"args": tuple(args), "kwargs": dict(kwargs)})
+    def fake_apply_async(*, job_id, **kwargs):
+        dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id="fresh-processing-task")
 
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: True)
     monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.processing_workers_available",
-        lambda *_args, **_kwargs: True,
-    )
-    monkeypatch.setattr(
-        "apps.processing.tasks.kickoff_book_creation_request_task.apply_async",
+        "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,
     )
 
@@ -146,11 +129,12 @@ def test_processing_pipeline_requeues_stale_dispatch_marker(client, monkeypatch)
     assert mutation["advancedCount"] == 1
     processing_request.refresh_from_db()
     assert processing_request.state == "queued"
-    assert processing_request.progress["_dispatchTaskId"] == "fresh-processing-task"
+    assert processing_request.progress["_dispatchTaskId"] == "stale-dispatch-request"
     assert dispatch_calls == [
         {
-            "args": ("stale-dispatch-request",),
-            "kwargs": {"queue": "processing"},
+            "job_id": "stale-dispatch-request",
+            "job_type": "pipeline",
+            "handler": "pipeline",
         }
     ]
 
@@ -221,11 +205,7 @@ def test_reset_processing_data_can_revoke_tasks_and_purge_processing_queue(
         "revoke",
         lambda task_id, terminate=False: revoked.append((task_id, terminate)),
     )
-    monkeypatch.setattr(
-        processing_services,
-        "purge_processing_task_queue",
-        lambda: purged.append(True) or 1,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.request_queue_runtime.purge_processing_task_queue', lambda: purged.append(True) or 1)
 
     processing_services.reset_processing_data(revoke_tasks=True, purge_queue=True)
 

@@ -1,0 +1,20 @@
+ARG PYTHON_IMAGE=python:3.12.15-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
+FROM ${PYTHON_IMAGE}
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1
+WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-noto-core libraqm0 \
+    && rm -rf /var/lib/apt/lists/* \
+    && groupadd --gid 10001 library \
+    && useradd --uid 10001 --gid library --no-create-home library \
+    && mkdir -p /data/media /data/runtime /data/static \
+    && chown -R library:library /data
+COPY app/backend/requirements.txt app/backend/constraints.txt /tmp/
+RUN python -m pip install --no-cache-dir -c /tmp/constraints.txt -r /tmp/requirements.txt
+COPY app/backend /app
+COPY deploy/gunicorn.conf.py /app/gunicorn.conf.py
+COPY deploy/application-entrypoint.sh /usr/local/bin/library-application
+RUN chmod 755 /usr/local/bin/library-application
+USER library
+ENTRYPOINT ["/usr/local/bin/library-application"]
+CMD ["gunicorn", "--config", "gunicorn.conf.py", "config.wsgi:application"]

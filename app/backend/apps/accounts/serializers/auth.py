@@ -1,3 +1,5 @@
+from typing import ClassVar, NoReturn
+
 from django.contrib.auth import authenticate, get_user_model
 from django.contrib.auth.tokens import PasswordResetTokenGenerator
 from django.utils.encoding import force_str
@@ -5,7 +7,9 @@ from django.utils.http import urlsafe_base64_decode
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 
-from .base import PASSWORD_MIN_LENGTH_ERROR_MESSAGES
+from apps.accounts.otp_verification import attach_verified_device, verify_login_token
+
+from .base import PASSWORD_MIN_LENGTH_MESSAGE
 from .support import password_link_token_generator, send_password_reset_email
 
 
@@ -14,13 +18,13 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
     otp_token = serializers.CharField(required=False, allow_blank=True, write_only=True)
 
-    default_error_messages = {
+    default_error_messages: ClassVar = {
         "invalid_credentials": _("Invalid email or password."),
         "otp_required": _("A valid TOTP code is required for this account."),
         "otp_invalid": _("The supplied TOTP code is invalid."),
     }
 
-    def raise_login_error(self, code):
+    def raise_login_error(self, code) -> NoReturn:
         raise serializers.ValidationError({"detail": self.error_messages[code], "code": code})
 
     def validate(self, attrs):
@@ -32,21 +36,21 @@ class LoginSerializer(serializers.Serializer):
         if user.has_totp_enabled:
             if not otp_token:
                 self.raise_login_error("otp_required")
-            from django_otp.plugins.otp_totp.models import TOTPDevice
-            device = TOTPDevice.objects.filter(user=user, confirmed=True).first()
-            if device is None or not device.verify_token(otp_token):
+            device = verify_login_token(user, otp_token)
+            if not device:
                 self.raise_login_error("otp_invalid")
+            attach_verified_device(user, device)
         attrs["user"] = user
         return attrs
 
 
 class PasswordResetRequestSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    default_error_messages = {
+    default_error_messages: ClassVar = {
         "missing_user": _("No user exist with this email."),
     }
 
-    def save(self):
+    def save(self, **kwargs):
         sent = send_password_reset_email(
             self.validated_data["email"],
             request=self.context["request"],
@@ -74,9 +78,8 @@ def resolve_password_link_user(uid, token):
     # Backward compatibility for reset links issued before nonce-backed invalidation
     # was introduced. Once a newer reset request is sent, the nonce is non-zero and
     # only the latest link remains valid.
-    if not user.email_setup_pending and user.password_setup_nonce == 0:
-        if PasswordResetTokenGenerator().check_token(user, token):
-            return user
+    if not user.email_setup_pending and user.password_setup_nonce == 0 and PasswordResetTokenGenerator().check_token(user, token):
+        return user
 
     raise serializers.ValidationError("Reset token is invalid or expired.")
 
@@ -94,10 +97,10 @@ class PasswordResetConfirmSerializer(PasswordResetValidateSerializer):
     new_password = serializers.CharField(
         write_only=True,
         min_length=12,
-        error_messages=PASSWORD_MIN_LENGTH_ERROR_MESSAGES,
+        error_messages={"min_length": PASSWORD_MIN_LENGTH_MESSAGE},
     )
 
-    def save(self):
+    def save(self, **kwargs):
         user = self.validated_data["user"]
         user.set_password(self.validated_data["new_password"])
         if user.email_setup_pending:

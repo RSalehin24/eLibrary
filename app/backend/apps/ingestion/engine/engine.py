@@ -16,6 +16,7 @@ from . import worker_registry as wr
 from . import job_queue as jq
 from .stale_detector import check_stale_workers
 from .recovery import recover_state
+from .job_persistence import update_db_job_assignment, update_db_job_status
 
 logger = logging.getLogger(__name__)
 
@@ -260,39 +261,10 @@ class JobEngine:
         return dispatched
 
     def _update_db_job_assignment(self, job_id, worker_hostname):
-        """Update the ProcessingJob record with the assigned worker."""
-        try:
-            import uuid
-            try:
-                uuid.UUID(str(job_id))
-            except ValueError:
-                # Not a valid UUID, so it's a BookCreationRequest and doesn't have a ProcessingJob
-                return
-            from apps.ingestion.models.processing import ProcessingJob
-            ProcessingJob.objects.filter(id=job_id).update(worker_hostname=worker_hostname)
-        except Exception:
-            logger.exception("Failed to update DB job assignment for %s", job_id)
+        return update_db_job_assignment(job_id, worker_hostname)
 
     def _update_db_job_status(self, job_id, status, error_message=""):
-        """Update the ProcessingJob record with completion status."""
-        try:
-            import uuid
-            try:
-                uuid.UUID(str(job_id))
-            except ValueError:
-                # Not a valid UUID, so it's a BookCreationRequest and doesn't have a ProcessingJob
-                return
-            from apps.ingestion.models.processing import ProcessingJob
-            from django.utils import timezone
-            update_fields = {
-                "status": status,
-                "finished_at": timezone.now(),
-            }
-            if error_message:
-                update_fields["last_error"] = error_message
-            ProcessingJob.objects.filter(id=job_id).update(**update_fields)
-        except Exception:
-            logger.exception("Failed to update DB job status for %s", job_id)
+        return update_db_job_status(job_id, status, error_message)
 
     def _decode(self, message):
         """Decode a pub/sub message payload."""

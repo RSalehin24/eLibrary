@@ -1,4 +1,22 @@
+from typing import Any
 from urllib.parse import parse_qs, urlencode
+
+from .metadata_and_inline_toc import (
+    normalize_crawl_url,
+    normalize_structured_heading_title,
+)
+from .scrape_limits_and_header_cleanup import (
+    clean_display_text,
+    get_soup,
+    json,
+    normalize_text,
+    re,
+    time,
+    truncate_scraped_content,
+    urljoin,
+    urlparse,
+    urlunparse,
+)
 
 
 def build_query_url(base_url, query_updates):
@@ -28,6 +46,13 @@ def crawl_inline_toc_entry(
     crawl_limits,
     depth,
 ):
+    from .recursive_content_nodes import (
+        build_content_node,
+        clean_content_html,
+        consume_inline_content_item,
+        merge_unique_children,
+        scrape_recursive_content_node,
+    )
     title = clean_display_text(entry.get("title", ""))
     node_type = entry.get("type") or "lesson"
     raw_url = (entry.get("url") or "").strip()
@@ -188,7 +213,7 @@ def extract_topic_entries(lesson_item, seen_urls, base_url=""):
     if expanded_container is None:
         return []
 
-    topics = []
+    topics: list[tuple[str, str]] = []
     topic_items = expanded_container.find_all(
         "div",
         class_=lambda c: c and "ld-table-list-item" in c,
@@ -273,8 +298,8 @@ def scrape_nested_topics(lesson_item, page_url="", max_topic_pages=None):
     Recursively scrape topics from a lesson item's expanded content, including
     paginated topic lists like ld-topic-page=<expand_id>-<page>.
     """
-    topics = []
-    seen_urls = set()
+    topics: list[dict[str, Any]] = []
+    seen_urls: set[str] = set()
 
     expand_id = lesson_item.get("data-ld-expand-id")
     if not expand_id:

@@ -1,9 +1,13 @@
 import uuid
 from datetime import time
+from typing import ClassVar
 
 from django.db import models
 
 from apps.common.models import TimeStampedModel
+
+from .job_models import BackgroundJob, JobAttempt, JobDispatch
+from .automation_models import AutomationRun, SourceAutomation
 
 
 def generate_processing_id():
@@ -87,7 +91,7 @@ class BookRecord(TimeStampedModel):
     )
 
     class Meta:
-        ordering = ["name", "id"]
+        ordering: ClassVar[list[str]] = ["name", "id"]
 
     def __str__(self):
         return self.name
@@ -158,7 +162,7 @@ class BookCreationRequest(TimeStampedModel):
     pipeline_outcome = models.CharField(max_length=32, default=BookCreationRequestState.CREATED)
 
     class Meta:
-        ordering = ["-updated_at", "-created_at", "id"]
+        ordering: ClassVar[list[str]] = ["-updated_at", "-created_at", "id"]
 
     def __str__(self):
         return f"{self.book_record_id}: {self.state}"
@@ -184,7 +188,7 @@ class ProcessingSyncState(TimeStampedModel):
     last_error = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["singleton_key"]
+        ordering: ClassVar[list[str]] = ["singleton_key"]
 
 
 class ProcessingAutomationSettings(TimeStampedModel):
@@ -201,7 +205,7 @@ class ProcessingAutomationSettings(TimeStampedModel):
     status_message = models.CharField(max_length=500, blank=True)
 
     class Meta:
-        ordering = ["kind"]
+        ordering: ClassVar[list[str]] = ["kind"]
 
 
 class ProcessingUiDomainVersion(TimeStampedModel):
@@ -209,7 +213,7 @@ class ProcessingUiDomainVersion(TimeStampedModel):
     version = models.PositiveBigIntegerField(default=0)
 
     class Meta:
-        ordering = ["domain"]
+        ordering: ClassVar[list[str]] = ["domain"]
 
     def __str__(self):
         return f"{self.domain}@{self.version}"
@@ -220,21 +224,26 @@ class ProcessingUiProjection(TimeStampedModel):
     payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["key"]
+        ordering: ClassVar[list[str]] = ["key"]
 
     def __str__(self):
         return self.key
 
 
 __all__ = [
+    "AutomationRun",
+    "BackgroundJob",
     "BookCreationRequest",
     "BookCreationRequestState",
     "BookCreationState",
     "BookRecord",
+    "JobAttempt",
+    "JobDispatch",
     "ProcessingAutomationKind",
     "ProcessingAutomationSettings",
-    "ProcessingUiDomainVersion",
-    "ProcessingUiProjection",
     "ProcessingSyncState",
     "ProcessingSyncStatus",
+    "ProcessingUiDomainVersion",
+    "ProcessingUiProjection",
+    "SourceAutomation",
 ]

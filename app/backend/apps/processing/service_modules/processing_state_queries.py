@@ -1,75 +1,105 @@
+from types import SimpleNamespace
+
+from apps.catalog.services import find_existing_book_by_source_url
+from django.db.models import Prefetch
+
+from ..models import (
+    BookCreationRequest,
+    BookCreationState,
+    BookRecord,
+    ProcessingAutomationKind,
+)
+from ..source import normalize_source_url
+from . import remote_record_queries as _remote_record_queries
+from . import service_imports_and_constants as _constants
+from . import state_serializers as _state
+from . import ui_projection_queries as _projections
 
 
 def processing_state_payload(*, include_lists=True):
-    projection_rows = processing_ui_shared_projection_rows(keys=PROCESSING_SHARED_CARD_KEYS)
-    versions = processing_ui_versions_map()
+    projection_rows = _projections.processing_ui_shared_projection_rows(
+        keys=_constants.PROCESSING_SHARED_CARD_KEYS
+    )
+    versions = _projections.processing_ui_versions_map()
     shared_cards = {
         key: (
             (projection_rows.get(key).payload or {})
             if projection_rows.get(key) is not None
-            else default_processing_shared_projection_payload(key)
+            else _projections.default_processing_shared_projection_payload(key)
         )
-        for key in PROCESSING_SHARED_CARD_KEYS
+        for key in _constants.PROCESSING_SHARED_CARD_KEYS
     }
     summary = {
-        "catalog": shared_cards[PROCESSING_CARD_CATALOG_OVERVIEW].get("summary", {}),
-        "notifications": shared_cards[PROCESSING_CARD_CATALOG_OVERVIEW].get(
+        "catalog": shared_cards[_constants.PROCESSING_CARD_CATALOG_OVERVIEW].get(
+            "summary", {}
+        ),
+        "notifications": shared_cards[_constants.PROCESSING_CARD_CATALOG_OVERVIEW].get(
             "notifications",
             {},
         ),
-        "create": shared_cards[PROCESSING_CARD_CREATE_OVERVIEW].get("summary", {}),
-        "onHold": shared_cards[PROCESSING_CARD_ON_HOLD_OVERVIEW].get("summary", {}),
-        "incomplete": shared_cards[PROCESSING_CARD_INCOMPLETE_OVERVIEW].get(
+        "create": shared_cards[_constants.PROCESSING_CARD_CREATE_OVERVIEW].get(
+            "summary", {}
+        ),
+        "onHold": shared_cards[_constants.PROCESSING_CARD_ON_HOLD_OVERVIEW].get(
+            "summary", {}
+        ),
+        "incomplete": shared_cards[_constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW].get(
             "summary",
             {},
         ),
     }
     automation = {
-        "catalog": shared_cards[PROCESSING_CARD_CATALOG_AUTOMATION].get(
+        "catalog": shared_cards[_constants.PROCESSING_CARD_CATALOG_AUTOMATION].get(
             "automation",
-            default_automation_payload(ProcessingAutomationKind.CATALOG),
+            _state.default_automation_payload(ProcessingAutomationKind.CATALOG),
         ),
-        "incomplete": shared_cards[PROCESSING_CARD_INCOMPLETE_AUTOMATION].get(
+        "incomplete": shared_cards[
+            _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION
+        ].get(
             "automation",
-            default_automation_payload(ProcessingAutomationKind.INCOMPLETE),
+            _state.default_automation_payload(ProcessingAutomationKind.INCOMPLETE),
         ),
     }
     sync_states = {
-        "catalog": shared_cards[PROCESSING_CARD_CATALOG_SYNC].get(
+        "catalog": shared_cards[_constants.PROCESSING_CARD_CATALOG_SYNC].get(
             "sync",
-            default_sync_state_payload(PROCESSING_SYNC_KEY_CATALOG),
+            _state.default_sync_state_payload(_constants.PROCESSING_SYNC_KEY_CATALOG),
         ),
-        "incomplete": shared_cards[PROCESSING_CARD_INCOMPLETE_AUTOMATION].get(
+        "incomplete": shared_cards[
+            _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION
+        ].get(
             "sync",
-            default_sync_state_payload(PROCESSING_SYNC_KEY_INCOMPLETE),
+            _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_INCOMPLETE
+            ),
         ),
     }
 
     catalog_sync_updated_at = getattr(
-        projection_rows.get(PROCESSING_CARD_CATALOG_SYNC),
+        projection_rows.get(_constants.PROCESSING_CARD_CATALOG_SYNC),
         "updated_at",
         None,
     )
     incomplete_sync_updated_at = getattr(
-        projection_rows.get(PROCESSING_CARD_INCOMPLETE_AUTOMATION),
+        projection_rows.get(_constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION),
         "updated_at",
         None,
     )
-    catalog_sync_version = int(versions.get(PROCESSING_CARD_CATALOG_SYNC, 0))
+    catalog_sync_version = int(versions.get(_constants.PROCESSING_CARD_CATALOG_SYNC, 0))
     incomplete_sync_version = int(
-        versions.get(PROCESSING_CARD_INCOMPLETE_AUTOMATION, 0)
+        versions.get(_constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION, 0)
     )
-    catalog_sync_has_activity = processing_sync_payload_has_activity(
+    catalog_sync_has_activity = _projections.processing_sync_payload_has_activity(
         sync_states["catalog"],
-        scope=PROCESSING_SYNC_KEY_CATALOG,
+        scope=_constants.PROCESSING_SYNC_KEY_CATALOG,
     )
-    incomplete_sync_has_activity = processing_sync_payload_has_activity(
+    incomplete_sync_has_activity = _projections.processing_sync_payload_has_activity(
         sync_states["incomplete"],
-        scope=PROCESSING_SYNC_KEY_INCOMPLETE,
+        scope=_constants.PROCESSING_SYNC_KEY_INCOMPLETE,
     )
-    if sync_is_active_or_paused(SimpleNamespace(**sync_states["incomplete"])):
+    if _state.sync_is_active_or_paused(SimpleNamespace(**sync_states["incomplete"])):
         primary_sync_payload = sync_states["incomplete"]
-    elif sync_is_active_or_paused(SimpleNamespace(**sync_states["catalog"])):
+    elif _state.sync_is_active_or_paused(SimpleNamespace(**sync_states["catalog"])):
         primary_sync_payload = sync_states["catalog"]
     elif incomplete_sync_has_activity and not catalog_sync_has_activity:
         primary_sync_payload = sync_states["incomplete"]
@@ -105,7 +135,7 @@ def processing_state_payload(*, include_lists=True):
 
 
 def serialized_processing_records():
-    from .serializers import BookRecordSerializer
+    from ..serializers import BookRecordSerializer
 
     return BookRecordSerializer(
         BookRecord.objects.select_related("linked_book")
@@ -116,7 +146,7 @@ def serialized_processing_records():
 
 
 def serialized_processing_requests():
-    from .serializers import BookCreationRequestSerializer
+    from ..serializers import BookCreationRequestSerializer
 
     return BookCreationRequestSerializer(
         BookCreationRequest.objects.select_related(
@@ -130,10 +160,13 @@ def serialized_processing_requests():
         many=True,
     ).data
 
+
 def processing_request_prefetch():
     return Prefetch(
         "creation_requests",
-        queryset=BookCreationRequest.objects.select_related("duplicate_of_request").order_by(
+        queryset=BookCreationRequest.objects.select_related(
+            "duplicate_of_request"
+        ).order_by(
             "-updated_at",
             "-created_at",
             "id",
@@ -184,76 +217,12 @@ def sync_records_for_requests(requests):
         sync_record_state(record)
 
 
-def normalize_remote_record(payload):
-    timestamp = payload.get("updatedAt") or payload.get("updated_at") or timezone.now().isoformat()
-    category = str(payload.get("category") or "Uncategorized")
-    was_incomplete = payload.get("wasIncomplete")
-    if was_incomplete is None:
-        was_incomplete = payload.get("was_incomplete")
-    if was_incomplete is None:
-        was_incomplete = category_is_incomplete(category)
-    return {
-        "id": str(payload.get("id") or payload.get("url") or ""),
-        "name": str(payload.get("name") or payload.get("title") or "Untitled book"),
-        "url": str(payload.get("url") or ""),
-        "category": category,
-        "writer": str(payload.get("writer") or payload.get("author") or ""),
-        "translator": str(payload.get("translator") or ""),
-        "composer": str(payload.get("composer") or ""),
-        "publisher": str(payload.get("publisher") or ""),
-        "updatedAt": timestamp,
-        "bookCreationState": str(
-            payload.get("bookCreationState")
-            or payload.get("book_creation_state")
-            or BookCreationState.NOT_CREATED
-        ),
-        "wasIncomplete": bool(was_incomplete),
-        "resolvedFromIncomplete": bool(
-            payload.get("resolvedFromIncomplete") or payload.get("resolved_from_incomplete")
-        ),
-        "willResolveToCategory": str(
-            payload.get("willResolveToCategory")
-            or payload.get("will_resolve_to_category")
-            or ""
-        ),
-    }
-
-
-def is_catalog_remote_page(page):
-    return isinstance(page, list) and all(isinstance(item, dict) for item in page)
-
-
-def catalog_remote_pages(remote_pages):
-    if isinstance(remote_pages, list) and all(is_catalog_remote_page(page) for page in remote_pages):
-        return remote_pages
-    return []
-
-
-def source_catalog_entry_payload(entry):
-    raw_data = entry.raw_data or {}
-    category = (
-        raw_data.get("category")
-        or raw_data.get("resolvedCategory")
-        or raw_data.get("resolved_category")
-        or "Uncategorized"
-    )
-    parsed = urlparse((entry.source_url or "").strip())
-    return {
-        "id": str(entry.id),
-        "name": entry.title,
-        "url": entry.source_url,
-        "displayUrl": unquote(entry.source_url or ""),
-        "displayPath": unquote(parsed.path).strip("/") or parsed.netloc,
-        "category": category,
-        "writer": entry.author_line,
-        "translator": raw_data.get("translator") or "",
-        "composer": raw_data.get("composer") or "",
-        "publisher": raw_data.get("publisher") or "",
-        "updatedAt": entry.updated_at.isoformat(),
-        "wasIncomplete": category_is_incomplete(category),
-        "willResolveToCategory": raw_data.get("willResolveToCategory")
-        or raw_data.get("will_resolve_to_category")
-        or raw_data.get("resolvedCategory")
-        or raw_data.get("resolved_category")
-        or "",
-    }
+def __getattr__(name):
+    if name in {
+        "normalize_remote_record",
+        "source_catalog_entry_payload",
+        "catalog_remote_pages",
+        "is_catalog_remote_page",
+    }:
+        return getattr(_remote_record_queries, name)
+    raise AttributeError(f"{__name__!r} has no attribute {name!r}")

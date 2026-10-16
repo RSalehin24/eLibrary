@@ -1,3 +1,33 @@
+from apps.common.text import clean_display_text, normalize_catalog_text
+from apps.ingestion.pipeline.book_manifest import disambiguate_duplicate_content_paths
+from apps.ingestion.pipeline.curated_validation import (
+    SOURCE_CHROME_BLOCK_TAGS,
+    SOURCE_CHROME_PATTERNS,
+    is_source_chrome_block,
+)
+from bs4 import BeautifulSoup
+from django.utils import timezone
+
+from ..models import (
+    BookCreationRequest,
+    BookCreationRequestState,
+    ProcessingSyncState,
+    ProcessingSyncStatus,
+)
+from . import automation_commands as _automation_commands
+from . import catalog_progress_state as _progress
+from . import catalog_record_sync as _catalog_sync
+from . import checkpoint_and_runtime_adapters as _checkpoints
+from . import processing_state_queries as _queries
+from . import request_action_dispatch as _actions
+from . import request_processing_persistence as _persistence
+from . import request_processing_pipeline as _pipeline
+from . import request_queue_runtime as _request_queue
+from . import service_imports_and_constants as _constants
+from . import state_serializers as _state
+from . import sync_runner as _sync_runner
+from . import sync_status_messages as _messages
+from . import ui_domain_versions as _ui_versions
 
 
 def repair_self_linked_duplicate_requests():
@@ -17,8 +47,10 @@ def repair_self_linked_duplicate_requests():
 
     for processing_request in queryset:
         previous_state = processing_request.state
-        record_before = processing_record_snapshot(processing_request.book_record)
-        current_book = processing_linked_book(
+        record_before = _state.processing_record_snapshot(
+            processing_request.book_record
+        )
+        current_book = _request_queue.processing_linked_book(
             processing_request.book_record,
             processing_request,
         )
@@ -53,28 +85,28 @@ def repair_self_linked_duplicate_requests():
         if record_update_fields:
             record.save(update_fields=[*record_update_fields, "updated_at"])
 
-        sync_record_state(record)
+        _queries.sync_record_state(record)
         repaired.append(processing_request)
         published_domains.update(
-            processing_domains_for_request_change(
+            _ui_versions.processing_domains_for_request_change(
                 previous_state,
                 BookCreationRequestState.CREATED,
                 record=record,
             )
-            | processing_domains_for_record_change(
+            | _ui_versions.processing_domains_for_record_change(
                 record_before,
-                processing_record_snapshot(record),
+                _state.processing_record_snapshot(record),
                 current_request_state=BookCreationRequestState.CREATED,
             )
         )
 
     if published_domains:
-        publish_processing_ui_domains(published_domains)
+        _ui_versions.publish_processing_ui_domains(published_domains)
     return repaired
 
 
 def mark_stale_processing_requests():
-    cutoff = timezone.now() - PROCESSING_STALE_AFTER
+    cutoff = timezone.now() - _constants.PROCESSING_STALE_AFTER
     stale_requests = list(
         BookCreationRequest.objects.filter(
             state=BookCreationRequestState.PROCESSING,
@@ -83,70 +115,95 @@ def mark_stale_processing_requests():
     )
     recovered = []
     for processing_request in stale_requests:
-        recovered_request = _transition_request_state(
+        recovered_request = _pipeline._transition_request_state(
             processing_request.id,
             BookCreationRequestState.PROCESSING,
             BookCreationRequestState.QUEUED,
         )
         recovered_request.error_message = ""
         recovered_request.is_resumed = True
-        recovered_request.save(update_fields=["error_message", "is_resumed", "updated_at"])
+        recovered_request.save(
+            update_fields=["error_message", "is_resumed", "updated_at"]
+        )
         recovered.append(recovered_request)
-        queue_processing_request(recovered_request)
+        _request_queue.queue_processing_request(recovered_request)
     return recovered
 
 
 def recover_stale_sync_states():
-    cutoff = timezone.now() - PROCESSING_STALE_AFTER
+    cutoff = timezone.now() - _constants.PROCESSING_STALE_AFTER
     states = list(
         ProcessingSyncState.objects.filter(
-            status__in=SYNC_ACTIVE_STATUSES,
+            status__in=_constants.SYNC_ACTIVE_STATUSES,
             updated_at__lt=cutoff,
         ).order_by("singleton_key")
     )
     recovered = []
     for state in states:
-        run_mode = sync_run_mode(state)
+        run_mode = _progress.sync_run_mode(state)
         if state.status == ProcessingSyncStatus.PAUSING:
-            if state.singleton_key == PROCESSING_SYNC_KEY_CATALOG and sync_phase(state) == CATALOG_REQUEST_CREATION_PHASE:
-                state.progress = build_catalog_request_creation_progress(
+            if (
+                state.singleton_key == _constants.PROCESSING_SYNC_KEY_CATALOG
+                and _progress.sync_phase(state)
+                == _constants.CATALOG_REQUEST_CREATION_PHASE
+            ):
+                state.progress = _messages.build_catalog_request_creation_progress(
                     state,
-                    request_creation=catalog_request_creation_progress(state) or initial_catalog_request_creation_progress(state),
+                    request_creation=_progress.catalog_request_creation_progress(state)
+                    or _progress.initial_catalog_request_creation_progress(state),
                     run_mode=run_mode,
-                    trigger_source=sync_trigger_source(state),
-                    request_creation_phase_status=CATALOG_PHASE_STATUS_PAUSED,
-                    sync_phase_state=catalog_phase_state(state, CATALOG_SYNC_PHASE),
+                    trigger_source=_progress.sync_trigger_source(state),
+                    request_creation_phase_status=_constants.CATALOG_PHASE_STATUS_PAUSED,
+                    sync_phase_state=_progress.catalog_phase_state(
+                        state, _constants.CATALOG_SYNC_PHASE
+                    ),
                 )
-            elif state.singleton_key == PROCESSING_SYNC_KEY_CATALOG:
-                state.progress = build_catalog_sync_progress(
+            elif state.singleton_key == _constants.PROCESSING_SYNC_KEY_CATALOG:
+                state.progress = _messages.build_catalog_sync_progress(
                     state,
                     run_mode,
                     next_page_index=state.page_index,
                     fetched_count=state.fetched_count,
                     saved_at=timezone.now().isoformat(),
-                    live_fetch=sync_uses_live_fetch(state),
-                    trigger_source=sync_trigger_source(state),
-                    sync_phase_status=CATALOG_PHASE_STATUS_PAUSED,
-                    request_creation_phase_state=catalog_phase_state(state, CATALOG_REQUEST_CREATION_PHASE),
+                    live_fetch=_checkpoints.sync_uses_live_fetch(state),
+                    trigger_source=_progress.sync_trigger_source(state),
+                    sync_phase_status=_constants.CATALOG_PHASE_STATUS_PAUSED,
+                    request_creation_phase_state=_progress.catalog_phase_state(
+                        state,
+                        _constants.CATALOG_REQUEST_CREATION_PHASE,
+                    ),
                 )
             else:
-                state.progress = build_sync_progress(
+                state.progress = _messages.build_sync_progress(
                     run_mode,
                     next_page_index=state.page_index,
                     fetched_count=state.fetched_count,
                     saved_at=timezone.now().isoformat(),
-                    live_fetch=sync_uses_live_fetch(state),
-                    trigger_source=sync_trigger_source(state),
+                    live_fetch=_checkpoints.sync_uses_live_fetch(state),
+                    trigger_source=_progress.sync_trigger_source(state),
                 )
             state.status = ProcessingSyncStatus.PAUSED
-            state.message = f"{sync_run_label(run_mode)} progress saved after interruption."
+            state.message = f"{_checkpoints.sync_run_label(run_mode)} progress saved after interruption."
         else:
-            state.message = f"Recovering interrupted {sync_run_label(run_mode).lower()}."
+            state.message = f"Recovering interrupted {_checkpoints.sync_run_label(run_mode).lower()}."
         state.task_id = ""
         state.queue_name = ""
-        save_sync_state(state, update_fields=["status", "progress", "task_id", "queue_name", "message", "updated_at"])
-        if state.status == ProcessingSyncStatus.SYNCING and should_enqueue_processing_sync_work():
-            dispatch_sync_task(state, force=True)
+        _checkpoints.save_sync_state(
+            state,
+            update_fields=[
+                "status",
+                "progress",
+                "task_id",
+                "queue_name",
+                "message",
+                "updated_at",
+            ],
+        )
+        if (
+            state.status == ProcessingSyncStatus.SYNCING
+            and _checkpoints.should_enqueue_processing_sync_work()
+        ):
+            _catalog_sync.dispatch_sync_task(state, force=True)
         recovered.append(state)
     return recovered
 
@@ -164,31 +221,40 @@ def run_processing_maintenance():
 
 def run_processing_runtime_tick():
     sync_results = {}
-    for sync_key in (PROCESSING_SYNC_KEY_CATALOG, PROCESSING_SYNC_KEY_INCOMPLETE):
-        state = get_sync_state(sync_key)
-        if state.status in SYNC_ACTIVE_STATUSES:
-            sync_results[sync_key] = sync_state_task_payload(
-                advance_sync_once(sync_key)
+    for sync_key in (
+        _constants.PROCESSING_SYNC_KEY_CATALOG,
+        _constants.PROCESSING_SYNC_KEY_INCOMPLETE,
+    ):
+        state = _state.get_sync_state(sync_key)
+        if state.status in _constants.SYNC_ACTIVE_STATUSES:
+            sync_results[sync_key] = _checkpoints.sync_state_task_payload(
+                _sync_runner.advance_sync_once(sync_key)
             )
     return {
         "sync": sync_results,
-        "advancedCount": advance_pipeline_once(),
+        "advancedCount": _actions.advance_pipeline_once(),
     }
 
 
 def apply_delete_action(processing_request, *, delete_book=False):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    if delete_book and processing_request.linked_book and processing_request.linked_book.deleted_at is None:
+    if (
+        delete_book
+        and processing_request.linked_book
+        and processing_request.linked_book.deleted_at is None
+    ):
         processing_request.linked_book.soft_delete()
 
     processing_request.state = BookCreationRequestState.DELETED
     processing_request.progress = None
     processing_request.error_message = ""
-    processing_request.save(update_fields=["state", "progress", "error_message", "updated_at"])
-    sync_record_state(processing_request.book_record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    processing_request.save(
+        update_fields=["state", "progress", "error_message", "updated_at"]
+    )
+    _queries.sync_record_state(processing_request.book_record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.DELETED,
             record=processing_request.book_record,
@@ -198,19 +264,22 @@ def apply_delete_action(processing_request, *, delete_book=False):
 
 
 def apply_pause_action(processing_request):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    saved_data = _request_saved_data(processing_request)
+    saved_data = _persistence._request_saved_data(processing_request)
     processing_request.state = BookCreationRequestState.PAUSED
-    processing_request.progress = _build_processing_progress(
-        _request_progress(processing_request).get("checkpoint") or "Pause requested",
+    processing_request.progress = _persistence._build_processing_progress(
+        _automation_commands._request_progress(processing_request).get("checkpoint")
+        or "Pause requested",
         saved_data,
     )
     processing_request.error_message = ""
-    processing_request.save(update_fields=["state", "progress", "error_message", "updated_at"])
-    sync_record_state(processing_request.book_record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    processing_request.save(
+        update_fields=["state", "progress", "error_message", "updated_at"]
+    )
+    _queries.sync_record_state(processing_request.book_record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.PAUSED,
             record=processing_request.book_record,
@@ -220,22 +289,30 @@ def apply_pause_action(processing_request):
 
 
 def apply_resume_action(processing_request, *, actor=None):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
     processing_request.state = BookCreationRequestState.INITIAL
     processing_request.is_resumed = True
     processing_request.force_generate = False
     processing_request.error_message = ""
-    processing_request.save(update_fields=["state", "is_resumed", "force_generate", "error_message", "updated_at"])
-    sync_record_state(processing_request.book_record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    processing_request.save(
+        update_fields=[
+            "state",
+            "is_resumed",
+            "force_generate",
+            "error_message",
+            "updated_at",
+        ]
+    )
+    _queries.sync_record_state(processing_request.book_record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.INITIAL,
             record=processing_request.book_record,
         )
     )
-    queue_processing_request(processing_request)
+    _request_queue.queue_processing_request(processing_request)
     return processing_request
 
 
@@ -265,7 +342,9 @@ def _strip_source_chrome_from_document(document):
             normalized = normalize_catalog_text(block_text)
             for pattern in SOURCE_CHROME_PATTERNS:
                 normalized_pattern = normalize_catalog_text(pattern)
-                if normalized_pattern and is_source_chrome_block(normalized, normalized_pattern, pattern):
+                if normalized_pattern and is_source_chrome_block(
+                    normalized, normalized_pattern, pattern
+                ):
                     block.decompose()
                     stripped += 1
                     break
@@ -291,13 +370,16 @@ def _fix_duplicate_paths_in_document(document):
     content_items = document.get("content_items") or []
 
     from apps.ingestion.pipeline.curated_validation import duplicate_paths as _dp
+
     dupes = _dp(content_items)
     if not dupes:
         return document, 0
 
     fixed_toc, fixed_items = disambiguate_duplicate_content_paths(toc, content_items)
     fixed_count = len(content_items) - len(fixed_items) + len(dupes)
-    return {**document, "toc": fixed_toc, "content_items": fixed_items}, max(fixed_count, len(dupes))
+    return {**document, "toc": fixed_toc, "content_items": fixed_items}, max(
+        fixed_count, len(dupes)
+    )
 
 
 def apply_force_generate_action(processing_request, *, actor=None):
@@ -309,9 +391,9 @@ def apply_force_generate_action(processing_request, *, actor=None):
     generating assets. The request moves back onto the Requests queue and the
     book is recreated from scratch (re-scrape → curate → mitigate → export).
     """
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    record_before = processing_record_snapshot(processing_request.book_record)
+    record_before = _state.processing_record_snapshot(processing_request.book_record)
     processing_request.state = BookCreationRequestState.INITIAL
     processing_request.force_generate = True
     processing_request.progress = None
@@ -332,27 +414,27 @@ def apply_force_generate_action(processing_request, *, actor=None):
         record.is_duplicate = False
         record.duplicate_of_record = None
         record.save(update_fields=["is_duplicate", "duplicate_of_record", "updated_at"])
-    sync_record_state(record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    _queries.sync_record_state(record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.INITIAL,
             record=record,
         )
-        | processing_domains_for_record_change(
+        | _ui_versions.processing_domains_for_record_change(
             record_before,
-            processing_record_snapshot(record),
+            _state.processing_record_snapshot(record),
             current_request_state=BookCreationRequestState.INITIAL,
         )
     )
-    queue_processing_request(processing_request)
+    _request_queue.queue_processing_request(processing_request)
     return processing_request
 
 
 def apply_retry_action(processing_request, *, actor=None):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    record_before = processing_record_snapshot(processing_request.book_record)
+    record_before = _state.processing_record_snapshot(processing_request.book_record)
     processing_request.state = BookCreationRequestState.INITIAL
     processing_request.force_generate = False
     processing_request.error_message = ""
@@ -373,18 +455,18 @@ def apply_retry_action(processing_request, *, actor=None):
         record.is_duplicate = False
         record.duplicate_of_record = None
         record.save(update_fields=["is_duplicate", "duplicate_of_record", "updated_at"])
-    sync_record_state(record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    _queries.sync_record_state(record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.INITIAL,
             record=record,
         )
-        | processing_domains_for_record_change(
+        | _ui_versions.processing_domains_for_record_change(
             record_before,
-            processing_record_snapshot(record),
+            _state.processing_record_snapshot(record),
             current_request_state=BookCreationRequestState.INITIAL,
         )
     )
-    queue_processing_request(processing_request)
+    _request_queue.queue_processing_request(processing_request)
     return processing_request

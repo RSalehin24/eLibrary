@@ -32,7 +32,10 @@ class SoftDeleteModel(models.Model):
 
     def soft_delete(self):
         self.deleted_at = timezone.now()
-        self.save(update_fields=["deleted_at", "updated_at"])
+        fields = ["deleted_at"]
+        if hasattr(self, "updated_at"):
+            fields.append("updated_at")
+        self.save(update_fields=fields)
 
 
 class LifecycleState(models.TextChoices):

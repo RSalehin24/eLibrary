@@ -1,3 +1,4 @@
+from typing import Any
 import json
 import logging
 import os
@@ -66,7 +67,7 @@ def _as_bool(value):
 
 
 def normalize_manifest_limits(content_limits=None):
-    limits = {
+    limits: dict[str, int | bool | str | None] = {
         "max_nodes": None,
         "max_lesson_pages": None,
         "max_topic_pages": None,
@@ -267,7 +268,7 @@ def has_class_token(tag, token):
 
 
 def extract_entry_terms(soup):
-    terms = {}
+    terms: dict[str, list[str]] = {}
     meta = soup.select_one(".entry-meta.entry-meta-after-content") or soup.select_one(".entry-meta")
     if not meta:
         return terms
@@ -549,7 +550,7 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None)
         return []
 
     topics = []
-    seen_urls = set()
+    seen_urls: set[str] = set()
     for page_number in topic_page_numbers(
         lesson_item,
         page_url,
@@ -981,12 +982,12 @@ def collect_learndash_toc(landing_soup, canonical_url, ctx, limits):
 
     source_total_pages = lesson_total_pages(landing_soup)
     total_pages = bounded_total(source_total_pages, limits.get("max_lesson_pages"))
-    collected = []
-    seen_lesson_keys = set()
+    collected: list[dict[str, Any]] = []
+    seen_lesson_keys: set[tuple[Any, ...]] = set()
     current_section = None
     page_count = 0
     pages_with_content = 0
-    _meta = {}
+    _meta: dict[str, Any] = {}
 
     for page_number in range(1, total_pages + 1):
         page_url = canonical_url if page_number == 1 else build_query_url(canonical_url, {"ld-courseinfo-lesson-page": page_number})
@@ -1074,8 +1075,8 @@ def disambiguate_duplicate_content_paths(toc, content_items):
     # First pass: group items by clean path so we can detect duplicates and
     # decide between "rename" (genuine distinct items sharing a label) and
     # "merge" (identical inline extractions that should be collapsed).
-    groups = {}
-    item_order = []
+    groups: dict[tuple[str, ...], list[int]] = {}
+    item_order: list[tuple[int, dict[str, Any], tuple[str, ...] | None]] = []
     for index, item in enumerate(content_items or []):
         path = [clean_display_text(part) for part in item.get("path", []) if clean_display_text(part)]
         if not path:
@@ -1114,16 +1115,16 @@ def disambiguate_duplicate_content_paths(toc, content_items):
                 dropped_indices.add(i)
 
     normalized_items = []
-    for index, item, path_key in item_order:
+    for index, item, item_path_key in item_order:
         if index in dropped_indices:
             continue
         normalized_item = dict(item)
-        if path_key is not None:
+        if item_path_key is not None:
             source_url = item.get("source_url") or ""
-            updated_path = updates_by_source_and_path.get((source_url, path_key))
-            if updated_path:
-                normalized_item["title"] = updated_path[-1]
-                normalized_item["path"] = updated_path
+            replacement_path = updates_by_source_and_path.get((source_url, item_path_key))
+            if replacement_path:
+                normalized_item["title"] = replacement_path[-1]
+                normalized_item["path"] = replacement_path
         normalized_items.append(normalized_item)
 
     # Build a set of surviving paths so we can prune TOC leaves that no
@@ -1463,7 +1464,7 @@ def fetch_content_item(node, path, ctx, limits):
 
 
 def collect_content_items(nodes, ctx, limits, *, page_cache=None):
-    content_items = []
+    content_items: list[dict[str, Any]] = []
     max_nodes = limits.get("max_nodes")
     cached = {}
     if page_cache is not None:
@@ -2184,77 +2185,13 @@ def build_manifest_from_projection(canonical_url, projection, *, pages=None, sou
 
 
 def build_manifest_source_pages(source_url, *, content_limits=None, page_cache=None):
+    from .manifest_collection import CollectionOptions, ManifestCollector
+
     canonical_url = normalize_source_url(source_url)
     limits = normalize_manifest_limits(content_limits)
     with create_session_with_retries() as session:
         ctx = SourceFetchContext(session)
-        landing_soup = ctx.fetch_soup(canonical_url, kind="landing")
-        if not landing_soup:
-            return {
-                "schema_version": CURRENT_MANIFEST_SCHEMA_VERSION,
-                "source_url": canonical_url,
-                "canonical_url": canonical_url,
-                "pages": ctx.pages,
-                "manifest": {},
-                "raw_scrape_payload": {},
-            }
-
-        title, title_author = extract_title_and_author(landing_soup)
-        terms = extract_entry_terms(landing_soup)
-        author = term_display(terms, "authors", "author") or title_author
-        series = term_display(terms, "series")
-        book_type = term_display(terms, "ld_course_category", "category")
-        output_folder = scraper.create_output_folder(title)
-        cover_source_url = extract_cover_url(landing_soup, canonical_url)
-        cover = download_cover_asset(cover_source_url, output_folder, session)
-        landing_main_content = extract_entry_content_html(landing_soup, title)
-
-        toc_nodes, toc_meta = collect_learndash_toc(landing_soup, canonical_url, ctx, limits)
-        landing_soup.decompose()
-        content_items = collect_content_items(toc_nodes, ctx, limits, page_cache=page_cache) if toc_nodes else []
-        sections_payload = normalize_body_sections(
-            book_title=title,
-            landing_main_content=landing_main_content,
-            toc_nodes=toc_nodes,
-            content_items=content_items,
-            author=author,
-            series=series,
-            book_type=book_type,
-        )
-        source_structure = classify_manifest_structure(
-            toc_nodes,
-            sections_payload["content_items"],
-            sections_payload["main_content"],
-            toc_meta,
-            limits=limits,
-        )
-        projection = projection_from_manifest_parts(
-            canonical_url=canonical_url,
-            title=title,
-            author=author,
-            series=series,
-            book_type=book_type,
-            cover=cover,
-            cover_source_url=cover_source_url,
-            output_folder=output_folder,
-            sections_payload=sections_payload,
-        )
-        manifest = build_manifest_from_projection(
-            canonical_url,
-            projection,
-            pages=ctx.pages,
-            source_structure=source_structure,
-            metadata={"entry_terms": terms, "title_author": title_author},
-        )
-        manifest["toc_source"] = toc_nodes
-        return {
-            "schema_version": CURRENT_MANIFEST_SCHEMA_VERSION,
-            "source_url": canonical_url,
-            "canonical_url": canonical_url,
-            "pages": ctx.pages,
-            "manifest": manifest,
-            "raw_scrape_payload": projection,
-        }
+        return ManifestCollector(ctx, CollectionOptions(limits, page_cache)).collect(canonical_url)
 
 
 def build_manifest_from_legacy_payload(source_url, scraped_data):

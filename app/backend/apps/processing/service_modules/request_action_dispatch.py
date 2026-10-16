@@ -1,4 +1,13 @@
+from apps.catalog.models import BookGroup
 
+from ..models import BookCreationRequest, BookCreationRequestState
+from . import maintenance_and_request_actions as _maintenance
+from . import processing_state_queries as _queries
+from . import request_pipeline_tick as _request_pipeline_tick
+from . import request_processing_persistence as _persistence
+from . import request_queue_runtime as _request_queue
+from . import state_serializers as _state
+from . import ui_domain_versions as _ui_versions
 
 
 def _resolve_existing_duplicate_book(processing_request):
@@ -32,7 +41,7 @@ def apply_new_edition_action(processing_request, *, actor=None):
     duplicate. Wires both books to a shared BookGroup and re-queues the
     submission for full creation.
     """
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
 
     existing_book = _resolve_existing_duplicate_book(processing_request)
     group = _ensure_book_group_for_existing(existing_book) if existing_book else None
@@ -48,9 +57,9 @@ def apply_new_edition_action(processing_request, *, actor=None):
 
 
 def apply_new_action(processing_request, *, actor=None):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    record_before = processing_record_snapshot(processing_request.book_record)
+    record_before = _state.processing_record_snapshot(processing_request.book_record)
     processing_request.state = BookCreationRequestState.INITIAL
     processing_request.is_confirmed_not_duplicate = True
     processing_request.force_generate = False
@@ -79,32 +88,39 @@ def apply_new_action(processing_request, *, actor=None):
     record.is_duplicate = False
     record.duplicate_of_record = None
     record.save(
-        update_fields=["linked_book", "is_duplicate", "duplicate_of_record", "updated_at"]
+        update_fields=[
+            "linked_book",
+            "is_duplicate",
+            "duplicate_of_record",
+            "updated_at",
+        ]
     )
-    sync_record_state(record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    _queries.sync_record_state(record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.INITIAL,
             record=record,
         )
-        | processing_domains_for_record_change(
+        | _ui_versions.processing_domains_for_record_change(
             record_before,
-            processing_record_snapshot(record),
+            _state.processing_record_snapshot(record),
             current_request_state=BookCreationRequestState.INITIAL,
         )
     )
-    queue_processing_request(processing_request)
+    _request_queue.queue_processing_request(processing_request)
     return processing_request
 
 
 def apply_confirm_duplicate_action(processing_request):
-    processing_request = _reload_processing_request(processing_request.id)
-    record_before = processing_record_snapshot(processing_request.book_record)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
+    record_before = _state.processing_record_snapshot(processing_request.book_record)
     target_request = processing_request.duplicate_of_request
     if processing_request.duplicate_of_record_id and not target_request:
         target_request = (
-            BookCreationRequest.objects.filter(book_record_id=processing_request.duplicate_of_record_id)
+            BookCreationRequest.objects.filter(
+                book_record_id=processing_request.duplicate_of_record_id
+            )
             .exclude(pk=processing_request.pk)
             .order_by("-updated_at", "-created_at")
             .first()
@@ -126,20 +142,22 @@ def apply_confirm_duplicate_action(processing_request):
 
     if processing_request.duplicate_of_record_id:
         processing_request.book_record.is_duplicate = True
-        processing_request.book_record.duplicate_of_record = processing_request.duplicate_of_record
+        processing_request.book_record.duplicate_of_record = (
+            processing_request.duplicate_of_record
+        )
         processing_request.book_record.save(
             update_fields=["is_duplicate", "duplicate_of_record", "updated_at"]
         )
-    sync_record_state(processing_request.book_record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    _queries.sync_record_state(processing_request.book_record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             BookCreationRequestState.DUPLICATE,
             BookCreationRequestState.DUPLICATE,
             record=processing_request.book_record,
         )
-        | processing_domains_for_record_change(
+        | _ui_versions.processing_domains_for_record_change(
             record_before,
-            processing_record_snapshot(processing_request.book_record),
+            _state.processing_record_snapshot(processing_request.book_record),
             current_request_state=BookCreationRequestState.DUPLICATE,
         )
     )
@@ -147,9 +165,9 @@ def apply_confirm_duplicate_action(processing_request):
 
 
 def apply_recreate_action(processing_request, *, actor=None):
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
-    record_before = processing_record_snapshot(processing_request.book_record)
+    record_before = _state.processing_record_snapshot(processing_request.book_record)
     processing_request.state = BookCreationRequestState.INITIAL
     processing_request.force_generate = False
     processing_request.progress = None
@@ -170,82 +188,21 @@ def apply_recreate_action(processing_request, *, actor=None):
         record.is_duplicate = False
         record.duplicate_of_record = None
         record.save(update_fields=["is_duplicate", "duplicate_of_record", "updated_at"])
-    sync_record_state(record)
-    publish_processing_ui_domains(
-        processing_domains_for_request_change(
+    _queries.sync_record_state(record)
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_request_change(
             previous_state,
             BookCreationRequestState.INITIAL,
             record=record,
         )
-        | processing_domains_for_record_change(
+        | _ui_versions.processing_domains_for_record_change(
             record_before,
-            processing_record_snapshot(record),
+            _state.processing_record_snapshot(record),
             current_request_state=BookCreationRequestState.INITIAL,
         )
     )
-    queue_processing_request(processing_request)
+    _request_queue.queue_processing_request(processing_request)
     return processing_request
-
-
-def advance_pipeline_once():
-    advanced = 0
-    advanced += len(mark_stale_processing_requests())
-
-    queued_request = (
-        BookCreationRequest.objects.filter(state=BookCreationRequestState.QUEUED)
-        .order_by("created_at", "id")
-        .first()
-    )
-    if queued_request:
-        if should_run_processing_jobs_inline():
-            _transition_request_state(
-                queued_request.id,
-                BookCreationRequestState.QUEUED,
-                BookCreationRequestState.PROCESSING,
-            )
-            advanced += 1
-        elif should_enqueue_processing_work():
-            workers_available = processing_workers_available()
-            if not _request_dispatch_pending(queued_request) or not workers_available:
-                if not workers_available or not enqueue_request_processing(queued_request):
-                    kickoff_request_processing(queued_request.id)
-                advanced += 1
-        else:
-            _transition_request_state(
-                queued_request.id,
-                BookCreationRequestState.QUEUED,
-                BookCreationRequestState.PROCESSING,
-            )
-            advanced += 1
-
-    processing_request = (
-        BookCreationRequest.objects.filter(state=BookCreationRequestState.PROCESSING)
-        .order_by("created_at", "id")
-        .first()
-    )
-    if processing_request and (
-        should_run_processing_jobs_inline()
-        or should_manually_advance_processing_work()
-    ):
-        _run_processing_request(processing_request)
-        advanced += 1
-
-    initial_request = (
-        BookCreationRequest.objects.filter(state=BookCreationRequestState.INITIAL)
-        .order_by("created_at", "id")
-        .first()
-    )
-    if initial_request:
-        _transition_request_state(
-            initial_request.id,
-            BookCreationRequestState.INITIAL,
-            BookCreationRequestState.QUEUED,
-        )
-        advanced += 1
-
-    if advanced == 0:
-        repair_self_linked_duplicate_requests()
-    return advanced
 
 
 def apply_request_action(request_ids, action, *, delete_book=False, actor=None):
@@ -257,15 +214,17 @@ def apply_request_action(request_ids, action, *, delete_book=False, actor=None):
     changed = []
     for processing_request in requests:
         if action == "delete":
-            apply_delete_action(processing_request, delete_book=delete_book)
+            _maintenance.apply_delete_action(
+                processing_request, delete_book=delete_book
+            )
         elif action == "pause":
-            apply_pause_action(processing_request)
+            _maintenance.apply_pause_action(processing_request)
         elif action == "resume":
-            apply_resume_action(processing_request, actor=actor)
+            _maintenance.apply_resume_action(processing_request, actor=actor)
         elif action == "retry":
-            apply_retry_action(processing_request, actor=actor)
+            _maintenance.apply_retry_action(processing_request, actor=actor)
         elif action == "force_generate":
-            apply_force_generate_action(processing_request, actor=actor)
+            _maintenance.apply_force_generate_action(processing_request, actor=actor)
         elif action == "new":
             apply_new_action(processing_request, actor=actor)
         elif action == "new_edition":
@@ -277,5 +236,11 @@ def apply_request_action(request_ids, action, *, delete_book=False, actor=None):
         else:
             continue
         changed.append(processing_request)
-    sync_records_for_requests(changed)
+    _queries.sync_records_for_requests(changed)
     return changed
+
+
+def __getattr__(name):
+    if name in {"advance_pipeline_once"}:
+        return getattr(_request_pipeline_tick, name)
+    raise AttributeError(f"{__name__!r} has no attribute {name!r}")

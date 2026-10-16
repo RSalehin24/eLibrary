@@ -99,10 +99,7 @@ def test_catalog_automation_run_takes_over_paused_manual_runtime(client):
 @pytest.mark.django_db
 def test_catalog_automation_request_creation_phase_can_pause_and_resume(client, monkeypatch):
     login_processing_admin(client)
-    monkeypatch.setattr(
-        "apps.processing.services.CATALOG_REQUEST_CREATION_BATCH_SIZE",
-        1,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.service_imports_and_constants.CATALOG_REQUEST_CREATION_BATCH_SIZE', 1)
     BookRecord.objects.create(
         id="phase-request-a",
         name="Phase Request A",
@@ -174,10 +171,7 @@ def test_manual_start_from_paused_automation_request_creation_preserves_phase_tw
     monkeypatch,
 ):
     login_processing_admin(client)
-    monkeypatch.setattr(
-        "apps.processing.services.CATALOG_REQUEST_CREATION_BATCH_SIZE",
-        1,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.service_imports_and_constants.CATALOG_REQUEST_CREATION_BATCH_SIZE', 1)
     BookRecord.objects.create(
         id="carry-existing",
         name="Carry Existing",

@@ -1,4 +1,9 @@
-from .catalog import CatalogAutomationSettings, CatalogCurationRun, SourceCatalogEntry, SourceCatalogRefreshState
+from .catalog import (
+    CatalogAutomationSettings,
+    CatalogCurationRun,
+    SourceCatalogEntry,
+    SourceCatalogRefreshState,
+)
 from .choices import (
     CatalogAutomationFrequency,
     CatalogCurationMode,
@@ -13,6 +18,7 @@ from .choices import (
     SubmissionStatus,
 )
 from .processing import DuplicateReview, ProcessingJob, ProcessingLog
+from .source_rate import SourceRequestWindow
 from .submissions import BookSubmission, MatchCandidate, TitleResolutionAttempt
 
 __all__ = [
@@ -33,6 +39,7 @@ __all__ = [
     "SourceCatalogEntry",
     "SourceCatalogRefreshState",
     "SourceCatalogRefreshStatus",
+    "SourceRequestWindow",
     "SubmissionInputType",
     "SubmissionOrigin",
     "SubmissionStatus",

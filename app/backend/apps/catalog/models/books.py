@@ -1,9 +1,21 @@
-from django.db import models
+from typing import ClassVar
 
-from apps.common.models import LifecycleState, ReviewState, SoftDeleteModel, TimeStampedModel, UUIDPrimaryKeyModel
+from django.db import models, transaction
+
+from apps.common.models import (
+    LifecycleState,
+    ReviewState,
+    SoftDeleteModel,
+    TimeStampedModel,
+    UUIDPrimaryKeyModel,
+)
 from apps.common.text import clean_display_text, normalize_catalog_text
 
-from .catalog_codes import CATALOG_CODE_LENGTH, build_book_catalog_code, is_book_catalog_code
+from .catalog_codes import (
+    CATALOG_CODE_LENGTH,
+    build_book_catalog_code,
+    is_book_catalog_code,
+)
 from .choices import (
     BookRecordType,
     ContributorRole,
@@ -14,6 +26,7 @@ from .choices import (
     GeneratedAssetType,
     ManualBindingType,
 )
+from .editorial import EditorialMetadata
 from .entities import Category, Contributor, Series
 from .utils import build_unique_slug, generated_asset_upload_to
 
@@ -31,7 +44,7 @@ class BookGroup(UUIDPrimaryKeyModel, TimeStampedModel):
     note = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["canonical_title"]
+        ordering: ClassVar[list[str]] = ["canonical_title"]
 
     def save(self, *args, **kwargs):
         self.canonical_title = clean_display_text(self.canonical_title)
@@ -42,7 +55,7 @@ class BookGroup(UUIDPrimaryKeyModel, TimeStampedModel):
         return self.canonical_title
 
 
-class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
+class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMetadata):
     title = models.CharField(max_length=255)
     normalized_title = models.CharField(max_length=255, db_index=True, editable=False, blank=True, default="")
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
@@ -83,8 +96,8 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
     categories = models.ManyToManyField(Category, through="BookCategory", related_name="books")
 
     class Meta:
-        ordering = ["-created_at", "title"]
-        constraints = []
+        ordering: ClassVar[list[str]] = ["-created_at", "title"]
+        constraints: ClassVar[list[models.BaseConstraint]] = []
 
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
@@ -92,6 +105,7 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel):
         previous = Book.objects.filter(pk=self.pk).values_list("title", flat=True).first()
         return clean_display_text(previous) != self.title
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.title = clean_display_text(self.title)
         self.normalized_title = normalize_catalog_text(self.title)
@@ -120,7 +134,7 @@ class BookContributor(UUIDPrimaryKeyModel, TimeStampedModel):
     sort_order = models.PositiveIntegerField(default=0)
 
     class Meta:
-        ordering = ["sort_order", "contributor__name"]
+        ordering: ClassVar[list[str]] = ["sort_order", "contributor__name"]
         unique_together = ("book", "contributor", "role")
 
     def __str__(self):
@@ -134,7 +148,7 @@ class BookSeries(UUIDPrimaryKeyModel, TimeStampedModel):
     raw_value = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        ordering = ["sort_order", "series__name"]
+        ordering: ClassVar[list[str]] = ["sort_order", "series__name"]
         unique_together = ("book", "series")
 
     def __str__(self):
@@ -147,7 +161,7 @@ class BookCategory(UUIDPrimaryKeyModel, TimeStampedModel):
     raw_value = models.CharField(max_length=255, blank=True)
 
     class Meta:
-        ordering = ["category__name"]
+        ordering: ClassVar[list[str]] = ["category__name"]
         unique_together = ("book", "category")
 
     def __str__(self):
@@ -159,7 +173,7 @@ class UserBook(UUIDPrimaryKeyModel, TimeStampedModel):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="user_books")
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
         unique_together = ("user", "book")
 
     def __str__(self):
@@ -171,7 +185,7 @@ class UserBookKindleSend(UUIDPrimaryKeyModel, TimeStampedModel):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="kindle_sends")
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
         unique_together = ("user", "book")
 
     def __str__(self):
@@ -188,7 +202,7 @@ class BookSource(UUIDPrimaryKeyModel, TimeStampedModel):
     raw_metadata = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
         unique_together = ("book",)
 
     def __str__(self):
@@ -209,7 +223,7 @@ class GeneratedAsset(UUIDPrimaryKeyModel, TimeStampedModel):
     source_job = models.ForeignKey("ingestion.ProcessingJob", on_delete=models.SET_NULL, blank=True, null=True, related_name="generated_assets")
 
     class Meta:
-        ordering = ["asset_type", "-created_at"]
+        ordering: ClassVar[list[str]] = ["asset_type", "-created_at"]
         unique_together = ("book", "asset_type")
 
     def __str__(self):
@@ -224,7 +238,7 @@ class MetadataReview(UUIDPrimaryKeyModel, TimeStampedModel):
     notes = models.TextField(blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
 
 class MetadataVersion(UUIDPrimaryKeyModel, TimeStampedModel):
@@ -235,7 +249,7 @@ class MetadataVersion(UUIDPrimaryKeyModel, TimeStampedModel):
     created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, blank=True, null=True, related_name="metadata_versions_created")
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
 
 
 class CuratedBookDocument(UUIDPrimaryKeyModel, TimeStampedModel):
@@ -269,7 +283,7 @@ class CuratedBookDocument(UUIDPrimaryKeyModel, TimeStampedModel):
     document = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar[list[str]] = ["-created_at"]
         unique_together = ("source_url", "version")
 
     def __str__(self):
@@ -289,7 +303,7 @@ class CuratedEntity(UUIDPrimaryKeyModel, TimeStampedModel):
     payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["entity_type", "role", "value"]
+        ordering: ClassVar[list[str]] = ["entity_type", "role", "value"]
 
     def __str__(self):
         return f"{self.entity_type}:{self.role}:{self.value}"
@@ -309,7 +323,7 @@ class CuratedSection(UUIDPrimaryKeyModel, TimeStampedModel):
     payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["sort_order", "section_id"]
+        ordering: ClassVar[list[str]] = ["sort_order", "section_id"]
         unique_together = ("document", "section_id")
 
     def __str__(self):
@@ -331,4 +345,4 @@ class CuratedEvidence(UUIDPrimaryKeyModel, TimeStampedModel):
     payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["created_at"]
+        ordering: ClassVar[list[str]] = ["created_at"]

@@ -1,3 +1,21 @@
+from urllib.parse import unquote, urlparse
+
+from config.celery import app as celery_app
+from django.utils import timezone
+from kombu import Queue
+
+from ..models import (
+    BookCreationRequest,
+    BookCreationRequestState,
+    BookCreationState,
+    ProcessingSyncState,
+)
+from . import automation_commands as _automation_commands
+from . import checkpoint_and_runtime_adapters as _checkpoints
+from . import processing_state_queries as _queries
+from . import request_processing_persistence as _persistence
+from . import request_processing_pipeline as _pipeline
+from . import service_imports_and_constants as _constants
 
 
 def next_request_id(preferred_id):
@@ -17,14 +35,15 @@ def request_blocks_record_selection(request):
 
 
 def record_is_selectable(record):
-    if not can_process_record_url(record.url):
+    if not _checkpoints.can_process_record_url(record.url):
         return False
-    requests = record_request_list(record)
+    requests = _queries.record_request_list(record)
     duplicate_request = next(
         (
             request
             for request in requests
-            if request.state == BookCreationRequestState.DUPLICATE and request.duplicate_confirmed
+            if request.state == BookCreationRequestState.DUPLICATE
+            and request.duplicate_confirmed
         ),
         None,
     )
@@ -42,16 +61,16 @@ def record_is_selectable(record):
 def enqueue_request_processing(processing_request):
     from apps.ingestion.engine.dispatch import dispatch_job
 
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     if processing_request.state == BookCreationRequestState.INITIAL:
-        processing_request = _transition_request_state(
+        processing_request = _pipeline._transition_request_state(
             processing_request.id,
             BookCreationRequestState.INITIAL,
             BookCreationRequestState.QUEUED,
         )
     if processing_request.state != BookCreationRequestState.QUEUED:
         return False
-    if _request_dispatch_pending(processing_request):
+    if _persistence._request_dispatch_pending(processing_request):
         return False
 
     try:
@@ -61,18 +80,19 @@ def enqueue_request_processing(processing_request):
             handler="pipeline",
         )
     except Exception:
-        logger.warning(
+        _constants.logger.warning(
             "Engine pipeline dispatch failed for %s.",
             processing_request.id,
             exc_info=True,
         )
         return False
 
-    processing_request = _reload_processing_request(processing_request.id)
+    processing_request = _persistence._reload_processing_request(processing_request.id)
     if processing_request.state == BookCreationRequestState.QUEUED:
         next_progress = {
-            **_request_progress(processing_request),
-            PROCESSING_DISPATCH_REQUESTED_AT_KEY: timezone.now().isoformat(),
+            **_automation_commands._request_progress(processing_request),
+            _constants.PROCESSING_DISPATCH_REQUESTED_AT_KEY: timezone.now().isoformat(),
+            _constants.PROCESSING_DISPATCH_TASK_ID_KEY: str(processing_request.id),
         }
         processing_request.progress = next_progress
         processing_request.save(update_fields=["progress", "updated_at"])
@@ -80,18 +100,18 @@ def enqueue_request_processing(processing_request):
 
 
 def queue_processing_request(processing_request):
-    if not can_process_record_url(processing_request.book_record.url):
-        return _fail_processing_request(
+    if not _checkpoints.can_process_record_url(processing_request.book_record.url):
+        return _pipeline._fail_processing_request(
             processing_request,
             ValueError("Only source site book URLs are allowed"),
         )
-    if should_enqueue_processing_work():
+    if _checkpoints.should_enqueue_processing_work():
         if enqueue_request_processing(processing_request):
-            return _reload_processing_request(processing_request.id)
-        return kickoff_request_processing(processing_request.id)
-    if should_run_processing_jobs_inline():
-        return kickoff_request_processing(processing_request.id)
-    return _reload_processing_request(processing_request.id)
+            return _persistence._reload_processing_request(processing_request.id)
+        return _pipeline.kickoff_request_processing(processing_request.id)
+    if _checkpoints.should_run_processing_jobs_inline():
+        return _pipeline.kickoff_request_processing(processing_request.id)
+    return _persistence._reload_processing_request(processing_request.id)
 
 
 def collect_processing_task_ids():
@@ -103,13 +123,17 @@ def collect_processing_task_ids():
         )
         if str(task_id).strip()
     }
-    for progress in BookCreationRequest.objects.exclude(progress__isnull=True).values_list(
+    for progress in BookCreationRequest.objects.exclude(
+        progress__isnull=True
+    ).values_list(
         "progress",
         flat=True,
     ):
         if not isinstance(progress, dict):
             continue
-        task_id = str(progress.get(PROCESSING_DISPATCH_TASK_ID_KEY) or "").strip()
+        task_id = str(
+            progress.get(_constants.PROCESSING_DISPATCH_TASK_ID_KEY) or ""
+        ).strip()
         if task_id:
             task_ids.add(task_id)
     return task_ids
@@ -124,7 +148,7 @@ def revoke_processing_task_ids(task_ids, *, terminate=False):
         try:
             celery_app.control.revoke(normalized_task_id, terminate=terminate)
         except Exception:
-            logger.warning(
+            _constants.logger.warning(
                 "Failed to revoke processing task %s.",
                 normalized_task_id,
                 exc_info=True,
@@ -138,14 +162,14 @@ def purge_processing_task_queue():
     try:
         with celery_app.connection_or_acquire() as connection:
             queue = Queue(
-                PROCESSING_TASK_QUEUE,
-                routing_key=PROCESSING_TASK_QUEUE,
+                _constants.PROCESSING_TASK_QUEUE,
+                routing_key=_constants.PROCESSING_TASK_QUEUE,
             ).bind(connection.default_channel)
             return int(queue.purge() or 0)
     except Exception:
-        logger.warning(
+        _constants.logger.warning(
             "Failed to purge processing task queue %s.",
-            PROCESSING_TASK_QUEUE,
+            _constants.PROCESSING_TASK_QUEUE,
             exc_info=True,
         )
         return 0
@@ -187,7 +211,9 @@ def processing_request_details(request):
 
 
 def processing_linked_book(record, request=None):
-    request_book = getattr(request, "linked_book", None) if request is not None else None
+    request_book = (
+        getattr(request, "linked_book", None) if request is not None else None
+    )
     if (
         request is not None
         and getattr(request, "linked_book_id", None)
@@ -208,7 +234,11 @@ def processing_linked_book(record, request=None):
 
 
 def processing_row_payload(record, request=None, *, selectable=True):
-    progress = request.progress if (request is not None and isinstance(request.progress, dict)) else {}
+    progress = (
+        request.progress
+        if (request is not None and isinstance(request.progress, dict))
+        else {}
+    )
     linked_book = processing_linked_book(record, request)
     return {
         "id": str(request.id if request else record.id),

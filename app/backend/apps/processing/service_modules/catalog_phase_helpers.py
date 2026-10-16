@@ -1,3 +1,9 @@
+from django.db.models import Q
+
+from ..models import ProcessingSyncStatus
+from . import catalog_progress_state as _progress
+from . import service_imports_and_constants as _constants
+
 PROCESSING_CHECKPOINT_REDIS = {
     "url": "",
     "client": None,
@@ -11,26 +17,28 @@ def normalize_category_key(value):
 
 def category_is_incomplete(value):
     normalized = normalize_category_key(value)
-    return any(keyword in normalized for keyword in INCOMPLETE_CATEGORY_KEYWORDS)
+    return any(
+        keyword in normalized for keyword in _constants.INCOMPLETE_CATEGORY_KEYWORDS
+    )
 
 
 def incomplete_category_query(field_name="category"):
     query = Q()
-    for keyword in INCOMPLETE_CATEGORY_KEYWORDS:
+    for keyword in _constants.INCOMPLETE_CATEGORY_KEYWORDS:
         query |= Q(**{f"{field_name}__icontains": keyword})
     return query
 
 
 def catalog_phase_statuses(
     *,
-    sync_status=CATALOG_PHASE_STATUS_NOT_STARTED,
-    request_creation_status=CATALOG_PHASE_STATUS_NOT_STARTED,
+    sync_status=_constants.CATALOG_PHASE_STATUS_NOT_STARTED,
+    request_creation_status=_constants.CATALOG_PHASE_STATUS_NOT_STARTED,
 ):
     sync_status = catalog_phase_summary_status(sync_status)
     request_creation_status = catalog_phase_summary_status(request_creation_status)
     return {
-        CATALOG_SYNC_PHASE: sync_status,
-        CATALOG_REQUEST_CREATION_PHASE: request_creation_status,
+        _constants.CATALOG_SYNC_PHASE: sync_status,
+        _constants.CATALOG_REQUEST_CREATION_PHASE: request_creation_status,
     }
 
 
@@ -44,17 +52,19 @@ def _phase_request_creation(value):
 
 def catalog_phase_is_active_status(status):
     return status in {
-        CATALOG_PHASE_STATUS_RUNNING,
-        CATALOG_PHASE_STATUS_PAUSING,
+        _constants.CATALOG_PHASE_STATUS_RUNNING,
+        _constants.CATALOG_PHASE_STATUS_PAUSING,
     }
 
 
 def catalog_phase_summary_status(status):
     normalized_status = (
-        status if status in CATALOG_PHASE_STATUSES else CATALOG_PHASE_STATUS_NOT_STARTED
+        status
+        if status in _constants.CATALOG_PHASE_STATUSES
+        else _constants.CATALOG_PHASE_STATUS_NOT_STARTED
     )
-    if normalized_status == CATALOG_PHASE_STATUS_PAUSING:
-        return CATALOG_PHASE_STATUS_RUNNING
+    if normalized_status == _constants.CATALOG_PHASE_STATUS_PAUSING:
+        return _constants.CATALOG_PHASE_STATUS_RUNNING
     return normalized_status
 
 
@@ -62,11 +72,11 @@ def _runtime_catalog_phase_status(runtime_status, phase, progress_phase):
     if phase != progress_phase:
         return ""
     if runtime_status == ProcessingSyncStatus.PAUSING:
-        return CATALOG_PHASE_STATUS_PAUSING
+        return _constants.CATALOG_PHASE_STATUS_PAUSING
     if runtime_status == ProcessingSyncStatus.PAUSED:
-        return CATALOG_PHASE_STATUS_PAUSED
+        return _constants.CATALOG_PHASE_STATUS_PAUSED
     if runtime_status == ProcessingSyncStatus.SYNCING:
-        return CATALOG_PHASE_STATUS_RUNNING
+        return _constants.CATALOG_PHASE_STATUS_RUNNING
     return ""
 
 
@@ -103,10 +113,10 @@ def _normalize_catalog_phase_status_pair(
     request_creation_checkpoint="",
 ):
     if (
-        request_creation_status != CATALOG_PHASE_STATUS_NOT_STARTED
-        and sync_status == CATALOG_PHASE_STATUS_NOT_STARTED
+        request_creation_status != _constants.CATALOG_PHASE_STATUS_NOT_STARTED
+        and sync_status == _constants.CATALOG_PHASE_STATUS_NOT_STARTED
     ):
-        sync_status = CATALOG_PHASE_STATUS_COMPLETED
+        sync_status = _constants.CATALOG_PHASE_STATUS_COMPLETED
 
     if not (
         catalog_phase_is_active_status(sync_status)
@@ -116,21 +126,28 @@ def _normalize_catalog_phase_status_pair(
 
     active_phase = (
         progress_phase
-        if progress_phase in {CATALOG_SYNC_PHASE, CATALOG_REQUEST_CREATION_PHASE}
-        else CATALOG_SYNC_PHASE
+        if progress_phase
+        in {
+            _constants.CATALOG_SYNC_PHASE,
+            _constants.CATALOG_REQUEST_CREATION_PHASE,
+        }
+        else _constants.CATALOG_SYNC_PHASE
     )
-    if active_phase == CATALOG_REQUEST_CREATION_PHASE:
-        return CATALOG_PHASE_STATUS_COMPLETED, request_creation_status
+    if active_phase == _constants.CATALOG_REQUEST_CREATION_PHASE:
+        return (
+            _constants.CATALOG_PHASE_STATUS_COMPLETED,
+            request_creation_status,
+        )
     return (
         sync_status,
         (
-            CATALOG_PHASE_STATUS_PAUSED
+            _constants.CATALOG_PHASE_STATUS_PAUSED
             if _catalog_request_creation_checkpoint_available(
                 request_creation,
                 request_creation_base_token,
                 request_creation_checkpoint,
             )
-            else CATALOG_PHASE_STATUS_NOT_STARTED
+            else _constants.CATALOG_PHASE_STATUS_NOT_STARTED
         ),
     )
 
@@ -139,7 +156,9 @@ def _catalog_phase_checkpoint_from_saved_data(saved_data):
     session_id = str(saved_data.get("sessionId") or "").strip()
     if not session_id:
         return ""
-    return str(saved_data.get("checkpointToken") or "").strip() or catalog_sync_checkpoint_token(
+    return str(
+        saved_data.get("checkpointToken") or ""
+    ).strip() or _progress.catalog_sync_checkpoint_token(
         session_id,
         next_page_index=saved_data.get("nextPageIndex") or 0,
         fetched_count=saved_data.get("fetchedCount") or 0,
@@ -150,9 +169,9 @@ def _catalog_phase_checkpoint_from_saved_data(saved_data):
 def _catalog_phase_state(
     phase,
     *,
-    status=CATALOG_PHASE_STATUS_NOT_STARTED,
+    status=_constants.CATALOG_PHASE_STATUS_NOT_STARTED,
     owner="",
-    trigger_source=SYNC_TRIGGER_SOURCE_BUTTON,
+    trigger_source=_constants.SYNC_TRIGGER_SOURCE_BUTTON,
     checkpoint="",
     saved_at="",
     saved_data=None,
@@ -160,9 +179,11 @@ def _catalog_phase_state(
     base_sync_checkpoint_token="",
 ):
     payload = {
-        "status": status if status in CATALOG_PHASE_STATUSES else CATALOG_PHASE_STATUS_NOT_STARTED,
+        "status": status
+        if status in _constants.CATALOG_PHASE_STATUSES
+        else _constants.CATALOG_PHASE_STATUS_NOT_STARTED,
         "owner": str(owner or "").strip(),
-        "triggerSource": str(trigger_source or SYNC_TRIGGER_SOURCE_BUTTON),
+        "triggerSource": str(trigger_source or _constants.SYNC_TRIGGER_SOURCE_BUTTON),
     }
     checkpoint = str(checkpoint or "").strip()
     if checkpoint:
@@ -170,7 +191,7 @@ def _catalog_phase_state(
     saved_at = str(saved_at or "").strip()
     if saved_at:
         payload["savedAt"] = saved_at
-    if phase == CATALOG_SYNC_PHASE:
+    if phase == _constants.CATALOG_SYNC_PHASE:
         saved_data = _phase_saved_data(saved_data)
         if saved_data:
             payload["savedData"] = saved_data
@@ -189,6 +210,6 @@ def _explicit_catalog_phase_status_from_progress(progress, phase):
     if not isinstance(phase_statuses, dict):
         return ""
     status = str(phase_statuses.get(phase) or "").strip()
-    if status in CATALOG_PHASE_STATUSES:
+    if status in _constants.CATALOG_PHASE_STATUSES:
         return status
     return ""

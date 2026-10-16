@@ -1,6 +1,23 @@
+from .front_matter_text_rules import ContributorRole, re
 
 
 def extract_dedication_title_and_content(dedication_html, default_title="উৎসর্গ"):
+    from .content_segment_extraction import (
+        clean_extracted_dedication_html,
+        dedupe_html_fragment_blocks,
+    )
+    from .front_matter_detection import search_front_matter_label_value
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BODY_SECTION_PATTERNS,
+        BeautifulSoup,
+        block_has_break,
+        block_strong_text,
+        block_text,
+        count_sentence_markers,
+        plain_text_from_html,
+        text_matches_patterns,
+    )
     cleaned_html = dedupe_html_fragment_blocks(
         clean_extracted_dedication_html(dedication_html)
     )
@@ -42,6 +59,7 @@ def extract_dedication_title_and_content(dedication_html, default_title="উৎ�
 
 
 def resolve_dedication_heading(dedication_html, default_title="উৎসর্গ"):
+    from .front_matter_text_rules import clean_display_text, plain_text_from_html, re
     plain_text = plain_text_from_html(dedication_html)
     lines = [clean_display_text(line) for line in plain_text.splitlines() if clean_display_text(line)]
     if not lines:
@@ -55,6 +73,10 @@ def resolve_dedication_heading(dedication_html, default_title="উৎসর্�
 
 
 def normalize_dedication_heading_and_content(dedication_html, default_title="উৎসর্গ"):
+    from .content_segment_extraction import (
+        clean_extracted_dedication_html,
+        dedupe_html_fragment_blocks,
+    )
     heading = resolve_dedication_heading(dedication_html, default_title=default_title)
     cleaned_html = dedupe_html_fragment_blocks(
         clean_extracted_dedication_html(dedication_html)
@@ -63,22 +85,33 @@ def normalize_dedication_heading_and_content(dedication_html, default_title="উ
 
 
 def extract_leading_front_matter_html(html):
+    from .content_segment_extraction import extract_main_content_segments
     extracted_html, _, _ = extract_main_content_segments(html)
     return extracted_html
 
 
 def promote_leading_front_matter(book_info_html, main_content_html):
+    from .content_segment_extraction import (
+        extract_main_content_segments,
+        merge_front_matter_html_parts,
+    )
     extracted_html, _, cleaned_main_content = extract_main_content_segments(main_content_html)
     book_info_html = merge_front_matter_html_parts(book_info_html, extracted_html)
     return book_info_html or "", cleaned_main_content
 
 
 def combined_front_matter_html(book_info_html, main_content_html=""):
+    from .content_segment_extraction import merge_front_matter_html_parts
     extracted_html = extract_leading_front_matter_html(main_content_html)
     return merge_front_matter_html_parts(book_info_html, extracted_html)
 
 
 def iter_front_matter_blocks(book_info_html):
+    from .front_matter_text_rules import (
+        BeautifulSoup,
+        clean_display_text,
+        plain_text_from_html,
+    )
     if not book_info_html:
         return []
 
@@ -96,6 +129,21 @@ def iter_front_matter_blocks(book_info_html):
 
 
 def extract_front_matter_entries(book_info_html):
+    from .front_matter_detection import parse_front_matter_line
+    from .front_matter_text_rules import (
+        FRONT_MATTER_PATTERNS,
+        block_has_break,
+        block_strong_text,
+        block_strong_text_lines,
+        block_text,
+        block_text_lines,
+        extract_contributor_evidence,
+        is_role_label_text,
+        match_pattern_key,
+        normalize_catalog_text,
+        roles_in_text,
+        split_metadata_fragments,
+    )
     entries = []
     seen = set()
     block_variants = []
@@ -182,7 +230,7 @@ def extract_front_matter_entries(book_info_html):
                     continue
                 consumed_indices.add(index + 1)
 
-            grouped = {}
+            grouped: dict[str, list[str]] = {}
             for contributor in evidence["contributors"]:
                 grouped.setdefault(contributor["role"], [])
                 grouped[contributor["role"]].append(contributor["name"])
@@ -207,6 +255,7 @@ def extract_front_matter_entries(book_info_html):
 
 
 def extract_role_contributors(book_info_html):
+    from .front_matter_text_rules import extract_contributor_evidence
     extracted = []
     for entry in extract_front_matter_entries(book_info_html):
         entry_roles = entry.get("roles") or ([entry["role"]] if entry["role"] else [])
@@ -222,6 +271,14 @@ def extract_role_contributors(book_info_html):
 
 
 def normalize_scraped_book(book_data):
+    from .front_matter_text_rules import (
+        ContributorRole,
+        clean_display_text,
+        extract_contributor_evidence,
+        normalize_book_contributors,
+        normalize_catalog_text,
+        split_multi_value,
+    )
     front_matter_html = combined_front_matter_html(
         book_data.get("book_info", ""),
         book_data.get("main_content", ""),
@@ -365,6 +422,11 @@ def _resolve_label_key(label):
     e.g. "মূল্য" (price) is not mistakenly matched by the shorter
     "মূল" (original_title) prefix.
     """
+    from .front_matter_text_rules import (
+        METADATA_LABEL_ALIASES,
+        canonical_role,
+        normalize_catalog_text,
+    )
     if not label:
         return ""
     normalized = normalize_catalog_text(label)
@@ -382,6 +444,7 @@ def _resolve_label_key(label):
 
 
 def _bn_label_for_key(key, fallback_label="", *, labels=None):
+    from .front_matter_text_rules import clean_display_text
     table = labels if labels is not None else BOOK_INFO_KEY_LABELS_BN
     if key in table:
         return table[key]
@@ -389,6 +452,7 @@ def _bn_label_for_key(key, fallback_label="", *, labels=None):
 
 
 def _emit_book_info_line(label, value):
+    from .front_matter_text_rules import clean_display_text, escape
     label_html = escape(clean_display_text(label))
     value_html = escape(clean_display_text(value))
     if not value_html:
@@ -399,6 +463,7 @@ def _emit_book_info_line(label, value):
 
 
 def _add_bucket_value(buckets, key, value):
+    from .front_matter_text_rules import clean_display_text, normalize_catalog_text
     cleaned = clean_display_text(value)
     if not cleaned:
         return
@@ -421,6 +486,22 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
     ``language`` selects between Bengali ("bn", default) and English ("en")
     field labels.
     """
+    from .front_matter_detection import parse_front_matter_line
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_has_break,
+        block_strong_text,
+        block_strong_text_lines,
+        block_text,
+        block_text_lines,
+        canonical_role,
+        clean_display_text,
+        normalize_catalog_text,
+        parse_role_labeled_segment,
+        roles_in_text,
+        split_metadata_fragments,
+    )
 
     if not book_info_html:
         return book_info_html
@@ -436,7 +517,7 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
     if not blocks:
         return book_info_html
 
-    buckets = {}
+    buckets: dict[str, list[str]] = {}
     raw_lines = []
     raw_seen = set()
 
@@ -550,3 +631,6 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
     # narrative text is intentionally discarded here.
 
     return "\n".join(output_lines)
+
+
+__all__ = ['BOOK_INFO_KEY_LABELS_BN', 'BOOK_INFO_KEY_LABELS_EN', 'CANONICAL_BOOK_INFO_KEY_ORDER', '_GENERIC_LABEL_VALUE_PATTERN', '_add_bucket_value', '_bn_label_for_key', '_book_info_labels', '_emit_book_info_line', '_resolve_label_key', 'combined_front_matter_html', 'extract_dedication_title_and_content', 'extract_front_matter_entries', 'extract_leading_front_matter_html', 'extract_role_contributors', 'format_book_info_html_ordered', 'iter_front_matter_blocks', 'normalize_dedication_heading_and_content', 'normalize_scraped_book', 'promote_leading_front_matter', 'resolve_dedication_heading']

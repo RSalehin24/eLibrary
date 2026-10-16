@@ -234,6 +234,8 @@ def captured_events(docker_redis_client):
     yield events
 
     thread.stop()
+    thread.join(timeout=2)
+    assert not thread.is_alive(), "The Redis observer did not stop."
     try:
         pubsub.unsubscribe()
     except Exception:

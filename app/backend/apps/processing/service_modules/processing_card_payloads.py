@@ -1,3 +1,17 @@
+from django.db.models import Q
+
+from ..models import (
+    BookCreationRequest,
+    BookCreationRequestState,
+    BookCreationState,
+    BookRecord,
+)
+from . import catalog_phase_helpers as _phase_helpers
+from . import processing_state_queries as _queries
+from . import processing_table_queries as _tables
+from . import request_queue_runtime as _request_queue
+from . import service_imports_and_constants as _constants
+from . import ui_projection_queries as _projections
 
 
 def request_processing_rows(states, *, predicate=None):
@@ -11,23 +25,23 @@ def request_processing_rows(states, *, predicate=None):
         record = processing_request.book_record
         if predicate and not predicate(processing_request, record):
             continue
-        rows.append(processing_row_payload(record, processing_request))
+        rows.append(_request_queue.processing_row_payload(record, processing_request))
     return rows
 
 
 def incomplete_record_rows():
     queryset = (
         BookRecord.objects.select_related("linked_book")
-        .prefetch_related(processing_request_prefetch())
+        .prefetch_related(_queries.processing_request_prefetch())
         .filter(resolved_from_incomplete=False)
-        .filter(Q(was_incomplete=True) | incomplete_category_query())
+        .filter(Q(was_incomplete=True) | _phase_helpers.incomplete_category_query())
         .order_by("name", "id")
     )
     rows = []
     for record in queryset:
-        latest_request = latest_request_for_record(record)
+        latest_request = _queries.latest_request_for_record(record)
         rows.append(
-            processing_row_payload(
+            _request_queue.processing_row_payload(
                 record,
                 latest_request,
                 selectable=False,
@@ -52,7 +66,9 @@ def multipage_toc_rows():
         .order_by("-updated_at", "-created_at", "id")
     )
     return [
-        processing_row_payload(processing_request.book_record, processing_request)
+        _request_queue.processing_row_payload(
+            processing_request.book_record, processing_request
+        )
         for processing_request in queryset
     ]
 
@@ -80,13 +96,17 @@ def empty_chapters_rows():
         .order_by("-updated_at", "-created_at", "id")
     )
     return [
-        processing_row_payload(processing_request.book_record, processing_request)
+        _request_queue.processing_row_payload(
+            processing_request.book_record, processing_request
+        )
         for processing_request in queryset
     ]
 
 
 def empty_chapters_summary():
-    queryset = BookCreationRequest.objects.filter(linked_book__empty_chapters_count__gt=0)
+    queryset = BookCreationRequest.objects.filter(
+        linked_book__empty_chapters_count__gt=0
+    )
     return {
         "total": queryset.count(),
         "created": queryset.filter(state=BookCreationRequestState.CREATED).count(),
@@ -102,14 +122,14 @@ def empty_chapters_summary():
 
 
 PROCESSING_TABLE_BUILDERS = {
-    "catalog-records": catalog_processing_rows,
+    "catalog-records": _tables.catalog_processing_rows,
     "incomplete-records": incomplete_record_rows,
     "incomplete-completed": incomplete_completed_rows,
     "multipage-records": multipage_toc_rows,
     "empty-chapters-records": empty_chapters_rows,
     **{
-        card_id: (lambda states: lambda: request_processing_rows(states))(states)
-        for card_id, states in PROCESSING_REQUEST_CARD_STATES.items()
+        card_id: (lambda states=states: request_processing_rows(states))
+        for card_id, states in _constants.PROCESSING_REQUEST_CARD_STATES.items()
     },
 }
 
@@ -121,22 +141,26 @@ def processing_table_payload(
     category="",
     status="",
     offset=0,
-    limit=PROCESSING_TABLE_DEFAULT_LIMIT,
+    limit=_constants.PROCESSING_TABLE_DEFAULT_LIMIT,
     include_facets=True,
 ):
     offset_value = max(0, int(offset or 0))
     limit_value = max(
         1,
-        min(int(limit or PROCESSING_TABLE_DEFAULT_LIMIT), PROCESSING_TABLE_MAX_LIMIT),
+        min(
+            int(limit or _constants.PROCESSING_TABLE_DEFAULT_LIMIT),
+            _constants.PROCESSING_TABLE_MAX_LIMIT,
+        ),
     )
     query_value = str(query or "").strip()
 
     if card == "catalog-records":
-        payload = build_processing_record_table_payload(
-            order_catalog_records_queryset(
-                annotate_record_processing_status(
-                    BookRecord.objects.select_related("linked_book")
-                    .prefetch_related(processing_request_prefetch())
+        payload = _tables.build_processing_record_table_payload(
+            _tables.order_catalog_records_queryset(
+                _tables.annotate_record_processing_status(
+                    BookRecord.objects.select_related("linked_book").prefetch_related(
+                        _queries.processing_request_prefetch()
+                    )
                 )
             ),
             query=query_value,
@@ -146,16 +170,20 @@ def processing_table_payload(
             limit=limit_value,
             include_facets=include_facets,
         )
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
     if card == "incomplete-records":
-        payload = build_processing_record_table_payload(
-            annotate_record_processing_status(
+        payload = _tables.build_processing_record_table_payload(
+            _tables.annotate_record_processing_status(
                 BookRecord.objects.select_related("linked_book")
-                .prefetch_related(processing_request_prefetch())
+                .prefetch_related(_queries.processing_request_prefetch())
                 .filter(resolved_from_incomplete=False)
-                .filter(Q(was_incomplete=True) | incomplete_category_query())
+                .filter(
+                    Q(was_incomplete=True) | _phase_helpers.incomplete_category_query()
+                )
                 .order_by("name", "id")
             ),
             query=query_value,
@@ -166,11 +194,13 @@ def processing_table_payload(
             selectable=False,
             include_facets=include_facets,
         )
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
     if card == "incomplete-completed":
-        payload = build_processing_request_table_payload(
+        payload = _tables.build_processing_request_table_payload(
             BookCreationRequest.objects.filter(state=BookCreationRequestState.CREATED)
             .filter(
                 book_record__was_incomplete=True,
@@ -203,12 +233,16 @@ def processing_table_payload(
             limit=limit_value,
             include_facets=include_facets,
         )
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
-    if card in PROCESSING_REQUEST_CARD_STATES:
-        payload = build_processing_request_table_payload(
-            BookCreationRequest.objects.filter(state__in=PROCESSING_REQUEST_CARD_STATES[card])
+    if card in _constants.PROCESSING_REQUEST_CARD_STATES:
+        payload = _tables.build_processing_request_table_payload(
+            BookCreationRequest.objects.filter(
+                state__in=_constants.PROCESSING_REQUEST_CARD_STATES[card]
+            )
             .select_related("book_record", "linked_book", "book_record__linked_book")
             .defer(
                 "linked_book__summary",
@@ -236,11 +270,13 @@ def processing_table_payload(
             limit=limit_value,
             include_facets=include_facets,
         )
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
     if card == "multipage-records":
-        payload = build_processing_request_table_payload(
+        payload = _tables.build_processing_request_table_payload(
             BookCreationRequest.objects.filter(has_multi_page_toc=True)
             .select_related("book_record", "linked_book", "book_record__linked_book")
             .defer(
@@ -270,11 +306,13 @@ def processing_table_payload(
             include_facets=include_facets,
         )
         payload["summary"] = multipage_toc_summary()
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
     if card == "empty-chapters-records":
-        payload = build_processing_request_table_payload(
+        payload = _tables.build_processing_request_table_payload(
             BookCreationRequest.objects.filter(linked_book__empty_chapters_count__gt=0)
             .select_related("book_record", "linked_book", "book_record__linked_book")
             .defer(
@@ -304,7 +342,9 @@ def processing_table_payload(
             include_facets=include_facets,
         )
         payload["summary"] = empty_chapters_summary()
-        payload["version"] = processing_ui_versions_map(domains=[card]).get(card, 0)
+        payload["version"] = _projections.processing_ui_versions_map(
+            domains=[card]
+        ).get(card, 0)
         return payload
 
     raise KeyError(card)
@@ -320,7 +360,7 @@ def processing_request_counts():
 def processing_incomplete_counts():
     incomplete_records = (
         BookRecord.objects.filter(resolved_from_incomplete=False)
-        .filter(Q(was_incomplete=True) | incomplete_category_query())
+        .filter(Q(was_incomplete=True) | _phase_helpers.incomplete_category_query())
         .count()
     )
     resolved_records = BookRecord.objects.filter(
@@ -396,10 +436,10 @@ def processing_summary_payload():
 
 
 def processing_card_payload(card):
-    if card not in PROCESSING_SHARED_CARD_KEYS:
+    if card not in _constants.PROCESSING_SHARED_CARD_KEYS:
         raise KeyError(card)
-    payload = processing_ui_shared_projection_payload(card)
+    payload = _projections.processing_ui_shared_projection_payload(card)
     return {
         **payload,
-        "version": processing_ui_versions_map(domains=[card]).get(card, 0),
+        "version": _projections.processing_ui_versions_map(domains=[card]).get(card, 0),
     }

@@ -40,7 +40,7 @@ def save_html(
     back_sections=None,
 ):
     """Generate and save HTML book with hierarchical TOC, book info and dedication section"""
-    existing_ids = set()
+    existing_ids: set[str] = set()
     front_sections = list(front_sections or [])
     back_sections = list(back_sections or [])
     compact_main_content = main_content or ""

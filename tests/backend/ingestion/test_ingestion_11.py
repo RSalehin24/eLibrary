@@ -77,7 +77,7 @@ def test_repeated_requests_reuse_canonical_submission_and_existing_job(monkeypat
         queue_name="celery",
     )
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda url: None)
 
     duplicate_submission = create_submission_records(
         submitter=user,
@@ -112,7 +112,7 @@ def test_new_url_submission_does_not_reuse_deleted_ready_submission(monkeypatch)
         linked_book=deleted_book,
     )
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda url: None)
 
     recreated_submission = create_submission_records(
         submitter=user,
@@ -140,7 +140,7 @@ def test_new_url_submission_does_not_reuse_failed_request(monkeypatch):
         error_message="Processing failed.",
     )
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda url: None)
 
     recreated_submission = create_submission_records(
         submitter=user,
@@ -181,7 +181,7 @@ def test_retrying_deleted_submission_clears_reused_state_and_queues_recreation(c
             "linked_book_slug": deleted_book.slug,
         },
     )
-    monkeypatch.setattr("apps.ingestion.services.submissions.dispatch_processing_job", lambda job, force=False: job)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job", lambda job, force=False: job)
     client.force_login(user)
 
     response = client.post(

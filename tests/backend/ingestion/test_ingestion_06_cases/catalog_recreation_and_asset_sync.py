@@ -141,10 +141,7 @@ def test_catalog_automation_recreates_stopped_catalog_entry_without_local_book(
         assert origin == SubmissionOrigin.AUTOMATION
         return []
 
-    monkeypatch.setattr(
-        "apps.ingestion.services.curation.create_submission_records",
-        fake_create_submission_records,
-    )
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.catalog_automation_runs.create_submission_records', fake_create_submission_records)
 
     result = process_catalog_curation_run(run.id)
 
@@ -205,10 +202,7 @@ def test_catalog_automation_reprocesses_stopped_catalog_entry_with_local_book(
         requeued_books.append((book.id, actor, origin))
         return object(), True
 
-    monkeypatch.setattr(
-        "apps.ingestion.services.curation.queue_reprocess_book",
-        fake_queue_reprocess_book,
-    )
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.catalog_automation_runs.queue_reprocess_book', fake_queue_reprocess_book)
 
     result = process_catalog_curation_run(run.id)
 

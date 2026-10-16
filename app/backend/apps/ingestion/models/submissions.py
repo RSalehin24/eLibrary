@@ -26,18 +26,17 @@ class BookSubmission(UUIDPrimaryKeyModel, TimeStampedModel):
         ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
-        previous = {"linked_book_id": None, "submitter_id": None}
+        previous = None
         if self.pk:
-            previous = (
-                BookSubmission.objects.filter(pk=self.pk)
-                .values("linked_book_id", "submitter_id")
-                .first()
-                or previous
-            )
+            previous = BookSubmission.objects.filter(pk=self.pk).values(
+                "linked_book_id", "submitter_id"
+            ).first()
+        prior_book_id = previous["linked_book_id"] if previous else None
+        prior_submitter_id = previous["submitter_id"] if previous else None
         super().save(*args, **kwargs)
         if self.submitter_id and self.linked_book_id and (
-            previous["linked_book_id"] != self.linked_book_id
-            or previous["submitter_id"] != self.submitter_id
+            prior_book_id != self.linked_book_id
+            or prior_submitter_id != self.submitter_id
         ):
             from apps.catalog.models import UserBook
 

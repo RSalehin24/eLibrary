@@ -1,6 +1,14 @@
+from ..models import (
+    ProcessingAutomationSettings,
+    ProcessingSyncState,
+    ProcessingSyncStatus,
+)
+from . import catalog_phase_helpers as _phase_helpers
+from . import catalog_progress_state as _progress
+from . import service_imports_and_constants as _constants
 
 
-def get_sync_state(sync_key=PROCESSING_SYNC_KEY_CATALOG):
+def get_sync_state(sync_key=_constants.PROCESSING_SYNC_KEY_CATALOG):
     state = ProcessingSyncState.objects.filter(singleton_key=sync_key).first()
     if state is None:
         state = ProcessingSyncState(
@@ -10,22 +18,24 @@ def get_sync_state(sync_key=PROCESSING_SYNC_KEY_CATALOG):
     return state
 
 
-def active_sync_scope(default=PROCESSING_SYNC_KEY_CATALOG):
-    incomplete_state = get_sync_state(PROCESSING_SYNC_KEY_INCOMPLETE)
+def active_sync_scope(
+    default=_constants.PROCESSING_SYNC_KEY_CATALOG,
+):
+    incomplete_state = get_sync_state(_constants.PROCESSING_SYNC_KEY_INCOMPLETE)
     if incomplete_state.status in {
         ProcessingSyncStatus.SYNCING,
         ProcessingSyncStatus.PAUSING,
         ProcessingSyncStatus.PAUSED,
     }:
-        return PROCESSING_SYNC_KEY_INCOMPLETE
+        return _constants.PROCESSING_SYNC_KEY_INCOMPLETE
 
-    catalog_state = get_sync_state(PROCESSING_SYNC_KEY_CATALOG)
+    catalog_state = get_sync_state(_constants.PROCESSING_SYNC_KEY_CATALOG)
     if catalog_state.status in {
         ProcessingSyncStatus.SYNCING,
         ProcessingSyncStatus.PAUSING,
         ProcessingSyncStatus.PAUSED,
     }:
-        return PROCESSING_SYNC_KEY_CATALOG
+        return _constants.PROCESSING_SYNC_KEY_CATALOG
 
     return default
 
@@ -39,37 +49,37 @@ def sync_is_active_or_paused(state):
 
 
 def sync_owner_conflicts(state, run_mode):
-    if state.status in SYNC_ACTIVE_STATUSES:
-        return sync_run_mode(state) != run_mode
+    if state.status in _constants.SYNC_ACTIVE_STATUSES:
+        return _progress.sync_run_mode(state) != run_mode
     if state.status != ProcessingSyncStatus.PAUSED:
         return False
     if (
-        state.singleton_key == PROCESSING_SYNC_KEY_CATALOG
-        and catalog_shared_runtime(sync_run_mode(state))
-        and catalog_shared_runtime(run_mode)
+        state.singleton_key == _constants.PROCESSING_SYNC_KEY_CATALOG
+        and _progress.catalog_shared_runtime(_progress.sync_run_mode(state))
+        and _progress.catalog_shared_runtime(run_mode)
     ):
         return False
-    return sync_run_mode(state) != run_mode
+    return _progress.sync_run_mode(state) != run_mode
 
 
 def serialize_sync_state(state, *, include_remote_pages=True):
     progress = (
-        sync_progress_payload(state)
+        _progress.sync_progress_payload(state)
         if isinstance(state.progress, dict)
         else None
     )
     payload = {
         "status": state.status,
         "progress": progress,
-        "phase": sync_phase(state),
+        "phase": _progress.sync_phase(state),
         "fetchedCount": state.fetched_count,
         "skippedCount": state.skipped_count,
         "updatedCount": state.updated_count,
         "appendedCount": state.appended_count,
         "message": state.message,
         "pageIndex": state.page_index,
-        "runMode": sync_run_mode(state),
-        "triggerSource": sync_trigger_source(state),
+        "runMode": _progress.sync_run_mode(state),
+        "triggerSource": _progress.sync_trigger_source(state),
         "scope": state.singleton_key,
         "workerManaged": bool(state.task_id),
     }
@@ -107,14 +117,17 @@ def normalize_automation_settings(automation_settings, *, persist=False):
     update_fields = []
 
     if not automation_settings.saved:
-        if automation_settings.interval != DEFAULT_AUTOMATION_INTERVAL:
-            automation_settings.interval = DEFAULT_AUTOMATION_INTERVAL
+        if automation_settings.interval != _constants.DEFAULT_AUTOMATION_INTERVAL:
+            automation_settings.interval = _constants.DEFAULT_AUTOMATION_INTERVAL
             update_fields.append("interval")
-        if automation_settings.time != DEFAULT_AUTOMATION_TIME:
-            automation_settings.time = DEFAULT_AUTOMATION_TIME
+        if automation_settings.time != _constants.DEFAULT_AUTOMATION_TIME:
+            automation_settings.time = _constants.DEFAULT_AUTOMATION_TIME
             update_fields.append("time")
 
-    if automation_settings.status_message == LEGACY_AUTOMATION_STATUS_MESSAGE:
+    if (
+        automation_settings.status_message
+        == _constants.LEGACY_AUTOMATION_STATUS_MESSAGE
+    ):
         automation_settings.status_message = ""
         update_fields.append("status_message")
 
@@ -130,8 +143,8 @@ def get_automation_settings(kind):
         automation_settings = ProcessingAutomationSettings(
             kind=kind,
             enabled=False,
-            interval=DEFAULT_AUTOMATION_INTERVAL,
-            time=DEFAULT_AUTOMATION_TIME,
+            interval=_constants.DEFAULT_AUTOMATION_INTERVAL,
+            time=_constants.DEFAULT_AUTOMATION_TIME,
             saved=False,
             status_message="",
         )
@@ -139,17 +152,20 @@ def get_automation_settings(kind):
 
 
 def processing_request_card_for_state(state):
-    for card_id, states in PROCESSING_REQUEST_CARD_STATES.items():
+    for (
+        card_id,
+        states,
+    ) in _constants.PROCESSING_REQUEST_CARD_STATES.items():
         if state in states:
             return card_id
     return None
 
 
 def processing_overview_card_for_state(state):
-    if state in PROCESSING_STATE_REQUEST_GROUP:
-        return PROCESSING_CARD_CREATE_OVERVIEW
-    if state in PROCESSING_STATE_ON_HOLD_GROUP:
-        return PROCESSING_CARD_ON_HOLD_OVERVIEW
+    if state in _constants.PROCESSING_STATE_REQUEST_GROUP:
+        return _constants.PROCESSING_CARD_CREATE_OVERVIEW
+    if state in _constants.PROCESSING_STATE_ON_HOLD_GROUP:
+        return _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW
     return None
 
 
@@ -162,7 +178,7 @@ def processing_record_is_incomplete(record_or_snapshot):
     else:
         category = getattr(record_or_snapshot, "category", "")
         was_incomplete = bool(getattr(record_or_snapshot, "was_incomplete", False))
-    return was_incomplete or category_is_incomplete(category)
+    return was_incomplete or _phase_helpers.category_is_incomplete(category)
 
 
 def processing_record_snapshot(record):
@@ -206,7 +222,9 @@ def processing_request_snapshot(processing_request):
         ),
         "duplicate_confirmed": bool(processing_request.duplicate_confirmed),
         "is_resumed": bool(processing_request.is_resumed),
-        "is_confirmed_not_duplicate": bool(processing_request.is_confirmed_not_duplicate),
+        "is_confirmed_not_duplicate": bool(
+            processing_request.is_confirmed_not_duplicate
+        ),
     }
 
 
@@ -214,15 +232,15 @@ def default_sync_state_payload(scope):
     return {
         "status": ProcessingSyncStatus.IDLE,
         "progress": None,
-        "phase": CATALOG_SYNC_PHASE,
+        "phase": _constants.CATALOG_SYNC_PHASE,
         "fetchedCount": 0,
         "skippedCount": 0,
         "updatedCount": 0,
         "appendedCount": 0,
         "message": "Ready to sync.",
         "pageIndex": 0,
-        "runMode": SYNC_RUN_MODE_MANUAL,
-        "triggerSource": SYNC_TRIGGER_SOURCE_BUTTON,
+        "runMode": _constants.SYNC_RUN_MODE_MANUAL,
+        "triggerSource": _constants.SYNC_TRIGGER_SOURCE_BUTTON,
         "scope": scope,
         "workerManaged": False,
         "remotePages": [],
@@ -233,8 +251,8 @@ def default_automation_payload(kind):
     return {
         "kind": kind,
         "enabled": False,
-        "interval": DEFAULT_AUTOMATION_INTERVAL,
-        "time": DEFAULT_AUTOMATION_TIME.strftime("%H:%M"),
+        "interval": _constants.DEFAULT_AUTOMATION_INTERVAL,
+        "time": _constants.DEFAULT_AUTOMATION_TIME.strftime("%H:%M"),
         "saved": False,
         "lastRunAt": None,
         "statusMessage": "",

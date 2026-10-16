@@ -22,23 +22,16 @@ def test_recover_stale_processing_jobs_requeues_stale_processing_work(monkeypatc
     dispatched = []
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.revoke_processing_task",
+        "apps.ingestion.services.submission_modules.job_lifecycle.revoke_processing_task",
         lambda task_id, terminate=False: revoked.append((task_id, terminate)),
     )
 
-    def fake_apply_async(args=None, kwargs=None, task_id=None, **_extra_kwargs):
-        dispatched.append(
-            {
-                "args": args,
-                "kwargs": kwargs,
-                "task_id": task_id,
-            }
-        )
-        return type("AsyncResult", (), {"id": task_id})()
+    def fake_dispatch(**values):
+        dispatched.append(values)
 
     monkeypatch.setattr(
-        "apps.ingestion.tasks.process_submission_task.apply_async",
-        fake_apply_async,
+        "apps.ingestion.engine.dispatch.dispatch_job",
+        fake_dispatch,
     )
 
     recovered = recover_stale_processing_jobs(limit=10)
@@ -49,14 +42,15 @@ def test_recover_stale_processing_jobs_requeues_stale_processing_work(monkeypatc
     assert revoked == [("stale-task-id", True)]
     assert dispatched == [
         {
-            "args": [str(job.id)],
-            "kwargs": {"attempt_offset": 1},
-            "task_id": job.task_id,
+            "job_id": str(job.id),
+            "job_type": job.job_type,
+            "handler": "process_submission",
+            "attempt_offset": 1,
         }
     ]
     assert job.status == JobStatus.QUEUED
     assert job.retry_count == 1
-    assert job.queue_name == "celery"
+    assert job.queue_name == "engine"
     assert job.task_id
     assert job.last_error
     assert submission.status == SubmissionStatus.QUEUED
@@ -84,7 +78,7 @@ def test_recover_stale_processing_jobs_fails_exhausted_processing_work(monkeypat
     revoked = []
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.revoke_processing_task",
+        "apps.ingestion.services.submission_modules.job_lifecycle.revoke_processing_task",
         lambda task_id, terminate=False: revoked.append((task_id, terminate)),
     )
     monkeypatch.setattr(

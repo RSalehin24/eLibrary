@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 
 from apps.common.models import TimeStampedModel, UUIDPrimaryKeyModel
+from .publication_models import PreparedPublication
 
 
 def generate_access_token():
@@ -103,6 +104,16 @@ class PermissionGrant(UUIDPrimaryKeyModel, TimeStampedModel):
 
     class Meta:
         ordering = ["user__email", "scope", "book__title", "category__name", "contributor__name"]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    models.Q(book__isnull=True, category__isnull=True)
+                    | models.Q(book__isnull=True, contributor__isnull=True)
+                    | models.Q(category__isnull=True, contributor__isnull=True)
+                ),
+                name="permission_grant_single_target",
+            ),
+        ]
 
     def __str__(self):
         if self.book_id:
@@ -133,6 +144,10 @@ class PreviewAccessSession(UUIDPrimaryKeyModel, TimeStampedModel):
     )
     expires_at = models.DateTimeField(default=default_preview_expiry)
     launch_count = models.PositiveIntegerField(default=0)
+    prepared_publication = models.ForeignKey(
+        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        related_name="reader_sessions",
+    )
 
     class Meta:
         ordering = ["-created_at"]
@@ -170,10 +185,17 @@ class Bookmark(UUIDPrimaryKeyModel, TimeStampedModel):
     chapter_href = models.CharField(max_length=512, blank=True)
     chapter_label = models.CharField(max_length=255, blank=True)
     preview_text = models.CharField(max_length=280, blank=True)
+    prepared_publication = models.ForeignKey(
+        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        related_name="bookmarks",
+    )
 
     class Meta:
         ordering = ["book__title", "-created_at"]
-        unique_together = ("user", "book", "location")
+        constraints = [models.UniqueConstraint(
+            fields=("user", "book", "location", "prepared_publication"),
+            name="bookmark_reader_edition_location", nulls_distinct=False,
+        )]
 
 
 class HighlightColor(models.TextChoices):
@@ -200,6 +222,10 @@ class Highlight(UUIDPrimaryKeyModel, TimeStampedModel):
     color = models.CharField(max_length=16, choices=HighlightColor.choices, default=HighlightColor.YELLOW)
     kind = models.CharField(max_length=16, choices=HighlightKind.choices, default=HighlightKind.HIGHLIGHT)
     tags = models.JSONField(default=list, blank=True)
+    prepared_publication = models.ForeignKey(
+        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        related_name="highlights",
+    )
 
     class Meta:
         ordering = ["-created_at"]

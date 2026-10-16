@@ -179,7 +179,7 @@ def test_direct_url_submission_stores_source_page_metadata(monkeypatch):
     }
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.capture_source_page_metadata",
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
         lambda url: fake_metadata,
     )
 
@@ -197,7 +197,7 @@ def test_source_catalog_refresh_starts_background_sync_and_returns_state(client,
     admin = User.objects.create_superuser(email="catalog-refresh@example.com", password="strong-password-123")
     client.force_login(admin)
 
-    monkeypatch.setattr("apps.ingestion.services.curation.dispatch_source_catalog_refresh", lambda state: state)
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.dispatch_source_catalog_refresh', lambda state: state)
 
     response = client.post(
         "/api/ingestion/catalog/refresh/",

@@ -129,12 +129,11 @@ def test_processing_duplicate_detection_is_backend_owned(client, monkeypatch):
         publisher="Example Press",
     )
 
+    monkeypatch.setattr('apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
     monkeypatch.setattr(
-        "apps.processing.services.find_existing_book_by_source_url",
-        lambda *_args, **_kwargs: existing_book,
-    )
-    monkeypatch.setattr(
-        "apps.ingestion.services.submissions.create_submission_records",
+        "apps.ingestion.services.submission_modules.book_persistence.create_submission_records",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
             AssertionError("legacy submission flow should not be used by duplicate detection")
         ),

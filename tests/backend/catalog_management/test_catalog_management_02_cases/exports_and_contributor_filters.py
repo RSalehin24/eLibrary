@@ -6,6 +6,7 @@ def test_manual_book_listing_supports_optional_pagination_payload(client):
         email="manual-pagination-reader@example.com",
         password="strong-password-123",
     )
+    PermissionGrant.objects.create(user=user, scope=PermissionScope.PHYSICAL_BOOKS_VIEW)
     client.force_login(user)
 
     for index in range(3):

@@ -121,7 +121,7 @@ def sync_assets(book, job, scraped_data, *, generated_asset_labels, required_ass
             asset.file.delete(save=False)
         with open(path, "rb") as handle:
             asset.file.save(path.name, File(handle), save=False)
-        asset.storage_path = asset.file.name
+        asset.storage_path = asset.file.name or ""
         asset.legacy_path = ""
         asset.save(update_fields=["status", "legacy_path", "file_size", "content_type", "checksum", "source_job", "file", "storage_path", "updated_at"])
         synced_paths.append(path)

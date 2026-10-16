@@ -1,6 +1,9 @@
+from .job_dispatch import dispatch_processing_job as dispatch_processing_job
+from .job_lifecycle import ResolutionStatus, SubmissionOrigin
 
 
 def find_reusable_submission(*, normalized_input="", resolved_url="", exclude_submission_id=None):
+    from .job_lifecycle import REUSABLE_SUBMISSION_STATUSES, BookSubmission, Q
     queryset = BookSubmission.objects.select_related(
         "linked_book",
         "duplicate_of_book",
@@ -29,6 +32,11 @@ def find_reusable_submission(*, normalized_input="", resolved_url="", exclude_su
 
 
 def create_local_resolution_attempt(submission, book, confidence=1.0):
+    from .job_lifecycle import (
+        ResolutionStatus,
+        TitleResolutionAttempt,
+        primary_source_url_for_book,
+    )
     return TitleResolutionAttempt.objects.create(
         submission=submission,
         query=submission.original_input,
@@ -52,6 +60,13 @@ def fulfill_submission_with_existing_book(
     resolution_status=ResolutionStatus.RESOLVED,
     resolved_url="",
 ):
+    from .job_lifecycle import (
+        AuditLog,
+        SubmissionStatus,
+        ensure_preview_session,
+        primary_source_url_for_book,
+    )
+    from .retry_and_deduplication import sync_deduplicated_submissions
     if not resolved_url:
         resolved_url = primary_source_url_for_book(book)
 
@@ -83,6 +98,15 @@ def fulfill_submission_with_existing_book(
 
 
 def resolve_submission(submission, force_refresh=False):
+    from .job_lifecycle import (
+        MatchCandidate,
+        ResolutionStatus,
+        ReviewState,
+        SubmissionStatus,
+        TitleResolutionAttempt,
+        TitleResolver,
+    )
+    from .retry_and_deduplication import sync_deduplicated_submissions
     resolver = TitleResolver()
     result = resolver.resolve(submission.original_input, refresh_catalog=force_refresh)
     attempt = TitleResolutionAttempt.objects.create(
@@ -128,6 +152,15 @@ def resolve_submission(submission, force_refresh=False):
 
 
 def queue_submission(submission, actor=None):
+    from .job_lifecycle import (
+        ACTIVE_JOB_STATUSES,
+        JobStatus,
+        JobType,
+        ProcessingJob,
+        SubmissionStatus,
+        root_submission,
+    )
+    from .retry_and_deduplication import sync_deduplicated_submissions
     submission = root_submission(submission)
     existing_job = submission.processing_jobs.filter(status__in=ACTIVE_JOB_STATUSES).first()
     if existing_job:
@@ -150,61 +183,23 @@ def queue_submission(submission, actor=None):
     return job
 
 
-def dispatch_processing_job(job, force=False, attempt_offset=None):
-    from apps.ingestion.engine.dispatch import dispatch_job
-
-    job.refresh_from_db(fields=["status", "task_id", "queue_name", "cancel_requested", "updated_at"])
-    if job.status == JobStatus.CANCELLED or job.cancel_requested:
-        return job
-    if not force and job.status == JobStatus.QUEUED and job.task_id:
-        return job
-    resolved_attempt_offset = max(
-        int(job.retry_count or 0),
-        int(attempt_offset or 0),
-    )
-
-    assigned_job_id = str(uuid4())
-    job.task_id = assigned_job_id
-    job.queue_name = "engine"
-    job.save(update_fields=["task_id", "queue_name", "updated_at"])
-
-    try:
-        dispatch_job(
-            job_id=str(job.id),
-            job_type=job.job_type,
-            handler="process_submission",
-            attempt_offset=resolved_attempt_offset,
-        )
-    except Exception as exc:
-        job.refresh_from_db()
-        logger.warning("Engine dispatch failed, falling back to inline processing", exc_info=True)
-        job.task_id = ""
-        job.queue_name = "inline-fallback"
-        job.last_error = f"Engine dispatch failed: {exc}"
-        job.save(update_fields=["task_id", "queue_name", "last_error", "updated_at"])
-        record_job_log(
-            job,
-            "warning",
-            "Engine dispatch failed, processing inline instead.",
-            {"error": str(exc)},
-        )
-        inline_retry_count = int(job.retry_count or 0)
-        last_error = None
-        for attempt in range(inline_retry_count, MAX_PROCESSING_JOB_ATTEMPTS):
-            try:
-                process_submission_job(str(job.id), retry_count=attempt, task_id="")
-                last_error = None
-                break
-            except Exception as inline_exc:
-                last_error = inline_exc
-                if attempt + 1 >= MAX_PROCESSING_JOB_ATTEMPTS:
-                    break
-        if last_error is not None:
-            raise last_error
-        job.refresh_from_db()
 
 
 def queue_reprocess_book(book, actor=None, origin=SubmissionOrigin.USER):
+    from .job_lifecycle import (
+        ACTIVE_JOB_STATUSES,
+        BookSubmission,
+        JobStatus,
+        JobType,
+        LifecycleState,
+        ProcessingJob,
+        ResolutionStatus,
+        SubmissionInputType,
+        SubmissionStatus,
+        normalize_source_url,
+        normalize_text,
+        primary_source_url_for_book,
+    )
     existing_job = book.processing_jobs.filter(status__in=ACTIVE_JOB_STATUSES).first()
     if existing_job:
         return existing_job, False
@@ -244,3 +239,6 @@ def queue_reprocess_book(book, actor=None, origin=SubmissionOrigin.USER):
 
     dispatch_processing_job(job)
     return job, True
+
+
+__all__ = ['create_local_resolution_attempt', 'dispatch_processing_job', 'find_reusable_submission', 'fulfill_submission_with_existing_book', 'queue_reprocess_book', 'queue_submission', 'resolve_submission']

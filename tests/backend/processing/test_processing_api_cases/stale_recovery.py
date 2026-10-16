@@ -36,10 +36,7 @@ def test_processing_maintenance_requeues_stale_request_with_checkpoint():
 
 @pytest.mark.django_db
 def test_processing_maintenance_recovers_stale_sync_and_runtime_tick_resumes(monkeypatch):
-    monkeypatch.setattr(
-        "apps.processing.services.should_enqueue_processing_sync_work",
-        lambda: False,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work', lambda: False)
     sync_state = get_sync_state()
     sync_state.status = ProcessingSyncStatus.SYNCING
     sync_state.remote_pages = [[record_payload("stale-sync-record")], []]

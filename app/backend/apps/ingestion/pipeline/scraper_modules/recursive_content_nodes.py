@@ -1,3 +1,22 @@
+from .metadata_and_inline_toc import (
+    extract_inline_toc_and_content,
+    extract_title_and_author,
+    normalize_crawl_url,
+    normalize_structured_heading_title,
+    scrape_main_content,
+)
+from .scrape_limits_and_header_cleanup import (
+    BeautifulSoup,
+    clean_display_text,
+    extract_main_content_segments,
+    get_soup,
+    normalize_scrape_limits,
+    normalize_text,
+    remove_redundant_headers,
+    texts_are_similar,
+    truncate_scraped_content,
+    urlparse,
+)
 
 
 def clean_content_html(html_content, title=""):
@@ -67,6 +86,7 @@ def scrape_recursive_content_node(
     crawl_limits=None,
     depth=0,
 ):
+    from .lesson_collection import crawl_inline_toc_entry, scrape_all_lessons
     cache = cache if cache is not None else {}
     active_urls = active_urls if active_urls is not None else set()
     crawl_state = crawl_state if isinstance(crawl_state, dict) else {"visited_nodes": 0}

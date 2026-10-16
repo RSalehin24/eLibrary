@@ -24,7 +24,7 @@ def test_normalize_scraped_book_drops_author_role_when_same_person_is_translator
 
 
 @pytest.mark.django_db
-def test_queue_submission_falls_back_to_inline_processing_when_celery_dispatch_fails(monkeypatch):
+def test_queue_submission_falls_back_to_inline_processing_when_engine_dispatch_fails(monkeypatch):
     submission = BookSubmission.objects.create(
         input_type="url",
         original_input="https://www.example.com/books/fallback/",
@@ -45,13 +45,13 @@ def test_queue_submission_falls_back_to_inline_processing_when_celery_dispatch_f
         job.submission.save(update_fields=["status", "updated_at"])
         return job
 
-    monkeypatch.setattr("apps.ingestion.tasks.process_submission_task.apply_async", fail_apply_async)
-    monkeypatch.setattr("apps.ingestion.services.submissions.process_submission_job", fake_process)
+    monkeypatch.setattr("apps.ingestion.engine.dispatch.dispatch_job", fail_apply_async)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.processing_job_runner.process_submission_job", fake_process)
 
     job = queue_submission(submission)
 
     assert job.queue_name == "inline-fallback"
-    assert "Celery dispatch failed" in job.last_error
+    assert "Engine dispatch failed" in job.last_error
     submission.refresh_from_db()
     assert submission.status == SubmissionStatus.READY
 
@@ -87,8 +87,8 @@ def test_queue_submission_inline_fallback_retries_up_to_three_total_attempts(mon
         job.submission.save(update_fields=["status", "updated_at"])
         return job
 
-    monkeypatch.setattr("apps.ingestion.tasks.process_submission_task.apply_async", fail_apply_async)
-    monkeypatch.setattr("apps.ingestion.services.submissions.process_submission_job", fake_process)
+    monkeypatch.setattr("apps.ingestion.engine.dispatch.dispatch_job", fail_apply_async)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.processing_job_runner.process_submission_job", fake_process)
 
     job = queue_submission(submission)
 
@@ -122,8 +122,8 @@ def test_queue_submission_inline_fallback_stops_after_three_total_attempts(monke
         job.save(update_fields=["retry_count", "status", "last_error", "updated_at"])
         raise RuntimeError(f"retry-{retry_count}")
 
-    monkeypatch.setattr("apps.ingestion.tasks.process_submission_task.apply_async", fail_apply_async)
-    monkeypatch.setattr("apps.ingestion.services.submissions.process_submission_job", fake_process)
+    monkeypatch.setattr("apps.ingestion.engine.dispatch.dispatch_job", fail_apply_async)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.processing_job_runner.process_submission_job", fake_process)
 
     with pytest.raises(RuntimeError, match="retry-2"):
         queue_submission(submission)
@@ -182,15 +182,15 @@ def test_process_submission_job_requeues_intermediate_failures_without_becoming_
     )
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.capture_source_page_metadata",
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.find_existing_book_by_source_url",
+        "apps.ingestion.services.submission_modules.job_lifecycle.find_existing_book_by_source_url",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.scrape_book",
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("temporary scrape failure")),
     )
 
@@ -230,15 +230,15 @@ def test_process_submission_job_marks_last_attempt_as_failed(monkeypatch):
     )
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.capture_source_page_metadata",
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.find_existing_book_by_source_url",
+        "apps.ingestion.services.submission_modules.job_lifecycle.find_existing_book_by_source_url",
         lambda *_args, **_kwargs: None,
     )
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.scrape_book",
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(RuntimeError("permanent scrape failure")),
     )
 

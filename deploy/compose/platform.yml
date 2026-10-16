@@ -1,0 +1,238 @@
+name: ${COMPOSE_PROJECT_NAME:-elibrary-platform}
+
+x-environment: &environment
+  APP_ENV: production
+  DJANGO_DEBUG: "false"
+  DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:?Generate a private environment file}
+  PUBLIC_BASE_URL: ${PUBLIC_SITE_URL:?Configure the canonical HTTPS origin}
+  FRONTEND_BASE_URL: ${PUBLIC_SITE_URL}
+  PUBLIC_API_ORIGIN: ${PUBLIC_SITE_URL}
+  DJANGO_ALLOWED_HOSTS: ${PUBLIC_HOST},api,localhost,127.0.0.1
+  DJANGO_USE_X_FORWARDED_HOST: "false"
+  DJANGO_SECURE_PROXY_SSL_HEADER: "true"
+  SESSION_COOKIE_SECURE: "true"
+  CSRF_COOKIE_SECURE: "true"
+  CELERY_TASK_ALWAYS_EAGER: "false"
+  DATABASE_URL: ${DATABASE_URL:?Configure application database credentials}
+  CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Configure RabbitMQ credentials}
+  CELERY_RESULT_BACKEND: ${REDIS_RESULT_URL:?Configure the disposable result cache}
+  REDIS_CACHE_URL: ${REDIS_CACHE_URL:?Configure the shared rate cache}
+  RUNTIME_STORAGE_DIR: /data/runtime
+  MEDIA_ROOT: /data/media
+  STATIC_ROOT: /data/static
+  PROTECTED_FILES_USE_NGINX: "true"
+  TIME_ZONE: ${TIME_ZONE:-Asia/Dhaka}
+  SOURCE_SITE_HOST: ${SOURCE_SITE_HOST:-}
+  SOURCE_SITE_CATALOG_URL: ${SOURCE_SITE_CATALOG_URL:-}
+  SOURCE_SITE_FALLBACK_HOSTS: ${SOURCE_SITE_FALLBACK_HOSTS:-}
+  SOURCE_REQUEST_INTERVAL_SECONDS: ${SOURCE_REQUEST_INTERVAL_SECONDS:-2}
+  EMAIL_BACKEND: django.core.mail.backends.smtp.EmailBackend
+  EMAIL_HOST: ${EMAIL_HOST:-}
+  EMAIL_PORT: ${EMAIL_PORT:-587}
+  EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+  EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+  EMAIL_USE_TLS: ${EMAIL_USE_TLS:-true}
+  ACCOUNT_INVITE_FROM_EMAIL: ${ACCOUNT_INVITE_FROM_EMAIL:-}
+  API_WORKERS: ${API_WORKERS:-4}
+  API_THREADS: ${API_THREADS:-4}
+
+x-application: &application
+  image: ${API_IMAGE:-elibrary-api:review}
+  environment: *environment
+  restart: unless-stopped
+  init: true
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: [no-new-privileges:true]
+  cap_drop: [ALL]
+  volumes: [media:/data/media, runtime:/data/runtime, maintenance_static:/data/static]
+  networks: [internal, outbound]
+  stop_grace_period: 45s
+  depends_on:
+    postgres: {condition: service_healthy}
+    redis: {condition: service_healthy}
+    initialize: {condition: service_completed_successfully}
+
+services:
+  postgres:
+    image: postgres@sha256:e013e867e712fec275706a6c51c966f0bb0c93cfa8f51000f85a15f9865a28cb
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: library
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:?Generate a database administration password}
+      APP_DATABASE_PASSWORD: ${APP_DATABASE_PASSWORD:?Generate an application password}
+    volumes:
+      - postgres:/var/lib/postgresql/data
+      - ../postgres-init.sh:/docker-entrypoint-initdb.d/10-library.sh:ro
+    networks: [internal]
+    shm_size: 256m
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U postgres -d library"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    user: redis
+    restart: unless-stopped
+    read_only: true
+    tmpfs: [/tmp]
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Generate a cache password}
+    command: [sh, -ec, "umask 077; printf 'save \"\"\nappendonly no\nmaxmemory 256mb\nmaxmemory-policy noeviction\nrequirepass %s\n' \"$$REDIS_PASSWORD\" > /tmp/library-redis.conf; exec redis-server /tmp/library-redis.conf"]
+    networks: [internal]
+    healthcheck:
+      test: [CMD-SHELL, "REDISCLI_AUTH=\"$$REDIS_PASSWORD\" redis-cli ping | grep -q PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  rabbitmq:
+    image: rabbitmq:4.3.6-management@sha256:8d0592c8f13b9ca76d844aa269f54461503223f36d0bf955859608d78baaf8fb
+    hostname: rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: library
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?Generate a broker password}
+      RABBITMQ_DEFAULT_VHOST: library
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    networks: [internal]
+    healthcheck:
+      test: [CMD, rabbitmq-diagnostics, -q, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  initialize:
+    <<: *application
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.api
+      args:
+        PYTHON_IMAGE: python:3.12.15-slim-bookworm@sha256:34386ef0cb081344d7ec1c103ba398e6e9f64e9ab3a1509accc92a4e24a07258
+    restart: "no"
+    command: [sh, -ec, "python manage.py migrate --noinput && python manage.py collectstatic --noinput"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  api:
+    <<: *application
+    mem_limit: ${API_MEMORY:-2g}
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; request=urllib.request.Request('http://localhost:8000/api/v1/health/ready/', headers={'X-Forwarded-Proto':'https'}); urllib.request.urlopen(request, timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  dispatcher:
+    <<: *application
+    command: [python, manage.py, dispatch_background_jobs]
+    depends_on:
+      postgres: {condition: service_healthy}
+      initialize: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+
+  scheduler:
+    <<: *application
+    command: [python, manage.py, schedule_source_automations]
+
+  processing-worker:
+    <<: *application
+    command: [sh, -ec, "exec celery -A config worker --loglevel=INFO --queues=processing --concurrency=$${PROCESSING_CONCURRENCY:-2} --prefetch-multiplier=1 --hostname=processing@%h"]
+    environment:
+      <<: *environment
+      PROCESSING_CONCURRENCY: ${PROCESSING_CONCURRENCY:-2}
+    mem_limit: ${PROCESSING_MEMORY:-2g}
+    stop_grace_period: 75s
+    depends_on:
+      postgres: {condition: service_healthy}
+      initialize: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+
+  delivery-worker:
+    <<: *application
+    command: [sh, -ec, "exec celery -A config worker --loglevel=INFO --queues=delivery --concurrency=$${DELIVERY_CONCURRENCY:-2} --prefetch-multiplier=1 --hostname=delivery@%h"]
+    environment:
+      <<: *environment
+      DELIVERY_CONCURRENCY: ${DELIVERY_CONCURRENCY:-2}
+    mem_limit: ${DELIVERY_MEMORY:-1g}
+    stop_grace_period: 75s
+    depends_on:
+      postgres: {condition: service_healthy}
+      initialize: {condition: service_completed_successfully}
+      rabbitmq: {condition: service_healthy}
+
+  frontend-assets:
+    image: ${FRONTEND_IMAGE:-elibrary-frontend:review}
+    build:
+      context: ../..
+      dockerfile: deploy/Dockerfile.frontend
+      args:
+        NODE_IMAGE: node:22.23.3-bookworm-slim@sha256:c3de60bf2f9dd0ac6370e6117950ff62d6e339527e7472301c9c78a017978392
+        PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+    command: [node, publish-static-assets.mjs]
+    read_only: true
+    volumes: [frontend_static:/data/next-static]
+    networks: [internal]
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-elibrary-frontend:review}
+    restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    environment:
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+      API_INTERNAL_URL: http://api:8000
+    networks: [internal]
+    mem_limit: ${FRONTEND_MEMORY:-1g}
+    stop_grace_period: 30s
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:3000/manifest.webmanifest').then(response=>process.exit(response.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      api: {condition: service_healthy}
+      frontend-assets: {condition: service_completed_successfully}
+
+  proxy:
+    image: ${PROXY_IMAGE:-elibrary-proxy:review}
+    build: {context: ../.., dockerfile: deploy/Dockerfile.proxy}
+    restart: unless-stopped
+    read_only: true
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, SETUID, SETGID, NET_BIND_SERVICE]
+    tmpfs: [/tmp, /var/cache/nginx]
+    ulimits:
+      nofile: {soft: 65536, hard: 65536}
+    environment:
+      PUBLIC_HOST: ${PUBLIC_HOST}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL}
+    ports: ["${HTTP_PORT:-80}:80", "${HTTPS_PORT:-443}:443"]
+    volumes:
+      - ${TLS_DIRECTORY:?Configure the certificate directory}:/etc/nginx/tls:ro
+      - media:/data/media:ro
+      - maintenance_static:/data/static:ro
+      - frontend_static:/data/next-static:ro
+    networks: [internal, outbound]
+    stop_grace_period: 30s
+    depends_on:
+      api: {condition: service_healthy}
+      frontend: {condition: service_healthy}
+
+volumes:
+  postgres:
+  rabbitmq:
+  media:
+  runtime:
+  maintenance_static:
+  frontend_static:
+networks:
+  internal: {internal: true}
+  outbound:

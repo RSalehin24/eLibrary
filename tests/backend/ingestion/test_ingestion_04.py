@@ -221,7 +221,7 @@ def test_title_resolver_refresh_catalog_continues_past_existing_first_page_entri
         }
     ]
     assert session.calls == [
-        (CATALOG_URL, {}),
-        (CATALOG_URL, {"_paged": 2}),
+        ("https://www.example.com/books/", {}),
+        ("https://www.example.com/books/", {"_paged": 2}),
     ]
     assert SourceCatalogEntry.objects.filter(source_url=new_url).count() == 1

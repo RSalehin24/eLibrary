@@ -1,3 +1,21 @@
+from django.db.models import (
+    Case,
+    CharField,
+    F,
+    IntegerField,
+    OuterRef,
+    Q,
+    Subquery,
+    Value,
+    When,
+)
+from django.db.models.functions import Coalesce
+
+from ..models import BookCreationRequest, BookCreationState, BookRecord
+from . import catalog_phase_helpers as _phase_helpers
+from . import processing_state_queries as _queries
+from . import request_queue_runtime as _request_queue
+from . import service_imports_and_constants as _constants
 
 
 def processing_row_search_text(row):
@@ -22,7 +40,7 @@ def processing_row_search_text(row):
         row.get("translator"),
         row.get("publisher"),
         row.get("category"),
-        processing_state_label(row.get("status")),
+        _request_queue.processing_state_label(row.get("status")),
         details,
     ]
     return " ".join(str(value or "") for value in values).casefold()
@@ -63,7 +81,9 @@ def distinct_nonempty_values(queryset, field_name):
     return sorted(
         {
             value
-            for value in queryset.order_by().values_list(field_name, flat=True).distinct()
+            for value in queryset.order_by()
+            .values_list(field_name, flat=True)
+            .distinct()
             if value
         }
     )
@@ -115,7 +135,7 @@ def build_processing_record_table_payload(
     category="",
     status="",
     offset=0,
-    limit=PROCESSING_TABLE_DEFAULT_LIMIT,
+    limit=_constants.PROCESSING_TABLE_DEFAULT_LIMIT,
     selectable=True,
     include_facets=True,
 ):
@@ -123,7 +143,9 @@ def build_processing_record_table_payload(
         distinct_nonempty_values(queryset, "category") if include_facets else None
     )
     status_options = (
-        distinct_nonempty_values(queryset, "processing_status") if include_facets else None
+        distinct_nonempty_values(queryset, "processing_status")
+        if include_facets
+        else None
     )
 
     filtered_queryset = queryset
@@ -138,12 +160,14 @@ def build_processing_record_table_payload(
     page_records = list(filtered_queryset[offset : offset + limit])
     rows = []
     for record in page_records:
-        latest_request = latest_request_for_record(record)
+        latest_request = _queries.latest_request_for_record(record)
         rows.append(
-            processing_row_payload(
+            _request_queue.processing_row_payload(
                 record,
                 latest_request,
-                selectable=record_is_selectable(record) if selectable else False,
+                selectable=_request_queue.record_is_selectable(record)
+                if selectable
+                else False,
             )
         )
 
@@ -177,7 +201,7 @@ def build_processing_request_table_payload(
     category="",
     status="",
     offset=0,
-    limit=PROCESSING_TABLE_DEFAULT_LIMIT,
+    limit=_constants.PROCESSING_TABLE_DEFAULT_LIMIT,
     include_facets=True,
 ):
     category_options = (
@@ -191,7 +215,9 @@ def build_processing_request_table_payload(
 
     filtered_queryset = queryset
     if query:
-        filtered_queryset = filtered_queryset.filter(processing_row_request_query(query))
+        filtered_queryset = filtered_queryset.filter(
+            processing_row_request_query(query)
+        )
     if category:
         filtered_queryset = filtered_queryset.filter(book_record__category=category)
     if status:
@@ -200,7 +226,9 @@ def build_processing_request_table_payload(
     total_count = filtered_queryset.count()
     page_requests = list(filtered_queryset[offset : offset + limit])
     rows = [
-        processing_row_payload(processing_request.book_record, processing_request)
+        _request_queue.processing_row_payload(
+            processing_request.book_record, processing_request
+        )
         for processing_request in page_requests
     ]
 
@@ -231,16 +259,16 @@ def catalog_processing_rows():
     rows = []
     queryset = (
         BookRecord.objects.select_related("linked_book")
-        .prefetch_related(processing_request_prefetch())
+        .prefetch_related(_queries.processing_request_prefetch())
         .order_by("name", "id")
     )
     for record in queryset:
-        latest_request = latest_request_for_record(record)
+        latest_request = _queries.latest_request_for_record(record)
         rows.append(
-            processing_row_payload(
+            _request_queue.processing_row_payload(
                 record,
                 latest_request,
-                selectable=record_is_selectable(record),
+                selectable=_request_queue.record_is_selectable(record),
             )
         )
 
@@ -248,7 +276,7 @@ def catalog_processing_rows():
         rows,
         key=lambda row: (
             0 if row["status"] == BookCreationState.NOT_CREATED else 1,
-            normalize_category_key(row["title"]),
+            _phase_helpers.normalize_category_key(row["title"]),
             row["id"],
         ),
     )

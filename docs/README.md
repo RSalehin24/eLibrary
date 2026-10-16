@@ -10,6 +10,11 @@ This folder contains the repo’s operational and domain-specific documentation.
 
 ## Start Here
 
+- Current implementation handoff: [implementation-handoff.md](implementation-handoff.md)
+- New platform: [architecture/platform-foundation.md](architecture/platform-foundation.md)
+- Isolated HTTPS verification: [operations/local-platform-verification.md](operations/local-platform-verification.md)
+- Simulator acceptance results: [operations/simulator-acceptance.md](operations/simulator-acceptance.md)
+- Capacity harness and limits: [operations/capacity-verification.md](operations/capacity-verification.md)
 - Local development: [docs/operations/local-development.md](operations/local-development.md)
 - Deployment: [docs/operations/deployment.md](operations/deployment.md)
 - Log viewing: [docs/operations/log-viewing.md](operations/log-viewing.md)

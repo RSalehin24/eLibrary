@@ -117,7 +117,7 @@ def test_processing_manager_can_stop_queued_job(client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.revoke_processing_task",
+        "apps.ingestion.services.submission_modules.job_lifecycle.revoke_processing_task",
         lambda task_id, terminate=False: None,
     )
 
@@ -156,7 +156,7 @@ def test_processing_manager_can_stop_processing_job(client, monkeypatch):
     def fake_revoke(task_id, terminate=False):
         revoke_calls.append({"task_id": task_id, "terminate": terminate})
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.revoke_processing_task", fake_revoke)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.revoke_processing_task", fake_revoke)
 
     response = client.post(f"/api/ingestion/jobs/{job.id}/stop/", data=json.dumps({}), content_type="application/json")
 
@@ -184,7 +184,7 @@ def test_processing_manager_can_stop_catalog_curation_run(client, monkeypatch):
         queue_name="celery",
     )
 
-    monkeypatch.setattr("apps.ingestion.services.curation.revoke_curation_task", lambda task_id: None)
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.revoke_curation_task', lambda task_id: None)
 
     response = client.post(
         f"/api/ingestion/catalog/curation-runs/{run.id}/stop/",
@@ -221,7 +221,7 @@ def test_due_catalog_automation_queues_one_scheduled_run_per_day(monkeypatch):
             refresh_max_pages=kwargs["refresh_max_pages"],
         )
 
-    monkeypatch.setattr("apps.ingestion.services.curation.create_catalog_curation_run", fake_create_catalog_curation_run)
+    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.create_catalog_curation_run', fake_create_catalog_curation_run)
 
     result = run_due_catalog_automation(now=now)
     second_result = run_due_catalog_automation(now=now)

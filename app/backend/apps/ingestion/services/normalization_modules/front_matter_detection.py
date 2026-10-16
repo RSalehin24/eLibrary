@@ -1,3 +1,34 @@
+from .front_matter_text_rules import (
+    ALL_METADATA_LABELS,
+    BODY_SECTION_PATTERNS,
+    DATE_LINE_PATTERN,
+    DEDICATION_PATTERNS,
+    EXPLICIT_SEPARATOR_ONLY_LABELS,
+    FRONT_SECTION_HEADING_PATTERNS,
+    HEADING_TAG_NAMES,
+    LETTER_EXCERPT_PATTERNS,
+    LETTER_SALUTATION_PATTERN,
+    MAX_DEDICATION_BLOCK_LENGTH,
+    MAX_METADATA_TEXT_LENGTH,
+    MAX_METADATA_VALUE_LENGTH,
+    MAX_TITLE_PREFIX_LENGTH,
+    METADATA_LABEL_ALIASES,
+    SUPPLEMENTARY_CHAPTER_HEADING_PATTERNS,
+    block_strong_heading_text,
+    block_text,
+    clean_contributor_value,
+    clean_display_text,
+    count_sentence_markers,
+    has_non_name_phrase_marker,
+    heading_matches_patterns,
+    is_likely_section_title_text,
+    is_non_dedication_strong_heading,
+    is_separator_paragraph,
+    normalize_catalog_text,
+    re,
+    text_matches_patterns,
+)
+from .metadata_values import is_plausible_metadata_value as is_plausible_metadata_value
 
 
 def resolve_front_section_title(block):
@@ -37,30 +68,6 @@ def looks_like_title_prefix(prefix):
     return any(separator in prefix for separator in ("-", "–", "—")) or (2 <= word_count <= 10 and len(cleaned_prefix) >= 8)
 
 
-def is_plausible_metadata_value(entry, value):
-    cleaned_value = clean_display_text(value)
-    if not cleaned_value:
-        return False
-
-    if entry["role"]:
-        candidates = split_contributor_value(
-            clean_contributor_value(cleaned_value),
-            role=entry["role"],
-        )
-        if not candidates:
-            return False
-        if len(cleaned_value.split()) > 8 and all(len(candidate.split()) == 1 for candidate in candidates):
-            return False
-        return True
-
-    sentence_markers = count_sentence_markers(cleaned_value)
-    if sentence_markers > 1:
-        return False
-    if sentence_markers == 1 and len(cleaned_value.split()) > 6:
-        return False
-    if text_matches_patterns(cleaned_value, BODY_SECTION_PATTERNS) and len(cleaned_value) <= 80:
-        return False
-    return True
 
 
 def search_front_matter_label_value(text, strong_text="", has_break=False):
@@ -271,3 +278,6 @@ def is_front_section_heading(text, tag_name=""):
     if re.search(r"(অধ্যা|পর্ব|chapter)", normalized) and not is_supplementary_chapter:
         return False
     return tag_name in HEADING_TAG_NAMES or len(cleaned_text.split()) <= 8
+
+
+__all__ = ['is_body_section_marker', 'is_dedication_heading', 'is_front_section_heading', 'is_plausible_metadata_value', 'looks_like_letter_excerpt_marker', 'looks_like_title_prefix', 'parse_front_matter_line', 'resolve_front_section_title', 'search_front_matter_label_value', 'should_continue_dedication_block']

@@ -14,6 +14,10 @@ from .choices import (
 
 
 class SourceCatalogEntry(UUIDPrimaryKeyModel, TimeStampedModel):
+    catalog_book = models.ForeignKey(
+        "catalog.Book", on_delete=models.PROTECT, null=True, blank=True,
+        related_name="source_catalog_entries",
+    )
     source_url = models.URLField(max_length=1000, unique=True)
     title = models.CharField(max_length=255)
     author_line = models.CharField(max_length=255, blank=True)

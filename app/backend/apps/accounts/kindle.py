@@ -3,6 +3,7 @@ from django.core.validators import validate_email
 
 KINDLE_EMAIL_DOMAINS = {"kindle.com"}
 KINDLE_EMAIL_DOMAIN_MESSAGE = "Enter a Kindle email ending in @kindle.com."
+MAX_KINDLE_RECIPIENTS = 10
 
 
 def validate_kindle_email_address(value):
@@ -17,3 +18,22 @@ def validate_kindle_email_address(value):
         raise DjangoValidationError([KINDLE_EMAIL_DOMAIN_MESSAGE])
 
     return email
+
+
+def kindle_address_candidates(raw_value):
+    if isinstance(raw_value, str):
+        return raw_value.replace(";", "\n").replace(",", "\n").splitlines()
+    if isinstance(raw_value, (list, tuple)):
+        return raw_value
+    raise DjangoValidationError(["Enter one Kindle email per line."])
+
+
+def normalize_kindle_addresses(raw_value):
+    if raw_value is None:
+        return None
+    addresses = dict.fromkeys(
+        validate_kindle_email_address(value)
+        for value in kindle_address_candidates(raw_value)
+        if str(value or "").strip()
+    )
+    return list(addresses)

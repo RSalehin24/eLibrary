@@ -45,10 +45,9 @@ def test_fetch_live_incomplete_page_treats_paginated_404_as_end_of_archive(monke
         def raise_for_status(self):
             raise FakeHttpError(self)
 
-    monkeypatch.setattr(
-        "apps.processing.services.get_with_host_fallback",
-        lambda *_args, **_kwargs: FakeResponse(),
-    )
+    monkeypatch.setattr('apps.processing.service_modules.catalog_refresh.get_with_host_fallback', lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.get_with_host_fallback', lambda *_args, **_kwargs: FakeResponse())
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.get_with_host_fallback', lambda *_args, **_kwargs: FakeResponse())
 
     page = processing_services.fetch_live_incomplete_page(
         SimpleNamespace(session=object()),

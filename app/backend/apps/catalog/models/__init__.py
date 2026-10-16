@@ -51,6 +51,9 @@ from .choices import (
     ManualBindingType,
 )
 from .entities import Category, Contributor, Series
+from .personal import PhysicalReadingLog, SavedBook
+from .collections import CollectionBook, CuratedCollection
+from .slug_history import BookSlugHistory, CategorySlugHistory, CollectionSlugHistory, ContributorSlugHistory, SeriesSlugHistory
 from .utils import build_unique_slug, generated_asset_upload_to
 
 __all__ = [
@@ -62,10 +65,16 @@ __all__ = [
     "BookRecordType",
     "BookSeries",
     "BookSource",
+    "BookSlugHistory",
     "CATALOG_CODE_LENGTH",
     "CATEGORY_ENTITY_TAG",
     "Category",
+    "CategorySlugHistory",
+    "CollectionBook",
+    "CollectionSlugHistory",
+    "CuratedCollection",
     "Contributor",
+    "ContributorSlugHistory",
     "ContributorRole",
     "CuratedBookDocument",
     "CuratedDocumentStatus",
@@ -80,8 +89,11 @@ __all__ = [
     "ManualBindingType",
     "MetadataReview",
     "MetadataVersion",
+    "PhysicalReadingLog",
+    "SavedBook",
     "SERIES_ENTITY_TAG",
     "Series",
+    "SeriesSlugHistory",
     "UNKNOWN_RELATION_SEQUENCE",
     "UserBook",
     "UserBookKindleSend",

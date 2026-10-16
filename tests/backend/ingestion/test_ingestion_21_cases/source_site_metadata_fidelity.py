@@ -1,3 +1,4 @@
+from tests.backend.ingestion.scraper_fixtures import patch_scraper
 import zipfile
 
 import pytest
@@ -1076,20 +1077,20 @@ def test_scrape_book_data_handles_paginated_topics_and_prunes_dead_toc_leaves(mo
         """,
     }
 
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "get_soup",
         lambda url, max_retries=3: legacy_scraper.BeautifulSoup(
             html_map[url],
             "html.parser",
         ),
     )
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "create_output_folder",
         lambda _title: str(tmp_path / "output"),
     )
-    monkeypatch.setattr(legacy_scraper, "download_cover_image", lambda *_args: None)
+    patch_scraper(monkeypatch, "download_cover_image", lambda *_args: None)
     monkeypatch.setattr(legacy_scraper.time, "sleep", lambda *_args: None)
 
     scraped = legacy_scraper.scrape_book_data(root_url)

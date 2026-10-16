@@ -1,3 +1,4 @@
+from rest_framework.exceptions import PermissionDenied
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import generics, status
@@ -116,7 +117,10 @@ class BookmarkDeleteView(generics.DestroyAPIView):
     serializer_class = BookmarkSerializer
 
     def get_queryset(self):
-        return Bookmark.objects.filter(user=self.request.user)
+        identity = self.request.user.pk
+        if identity is None:
+            raise PermissionDenied("Sign in is required.")
+        return Bookmark.objects.filter(user_id=identity)
 
 
 __all__ = [

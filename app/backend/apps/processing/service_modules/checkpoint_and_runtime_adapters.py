@@ -1,8 +1,23 @@
+import json
+import os
+import sys
+from time import monotonic
+
+from config.celery import app as celery_app
+from django.conf import settings
+from redis import Redis
+from redis.exceptions import RedisError
+
+from . import automation_advancement as _automation
+from . import catalog_phase_helpers as _phase_helpers
+from . import catalog_progress_state as _progress
+from . import service_imports_and_constants as _constants
+from . import ui_domain_versions as _ui_versions
 
 
 def sync_state_task_payload(state):
     progress = (
-        sync_progress_payload(state)
+        _progress.sync_progress_payload(state)
         if isinstance(state.progress, dict)
         else None
     )
@@ -17,11 +32,12 @@ def sync_state_task_payload(state):
         "updated_count": state.updated_count,
         "appended_count": state.appended_count,
         "message": state.message,
-        "run_mode": sync_run_mode(state),
+        "run_mode": _progress.sync_run_mode(state),
     }
 
+
 def processing_sync_checkpoint_key(sync_key):
-    return f"{PROCESSING_SYNC_CHECKPOINT_KEY_PREFIX}:{sync_key}"
+    return f"{_constants.PROCESSING_SYNC_CHECKPOINT_KEY_PREFIX}:{sync_key}"
 
 
 def processing_checkpoint_redis_url():
@@ -38,15 +54,15 @@ def processing_checkpoint_client():
         return None
 
     if (
-        PROCESSING_CHECKPOINT_REDIS["client"] is not None
-        and PROCESSING_CHECKPOINT_REDIS["url"] == redis_url
-        and not PROCESSING_CHECKPOINT_REDIS["disabled"]
+        _phase_helpers.PROCESSING_CHECKPOINT_REDIS["client"] is not None
+        and _phase_helpers.PROCESSING_CHECKPOINT_REDIS["url"] == redis_url
+        and not _phase_helpers.PROCESSING_CHECKPOINT_REDIS["disabled"]
     ):
-        return PROCESSING_CHECKPOINT_REDIS["client"]
+        return _phase_helpers.PROCESSING_CHECKPOINT_REDIS["client"]
 
     if (
-        PROCESSING_CHECKPOINT_REDIS["disabled"]
-        and PROCESSING_CHECKPOINT_REDIS["url"] == redis_url
+        _phase_helpers.PROCESSING_CHECKPOINT_REDIS["disabled"]
+        and _phase_helpers.PROCESSING_CHECKPOINT_REDIS["url"] == redis_url
     ):
         return None
 
@@ -57,7 +73,7 @@ def processing_checkpoint_client():
             socket_connect_timeout=0.5,
             socket_timeout=0.5,
         )
-        PROCESSING_CHECKPOINT_REDIS.update(
+        _phase_helpers.PROCESSING_CHECKPOINT_REDIS.update(
             {
                 "url": redis_url,
                 "client": client,
@@ -66,11 +82,11 @@ def processing_checkpoint_client():
         )
         return client
     except Exception:
-        logger.debug(
+        _constants.logger.debug(
             "Processing checkpoint Redis client initialization failed.",
             exc_info=True,
         )
-        PROCESSING_CHECKPOINT_REDIS.update(
+        _phase_helpers.PROCESSING_CHECKPOINT_REDIS.update(
             {
                 "url": redis_url,
                 "client": None,
@@ -82,7 +98,7 @@ def processing_checkpoint_client():
 
 def processing_checkpoint_payload(state):
     progress = (
-        sync_progress_payload(state)
+        _progress.sync_progress_payload(state)
         if isinstance(state.progress, dict)
         else None
     )
@@ -92,8 +108,8 @@ def processing_checkpoint_payload(state):
     return {
         "scope": state.singleton_key,
         "status": state.status,
-        "runMode": sync_run_mode(state),
-        "triggerSource": sync_trigger_source(state),
+        "runMode": _progress.sync_run_mode(state),
+        "triggerSource": _progress.sync_trigger_source(state),
         "pageIndex": state.page_index,
         "fetchedCount": state.fetched_count,
         "skippedCount": state.skipped_count,
@@ -114,7 +130,7 @@ def clear_processing_checkpoint_mirror(sync_key):
         client.delete(processing_sync_checkpoint_key(sync_key))
         return True
     except RedisError:
-        logger.debug(
+        _constants.logger.debug(
             "Processing checkpoint Redis delete failed for %s.",
             sync_key,
             exc_info=True,
@@ -136,7 +152,7 @@ def mirror_processing_checkpoint(state):
             client.set(checkpoint_key, json.dumps(payload))
         return True
     except RedisError:
-        logger.debug(
+        _constants.logger.debug(
             "Processing checkpoint Redis write failed for %s.",
             state.singleton_key,
             exc_info=True,
@@ -146,7 +162,7 @@ def mirror_processing_checkpoint(state):
 
 def sync_checkpoint_progress(state):
     progress = (
-        sync_progress_payload(state)
+        _progress.sync_progress_payload(state)
         if isinstance(state.progress, dict)
         else None
     )
@@ -164,7 +180,9 @@ def save_sync_state(state, *, update_fields=None):
         unique_fields = list(dict.fromkeys(update_fields))
         state.save(update_fields=unique_fields)
     sync_checkpoint_progress(state)
-    publish_processing_ui_domains(processing_domains_for_sync_state(state))
+    _ui_versions.publish_processing_ui_domains(
+        _ui_versions.processing_domains_for_sync_state(state)
+    )
     return state
 
 
@@ -175,16 +193,21 @@ def should_run_processing_jobs_inline():
     )
 
 
-def processing_workers_available(queue_name=PROCESSING_TASK_QUEUE):
+def processing_workers_available(
+    queue_name=_constants.PROCESSING_TASK_QUEUE,
+):
     if should_run_processing_jobs_inline():
         return False
     if os.environ.get("PYTEST_CURRENT_TEST"):
         return False
 
-    checked_at = PROCESSING_WORKER_AVAILABILITY["checked_at"]
-    available = PROCESSING_WORKER_AVAILABILITY["available"]
+    checked_at = _constants.PROCESSING_WORKER_AVAILABILITY["checked_at"]
+    available = _constants.PROCESSING_WORKER_AVAILABILITY["available"]
     now = monotonic()
-    if available is not None and (now - checked_at) < PROCESSING_WORKER_CACHE_SECONDS:
+    if (
+        available is not None
+        and (now - checked_at) < _constants.PROCESSING_WORKER_CACHE_SECONDS
+    ):
         return available
 
     detected = False
@@ -196,13 +219,13 @@ def processing_workers_available(queue_name=PROCESSING_TASK_QUEUE):
             for queues in active_queues.values()
         )
     except Exception:
-        logger.debug(
+        _constants.logger.debug(
             "Processing worker availability check failed; assuming manual progression.",
             exc_info=True,
         )
 
-    PROCESSING_WORKER_AVAILABILITY["checked_at"] = now
-    PROCESSING_WORKER_AVAILABILITY["available"] = detected
+    _constants.PROCESSING_WORKER_AVAILABILITY["checked_at"] = now
+    _constants.PROCESSING_WORKER_AVAILABILITY["available"] = detected
     return detected
 
 
@@ -219,13 +242,13 @@ def should_enqueue_processing_sync_work():
 
 
 def should_manually_advance_processing_work():
-    return not should_run_processing_jobs_inline() and not processing_workers_available()
+    return (
+        not should_run_processing_jobs_inline() and not processing_workers_available()
+    )
 
 
 def should_skip_processing_metadata_duplicate_check():
-    return bool(
-        getattr(settings, "PROCESSING_SKIP_METADATA_DUPLICATE_CHECK", True)
-    )
+    return bool(getattr(settings, "PROCESSING_SKIP_METADATA_DUPLICATE_CHECK", True))
 
 
 def allow_processing_remote_page_payloads():
@@ -237,25 +260,28 @@ def allow_processing_remote_page_payloads():
 
 
 def can_process_record_url(url):
-    return allow_processing_remote_page_payloads() or uses_supported_source_url(url)
+    return (
+        allow_processing_remote_page_payloads()
+        or _automation.uses_supported_source_url(url)
+    )
 
 
 def sync_uses_live_fetch(state):
-    saved_data = sync_saved_data(state)
+    saved_data = _progress.sync_saved_data(state)
     return bool(saved_data.get("liveFetch"))
 
 
 def sync_run_label(run_mode):
-    if run_mode == SYNC_RUN_MODE_CATALOG_AUTOMATION:
+    if run_mode == _constants.SYNC_RUN_MODE_CATALOG_AUTOMATION:
         return "Automated catalog sync"
-    if run_mode == SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
+    if run_mode == _constants.SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
         return "Incomplete catalog sync"
     return "Catalog sync"
 
 
 def sync_start_message(run_mode):
-    if run_mode == SYNC_RUN_MODE_CATALOG_AUTOMATION:
+    if run_mode == _constants.SYNC_RUN_MODE_CATALOG_AUTOMATION:
         return "Automated catalog sync is running."
-    if run_mode == SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
+    if run_mode == _constants.SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
         return "Incomplete catalog sync is running."
     return "Syncing catalog records."

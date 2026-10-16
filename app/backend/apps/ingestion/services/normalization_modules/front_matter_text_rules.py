@@ -1,7 +1,6 @@
+
 import re
 from html import escape
-
-from bs4 import BeautifulSoup, Tag
 
 from apps.catalog.models import ContributorRole
 from apps.catalog.services import normalize_book_contributors
@@ -25,6 +24,7 @@ from apps.ingestion.services.normalization_support.metadata import (
     split_metadata_fragments,
     split_multi_value,
 )
+from bs4 import BeautifulSoup, Tag
 
 DEDICATION_PATTERNS = [
     "উৎসর্গ",
@@ -263,7 +263,7 @@ def block_text_lines(block):
 
 
 def block_strong_text_lines(block):
-    lines = []
+    lines: list[str] = []
     for strong in block.find_all("strong"):
         lines.extend(
             clean_display_text(line)
@@ -307,6 +307,10 @@ _NUMERIC_SECTION_MARKER_RE = re.compile(r"^[০-৯0-9]{1,4}(?:\s*[.)।])?$")
 
 
 def is_likely_section_title_text(text):
+    from .front_matter_detection import (
+        looks_like_letter_excerpt_marker,
+        search_front_matter_label_value,
+    )
     plain_text = heading_plain_text(text)
     if not plain_text or len(plain_text) > 180:
         return False
@@ -334,6 +338,7 @@ def is_likely_section_title_text(text):
 
 
 def is_non_dedication_strong_heading(text, strong_text="", tag_name=""):
+    from .front_matter_detection import is_dedication_heading
     if tag_name in HEADING_TAG_NAMES:
         return False
 
@@ -344,3 +349,6 @@ def is_non_dedication_strong_heading(text, strong_text="", tag_name=""):
     if is_dedication_heading(cleaned_text, strong_text=strong_text, tag_name=tag_name):
         return False
     return is_likely_section_title_text(cleaned_strong)
+
+
+__all__ = ['ALL_METADATA_LABELS', 'BLOCK_TAG_NAMES', 'BODY_SECTION_PATTERNS', 'BeautifulSoup', 'ContributorRole', 'DATE_LINE_PATTERN', 'DEDICATION_INLINE_PREFIX_PATTERN', 'DEDICATION_PATTERNS', 'EXPLICIT_SEPARATOR_ONLY_LABELS', 'FRONT_MATTER_PATTERNS', 'FRONT_SECTION_HEADING_PATTERNS', 'HEADING_TAG_NAMES', 'INLINE_TOC_HEADING_PATTERNS', 'LETTER_EXCERPT_PATTERNS', 'LETTER_SALUTATION_PATTERN', 'MAX_DEDICATION_BLOCK_LENGTH', 'MAX_METADATA_TEXT_LENGTH', 'MAX_METADATA_VALUE_LENGTH', 'MAX_TITLE_PREFIX_LENGTH', 'METADATA_LABEL_ALIASES', 'ROLE_PATTERNS', 'SEPARATOR_PARAGRAPH_VALUES', 'SOURCE_GENERATED_TOC_SELECTORS', 'SUPPLEMENTARY_CHAPTER_HEADING_PATTERNS', 'Tag', '_DOT_TEXT_DOT_RE', '_NUMERIC_SECTION_MARKER_RE', 'block_has_break', 'block_strong_heading_text', 'block_strong_text', 'block_strong_text_lines', 'block_text', 'block_text_lines', 'canonical_role', 'clean_contributor_value', 'clean_display_text', 'count_sentence_markers', 'escape', 'extract_contributor_evidence', 'has_non_name_phrase_marker', 'heading_matches_patterns', 'heading_plain_text', 'is_dot_bracketed_section_boundary', 'is_likely_section_title_text', 'is_non_dedication_strong_heading', 'is_probable_inline_toc_list', 'is_role_label_text', 'is_separator_paragraph', 'join_heading_lines', 'looks_like_contributor_name', 'match_pattern_key', 'normalize_book_contributors', 'normalize_catalog_text', 'parse_role_labeled_segment', 'plain_text_from_html', 're', 'remove_inline_toc_heading_and_lists', 'remove_source_generated_toc_containers', 'roles_in_text', 'split_contributor_value', 'split_metadata_fragments', 'split_multi_value', 'strip_leading_probable_toc_lists', 'text_matches_patterns']

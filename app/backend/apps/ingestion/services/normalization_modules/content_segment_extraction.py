@@ -1,3 +1,6 @@
+from typing import Any
+
+from .front_matter_text_rules import INLINE_TOC_HEADING_PATTERNS, re
 
 
 def split_leading_front_sections(main_content_html, *, has_explicit_body=False):
@@ -14,12 +17,35 @@ def split_leading_front_sections(main_content_html, *, has_explicit_body=False):
         section (so each separator-divided block becomes its own page),
         not terminate extraction.
     """
+    from .front_matter_detection import (
+        is_body_section_marker,
+        is_dedication_heading,
+        is_front_section_heading,
+        resolve_front_section_title,
+        search_front_matter_label_value,
+    )
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        HEADING_TAG_NAMES,
+        INLINE_TOC_HEADING_PATTERNS,
+        BeautifulSoup,
+        block_has_break,
+        block_strong_text,
+        block_text,
+        is_dot_bracketed_section_boundary,
+        is_separator_paragraph,
+        plain_text_from_html,
+        remove_inline_toc_heading_and_lists,
+        remove_source_generated_toc_containers,
+        strip_leading_probable_toc_lists,
+        text_matches_patterns,
+    )
     if not main_content_html:
         return [], main_content_html
 
     soup = BeautifulSoup(main_content_html, "html.parser")
     remove_source_generated_toc_containers(soup)
-    sections = []
+    sections: list[dict[str, Any]] = []
     current_section = None
     extraction_started = False
 
@@ -131,6 +157,7 @@ TOC_SECTION_TITLE_PATTERNS = tuple([*INLINE_TOC_HEADING_PATTERNS, "সূচী"
 
 
 def normalized_fragment_signature(text):
+    from .front_matter_text_rules import clean_display_text, normalize_catalog_text
     cleaned = clean_display_text(text or "")
     if not cleaned:
         return ""
@@ -138,6 +165,7 @@ def normalized_fragment_signature(text):
 
 
 def numbered_section_marker_value(text):
+    from .front_matter_text_rules import clean_display_text
     cleaned_text = clean_display_text(text or "")
     if not cleaned_text or len(cleaned_text) > 8:
         return None
@@ -158,6 +186,11 @@ def numbered_section_title(number):
 
 
 def is_probable_source_navigation_section(title, html):
+    from .front_matter_text_rules import (
+        BeautifulSoup,
+        clean_display_text,
+        normalize_catalog_text,
+    )
     normalized_title = normalize_catalog_text(title or "")
     if not normalized_title:
         return False
@@ -192,6 +225,7 @@ def is_probable_source_navigation_section(title, html):
 
 
 def iter_fragment_blocks(html):
+    from .front_matter_text_rules import BLOCK_TAG_NAMES, BeautifulSoup, block_text
     if not html:
         return []
 
@@ -204,6 +238,7 @@ def iter_fragment_blocks(html):
 
 
 def collect_fragment_signatures(*html_fragments):
+    from .front_matter_text_rules import block_text
     signatures = set()
     for fragment in html_fragments:
         for block in iter_fragment_blocks(fragment):
@@ -214,6 +249,12 @@ def collect_fragment_signatures(*html_fragments):
 
 
 def dedupe_html_fragment_blocks(html):
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_text,
+        plain_text_from_html,
+    )
     if not html:
         return ""
 
@@ -241,6 +282,12 @@ def dedupe_html_fragment_blocks(html):
 
 
 def merge_front_matter_html_parts(*html_fragments):
+    from .front_matter_text_rules import (
+        block_text,
+        clean_display_text,
+        escape,
+        plain_text_from_html,
+    )
     merged_blocks = []
     seen = set()
 
@@ -270,8 +317,16 @@ def merge_front_matter_html_parts(*html_fragments):
 
 
 def dedupe_structured_sections(sections, *, reference_fragments=None):
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_text,
+        clean_display_text,
+        normalize_catalog_text,
+        plain_text_from_html,
+    )
     reference_signatures = collect_fragment_signatures(*(reference_fragments or []))
-    deduped = []
+    deduped: list[dict[str, Any]] = []
     seen = set()
 
     for section in sections or []:
@@ -343,6 +398,13 @@ def prune_duplicate_main_content(
     reference_fragments=None,
     content_items=None,
 ):
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_text,
+        clean_display_text,
+        plain_text_from_html,
+    )
     if not main_content_html:
         return ""
 
@@ -388,6 +450,10 @@ def prune_duplicate_main_content(
 
 
 def strip_leading_dedication_label(text):
+    from .front_matter_text_rules import (
+        DEDICATION_INLINE_PREFIX_PATTERN,
+        clean_display_text,
+    )
     cleaned_text = clean_display_text(text)
     if not cleaned_text:
         return ""
@@ -396,6 +462,7 @@ def strip_leading_dedication_label(text):
 
 
 def lines_to_paragraphs_html(lines):
+    from .front_matter_text_rules import clean_display_text, escape
     cleaned_lines = [clean_display_text(line) for line in lines if clean_display_text(line)]
     if not cleaned_lines:
         return ""
@@ -403,6 +470,10 @@ def lines_to_paragraphs_html(lines):
 
 
 def split_block_on_inline_dedication(block):
+    from .front_matter_text_rules import (
+        DEDICATION_INLINE_PREFIX_PATTERN,
+        clean_display_text,
+    )
     if block.name not in {"p", "li", "blockquote"}:
         return None
 
@@ -439,6 +510,21 @@ def split_block_on_inline_dedication(block):
 
 
 def extract_main_content_segments(main_content_html):
+    from .front_matter_detection import (
+        is_dedication_heading,
+        search_front_matter_label_value,
+        should_continue_dedication_block,
+    )
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_has_break,
+        block_strong_text,
+        block_text,
+        is_dot_bracketed_section_boundary,
+        is_separator_paragraph,
+        remove_source_generated_toc_containers,
+    )
     if not main_content_html:
         return "", "", main_content_html
 
@@ -564,6 +650,7 @@ ORDINAL_SECTION_PREFIX_PATTERN = re.compile(
 
 
 def normalize_structured_section_title(title):
+    from .front_matter_text_rules import clean_display_text
     cleaned = clean_display_text(title or "")
     if not cleaned:
         return ""
@@ -571,6 +658,24 @@ def normalize_structured_section_title(title):
 
 
 def block_heading_candidate_text(block):
+    from .front_matter_detection import (
+        is_dedication_heading,
+        is_front_section_heading,
+        search_front_matter_label_value,
+    )
+    from .front_matter_text_rules import (
+        HEADING_TAG_NAMES,
+        INLINE_TOC_HEADING_PATTERNS,
+        Tag,
+        block_has_break,
+        block_strong_heading_text,
+        block_strong_text,
+        block_text,
+        count_sentence_markers,
+        heading_plain_text,
+        normalize_catalog_text,
+        text_matches_patterns,
+    )
     block_label = heading_plain_text(block_text(block))
     if not block_label or len(block_label) > 180:
         return ""
@@ -633,6 +738,7 @@ def block_heading_candidate_text(block):
 
 
 def structured_body_heading_score(title, *, tag_name=""):
+    from .front_matter_text_rules import HEADING_TAG_NAMES, normalize_catalog_text
     normalized = normalize_catalog_text(title)
     if not normalized:
         return 0
@@ -652,6 +758,7 @@ def structured_body_heading_score(title, *, tag_name=""):
 
 
 def build_flat_toc_from_content_items(content_items):
+    from .front_matter_text_rules import plain_text_from_html
     toc = []
     for item in content_items:
         path = item.get("path") or [item.get("title", "")]
@@ -667,6 +774,13 @@ def build_flat_toc_from_content_items(content_items):
 
 
 def infer_numeric_structured_content_from_main_content(main_content_html):
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_text,
+        clean_display_text,
+        plain_text_from_html,
+    )
     if not main_content_html:
         return [], [], main_content_html
 
@@ -704,7 +818,7 @@ def infer_numeric_structured_content_from_main_content(main_content_html):
         return [], [], main_content_html
 
     section_specs = []
-    consumed_indices = set()
+    consumed_indices: set[int] = set()
     first_marker = markers[0]
     leading_html = "\n".join(str(blocks[index]) for index in range(first_marker["index"])).strip()
     leading_text = clean_display_text(plain_text_from_html(leading_html))
@@ -761,6 +875,7 @@ def infer_numeric_structured_content_from_main_content(main_content_html):
 
 
 def prune_toc_entries_without_content(toc_entries, content_items, parent_path=()):
+    from .front_matter_text_rules import plain_text_from_html
     non_empty_paths = {
         tuple(item.get("path") or [])
         for item in content_items
@@ -792,6 +907,13 @@ def prune_toc_entries_without_content(toc_entries, content_items, parent_path=()
 
 
 def infer_structured_content_from_main_content(main_content_html, book_title=""):
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        clean_display_text,
+        normalize_catalog_text,
+        plain_text_from_html,
+    )
     if not main_content_html:
         return [], [], main_content_html
 
@@ -890,6 +1012,19 @@ def infer_structured_content_from_main_content(main_content_html, book_title="")
 
 
 def split_trailing_front_sections(main_content_html):
+    from .front_matter_detection import (
+        is_body_section_marker,
+        is_front_section_heading,
+        resolve_front_section_title,
+    )
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_text,
+        is_dot_bracketed_section_boundary,
+        is_separator_paragraph,
+        plain_text_from_html,
+    )
     if not main_content_html:
         return [], main_content_html
 
@@ -929,7 +1064,7 @@ def split_trailing_front_sections(main_content_html):
     if trailing_start_index is None:
         return [], main_content_html
 
-    sections = []
+    sections: list[dict[str, Any]] = []
     current_section = None
 
     for block in blocks[trailing_start_index:]:
@@ -986,12 +1121,13 @@ def split_trailing_front_sections(main_content_html):
 
 
 def extract_boundary_sections_from_content_items(content_items, toc, *, trust_source_toc=False):
+    from .front_matter_text_rules import plain_text_from_html
     if not content_items:
         return [], [], toc or [], []
 
     normalized_items = [dict(item) for item in content_items]
-    front_sections = []
-    back_sections = []
+    front_sections: list[dict[str, Any]] = []
+    back_sections: list[dict[str, Any]] = []
 
     if not trust_source_toc:
         first_content = normalized_items[0].get("content", "")
@@ -1020,6 +1156,18 @@ def extract_boundary_sections_from_content_items(content_items, toc, *, trust_so
 
 
 def clean_extracted_dedication_html(dedication_html):
+    from .front_matter_detection import is_dedication_heading
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        DEDICATION_PATTERNS,
+        BeautifulSoup,
+        block_strong_text,
+        block_text,
+        clean_display_text,
+        is_separator_paragraph,
+        plain_text_from_html,
+        text_matches_patterns,
+    )
     if not dedication_html:
         return ""
 
@@ -1078,6 +1226,7 @@ def _heading_is_top_level(heading_tag):
 
 
 def _collect_subchapter_candidates(content_html):
+    from .front_matter_text_rules import BeautifulSoup, clean_display_text
     if not content_html or not content_html.strip():
         return None, []
 
@@ -1098,6 +1247,7 @@ def _split_html_by_headings(soup, headings):
     {preamble_html, sections=[{title, html}]}.
     Sections end at the next heading at the same level (or end of doc).
     """
+    from .front_matter_text_rules import clean_display_text
     heading_ids = {id(tag) for tag in headings}
     title_by_id = {
         id(tag): clean_display_text(tag.get_text(" ", strip=True))
@@ -1105,7 +1255,7 @@ def _split_html_by_headings(soup, headings):
     }
 
     preamble_parts = []
-    sections = []
+    sections: list[dict[str, Any]] = []
     current = None
     # Iterate the soup's direct children plus any children of a wrapping container.
     # Use a flat list: every direct descendant of soup root.
@@ -1167,6 +1317,7 @@ def _subchapter_titles_are_safe(sections):
 
 def _split_content_item_into_subchapters(item):
     """Return (parent_item, sub_items) if the item can be split, else None."""
+    from .front_matter_text_rules import clean_display_text, plain_text_from_html
     content_html = item.get("content", "") or ""
     soup, headings = _collect_subchapter_candidates(content_html)
     if not soup or len(headings) < SUBCHAPTER_MIN_HEADINGS:
@@ -1348,6 +1499,7 @@ def _generate_residual_heading(plain_text):
     sentence terminators). If that is short enough use it verbatim,
     otherwise truncate to the first few words.
     """
+    from .front_matter_text_rules import clean_display_text, re
     cleaned = clean_display_text(plain_text or "")
     if not cleaned:
         return RESIDUAL_SECTION_FALLBACK_TITLE
@@ -1356,7 +1508,7 @@ def _generate_residual_heading(plain_text):
     if len(candidate) <= RESIDUAL_HEADING_MAX_CHARS:
         return candidate
     words = candidate.split()
-    truncated_words = []
+    truncated_words: list[str] = []
     running_length = 0
     for word in words:
         if (
@@ -1387,6 +1539,18 @@ def classify_residual_main_content(
     accounted for. Anything that did not classify as metadata or prose is
     silently dropped.
     """
+    from .front_matter_detection import search_front_matter_label_value
+    from .front_matter_text_rules import (
+        BLOCK_TAG_NAMES,
+        BeautifulSoup,
+        block_has_break,
+        block_strong_text,
+        block_text,
+        clean_display_text,
+        is_separator_paragraph,
+        plain_text_from_html,
+        re,
+    )
     if not residual_main_html or not plain_text_from_html(residual_main_html):
         return "", [], ""
 
@@ -1395,7 +1559,7 @@ def classify_residual_main_content(
     soup = BeautifulSoup(residual_main_html, "html.parser")
 
     book_info_parts = []
-    section_buckets = []
+    section_buckets: list[dict[str, Any]] = []
     current_bucket = None
 
     def _flush_current_bucket():
@@ -1441,7 +1605,7 @@ def classify_residual_main_content(
 
     _flush_current_bucket()
 
-    sections = []
+    sections: list[dict[str, Any]] = []
     for bucket in section_buckets:
         combined_plain = " ".join(bucket["plain_parts"]).strip()
         if len(clean_display_text(combined_plain)) < RESIDUAL_SECTION_MIN_PLAIN_LENGTH:
@@ -1473,3 +1637,6 @@ def classify_residual_main_content(
 
     book_info_html = "\n".join(book_info_parts).strip()
     return book_info_html, sections, ""
+
+
+__all__ = ['ASCII_TO_BANGLA_DIGITS', 'BANGLA_TO_ASCII_DIGITS', 'CHAPTER_SECTION_KEYWORD_PATTERN', 'MIN_DUPLICATE_FRAGMENT_SIGNATURE_LENGTH', 'NUMERIC_ONLY_SECTION_MARKER_PATTERN', 'NUMERIC_SECTION_PREFIX_PATTERN', 'ORDINAL_SECTION_PREFIX_PATTERN', 'RESIDUAL_HEADING_MAX_CHARS', 'RESIDUAL_HEADING_MAX_WORDS', 'RESIDUAL_SECTION_FALLBACK_TITLE', 'RESIDUAL_SECTION_MIN_PLAIN_LENGTH', 'SHORT_RESIDUAL_MAIN_CONTENT_LENGTH', 'SUBCHAPTER_HEADING_PREFERENCE', 'SUBCHAPTER_MIN_BODY_TEXT', 'SUBCHAPTER_MIN_HEADINGS', 'SUBCHAPTER_PARENT_INTRO_MIN_TEXT', 'TOC_SECTION_TITLE_PATTERNS', '_collect_subchapter_candidates', '_find_toc_entry_by_path', '_generate_residual_heading', '_heading_is_top_level', '_split_content_item_into_subchapters', '_split_html_by_headings', '_subchapter_titles_are_safe', 'block_heading_candidate_text', 'build_flat_toc_from_content_items', 'classify_residual_main_content', 'clean_extracted_dedication_html', 'collect_fragment_signatures', 'dedupe_html_fragment_blocks', 'dedupe_structured_sections', 'expand_content_items_with_subchapters', 'extract_boundary_sections_from_content_items', 'extract_main_content_segments', 'infer_numeric_structured_content_from_main_content', 'infer_structured_content_from_main_content', 'is_probable_source_navigation_section', 'iter_fragment_blocks', 'lines_to_paragraphs_html', 'merge_front_matter_html_parts', 'normalize_structured_section_title', 'normalized_fragment_signature', 'numbered_section_marker_value', 'numbered_section_title', 'prune_duplicate_main_content', 'prune_toc_entries_without_content', 'split_block_on_inline_dedication', 'split_leading_front_sections', 'split_trailing_front_sections', 'strip_leading_dedication_label', 'structured_body_heading_score']

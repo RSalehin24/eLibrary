@@ -1,14 +1,26 @@
 """Redis client factory for the Central Job Engine."""
 
 import os
+from urllib.parse import urlsplit
+
 from redis import Redis
 
 from .constants import DEFAULT_REDIS_URL
 
 
 def get_redis_url():
-    """Return the Redis URL from environment or default."""
-    return os.environ.get("REDIS_URL", os.environ.get("CELERY_BROKER_URL", DEFAULT_REDIS_URL))
+    """Keep Redis engine state separate from an AMQP task broker."""
+    if explicit := os.environ.get("REDIS_URL"):
+        return explicit
+    for name in (
+        "PROCESSING_CHECKPOINT_REDIS_URL",
+        "CELERY_RESULT_BACKEND",
+        "CELERY_BROKER_URL",
+    ):
+        value = os.environ.get(name, "")
+        if urlsplit(value).scheme in {"redis", "rediss", "unix"}:
+            return value
+    return DEFAULT_REDIS_URL
 
 
 def create_redis_client(decode_responses=True, **kwargs):

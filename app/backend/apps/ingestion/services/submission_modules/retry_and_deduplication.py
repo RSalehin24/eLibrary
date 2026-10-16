@@ -1,6 +1,12 @@
+from .job_lifecycle import STALE_PROCESSING_JOB_AFTER
 
 
 def delete_submission_record(submission):
+    from .job_lifecycle import (
+        SubmissionStatus,
+        root_submission,
+        soft_delete_submission_record,
+    )
     target_submission = root_submission(submission)
     if target_submission.status == SubmissionStatus.DELETED:
         target_submission.delete()
@@ -10,6 +16,7 @@ def delete_submission_record(submission):
 
 
 def fail_processing_job(job, message):
+    from .job_lifecycle import JobStatus, SubmissionStatus, record_job_log, timezone
     submission = job.submission
     submission.status = SubmissionStatus.FAILED
     submission.error_message = message
@@ -44,6 +51,7 @@ def requeue_processing_job(
     message="",
     preserve_dispatch_state=False,
 ):
+    from .job_lifecycle import JobStatus, SubmissionStatus, record_job_log
     submission = job.submission
     submission.status = SubmissionStatus.QUEUED
     submission.error_message = ""
@@ -90,6 +98,17 @@ def recover_stale_processing_jobs(
     limit=50,
     stale_after=STALE_PROCESSING_JOB_AFTER,
 ):
+    from .job_lifecycle import (
+        MAX_PROCESSING_JOB_ATTEMPTS,
+        STALE_PROCESSING_FAILURE_MESSAGE,
+        STALE_PROCESSING_RETRY_MESSAGE,
+        JobStatus,
+        ProcessingJob,
+        Q,
+        revoke_processing_task,
+        timezone,
+    )
+    from .resolution_and_queueing import dispatch_processing_job
     queryset = ProcessingJob.objects.select_related("submission").filter(
         cancel_requested=False
     )
@@ -145,6 +164,7 @@ def recover_stale_processing_jobs(
 
 
 def capture_source_page_metadata(source_url):
+    from .job_lifecycle import fetch_source_page_metadata, upsert_source_catalog_entry
     try:
         metadata = fetch_source_page_metadata(source_url)
     except Exception:
@@ -155,6 +175,16 @@ def capture_source_page_metadata(source_url):
 
 
 def retry_submission_record(submission, actor):
+    from .job_lifecycle import (
+        RETRY_PAYLOAD_RESET_KEYS,
+        PermissionDenied,
+        ReviewState,
+        SubmissionStatus,
+        build_retry_payload,
+        can_manage_processing_records,
+        root_submission,
+    )
+    from .resolution_and_queueing import queue_submission
     target_submission = root_submission(submission)
     can_manage_processing = can_manage_processing_records(actor)
     if not actor.is_staff and not can_manage_processing and submission.submitter_id != actor.id:
@@ -232,6 +262,13 @@ def retry_submission_records(submissions, actor):
 
 
 def sync_submission_from_canonical(submission, canonical_submission):
+    from .job_lifecycle import (
+        SUBMISSION_PAYLOAD_KEYS_TO_SHARE,
+        SubmissionStatus,
+        _sync_submission_from_canonical,
+        ensure_preview_session,
+        root_submission,
+    )
     return _sync_submission_from_canonical(
         submission,
         canonical_submission,
@@ -243,8 +280,12 @@ def sync_submission_from_canonical(submission, canonical_submission):
 
 
 def sync_deduplicated_submissions(submission):
+    from .job_lifecycle import _sync_deduplicated_submissions, root_submission
     return _sync_deduplicated_submissions(
         submission,
         root_submission_callback=root_submission,
         sync_submission_from_canonical_callback=sync_submission_from_canonical,
     )
+
+
+__all__ = ['capture_source_page_metadata', 'delete_submission_record', 'fail_processing_job', 'recover_stale_processing_jobs', 'requeue_processing_job', 'retry_submission_record', 'retry_submission_records', 'sync_deduplicated_submissions', 'sync_submission_from_canonical']

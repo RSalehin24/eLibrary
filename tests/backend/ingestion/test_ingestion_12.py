@@ -95,7 +95,7 @@ def test_bulk_retry_requeues_unique_submission_targets(client, monkeypatch):
     )
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.dispatch_processing_job",
+        "apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job",
         lambda queued_job, force=False: queued_job,
     )
 
@@ -151,7 +151,7 @@ def test_resume_cancelled_job_requeues_submission(client, monkeypatch):
         last_error="Stopped by user.",
     )
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.dispatch_processing_job",
+        "apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job",
         lambda queued_job, force=False: queued_job,
     )
 
@@ -198,7 +198,7 @@ def test_bulk_resume_requeues_cancelled_jobs(client, monkeypatch):
     job_one = ProcessingJob.objects.create(submission=submission_one, status=JobStatus.CANCELLED, cancel_requested=False)
     job_two = ProcessingJob.objects.create(submission=submission_two, status=JobStatus.CANCELLED, cancel_requested=False)
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.dispatch_processing_job",
+        "apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job",
         lambda queued_job, force=False: queued_job,
     )
 

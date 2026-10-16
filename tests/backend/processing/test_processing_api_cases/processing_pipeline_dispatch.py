@@ -83,22 +83,17 @@ def test_processing_create_requests_and_pipeline_are_backend_owned(client, monke
         (output_dir / "Request Record.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.capture_source_page_metadata', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.capture_source_page_metadata', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.scrape_book', lambda _url: sample, raising=False)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.scrape_book', lambda _url: sample, raising=False)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_persistence.generate_exports', fake_generate_exports, raising=False)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.generate_exports', fake_generate_exports, raising=False)
     monkeypatch.setattr(
-        "apps.processing.services.capture_source_page_metadata",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.find_existing_book_by_source_url",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr("apps.processing.services.scrape_book", lambda _url: sample, raising=False)
-    monkeypatch.setattr(
-        "apps.processing.services.generate_exports",
-        fake_generate_exports,
-        raising=False,
-    )
-    monkeypatch.setattr(
-        "apps.ingestion.services.submissions.create_submission_records",
+        "apps.ingestion.services.submission_modules.book_persistence.create_submission_records",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
             AssertionError("legacy submission flow should not be used by /api/processing")
         ),

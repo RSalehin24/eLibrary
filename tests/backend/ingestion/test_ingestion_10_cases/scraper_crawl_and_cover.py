@@ -1,3 +1,4 @@
+from tests.backend.ingestion.scraper_fixtures import patch_scraper
 import json
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -112,19 +113,19 @@ def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_pat
         """,
     }
 
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "get_soup",
         lambda url, max_retries=3: legacy_scraper.BeautifulSoup(
             html_map[url], "html.parser"
         ),
     )
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "create_output_folder",
         lambda _title: str(tmp_path / "output"),
     )
-    monkeypatch.setattr(legacy_scraper, "download_cover_image", lambda *_args: None)
+    patch_scraper(monkeypatch, "download_cover_image", lambda *_args: None)
 
     def fake_scrape_all_lessons(url, **_options):
         if url == child_url:
@@ -138,7 +139,7 @@ def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_pat
             ]
         return []
 
-    monkeypatch.setattr(legacy_scraper, "scrape_all_lessons", fake_scrape_all_lessons)
+    patch_scraper(monkeypatch, "scrape_all_lessons", fake_scrape_all_lessons)
 
     scraped = legacy_scraper.scrape_book_data(root_url)
 
@@ -195,8 +196,8 @@ def test_download_cover_image_uses_retry_session_and_saves_the_cover(monkeypatch
             return FakeResponse()
 
     session = FakeSession()
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "create_session_with_retries",
         lambda: session,
     )
@@ -241,14 +242,14 @@ def test_scrape_all_lessons_waits_between_pages(monkeypatch):
         seen_urls.append(url)
         return url
 
-    monkeypatch.setattr(legacy_scraper, "get_soup", fake_get_soup)
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(monkeypatch, "get_soup", fake_get_soup)
+    patch_scraper(
+        monkeypatch,
         "scrape_lesson_list",
         lambda soup: lesson_pages[soup]["lessons"],
     )
-    monkeypatch.setattr(
-        legacy_scraper,
+    patch_scraper(
+        monkeypatch,
         "get_total_pages",
         lambda soup: lesson_pages[soup]["total_pages"],
     )

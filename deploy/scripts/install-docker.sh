@@ -12,7 +12,7 @@ Examples:
   sudo bash deploy/scripts/install-docker.sh 28.5.1
 
 Installs Docker Engine, the Docker CLI, Buildx, and the Compose plugin on an
-Ubuntu-style host. When a version is provided, the script resolves the matching
+Ubuntu or Debian host. When a version is provided, the script resolves the matching
 apt package version.
 EOF
 }
@@ -28,6 +28,11 @@ if [[ "$(id -u)" -ne 0 ]]; then
 fi
 
 required_version="${1:-}"
+script_directory="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "${script_directory}/docker_install_repository.sh"
+distribution_values="$(docker_repository_distribution /etc/os-release)"
+read -r distribution codename <<<"${distribution_values}"
+repository_url="https://download.docker.com/linux/${distribution}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -36,14 +41,13 @@ apt-get install -y ca-certificates curl gnupg lsb-release
 
 install -m 0755 -d /etc/apt/keyrings
 if [[ ! -f /etc/apt/keyrings/docker.asc ]]; then
-  curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+  curl -fsSL "${repository_url}/gpg" -o /etc/apt/keyrings/docker.asc
   chmod a+r /etc/apt/keyrings/docker.asc
 fi
 
-. /etc/os-release
 arch="$(dpkg --print-architecture)"
 cat >/etc/apt/sources.list.d/docker.list <<EOF
-deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/${ID} ${VERSION_CODENAME} stable
+deb [arch=${arch} signed-by=/etc/apt/keyrings/docker.asc] ${repository_url} ${codename} stable
 EOF
 
 apt-get update

@@ -1,6 +1,24 @@
-
+from apps.ingestion.pipeline.scraper_support.network import (
+    _get_allowed_source_hosts as _get_allowed_source_hosts,
+)
 from apps.ingestion.services.resolution_support_metadata import split_display_title
-from apps.ingestion.pipeline.scraper_support.network import _get_allowed_source_hosts
+
+from .front_matter_extraction import sanitize_folder_name
+from .scrape_limits_and_header_cleanup import (
+    HEADERS,
+    INLINE_TOC_PATTERNS,
+    BeautifulSoup,
+    Path,
+    Tag,
+    clean_buttons,
+    clean_display_text,
+    create_session_with_retries,
+    normalize_text,
+    os,
+    remove_redundant_headers,
+    requests,
+    settings,
+)
 
 ASCII_TO_BANGLA_DIGITS = str.maketrans("0123456789", "০১২৩৪৫৬৭৮৯")
 
@@ -277,25 +295,4 @@ def extract_inline_toc_and_content(main_content_html):
     return toc_entries, content_items, str(soup)
 
 
-def normalize_crawl_url(url, base_url=""):
-    if not url:
-        return ""
-
-    candidate = urljoin(base_url, str(url).strip()) if base_url else str(url).strip()
-    parsed = urlparse(candidate)
-
-    if parsed.scheme not in {"http", "https"}:
-        return ""
-    allowed = _get_allowed_source_hosts()
-    if allowed and parsed.netloc.lower() not in allowed:
-        return ""
-
-    source_host = _get_source_site_host()
-    target_host = source_host or parsed.netloc.lower()
-    normalized_path = parsed.path or "/"
-    if normalized_path.startswith("/books/"):
-        normalized_path = normalized_path.rstrip("/") + "/"
-
-    return urlunparse(
-        ("https", target_host, normalized_path, parsed.params, parsed.query, "")
-    )
+from ..scraper_support.network import normalize_crawl_url

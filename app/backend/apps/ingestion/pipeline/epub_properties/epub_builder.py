@@ -204,8 +204,10 @@ def _generate_cover_png(book_title, author, series, output_folder):
     (e.g. Pillow not installed or no writable output folder).
     """
     try:
-        from PIL import Image, ImageDraw
+        from PIL import Image, ImageDraw, features
     except ImportError:
+        return None
+    if not features.check_feature("raqm"):
         return None
 
     title, author, series = _sanitize_cover_inputs(book_title, author, series)
@@ -242,7 +244,7 @@ def _generate_cover_png(book_title, author, series, output_folder):
         grad_pixels.extend([(r, g, b)] * 2)
     grad_img = Image.new("RGB", (2, GRAD_H))
     grad_img.putdata(grad_pixels)
-    img = grad_img.resize((W, H), Image.BILINEAR)
+    img = grad_img.resize((W, H), Image.Resampling.BILINEAR)
     draw = ImageDraw.Draw(img)
 
     def _draw_text(xy, text, font, fill):
@@ -982,7 +984,7 @@ class EpubBuilder:
             )
             covered_files.add(chapter.file_name)
 
-        self.book.toc = tuple(self._entries_to_nav_nodes(nav_entries))
+        self.book.toc = list(self._entries_to_nav_nodes(nav_entries))
         self.book.spine = [*self.chapters, ("nav", "no")]
         self.book.add_item(epub.EpubNcx())
         self.book.add_item(epub.EpubNav())

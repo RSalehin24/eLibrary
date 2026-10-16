@@ -1,30 +1,61 @@
-import json
-import os
+import json as json
+import os as os
 import re
-import shutil
-import time
-from pathlib import Path
-from urllib.parse import urljoin, urlparse, urlunparse
-
-import requests
-from bs4 import BeautifulSoup, Tag
-from django.conf import settings
-
-from apps.ingestion.services.normalization import extract_main_content_segments
-from apps.common.text import clean_display_text
-from .scraper_support.network import (
-    _get_allowed_source_hosts,
-    HEADERS,
-    clean_buttons,
-    create_session_with_retries,
-    get_soup,
-    normalize_source_url,
+import shutil as shutil
+import time as time
+from pathlib import (
+    Path as Path,
 )
-from .scraper_support.text import (
+from urllib.parse import (
+    urljoin as urljoin,
+)
+from urllib.parse import (
+    urlparse as urlparse,
+)
+from urllib.parse import (
+    urlunparse as urlunparse,
+)
+
+import requests as requests
+from apps.common.text import (
+    clean_display_text as clean_display_text,
+)
+from apps.ingestion.services.normalization import (
+    extract_main_content_segments as extract_main_content_segments,
+)
+from bs4 import BeautifulSoup
+from bs4 import (
+    Tag as Tag,
+)
+from django.conf import (
+    settings as settings,
+)
+
+from ..scraper_support.network import (
+    HEADERS as HEADERS,
+)
+from ..scraper_support.network import (
+    _get_allowed_source_hosts as _get_allowed_source_hosts,
+)
+from ..scraper_support.network import (
+    clean_buttons as clean_buttons,
+)
+from ..scraper_support.network import (
+    create_session_with_retries as create_session_with_retries,
+)
+from ..scraper_support.network import (
+    get_soup as get_soup,
+)
+from ..scraper_support.network import (
+    normalize_source_url as normalize_source_url,
+)
+from ..scraper_support.text import (
     extract_core_title,
-    normalize_bengali_numbers,
     normalize_text,
     texts_are_similar,
+)
+from ..scraper_support.text import (
+    normalize_bengali_numbers as normalize_bengali_numbers,
 )
 
 INLINE_TOC_PATTERNS = ("সূচীপত্র", "সুচিপত্র", "সূচী", "table of contents", "contents")

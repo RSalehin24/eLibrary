@@ -1,12 +1,43 @@
+from urllib.parse import urljoin
+from uuid import uuid4
+
+from apps.ingestion.models import SourceCatalogEntry
+from apps.ingestion.pipeline.scraper_support.network import create_session_with_retries
+from apps.ingestion.services.resolution import TitleResolver, get_with_host_fallback
+from apps.ingestion.services.resolution_support import (
+    fetch_source_page_metadata,
+    metadata_entry_defaults,
+    split_display_title,
+    upsert_source_catalog_entry,
+)
+from bs4 import BeautifulSoup
+
+from ..models import ProcessingSyncStatus
+from ..source import normalize_source_url
+from . import automation_advancement as _automation
+from . import catalog_phase_helpers as _phase_helpers
+from . import catalog_progress_state as _progress
+from . import catalog_record_sync as _catalog_sync
+from . import checkpoint_and_runtime_adapters as _checkpoints
+from . import processing_state_queries as _queries
+from . import service_imports_and_constants as _constants
+from . import state_serializers as _state
+from . import sync_runner as _sync_runner
+from . import sync_status_messages as _messages
 
 
 def parse_incomplete_catalog_page(soup):
     entries = []
     seen_urls = set()
-    anchors = soup.select(".entry-title a[href], article h2 a[href], article h3 a[href]")
+    anchors = soup.select(
+        ".entry-title a[href], article h2 a[href], article h3 a[href]"
+    )
 
     for anchor in anchors:
-        href = urljoin(INCOMPLETE_CATALOG_URL, anchor.get("href", ""))
+        href = urljoin(
+            _constants.incomplete_catalog_url(),
+            anchor.get("href", ""),
+        )
         try:
             normalized_url = normalize_source_url(href)
         except ValueError:
@@ -29,7 +60,7 @@ def parse_incomplete_catalog_page(soup):
                     "title": title or display_title,
                     "display_title": display_title,
                     "author_line": author_line,
-                    "incompleteCategoryUrl": INCOMPLETE_CATALOG_URL,
+                    "incompleteCategoryUrl": _constants.incomplete_catalog_url(),
                     "metadata_source": "incomplete_archive_page",
                 },
             )
@@ -50,7 +81,7 @@ def incomplete_resolution_category(raw_data, fallback=""):
         "book_type",
     ):
         value = str(raw_data.get(key) or "").strip()
-        if value and not category_is_incomplete(value):
+        if value and not _phase_helpers.category_is_incomplete(value):
             return value
     return str(fallback or "").strip()
 
@@ -76,7 +107,7 @@ def incomplete_remote_payload(stored_entry):
 def fetch_live_incomplete_page(resolver, page_number):
     response = get_with_host_fallback(
         resolver.session,
-        incomplete_catalog_page_url(page_number),
+        _catalog_sync.incomplete_catalog_page_url(page_number),
         timeout=30,
     )
     try:
@@ -86,9 +117,9 @@ def fetch_live_incomplete_page(resolver, page_number):
             page_number > 1
             and getattr(getattr(exc, "response", None), "status_code", None) == 404
         ):
-            logger.info(
+            _constants.logger.info(
                 "Incomplete catalog page %s returned 404; treating it as the end of the archive.",
-                incomplete_catalog_page_url(page_number),
+                _catalog_sync.incomplete_catalog_page_url(page_number),
             )
             return []
         raise
@@ -104,7 +135,9 @@ def fetch_live_incomplete_page(resolver, page_number):
         enriched_entry = dict(entry)
         try:
             metadata = fetch_source_page_metadata(source_url, session=resolver.session)
-            resolution_category = incomplete_resolution_category(metadata.get("raw_data"))
+            resolution_category = incomplete_resolution_category(
+                metadata.get("raw_data")
+            )
             enriched_entry = {
                 **metadata,
                 "raw_data": {
@@ -112,12 +145,12 @@ def fetch_live_incomplete_page(resolver, page_number):
                     "category": "অসম্পূর্ণ বই",
                     "willResolveToCategory": resolution_category,
                     "metadataSourceCategory": resolution_category,
-                    "incompleteCategoryUrl": INCOMPLETE_CATALOG_URL,
+                    "incompleteCategoryUrl": _constants.incomplete_catalog_url(),
                     "metadata_source": "incomplete_archive_page",
                 },
             }
         except Exception:
-            logger.warning(
+            _constants.logger.warning(
                 "Incomplete metadata enrichment failed for %s; using archive listing metadata.",
                 source_url,
                 exc_info=True,
@@ -128,7 +161,7 @@ def fetch_live_incomplete_page(resolver, page_number):
                     **(entry.get("raw_data") or {}),
                     "category": "অসম্পূর্ণ বই",
                     "willResolveToCategory": "",
-                    "incompleteCategoryUrl": INCOMPLETE_CATALOG_URL,
+                    "incompleteCategoryUrl": _constants.incomplete_catalog_url(),
                     "metadata_source": "incomplete_archive_page",
                 },
             }
@@ -183,42 +216,46 @@ def fetch_live_incomplete_remote_pages(page_size=100, max_pages=250):
 def start_sync(
     remote_pages=None,
     *,
-    run_mode=SYNC_RUN_MODE_MANUAL,
+    run_mode=_constants.SYNC_RUN_MODE_MANUAL,
     sync_key=None,
-    trigger_source=SYNC_TRIGGER_SOURCE_BUTTON,
+    trigger_source=_constants.SYNC_TRIGGER_SOURCE_BUTTON,
 ):
-    sync_key = sync_key or sync_key_for_run_mode(run_mode)
+    sync_key = sync_key or _progress.sync_key_for_run_mode(run_mode)
     live_fetch = False
     session_id = ""
-    if run_mode == SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
-        live_fetch = remote_pages is None and should_use_live_incomplete_fetch()
-        if remote_pages is None:
-            remote_pages = [] if live_fetch else incomplete_sync_remote_pages()
-        elif not isinstance(remote_pages, list):
-            remote_pages = [] if live_fetch else incomplete_sync_remote_pages()
+    if run_mode == _constants.SYNC_RUN_MODE_INCOMPLETE_AUTOMATION:
+        live_fetch = (
+            remote_pages is None and _automation.should_use_live_incomplete_fetch()
+        )
+        if remote_pages is None or not isinstance(remote_pages, list):
+            remote_pages = (
+                [] if live_fetch else _automation.incomplete_sync_remote_pages()
+            )
     else:
-        remote_pages = catalog_remote_pages(remote_pages)
-        live_fetch = should_use_live_catalog_fetch(remote_pages, run_mode)
+        remote_pages = _queries.catalog_remote_pages(remote_pages)
+        live_fetch = _catalog_sync.should_use_live_catalog_fetch(remote_pages, run_mode)
         if not live_fetch and not remote_pages and SourceCatalogEntry.objects.exists():
-            remote_pages = source_catalog_remote_pages()
+            remote_pages = _catalog_sync.source_catalog_remote_pages()
         session_id = str(uuid4())
 
-    state = get_sync_state(sync_key)
+    state = _state.get_sync_state(sync_key)
     preserved_request_creation_phase_state = None
-    if sync_key == PROCESSING_SYNC_KEY_CATALOG:
-        current_request_creation_phase_state = catalog_phase_state(
+    if sync_key == _constants.PROCESSING_SYNC_KEY_CATALOG:
+        current_request_creation_phase_state = _progress.catalog_phase_state(
             state,
-            CATALOG_REQUEST_CREATION_PHASE,
+            _constants.CATALOG_REQUEST_CREATION_PHASE,
         )
         if (
             current_request_creation_phase_state.get("status")
-            == CATALOG_PHASE_STATUS_PAUSED
+            == _constants.CATALOG_PHASE_STATUS_PAUSED
         ):
-            preserved_request_creation_phase_state = current_request_creation_phase_state
+            preserved_request_creation_phase_state = (
+                current_request_creation_phase_state
+            )
     state.remote_pages = remote_pages
     state.status = ProcessingSyncStatus.SYNCING
-    if sync_key == PROCESSING_SYNC_KEY_CATALOG:
-        state.progress = build_catalog_sync_progress(
+    if sync_key == _constants.PROCESSING_SYNC_KEY_CATALOG:
+        state.progress = _messages.build_catalog_sync_progress(
             state,
             run_mode,
             live_fetch=live_fetch,
@@ -227,7 +264,7 @@ def start_sync(
             request_creation_phase_state=preserved_request_creation_phase_state,
         )
     else:
-        state.progress = build_sync_progress(
+        state.progress = _messages.build_sync_progress(
             run_mode,
             live_fetch=live_fetch,
             trigger_source=trigger_source,
@@ -238,14 +275,16 @@ def start_sync(
     state.skipped_count = 0
     state.updated_count = 0
     state.appended_count = 0
-    state.message = sync_start_message(run_mode)
+    state.message = _checkpoints.sync_start_message(run_mode)
     state.task_id = ""
     state.queue_name = ""
     state.last_error = ""
-    save_sync_state(state)
-    update_automation_run_status(run_mode, state.message)
-    if should_enqueue_processing_sync_work():
-        dispatch_sync_task(state, force=True)
-    elif should_run_processing_jobs_inline():
-        run_processing_sync_until_blocked(singleton_key=state.singleton_key, task_id="")
+    _checkpoints.save_sync_state(state)
+    _messages.update_automation_run_status(run_mode, state.message)
+    if _checkpoints.should_enqueue_processing_sync_work():
+        _catalog_sync.dispatch_sync_task(state, force=True)
+    elif _checkpoints.should_run_processing_jobs_inline():
+        _sync_runner.run_processing_sync_until_blocked(
+            singleton_key=state.singleton_key, task_id=""
+        )
     return state

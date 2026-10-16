@@ -79,7 +79,7 @@ def make_book_tickets_pdf(books, *, record_type):
     ticket_style = ParagraphStyle("CatalogTicketBody", parent=styles["BodyText"], fontName=font_name, fontSize=8, leading=10)
 
     cells = []
-    row = []
+    row: list[Paragraph | str] = []
     for book in books:
         ticket_html = f"<b>{__import__('html').escape(book.catalog_code or '')}</b><br/>{__import__('html').escape(book.title or '')}<br/>{__import__('html').escape(identity_ticket_contributor_line(book))}"
         row.append(Paragraph(ticket_html, ticket_style))

@@ -263,10 +263,10 @@ def test_deleting_queued_submission_marks_it_deleted_and_retry_queues_it_again(c
     )
 
     monkeypatch.setattr(
-        "apps.ingestion.services.submissions.revoke_processing_task",
+        "apps.ingestion.services.submission_modules.job_lifecycle.revoke_processing_task",
         lambda task_id, terminate=False: None,
     )
-    monkeypatch.setattr("apps.ingestion.services.submissions.dispatch_processing_job", lambda job, force=False: job)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job", lambda job, force=False: job)
     client.force_login(user)
 
     delete_response = client.delete(f"/api/ingestion/submissions/{submission.id}/")

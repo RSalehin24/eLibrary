@@ -1,3 +1,46 @@
+from ..seed_e2e_data_config import (
+    ACCESS_USER_EMAIL,
+    ACCESS_USER_PASSWORD,
+    BOOK_DEFINITIONS,
+    DEFAULT_WRITER,
+    E2E_EMAIL_DOMAIN,
+    E2E_SOURCE_PREFIX,
+    E2E_TITLE_PREFIX,
+    Book,
+    Bookmark,
+    BookRecordType,
+    BookSource,
+    BookSubmission,
+    CatalogCurationRun,
+    CommandError,
+    ContentFile,
+    ContributorRole,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+    JobType,
+    LifecycleState,
+    PermissionGrant,
+    PermissionScope,
+    ProcessingJob,
+    Q,
+    ReadingSession,
+    ResolutionStatus,
+    ReviewState,
+    SourceCatalogEntry,
+    SubmissionInputType,
+    User,
+    build_simple_epub,
+    cache,
+    call_command,
+    normalize_catalog_text,
+    replace_book_relations,
+    seed_source_url,
+    settings,
+    transaction,
+)
+
+
 def handle(self, *args, **options):
     if not settings.SUPER_ADMIN_EMAIL or not settings.SUPER_ADMIN_PASSWORD:
         raise CommandError(
@@ -46,14 +89,14 @@ def handle(self, *args, **options):
             "Seeded live E2E data for access, catalog, book detail, and processing flows."
         )
     )
+
+
 def cleanup_existing_records(self):
     e2e_book_filter = Q(book__title__startswith=E2E_TITLE_PREFIX) | Q(
         book__source_urls__normalized_source_url__startswith=E2E_SOURCE_PREFIX
     )
     for asset in (
-        GeneratedAsset.objects.select_related("book")
-        .filter(e2e_book_filter)
-        .distinct()
+        GeneratedAsset.objects.select_related("book").filter(e2e_book_filter).distinct()
     ):
         if asset.file and asset.file.name:
             asset.file.delete(save=False)
@@ -62,7 +105,9 @@ def cleanup_existing_records(self):
         Q(title__startswith=E2E_TITLE_PREFIX)
         | Q(source_urls__normalized_source_url__startswith=E2E_SOURCE_PREFIX)
     ).distinct().delete()
-    BookSource.objects.filter(normalized_source_url__startswith=E2E_SOURCE_PREFIX).delete()
+    BookSource.objects.filter(
+        normalized_source_url__startswith=E2E_SOURCE_PREFIX
+    ).delete()
     SourceCatalogEntry.objects.filter(source_url__startswith=E2E_SOURCE_PREFIX).delete()
     CatalogCurationRun.objects.all().delete()
     BookSubmission.objects.filter(
@@ -72,6 +117,8 @@ def cleanup_existing_records(self):
     ).delete()
     PermissionGrant.objects.filter(user__email__endswith=E2E_EMAIL_DOMAIN).delete()
     User.objects.filter(email__endswith=E2E_EMAIL_DOMAIN).delete()
+
+
 def create_access_user(self, admin: User) -> User:
     access_user = User.objects.create_user(
         email=ACCESS_USER_EMAIL,
@@ -85,6 +132,8 @@ def create_access_user(self, admin: User) -> User:
         granted_by=admin,
     )
     return access_user
+
+
 def create_books(self) -> dict[str, Book]:
     books: dict[str, Book] = {}
     for key, definition in BOOK_DEFINITIONS.items():
@@ -133,6 +182,8 @@ def create_books(self) -> dict[str, Book]:
             )
         books[key] = book
     return books
+
+
 def attach_asset(
     self,
     book: Book,
@@ -153,6 +204,8 @@ def attach_asset(
     asset.file.save(filename, ContentFile(payload), save=False)
     asset.storage_path = asset.file.name
     asset.save()
+
+
 def create_access_grants(self, admin: User, access_user: User):
     access_book = Book.objects.get(title=BOOK_DEFINITIONS["access"].title)
     PermissionGrant.objects.create(
@@ -161,6 +214,8 @@ def create_access_grants(self, admin: User, access_user: User):
         scope=PermissionScope.METADATA_EDIT,
         granted_by=admin,
     )
+
+
 def create_reader_state(self, admin: User, detail_book: Book):
     ReadingSession.objects.create(
         user=admin,
@@ -175,6 +230,8 @@ def create_reader_state(self, admin: User, detail_book: Book):
         label="Seeded Bookmark",
         note="Remove me during the live test.",
     )
+
+
 def create_submission_record(
     self,
     *,
@@ -196,7 +253,9 @@ def create_submission_record(
         origin=origin,
         original_input=title,
         normalized_input=normalize_catalog_text(title),
-        resolved_url=resolved_url if resolved_url is not None else seed_source_url(title),
+        resolved_url=resolved_url
+        if resolved_url is not None
+        else seed_source_url(title),
         resolution_status=resolution_status,
         resolution_confidence=resolution_confidence,
         status=status,
@@ -204,6 +263,8 @@ def create_submission_record(
         linked_book=linked_book,
         error_message=error_message,
     )
+
+
 def create_processing_job_record(
     self,
     *,

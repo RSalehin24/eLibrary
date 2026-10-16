@@ -1,3 +1,4 @@
+from urllib.parse import unquote, urlparse
 from pathlib import Path
 
 from rest_framework import serializers
@@ -88,3 +89,17 @@ class EpubAssetReplaceSerializer(serializers.Serializer):
 class MetadataContributorInputSerializer(serializers.Serializer):
     name = serializers.CharField()
     role = serializers.ChoiceField(choices=ContributorRole.choices)
+
+
+def serialize_source_record(source):
+    url = source.normalized_source_url or source.source_url
+    parsed = urlparse(url)
+    return {
+        "url": url,
+        "display_url": unquote(url),
+        "display_path": unquote(parsed.path).strip("/") or parsed.netloc,
+        "source_title": source.source_title,
+        "source_type": source.source_type,
+        "site": parsed.netloc,
+        "is_primary": source.is_primary,
+    }

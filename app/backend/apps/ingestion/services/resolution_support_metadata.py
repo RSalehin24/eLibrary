@@ -120,7 +120,7 @@ def parse_source_page_metadata(html, source_url):
         author_line = title_author
 
     canonical = soup.find("link", rel="canonical")
-    canonical_url = canonical.get("href", "").strip() if canonical else ""
+    canonical_url = str(canonical.get("href") or "").strip() if canonical else ""
     normalized_url = normalize_source_url(canonical_url or source_url)
     if not full_title and not author_line and not series and not category:
         raise ValueError("The source page did not contain recognizable metadata.")
@@ -155,7 +155,9 @@ def fetch_source_page_metadata(source_url, session=None):
 
 def upsert_source_catalog_entry(metadata):
     defaults = dict(metadata)
-    incoming_raw_data = defaults.get("raw_data") if isinstance(defaults.get("raw_data"), dict) else {}
+    incoming_raw_data = defaults.get("raw_data")
+    if not isinstance(incoming_raw_data, dict):
+        incoming_raw_data = {}
     existing = SourceCatalogEntry.objects.filter(source_url=metadata["source_url"]).only("id", "raw_data").first()
     if existing is not None:
         defaults["raw_data"] = {

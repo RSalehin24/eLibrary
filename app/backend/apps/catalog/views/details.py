@@ -1,3 +1,4 @@
+from rest_framework.exceptions import PermissionDenied
 from django.db.models import Exists, OuterRef, Subquery
 from django.http import Http404
 from django.shortcuts import get_object_or_404
@@ -22,9 +23,12 @@ class BookDetailView(generics.RetrieveDestroyAPIView):
     lookup_field = "slug"
 
     def get_queryset(self):
-        owned = UserBook.objects.filter(book=OuterRef("pk"), user=self.request.user).order_by("-created_at")
-        kindle_sent = UserBookKindleSend.objects.filter(book=OuterRef("pk"), user=self.request.user).order_by("-created_at")
-        latest_submission = BookSubmission.objects.filter(linked_book=OuterRef("pk"), submitter=self.request.user).order_by("-created_at").values("created_at")[:1]
+        identity = self.request.user.pk
+        if identity is None:
+            raise PermissionDenied("Sign in is required.")
+        owned = UserBook.objects.filter(book=OuterRef("pk"), user_id=identity).order_by("-created_at")
+        kindle_sent = UserBookKindleSend.objects.filter(book=OuterRef("pk"), user_id=identity).order_by("-created_at")
+        latest_submission = BookSubmission.objects.filter(linked_book=OuterRef("pk"), submitter_id=identity).order_by("-created_at").values("created_at")[:1]
         return (
             Book.objects.prefetch_related("book_contributors__contributor", "book_series__series", "book_categories__category", "generated_assets", "source_urls", "processing_jobs")
             .annotate(
@@ -79,6 +83,9 @@ class BookMetadataUpdateView(generics.UpdateAPIView):
     lookup_field = "slug"
 
     def get_queryset(self):
+        identity = self.request.user.pk
+        if identity is None:
+            raise PermissionDenied("Sign in is required.")
         return Book.objects.prefetch_related("book_contributors__contributor", "book_series__series", "book_categories__category")
 
     def update(self, request, *args, **kwargs):
@@ -101,6 +108,9 @@ class MetadataReviewListCreateView(generics.ListCreateAPIView):
         return book
 
     def get_queryset(self):
+        identity = self.request.user.pk
+        if identity is None:
+            raise PermissionDenied("Sign in is required.")
         return MetadataReview.objects.filter(book=self.get_book()).select_related("requested_by", "reviewer")
 
     def perform_create(self, serializer):

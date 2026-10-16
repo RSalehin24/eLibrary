@@ -1,0 +1,7 @@
+FROM nginx:1.30.6-alpine@sha256:970364228b1e4f932abc22d321932816782cca8a20b85a77552a7cfe9acfb3b5
+RUN addgroup -g 10001 library && addgroup nginx library
+COPY deploy/nginx/*.conf /etc/nginx/
+COPY deploy/nginx/production.conf.template /etc/nginx/library.conf.template
+COPY deploy/start-proxy.sh /usr/local/bin/start-library-proxy
+RUN chmod 755 /usr/local/bin/start-library-proxy
+ENTRYPOINT ["/usr/local/bin/start-library-proxy"]

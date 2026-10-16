@@ -114,38 +114,23 @@ def mock_dependencies(
             "skipped_count": 0,
         }
 
-    monkeypatch.setattr(
-        "apps.processing.services.create_session_with_retries",
-        fake_create_session,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.TitleResolver.archive_query_params",
-        fake_archive_query_params,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.TitleResolver.parse_catalog_page",
-        fake_parse_catalog_page,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.get_with_host_fallback",
-        fake_get_with_host_fallback,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.fetch_source_page_metadata",
-        fake_fetch_metadata,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.upsert_source_catalog_entry",
-        fake_upsert_entry,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.source_catalog_entry_payload",
-        fake_entry_payload,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.upsert_remote_records",
-        fake_upsert_remote,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.create_session_with_retries', fake_create_session)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_resolution.create_session_with_retries', fake_create_session)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.create_session_with_retries', fake_create_session)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.TitleResolver.archive_query_params', fake_archive_query_params)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.TitleResolver.parse_catalog_page', fake_parse_catalog_page)
+    monkeypatch.setattr('apps.processing.service_modules.catalog_refresh.get_with_host_fallback', fake_get_with_host_fallback)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.get_with_host_fallback', fake_get_with_host_fallback)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.get_with_host_fallback', fake_get_with_host_fallback)
+    monkeypatch.setattr('apps.processing.service_modules.catalog_refresh.fetch_source_page_metadata', fake_fetch_metadata)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.fetch_source_page_metadata', fake_fetch_metadata)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.fetch_source_page_metadata', fake_fetch_metadata)
+    monkeypatch.setattr('apps.processing.service_modules.catalog_refresh.upsert_source_catalog_entry', fake_upsert_entry)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.upsert_source_catalog_entry', fake_upsert_entry)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_persistence.upsert_source_catalog_entry', fake_upsert_entry)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.upsert_source_catalog_entry', fake_upsert_entry)
+    monkeypatch.setattr('apps.processing.service_modules.remote_record_queries.source_catalog_entry_payload', fake_entry_payload)
+    monkeypatch.setattr('apps.processing.service_modules.catalog_record_sync.upsert_remote_records', fake_upsert_remote)
 
 
 class TestRefreshCatalogParallel:

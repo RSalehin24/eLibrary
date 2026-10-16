@@ -1,6 +1,44 @@
-
-
 def process_submission_job(job_id, retry_count=0, task_id=""):
+    from .book_persistence import (
+        cancel_requested_for_job,
+        complete_processed_submission,
+        detect_metadata_duplicate,
+        find_exact_existing_book,
+        persist_curated_book,
+        sync_assets,
+    )
+    from .job_lifecycle import (
+        CuratedDocumentStatus,
+        DuplicateReview,
+        DuplicateReviewStatus,
+        JobStatus,
+        JobType,
+        ProcessingJob,
+        ReviewState,
+        SubmissionStatus,
+        curate_book_document,
+        curate_scraped_book_data,
+        curated_document_with_projection,
+        export_payload_from_book,
+        finalize_cancelled_job,
+        find_existing_book_by_source_url,
+        generate_exports,
+        high_fidelity_scrape_limits,
+        normalize_source_url,
+        persist_curated_document,
+        record_job_log,
+        scrape_book,
+        scrape_book_high_fidelity,
+        timezone,
+    )
+    from .resolution_and_queueing import (
+        fulfill_submission_with_existing_book,
+        resolve_submission,
+    )
+    from .retry_and_deduplication import (
+        capture_source_page_metadata,
+        sync_deduplicated_submissions,
+    )
     job = ProcessingJob.objects.select_related("submission", "submission__submitter", "book").get(pk=job_id)
     submission = job.submission
     reprocess_book = None
@@ -37,13 +75,9 @@ def process_submission_job(job_id, retry_count=0, task_id=""):
 
         normalized_url = normalize_source_url(submission.resolved_url)
         if job.job_type == JobType.REPROCESS:
-            reprocess_book_id = job.payload.get("reprocess_book_id") or job.book_id or submission.linked_book_id
-            reprocess_book = Book.objects.filter(pk=reprocess_book_id, deleted_at__isnull=True).first()
-            if reprocess_book is None:
-                raise ValueError("The target book for regeneration is unavailable.")
-            if reprocess_book.state != LifecycleState.PROCESSING:
-                reprocess_book.state = LifecycleState.PROCESSING
-                reprocess_book.save(update_fields=["state", "updated_at"])
+            from .reprocessing import prepare_regeneration
+
+            reprocess_book = prepare_regeneration(job)
 
         if cancel_requested_for_job(job):
             return finalize_cancelled_job(job)
@@ -245,49 +279,14 @@ def process_submission_job(job_id, retry_count=0, task_id=""):
         )
         return job
     except Exception as exc:
-        logger.exception("Submission processing failed", extra={"submission_id": str(submission.id)})
-        next_retry_count = int(retry_count or 0) + 1
-        should_retry = next_retry_count < MAX_PROCESSING_JOB_ATTEMPTS
+        from .job_failures import handle_submission_failure
 
-        if should_retry:
-            requeue_processing_job(
-                job,
-                retry_count=next_retry_count,
-                message=PROCESSING_RETRY_MESSAGE_TEMPLATE.format(
-                    attempt=next_retry_count,
-                    max_attempts=MAX_PROCESSING_JOB_ATTEMPTS,
-                ),
-                preserve_dispatch_state=bool(task_id or job.task_id),
-            )
-            raise
-
-        submission.status = SubmissionStatus.FAILED
-        submission.error_message = str(exc)
-        submission.save(update_fields=["status", "error_message", "updated_at"])
-        sync_deduplicated_submissions(submission)
-        if reprocess_book is not None:
-            previous_book_state = job.payload.get("previous_book_state")
-            if previous_book_state:
-                reprocess_book.state = previous_book_state
-                reprocess_book.save(update_fields=["state", "updated_at"])
-        job.status = JobStatus.FAILED
-        job.task_id = ""
-        job.queue_name = ""
-        job.last_error = str(exc)
-        job.finished_at = timezone.now()
-        job.save(
-            update_fields=[
-                "status",
-                "task_id",
-                "queue_name",
-                "last_error",
-                "finished_at",
-                "updated_at",
-            ]
-        )
-        record_job_log(job, "error", "Submission processing failed.", {"error": str(exc)})
-        raise
+        return handle_submission_failure(job, exc, reprocess_book)
 
 
 def legacy_config_entries_as_submission_inputs():
+    from .job_lifecycle import load_legacy_config_entries
     return [{"kind": "url", "value": url, "label": name} for name, url in load_legacy_config_entries()]
+
+
+__all__ = ['legacy_config_entries_as_submission_inputs', 'process_submission_job']

@@ -1,0 +1,23 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.3.6-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_TEST_USER:?Set a local test broker user}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_TEST_PASSWORD:?Set a unique local test password}
+      RABBITMQ_DEFAULT_VHOST: library-test
+    ports:
+      - "127.0.0.1:5673:5672"
+      - "127.0.0.1:15673:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 15s
+    mem_limit: 768m
+    cpus: 1
+    volumes:
+      - broker_data:/var/lib/rabbitmq
+
+volumes:
+  broker_data:

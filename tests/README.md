@@ -7,8 +7,30 @@ The root `tests/` folder keeps all automated coverage organized by execution lay
 - `tests/frontend/unit/`: frontend unit coverage executed with `node --test`
 - `tests/frontend/e2e/`: Playwright browser stories executed against the real Dockerized local application
 - `tests/frontend/playwright.config.js`: shared Playwright config and live auth/bootstrap setup
+- `tests/web/`: Next.js helper tests and the current five-profile Playwright matrix
+- `tests/performance/`: disposable PostgreSQL query profiles and capacity harness checks
+
+The capacity harness can be checked without Docker, k6, or new dependencies:
+
+```sh
+node --experimental-vm-modules --test tests/performance/capacity.test.mjs
+node --check tests/performance/capacity.mjs
+```
+
+The VM-module flag supplies test doubles for the k6 imports. The approved pinned
+k6 image also passed actual local HTTPS simulations; use the guarded runner in
+[capacity verification](../docs/operations/capacity-verification.md). Completed
+Linux/device/mail/browser simulations and their limits are recorded in
+[simulator acceptance](../docs/operations/simulator-acceptance.md).
 
 All repo-facing helpers under `tests/scripts/` support `-h` or `--help` for usage details. Use `--` before passthrough flags when you want to forward options such as `-k` or `--workers` to the underlying test runner.
+
+Run pytest processes sequentially when they use the same managed test database.
+The legacy engine integrations also use real Redis pub/sub and worker-capacity
+keys. Pause the local preview processing worker during those tests, or use a
+separate Redis server. Different logical databases share
+[Pub/Sub channels](https://redis.io/docs/latest/develop/pubsub/#database--scoping),
+so changing the database number does not isolate worker heartbeats.
 
 ## Coverage Map
 

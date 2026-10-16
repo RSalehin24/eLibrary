@@ -1,3 +1,5 @@
+from apps.catalog.locking import lock_title
+
 CATALOG_CODE_LENGTH = 10
 CATALOG_CODE_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 CATALOG_CODE_BASE = len(CATALOG_CODE_ALPHABET)
@@ -132,6 +134,7 @@ def is_entity_catalog_code(value, *, entity_tag):
 
 
 def next_entity_sequence(model, field_name, *, entity_tag, exclude_pk=None):
+    lock_title("catalog-code-allocation")
     queryset = model.objects.exclude(**{f"{field_name}__isnull": True}).exclude(**{field_name: ""})
     if exclude_pk:
         queryset = queryset.exclude(pk=exclude_pk)
@@ -225,6 +228,7 @@ def is_book_catalog_code(value):
 def build_book_catalog_code(book):
     from .books import Book
 
+    lock_title("catalog-code-allocation")
     category_sequence = primary_category_sequence_for_book(book)
     writer_sequence = primary_writer_sequence_for_book(book)
     current_code = (book.catalog_code or "").strip().upper()

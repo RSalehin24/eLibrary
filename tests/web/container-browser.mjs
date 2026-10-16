@@ -1,0 +1,17 @@
+import { createServer, request } from "node:http";
+import { spawn } from "node:child_process";
+
+function localForwarder(port) {
+  return createServer((incoming, outgoing) => {
+  const upstream = request(new URL(incoming.url, `http://host.docker.internal:${port}`), {
+    method: incoming.method, headers: { ...incoming.headers, host: `127.0.0.1:${port}` },
+  }, (response) => { outgoing.writeHead(response.statusCode, response.headers); response.pipe(outgoing); });
+  upstream.on("error", () => { outgoing.writeHead(502); outgoing.end("Local test server is unavailable."); });
+  incoming.pipe(upstream);
+  });
+}
+
+const servers = [localForwarder(3000), localForwarder(8000)];
+await Promise.all(servers.map((server, index) => new Promise((resolve, reject) => { server.once("error", reject); server.listen(index === 0 ? 3000 : 8000, "127.0.0.1", resolve); })));
+const runner = spawn("node", ["app/web/node_modules/playwright/cli.js", "test", "--config", "tests/web/playwright.config.mjs", ...process.argv.slice(2)], { stdio: "inherit" });
+runner.once("exit", (code) => { for (const server of servers) { server.closeAllConnections(); server.close(); } process.exitCode = code ?? 1; });

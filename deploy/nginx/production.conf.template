@@ -1,0 +1,59 @@
+user nginx;
+worker_processes auto;
+pid /tmp/nginx.pid;
+error_log /dev/stderr warn;
+
+events { worker_connections 2048; }
+
+http {
+    include /etc/nginx/mime.types;
+    default_type application/octet-stream;
+    server_tokens off;
+    sendfile on;
+    tcp_nopush on;
+    keepalive_timeout 30;
+    log_format operation '$request_id $request_method $status $request_time $upstream_response_time $body_bytes_sent';
+    access_log /dev/stdout operation;
+
+    resolver 127.0.0.11 valid=5s ipv6=off;
+    resolver_timeout 3s;
+    upstream library_api {
+        zone api_addresses 64k;
+        server api:8000 resolve;
+        keepalive 32;
+    }
+    upstream library_frontend {
+        zone frontend_addresses 64k;
+        server frontend:3000 resolve;
+        keepalive 16;
+    }
+
+    map $host $canonical_host {
+        default 0;
+        ${PUBLIC_HOST} 1;
+    }
+
+    server {
+        listen 80;
+        if ($canonical_host = 0) { return 444; }
+        return 308 ${PUBLIC_SITE_URL}$request_uri;
+    }
+
+    server {
+        listen 443 ssl;
+        server_name ${PUBLIC_HOST};
+        if ($canonical_host = 0) { return 444; }
+        ssl_certificate /etc/nginx/tls/fullchain.pem;
+        ssl_certificate_key /etc/nginx/tls/privkey.pem;
+        ssl_protocols TLSv1.2 TLSv1.3;
+        ssl_session_cache shared:TLS:10m;
+        ssl_session_timeout 1d;
+        ssl_session_tickets off;
+        set $security_hsts "max-age=31536000";
+        include /etc/nginx/response-security.conf;
+        set $protected_storage /data/media;
+        set $maintenance_static /data/static;
+        set $frontend_static /data/next-static;
+        include /etc/nginx/application-routes.conf;
+    }
+}

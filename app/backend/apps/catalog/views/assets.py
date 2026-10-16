@@ -32,7 +32,7 @@ class BookEpubReplaceView(APIView):
         asset.source_job = None
         asset.legacy_path = ""
         asset.file.save(f"{book.title}.epub", ContentFile(content), save=False)
-        asset.storage_path = asset.file.name
+        asset.storage_path = asset.file.name or ""
         asset.save(update_fields=["status", "content_type", "file_size", "checksum", "source_job", "legacy_path", "file", "storage_path", "updated_at"])
         book.refresh_from_db()
         return Response(BookDetailSerializer(book, context={"request": request}).data)

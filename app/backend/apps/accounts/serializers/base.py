@@ -1,26 +1,31 @@
-from django.conf import settings
-from rest_framework import serializers
-import email.utils
+from typing import ClassVar
 
+from rest_framework import serializers
+
+from apps.accounts.mail_configuration import kindle_sender_email
 from apps.accounts.models import User
 
 PASSWORD_MIN_LENGTH_MESSAGE = "Ensure this field has at least 12 characters."
-PASSWORD_MIN_LENGTH_ERROR_MESSAGES = {
-    "min_length": PASSWORD_MIN_LENGTH_MESSAGE
-}
+PASSWORD_MIN_LENGTH_ERROR_MESSAGES = {"min_length": PASSWORD_MIN_LENGTH_MESSAGE}
 
 
 class UserSerializer(serializers.ModelSerializer):
     totp_enabled = serializers.BooleanField(source="has_totp_enabled", read_only=True)
     totp_required = serializers.BooleanField(read_only=True)
-    totp_setup_required = serializers.BooleanField(source="requires_totp_setup", read_only=True)
-    capabilities = serializers.ListField(source="capability_scopes", child=serializers.CharField(), read_only=True)
+    totp_setup_required = serializers.BooleanField(
+        source="requires_totp_setup", read_only=True
+    )
+    capabilities = serializers.ListField(
+        source="capability_scopes", child=serializers.CharField(), read_only=True
+    )
     profile_image_url = serializers.SerializerMethodField()
-    kindle_emails = serializers.ListField(child=serializers.EmailField(), read_only=True)
+    kindle_emails = serializers.ListField(
+        child=serializers.EmailField(), read_only=True
+    )
 
     class Meta:
         model = User
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "email",
             "full_name",
@@ -35,7 +40,7 @@ class UserSerializer(serializers.ModelSerializer):
             "kindle_emails",
         ]
 
-    def get_profile_image_url(self, obj):
+    def get_profile_image_url(self, obj) -> str:
         if not obj.profile_image:
             return ""
         request = self.context.get("request")
@@ -53,12 +58,12 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,
         min_length=12,
-        error_messages=PASSWORD_MIN_LENGTH_ERROR_MESSAGES,
+        error_messages={"min_length": PASSWORD_MIN_LENGTH_MESSAGE},
     )
 
     class Meta:
         model = User
-        fields = ["email", "full_name", "password"]
+        fields: ClassVar[list[str]] = ["email", "full_name", "password"]
 
     def create(self, validated_data):
         password = validated_data.pop("password")
@@ -67,7 +72,9 @@ class RegisterSerializer(serializers.ModelSerializer):
 
 class ManagedUserSerializer(UserSerializer):
     grant_count = serializers.SerializerMethodField()
-    global_scopes = serializers.ListField(source="global_grant_scopes", child=serializers.CharField(), read_only=True)
+    global_scopes = serializers.ListField(
+        source="global_grant_scopes", child=serializers.CharField(), read_only=True
+    )
     can_resend_setup_email = serializers.BooleanField(read_only=True)
 
     class Meta(UserSerializer.Meta):
@@ -93,10 +100,5 @@ class ProfileSerializer(UserSerializer):
             "kindle_sender_email",
         ]
 
-    def get_kindle_sender_email(self, _obj):
-        raw_email = (
-            getattr(settings, "ACCOUNT_INVITE_FROM_EMAIL", "")
-            or getattr(settings, "DEFAULT_FROM_EMAIL", "")
-            or ""
-        ).strip("'\" ")
-        return email.utils.parseaddr(raw_email)[1]
+    def get_kindle_sender_email(self, _obj) -> str:
+        return kindle_sender_email()

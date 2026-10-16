@@ -1,13 +1,18 @@
-from pathlib import Path
 import uuid
+from pathlib import Path
+from typing import ClassVar
 
-from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.db import models
+from django.conf import settings
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import AbstractUser, PermissionsMixin
+from django.db import models, transaction
+from django.utils import timezone
+from django.utils.crypto import salted_hmac
 
 from apps.common.models import TimeStampedModel
 
 
-class UserManager(BaseUserManager):
+class UserManager(BaseUserManager["User"]):
     use_in_migrations = True
 
     def _create_user(self, email, password, **extra_fields):
@@ -43,8 +48,21 @@ def profile_image_upload_to(instance, filename):
     return f"profile-images/{uuid.uuid4()}{suffix}"
 
 
-class User(AbstractUser, TimeStampedModel):
+class User(AbstractBaseUser, PermissionsMixin, TimeStampedModel):
     username = None
+    first_name = models.CharField("first name", max_length=150, blank=True)
+    last_name = models.CharField("last name", max_length=150, blank=True)
+    is_staff = models.BooleanField(
+        "staff status",
+        default=False,
+        help_text="Designates whether the user can log into this admin site.",
+    )
+    is_active = models.BooleanField(
+        "active",
+        default=True,
+        help_text="Designates whether this user should be treated as active. Unselect this instead of deleting accounts.",
+    )
+    date_joined = models.DateTimeField("date joined", default=timezone.now)
     email = models.EmailField(unique=True)
     full_name = models.CharField(max_length=255, blank=True)
     profile_image = models.FileField(upload_to=profile_image_upload_to, blank=True)
@@ -52,11 +70,53 @@ class User(AbstractUser, TimeStampedModel):
     totp_required = models.BooleanField(default=False)
     email_setup_pending = models.BooleanField(default=False)
     password_setup_nonce = models.PositiveIntegerField(default=0)
+    session_revision = models.PositiveIntegerField(default=0)
 
     USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    EMAIL_FIELD = "email"
+    REQUIRED_FIELDS: ClassVar[list[str]] = []
 
-    objects = UserManager()
+    objects: ClassVar[UserManager] = UserManager()
+    get_full_name = AbstractUser.get_full_name
+    get_short_name = AbstractUser.get_short_name
+    email_user = AbstractUser.email_user
+
+    class Meta:
+        verbose_name = "user"
+        verbose_name_plural = "users"
+        abstract = False
+
+    def clean(self):
+        super().clean()
+        self.email = type(self).objects.normalize_email(self.email)
+
+    @transaction.atomic
+    def save(self, *args, **kwargs):
+        from apps.accounts.session_security import prepare_security_save
+
+        prepare_security_save(self, kwargs)
+        return super().save(*args, **kwargs)
+
+    def session_hash(self, original, secret=None):
+        if self.session_revision == 0:
+            return original
+        return salted_hmac(
+            "apps.accounts.User.session_revision",
+            f"{original}:{self.session_revision}",
+            secret=secret,
+            algorithm="sha256",
+        ).hexdigest()
+
+    def get_session_auth_hash(self):
+        return self.session_hash(super().get_session_auth_hash())
+
+    def get_session_auth_fallback_hash(self):
+        for original, secret in zip(
+            super().get_session_auth_fallback_hash(),
+            settings.SECRET_KEY_FALLBACKS,
+            strict=True,
+        ):
+            yield self.session_hash(original, secret)
 
     def __str__(self):
         return self.display_name or self.email
@@ -97,15 +157,14 @@ class User(AbstractUser, TimeStampedModel):
         if prefetched_global_grants is not None:
             return sorted({grant.scope for grant in prefetched_global_grants})
 
-        try:
-            from apps.access.models import PermissionGrant
-        except Exception:
-            return []
+        from apps.access.models import PermissionGrant
 
         return sorted(
             set(
                 PermissionGrant.objects.active_for_user(self)
-                .filter(book__isnull=True, category__isnull=True, contributor__isnull=True)
+                .filter(
+                    book__isnull=True, category__isnull=True, contributor__isnull=True
+                )
                 .values_list("scope", flat=True)
             )
         )
@@ -130,13 +189,8 @@ class User(AbstractUser, TimeStampedModel):
 
         scopes = {"submit:create"}
 
-        try:
-            from apps.access.models import PermissionGrant
-        except Exception:
-            return sorted(scopes)
+        from apps.access.models import PermissionGrant
 
         active_grants = PermissionGrant.objects.active_for_user(self)
         scopes.update(active_grants.values_list("scope", flat=True))
         return sorted(scopes)
-
-# Create your models here.

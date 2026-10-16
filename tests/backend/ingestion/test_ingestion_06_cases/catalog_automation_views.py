@@ -88,7 +88,7 @@ def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkey
         job.save(update_fields=["task_id", "queue_name", "updated_at"])
         return job
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.dispatch_processing_job", fake_dispatch)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job", fake_dispatch)
 
     job_response = client.get("/api/ingestion/jobs/?origin=user")
     submission_response = client.get("/api/ingestion/submissions/?origin=curation")

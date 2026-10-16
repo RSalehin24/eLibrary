@@ -1,5 +1,5 @@
-from email.utils import parseaddr
 import logging
+from email.utils import parseaddr
 from smtplib import SMTPAuthenticationError
 
 from django.conf import settings
@@ -13,26 +13,35 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from apps.access.reading.launch import authorize_html_opening
 from apps.accounts.kindle import validate_kindle_email_address
+from apps.accounts.mail_configuration import (
+    BREVO_EMAIL_BACKEND,
+    BREVO_SMTP_PORT,
+    DEFAULT_CONSOLE_EMAIL_BACKEND,
+    SMTP_EMAIL_BACKEND,
+    build_kindle_delivery_connection_attempts,
+    build_kindle_delivery_connection_kwargs,
+    resolve_kindle_delivery_email_backend,
+)
 from apps.catalog.models import Book, GeneratedAssetType, UserBookKindleSend
-from apps.common.permissions import user_can_download_book_assets, user_can_view_book_cover, user_can_view_preview_html, user_can_send_to_kindle
+from apps.common.permissions import (
+    user_can_download_book_assets,
+    user_can_send_to_kindle,
+    user_can_view_book_cover,
+)
 
 from .preview_html import html_asset_response
 from .shared import (
     asset_download_filename,
     asset_is_available,
-    read_asset_bytes,
     missing_asset_response,
     open_asset_stream,
+    read_asset_bytes,
     resolve_asset,
 )
 
 logger = logging.getLogger(__name__)
-
-BREVO_EMAIL_BACKEND = "anymail.backends.brevo.EmailBackend"
-SMTP_EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-DEFAULT_CONSOLE_EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-BREVO_SMTP_PORT = 587
 
 
 def valid_kindle_delivery_addresses(values):
@@ -45,60 +54,6 @@ def valid_kindle_delivery_addresses(values):
         except DjangoValidationError:
             continue
     return normalized
-
-
-def resolve_kindle_delivery_email_backend():
-    primary_backend = str(getattr(settings, "EMAIL_BACKEND", "") or "").strip()
-    if primary_backend == BREVO_EMAIL_BACKEND:
-        # Brevo API rejects EPUB attachments, so Kindle deliveries use SMTP.
-        return SMTP_EMAIL_BACKEND
-    return primary_backend or DEFAULT_CONSOLE_EMAIL_BACKEND
-
-
-def _as_bool(value, *, default=False):
-    if isinstance(value, bool):
-        return value
-    if value is None:
-        return default
-    normalized = str(value).strip().lower()
-    if not normalized:
-        return default
-    return normalized in {"1", "true", "yes", "on"}
-
-
-def _as_int(value, *, default):
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return default
-
-
-def build_kindle_delivery_connection_kwargs():
-    backend = resolve_kindle_delivery_email_backend()
-    kwargs = {"backend": backend}
-    if backend != SMTP_EMAIL_BACKEND:
-        return kwargs
-
-    smtp_host = str(getattr(settings, "EMAIL_HOST", "") or "").strip()
-    smtp_username = str(getattr(settings, "EMAIL_HOST_USER", "") or "").strip()
-    smtp_password = str(getattr(settings, "EMAIL_HOST_PASSWORD", "") or "").strip()
-
-    kwargs.update(
-        {
-            "host": smtp_host,
-            "port": _as_int(getattr(settings, "EMAIL_PORT", BREVO_SMTP_PORT), default=BREVO_SMTP_PORT),
-            "username": smtp_username,
-            "password": smtp_password,
-            "use_tls": _as_bool(getattr(settings, "EMAIL_USE_TLS", True), default=True),
-            "use_ssl": _as_bool(getattr(settings, "EMAIL_USE_SSL", False), default=False),
-            "timeout": _as_int(getattr(settings, "EMAIL_TIMEOUT", 20), default=20),
-        }
-    )
-    return kwargs
-
-
-def build_kindle_delivery_connection_attempts():
-    return [build_kindle_delivery_connection_kwargs()]
 
 
 def close_kindle_delivery_connection(connection, book_slug):
@@ -115,28 +70,15 @@ def close_kindle_delivery_connection(connection, book_slug):
 
 
 class BookAssetDownloadView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def get(self, request, slug, asset_type):
         book = get_object_or_404(Book, slug=slug)
         if asset_type == GeneratedAssetType.COVER:
             can_access = user_can_view_book_cover(request.user, book)
         elif asset_type == GeneratedAssetType.HTML:
-            from apps.common.permissions import user_has_read_once_limit, user_has_scope, user_owns_book
-            if not request.user.is_superuser and not user_owns_book(request.user, book):
-                if user_has_read_once_limit(request.user, book):
-                    raise PermissionDenied("You have already opened this book under the Read Once permission.")
-            can_access = user_can_view_preview_html(request.user, book)
-            if can_access:
-                from apps.access.models import PermissionScope
-                if (
-                    not request.user.is_superuser
-                    and not user_owns_book(request.user, book)
-                    and user_has_scope(request.user, [PermissionScope.READ_ONCE], book=book)
-                    and not user_has_scope(request.user, [PermissionScope.READ_DURABLE], book=book)
-                ):
-                    from apps.access.models import BookOpeningRecord
-                    BookOpeningRecord.objects.get_or_create(user=request.user, book=book)
+            authorize_html_opening(request.user, book)
+            can_access = True
         else:
             can_access = user_can_download_book_assets(request.user, book)
 
@@ -156,12 +98,14 @@ class BookAssetDownloadView(APIView):
 
 
 class BookSendToKindleView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request, slug):
         book = get_object_or_404(Book, slug=slug)
         if not user_can_send_to_kindle(request.user, book):
-            raise PermissionDenied("You do not have permission to send this book to Kindle.")
+            raise PermissionDenied(
+                "You do not have permission to send this book to Kindle."
+            )
 
         kindle_emails = valid_kindle_delivery_addresses(
             request.user.kindle_emails or [],
@@ -198,7 +142,9 @@ class BookSendToKindleView(APIView):
         smtp_host = str(connection_kwargs.get("host") or "").strip()
         smtp_username = str(connection_kwargs.get("username") or "").strip()
         smtp_password = str(connection_kwargs.get("password") or "").strip()
-        if delivery_backend == SMTP_EMAIL_BACKEND and not (smtp_host and smtp_username and smtp_password):
+        if delivery_backend == SMTP_EMAIL_BACKEND and not (
+            smtp_host and smtp_username and smtp_password
+        ):
             return Response(
                 {
                     "detail": (
@@ -293,4 +239,13 @@ class BookSendToKindleView(APIView):
         )
 
 
-__all__ = ["BookAssetDownloadView", "BookSendToKindleView"]
+__all__ = [
+    "BREVO_EMAIL_BACKEND",
+    "BREVO_SMTP_PORT",
+    "DEFAULT_CONSOLE_EMAIL_BACKEND",
+    "SMTP_EMAIL_BACKEND",
+    "BookAssetDownloadView",
+    "BookSendToKindleView",
+    "build_kindle_delivery_connection_kwargs",
+    "resolve_kindle_delivery_email_backend",
+]

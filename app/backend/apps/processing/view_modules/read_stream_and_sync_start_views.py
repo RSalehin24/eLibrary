@@ -1,52 +1,29 @@
 import json
 import time
 
+from apps.common.permissions import CanManageProcessing
 from django.http import StreamingHttpResponse
 from rest_framework.exceptions import ValidationError
 from rest_framework.renderers import BaseRenderer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from apps.common.permissions import CanManageProcessing
-
-from .models import (
-    BookCreationRequest,
-    BookRecord,
-    ProcessingAutomationKind,
-    ProcessingSyncStatus,
-)
-from .serializers import (
-    AutomationUpdateSerializer,
-    BookCreationRequestSerializer,
-    BookRecordSerializer,
-    BulkIdsSerializer,
-    RequestActionSerializer,
+from ..serializers import (
     SyncStartSerializer,
 )
-from .services import (
+from ..services import (
     PROCESSING_CARD_KEYS,
     PROCESSING_PAGE_DOMAINS,
     PROCESSING_SYNC_KEY_CATALOG,
     PROCESSING_SYNC_KEY_INCOMPLETE,
-    active_sync_scope,
     allow_processing_remote_page_payloads,
-    apply_request_action,
     collect_processing_ui_version_updates,
-    create_requests_for_record_ids,
-    get_sync_state,
-    pause_sync,
     processing_card_payload,
     processing_state_payload,
     processing_table_payload,
     processing_ui_versions_diff,
     processing_ui_versions_map,
-    resume_sync,
-    run_catalog_automation,
-    run_incomplete_automation,
     run_manual_catalog_sync,
-    sync_run_mode,
-    stop_sync,
-    update_automation_settings,
 )
 
 
@@ -131,7 +108,7 @@ class EventStreamRenderer(BaseRenderer):
 
 
 class ProcessingStateView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def get(self, request):
         include_lists = truthy_query_param(
@@ -144,7 +121,7 @@ class ProcessingStateView(APIView):
 
 
 class ProcessingCardView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def get(self, request):
         card = str(request.query_params.get("card") or "").strip()
@@ -154,14 +131,16 @@ class ProcessingCardView(APIView):
         try:
             payload = processing_card_payload(card)
         except KeyError as exc:
-            raise ValidationError({"card": [f"Unsupported processing card: {exc.args[0]}"]}) from exc
+            raise ValidationError(
+                {"card": [f"Unsupported processing card: {exc.args[0]}"]}
+            ) from exc
 
         return processing_response(payload)
 
 
 class ProcessingStreamView(APIView):
-    permission_classes = [CanManageProcessing]
-    renderer_classes = [EventStreamRenderer]
+    permission_classes = (CanManageProcessing,)
+    renderer_classes = (EventStreamRenderer,)
 
     def get(self, request):
         page = normalize_stream_page(request.query_params.get("page"))
@@ -205,7 +184,7 @@ class ProcessingStreamView(APIView):
 
 
 class ProcessingTableView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def get(self, request):
         card = str(request.query_params.get("card") or "").strip()
@@ -235,13 +214,15 @@ class ProcessingTableView(APIView):
                 ),
             )
         except KeyError as exc:
-            raise ValidationError({"card": [f"Unsupported processing table: {exc.args[0]}"]}) from exc
+            raise ValidationError(
+                {"card": [f"Unsupported processing table: {exc.args[0]}"]}
+            ) from exc
 
         return processing_response(payload)
 
 
 class ProcessingSyncStartView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request):
         serializer = SyncStartSerializer(data=request.data)

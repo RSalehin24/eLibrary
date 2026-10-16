@@ -1,18 +1,13 @@
 from datetime import timedelta
 
-from django.db.models import Prefetch
-from django.utils import timezone
-
 from apps.catalog.models import BookSource, GeneratedAssetStatus, GeneratedAssetType
 from apps.common.models import LifecycleState
 from apps.ingestion.models import (
     BookSubmission,
-    CatalogCurationMode,
-    CatalogCurationTrigger,
     JobStatus,
     ProcessingJob,
-    SubmissionOrigin,
 )
+from django.db.models import Prefetch
 
 REQUIRED_READY_ASSETS = (GeneratedAssetType.HTML, GeneratedAssetType.EPUB)
 FAILED_AUTOMATION_RETRY_COOLDOWN = timedelta(hours=6)
@@ -32,9 +27,7 @@ OVERVIEW_CURATION_STATUSES = {"failed", "requeued"}
 
 def related_book_list_defer_fields(*prefixes):
     return [
-        f"{prefix}{field}"
-        for prefix in prefixes
-        for field in HEAVY_BOOK_LIST_FIELDS
+        f"{prefix}{field}" for prefix in prefixes for field in HEAVY_BOOK_LIST_FIELDS
     ]
 
 
@@ -158,8 +151,13 @@ def iter_source_catalog_entry_inspections(queryset, chunk_size=None):
 
 
 def book_has_required_assets(book):
-    asset_statuses = {asset.asset_type: asset.status for asset in book.generated_assets.all()}
-    return all(asset_statuses.get(asset_type) == GeneratedAssetStatus.READY for asset_type in REQUIRED_READY_ASSETS)
+    asset_statuses = {
+        asset.asset_type: asset.status for asset in book.generated_assets.all()
+    }
+    return all(
+        asset_statuses.get(asset_type) == GeneratedAssetStatus.READY
+        for asset_type in REQUIRED_READY_ASSETS
+    )
 
 
 def root_submission(submission):
@@ -189,25 +187,40 @@ def inspect_source_catalog_entry(entry, source_map, submission_map=None):
     book_source = source_map.get(entry.source_url)
     local_book = book_source.book if book_source and book_source.book_id else None
     latest_submission = submission_map.get(entry.source_url)
-    latest_job = local_book.processing_jobs.first() if local_book else latest_processing_job_for_submission(latest_submission)
+    latest_job = (
+        local_book.processing_jobs.first()
+        if local_book
+        else latest_processing_job_for_submission(latest_submission)
+    )
 
     if local_book and local_book.deleted_at:
         status = "deleted"
-    elif latest_job and latest_job.status in {JobStatus.QUEUED, JobStatus.PROCESSING}:
+    elif (
+        latest_job
+        and latest_job.status in {JobStatus.QUEUED, JobStatus.PROCESSING}
+        or latest_submission
+        and latest_submission.status in {"pending_resolution", "queued", "processing"}
+    ):
         status = "processing"
-    elif latest_submission and latest_submission.status in {"pending_resolution", "queued", "processing"}:
-        status = "processing"
-    elif latest_job and latest_job.status == JobStatus.CANCELLED:
+    elif (
+        latest_job
+        and latest_job.status == JobStatus.CANCELLED
+        or latest_submission
+        and latest_submission.status == "cancelled"
+    ):
         status = "stopped"
-    elif latest_submission and latest_submission.status == "cancelled":
-        status = "stopped"
-    elif latest_job and latest_job.status == JobStatus.FAILED:
-        status = "failed"
-    elif latest_submission and latest_submission.status in {"failed", "needs_review", "duplicate"}:
+    elif (
+        latest_job
+        and latest_job.status == JobStatus.FAILED
+        or latest_submission
+        and latest_submission.status in {"failed", "needs_review", "duplicate"}
+    ):
         status = "failed"
     elif not local_book:
         status = "new"
-    elif local_book.state != LifecycleState.READY or not book_has_required_assets(local_book):
+    elif local_book.state != LifecycleState.READY or not book_has_required_assets(
+        local_book
+    ):
         status = "unfinished"
     else:
         status = "ready"
@@ -219,7 +232,9 @@ def inspect_source_catalog_entry(entry, source_map, submission_map=None):
         "latest_submission": latest_submission,
         "latest_job": latest_job,
         "curation_status": status,
-        "activity_at": latest_activity_at(entry, latest_submission, latest_job, local_book),
+        "activity_at": latest_activity_at(
+            entry, latest_submission, latest_job, local_book
+        ),
     }
 
 
@@ -229,7 +244,9 @@ def serialize_source_catalog_entry_inspection(inspection):
     latest_submission = inspection["latest_submission"]
     latest_job = inspection["latest_job"]
     raw_data = entry.raw_data or {}
-    source_categories = (raw_data.get("category") or raw_data.get("book_type") or "").strip()
+    source_categories = (
+        raw_data.get("category") or raw_data.get("book_type") or ""
+    ).strip()
     local_categories = ""
     if local_book and not local_book.deleted_at:
         local_categories = ", ".join(
@@ -246,12 +263,22 @@ def serialize_source_catalog_entry_inspection(inspection):
         "created_at": entry.created_at,
         "last_seen_at": entry.last_seen_at,
         "curation_status": inspection["curation_status"],
-        "local_book_slug": local_book.slug if local_book and not local_book.deleted_at else "",
-        "local_book_title": local_book.title if local_book and not local_book.deleted_at else "",
-        "local_book_state": local_book.state if local_book and not local_book.deleted_at else "",
-        "latest_submission_status": latest_submission.status if latest_submission else "",
+        "local_book_slug": local_book.slug
+        if local_book and not local_book.deleted_at
+        else "",
+        "local_book_title": local_book.title
+        if local_book and not local_book.deleted_at
+        else "",
+        "local_book_state": local_book.state
+        if local_book and not local_book.deleted_at
+        else "",
+        "latest_submission_status": latest_submission.status
+        if latest_submission
+        else "",
         "latest_job_status": latest_job.status if latest_job else "",
         "latest_job_error": latest_job.last_error if latest_job else "",
         "activity_at": inspection["activity_at"],
-        "updated_at": local_book.updated_at if local_book and not local_book.deleted_at else None,
+        "updated_at": local_book.updated_at
+        if local_book and not local_book.deleted_at
+        else None,
     }

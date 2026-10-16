@@ -60,14 +60,8 @@ def test_processing_state_does_not_run_due_automations(client, monkeypatch):
             "status_message": "",
         },
     )
-    monkeypatch.setattr(
-        "apps.processing.services.should_run_processing_jobs_inline",
-        lambda: False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.should_enqueue_processing_sync_work",
-        lambda: False,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
+    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work', lambda: False)
 
     response = client.get("/api/processing/state/?includeLists=0")
 

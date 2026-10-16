@@ -106,7 +106,7 @@ def test_title_submission_does_not_auto_fulfill_from_title_only_local_match(monk
         submission.save(update_fields=["resolution_status", "status", "review_state", "error_message", "updated_at"])
         return submission
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.resolve_submission", fake_resolve_submission)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.resolve_submission", fake_resolve_submission)
 
     submission = create_submission_records(
         submitter=user,
@@ -159,8 +159,8 @@ def test_process_submission_job_handles_missing_cover_url_without_db_null_violat
         (output_dir / "কভারবিহীন বই.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(job.id))
 
@@ -212,8 +212,8 @@ def test_successful_deleted_book_recreation_is_not_reprocessed_again(tmp_path, m
         "output_folder": str(tmp_path),
     }
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda url: None)
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", lambda url: sample)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", lambda url: sample)
 
     def fake_generate_exports(book_data):
         output_dir = Path(book_data["output_folder"])
@@ -222,7 +222,7 @@ def test_successful_deleted_book_recreation_is_not_reprocessed_again(tmp_path, m
         (output_dir / "২০০১ : আ স্পেস ওডিসি.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.generate_exports", fake_generate_exports)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
 
     process_submission_job(str(job.id))
     submission.refresh_from_db()

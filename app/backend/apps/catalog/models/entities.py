@@ -1,11 +1,17 @@
-from django.db import models
+from typing import ClassVar
+
+from django.db import models, transaction
 
 from apps.common.models import TimeStampedModel, UUIDPrimaryKeyModel
-from apps.common.text import clean_display_text, clean_entity_display_text, normalize_catalog_text
+from apps.common.text import (
+    clean_display_text,
+    clean_entity_display_text,
+    normalize_catalog_text,
+)
 
 from .catalog_codes import (
-    CATEGORY_ENTITY_TAG,
     CATALOG_CODE_LENGTH,
+    CATEGORY_ENTITY_TAG,
     SERIES_ENTITY_TAG,
     WRITER_ENTITY_TAG,
     build_category_catalog_code,
@@ -14,17 +20,18 @@ from .catalog_codes import (
     is_entity_catalog_code,
     next_entity_sequence,
 )
+from .editorial import EditorialMetadata
 from .utils import build_unique_slug
 
 
-class Contributor(UUIDPrimaryKeyModel, TimeStampedModel):
+class Contributor(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     name = models.CharField(max_length=255, unique=True)
     normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
     catalog_code = models.CharField(max_length=CATALOG_CODE_LENGTH, unique=True, db_index=True, blank=True, null=True)
 
     class Meta:
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
 
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
@@ -32,6 +39,7 @@ class Contributor(UUIDPrimaryKeyModel, TimeStampedModel):
         previous = Contributor.objects.filter(pk=self.pk).values_list("name", flat=True).first()
         return clean_display_text(previous) != self.name
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.name = clean_entity_display_text(self.name)
         self.normalized_name = normalize_catalog_text(self.name)
@@ -48,7 +56,7 @@ class Contributor(UUIDPrimaryKeyModel, TimeStampedModel):
         return self.name
 
 
-class Series(UUIDPrimaryKeyModel, TimeStampedModel):
+class Series(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     name = models.CharField(max_length=255, unique=True)
     normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
@@ -56,7 +64,7 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel):
 
     class Meta:
         verbose_name_plural = "series"
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
 
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
@@ -64,6 +72,7 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel):
         previous = Series.objects.filter(pk=self.pk).values_list("name", flat=True).first()
         return clean_display_text(previous) != self.name
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.name = clean_entity_display_text(self.name)
         self.normalized_name = normalize_catalog_text(self.name)
@@ -80,7 +89,7 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel):
         return self.name
 
 
-class Category(UUIDPrimaryKeyModel, TimeStampedModel):
+class Category(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     name = models.CharField(max_length=255, unique=True)
     normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
@@ -88,7 +97,7 @@ class Category(UUIDPrimaryKeyModel, TimeStampedModel):
 
     class Meta:
         verbose_name_plural = "categories"
-        ordering = ["name"]
+        ordering: ClassVar[list[str]] = ["name"]
 
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
@@ -96,6 +105,7 @@ class Category(UUIDPrimaryKeyModel, TimeStampedModel):
         previous = Category.objects.filter(pk=self.pk).values_list("name", flat=True).first()
         return clean_display_text(previous) != self.name
 
+    @transaction.atomic
     def save(self, *args, **kwargs):
         self.name = clean_entity_display_text(self.name)
         self.normalized_name = normalize_catalog_text(self.name)

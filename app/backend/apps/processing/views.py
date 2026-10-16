@@ -1,15 +1,146 @@
-"""Compatibility facade for the named views modules."""
-from pathlib import Path as _Path
+"""Compatibility exports backed by regular Python modules."""
 
-_MODULE_DIR = _Path(__file__).with_name("view_modules")
-_MODULE_FILES = (
-    "read_stream_and_sync_start_views.py",
-    "sync_action_and_automation_views.py",
+import json
+import time
 
+from django.http import StreamingHttpResponse
+from rest_framework.exceptions import ValidationError
+from rest_framework.renderers import BaseRenderer
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from apps.common.permissions import CanManageProcessing
+from apps.processing.models import (
+    BookCreationRequest,
+    BookRecord,
+    ProcessingAutomationKind,
+    ProcessingSyncStatus,
+)
+from apps.processing.serializers import (
+    AutomationUpdateSerializer,
+    BookCreationRequestSerializer,
+    BookRecordSerializer,
+    BulkIdsSerializer,
+    RequestActionSerializer,
+    SyncStartSerializer,
+)
+from apps.processing.services import (
+    PROCESSING_CARD_KEYS,
+    PROCESSING_PAGE_DOMAINS,
+    PROCESSING_SYNC_KEY_CATALOG,
+    PROCESSING_SYNC_KEY_INCOMPLETE,
+    active_sync_scope,
+    allow_processing_remote_page_payloads,
+    apply_request_action,
+    collect_processing_ui_version_updates,
+    create_requests_for_record_ids,
+    get_sync_state,
+    pause_sync,
+    processing_card_payload,
+    processing_state_payload,
+    processing_table_payload,
+    processing_ui_versions_diff,
+    processing_ui_versions_map,
+    resume_sync,
+    run_catalog_automation,
+    run_incomplete_automation,
+    run_manual_catalog_sync,
+    stop_sync,
+    sync_run_mode,
+    update_automation_settings,
 )
 
-for _module_file in _MODULE_FILES:
-    _module_path = _MODULE_DIR / _module_file
-    exec(compile(_module_path.read_text(encoding="utf-8"), str(_module_path), "exec"), globals())
+from .view_modules.read_stream_and_sync_start_views import (
+    EventStreamRenderer,
+    ProcessingCardView,
+    ProcessingStateView,
+    ProcessingStreamView,
+    ProcessingSyncStartView,
+    ProcessingTableView,
+    int_query_param,
+    normalize_stream_page,
+    normalize_sync_scope,
+    processing_mutation_payload,
+    processing_response,
+    requested_resume_run_mode,
+    truthy_query_param,
+)
+from .view_modules.sync_action_and_automation_views import (
+    ProcessingAutomationView,
+    ProcessingCatalogAutomationRunView,
+    ProcessingCatalogAutomationView,
+    ProcessingIncompleteAutomationRunView,
+    ProcessingIncompleteAutomationView,
+    ProcessingRecordCreateRequestsView,
+    ProcessingRequestActionView,
+    ProcessingSyncPauseView,
+    ProcessingSyncResumeView,
+    ProcessingSyncStopView,
+)
 
-del _Path, _MODULE_DIR, _MODULE_FILES, _module_file, _module_path
+__all__ = [
+    "PROCESSING_CARD_KEYS",
+    "PROCESSING_PAGE_DOMAINS",
+    "PROCESSING_SYNC_KEY_CATALOG",
+    "PROCESSING_SYNC_KEY_INCOMPLETE",
+    "APIView",
+    "AutomationUpdateSerializer",
+    "BaseRenderer",
+    "BookCreationRequest",
+    "BookCreationRequestSerializer",
+    "BookRecord",
+    "BookRecordSerializer",
+    "BulkIdsSerializer",
+    "CanManageProcessing",
+    "EventStreamRenderer",
+    "ProcessingAutomationKind",
+    "ProcessingAutomationView",
+    "ProcessingCardView",
+    "ProcessingCatalogAutomationRunView",
+    "ProcessingCatalogAutomationView",
+    "ProcessingIncompleteAutomationRunView",
+    "ProcessingIncompleteAutomationView",
+    "ProcessingRecordCreateRequestsView",
+    "ProcessingRequestActionView",
+    "ProcessingStateView",
+    "ProcessingStreamView",
+    "ProcessingSyncPauseView",
+    "ProcessingSyncResumeView",
+    "ProcessingSyncStartView",
+    "ProcessingSyncStatus",
+    "ProcessingSyncStopView",
+    "ProcessingTableView",
+    "RequestActionSerializer",
+    "Response",
+    "StreamingHttpResponse",
+    "SyncStartSerializer",
+    "ValidationError",
+    "active_sync_scope",
+    "allow_processing_remote_page_payloads",
+    "apply_request_action",
+    "collect_processing_ui_version_updates",
+    "create_requests_for_record_ids",
+    "get_sync_state",
+    "int_query_param",
+    "json",
+    "normalize_stream_page",
+    "normalize_sync_scope",
+    "pause_sync",
+    "processing_card_payload",
+    "processing_mutation_payload",
+    "processing_response",
+    "processing_state_payload",
+    "processing_table_payload",
+    "processing_ui_versions_diff",
+    "processing_ui_versions_map",
+    "requested_resume_run_mode",
+    "resume_sync",
+    "run_catalog_automation",
+    "run_incomplete_automation",
+    "run_manual_catalog_sync",
+    "stop_sync",
+    "sync_run_mode",
+    "time",
+    "truthy_query_param",
+    "update_automation_settings",
+]

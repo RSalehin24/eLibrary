@@ -1,13 +1,21 @@
 import re
 
-from django.db.models import Exists, OuterRef, Q, Subquery
+from django.db.models import Q
 from django.utils.dateparse import parse_date, parse_datetime
-from rest_framework.response import Response
 
-from apps.catalog.models import Book, BookRecordType, ContributorRole, UserBook, UserBookKindleSend
+from apps.catalog.models import (
+    BookRecordType,
+    ContributorRole,
+)
 from apps.common.text import normalize_catalog_text
-from apps.ingestion.models import BookSubmission
 
+from .book_queries import BookQueryMixin as BookQueryMixin
+from .legacy_pagination import (
+    OptionalPaginationListMixin as OptionalPaginationListMixin,
+)
+from .legacy_pagination import (
+    bounded_positive_int as bounded_positive_int,
+)
 
 VALID_RECORD_TYPES = {choice for choice, _ in BookRecordType.choices}
 VALID_CONTRIBUTOR_ROLES = {choice for choice, _ in ContributorRole.choices}
@@ -66,12 +74,6 @@ def export_record_type(request, default_record_type):
     return "all" if record_type == "all" else record_type
 
 
-def bounded_positive_int(raw_value, *, default, minimum=1, maximum=100):
-    try:
-        value = int(str(raw_value).strip() or default)
-    except (TypeError, ValueError):
-        return default
-    return max(minimum, min(value, maximum))
 
 
 def contributor_roles_for_filter(role):
@@ -80,44 +82,6 @@ def contributor_roles_for_filter(role):
     return (role,) if role in VALID_CONTRIBUTOR_ROLES else ()
 
 
-class OptionalPaginationListMixin:
-    pagination_default_limit = 60
-    pagination_max_limit = 100
-
-    def list(self, request, *args, **kwargs):
-        if "page" not in request.query_params and "limit" not in request.query_params:
-            return super().list(request, *args, **kwargs)
-
-        queryset = self.filter_queryset(self.get_queryset())
-        limit_value = bounded_positive_int(
-            request.query_params.get("limit"),
-            default=self.pagination_default_limit,
-            maximum=self.pagination_max_limit,
-        )
-        page_value = bounded_positive_int(
-            request.query_params.get("page"),
-            default=1,
-            maximum=10_000,
-        )
-        total_count = queryset.count()
-        page_count = max(1, ((total_count - 1) // limit_value) + 1) if total_count else 1
-        page_value = min(page_value, page_count)
-        start = (page_value - 1) * limit_value
-        page_entries = queryset[start : start + limit_value]
-        serializer = self.get_serializer(page_entries, many=True)
-        return Response(
-            {
-                "entries": serializer.data,
-                "pagination": {
-                    "page": page_value,
-                    "limit": limit_value,
-                    "total_count": total_count,
-                    "page_count": page_count,
-                    "has_previous": page_value > 1,
-                    "has_next": page_value < page_count,
-                },
-            }
-        )
 
 
 def filtered_book_queryset(queryset, request, *, default_record_type):
@@ -259,11 +223,12 @@ def filtered_book_queryset(queryset, request, *, default_record_type):
     if binding:
         queryset = queryset.filter(manual_binding=binding)
 
-    for param, filters in {
+    reference_filters: dict[str, dict[str, ContributorRole | None]] = {
         "writer_code": {"book_contributors__role": ContributorRole.AUTHOR, "book_contributors__contributor__catalog_code": None},
         "writer_slug": {"book_contributors__role": ContributorRole.AUTHOR, "book_contributors__contributor__slug": None},
         "contributor": {},
-    }.items():
+    }
+    for param, contributor_match in reference_filters.items():
         value = request.query_params.get(param, "").strip()
         if value:
             if param == "contributor":
@@ -281,7 +246,7 @@ def filtered_book_queryset(queryset, request, *, default_record_type):
                     )
                 )
             else:
-                resolved = {key: (value if current is None else current) for key, current in filters.items()}
+                resolved = {key: (value if current is None else current) for key, current in contributor_match.items()}
                 queryset = queryset.filter(**resolved)
 
     contributor_role = request.query_params.get("contributor_role", "").strip()
@@ -317,43 +282,3 @@ def filtered_book_queryset(queryset, request, *, default_record_type):
         sort_map.update({"sent_at": "user_kindle_sent_at", "-sent_at": "-user_kindle_sent_at"})
     sort_field = sort_map.get(sort, "-my_books_added_at" if ownership == "mine" else "-user_kindle_sent_at" if kindle_sent == "mine" else "-created_at")
     return queryset.order_by(sort_field) if sort_field in {"created_at", "-created_at"} else queryset.order_by(sort_field, "-created_at")
-
-
-class BookQueryMixin:
-    default_record_type = BookRecordType.DIGITAL
-
-    def base_queryset(self):
-        owned = UserBook.objects.filter(book=OuterRef("pk"), user=self.request.user).order_by("-created_at")
-        kindle_sent = UserBookKindleSend.objects.filter(book=OuterRef("pk"), user=self.request.user).order_by("-created_at")
-        latest_submission = BookSubmission.objects.filter(linked_book=OuterRef("pk"), submitter=self.request.user).order_by("-created_at").values("created_at")[:1]
-        return (
-            Book.objects.prefetch_related(
-                "book_contributors__contributor",
-                "book_series__series",
-                "book_categories__category",
-                "generated_assets",
-                "source_urls",
-            )
-            .annotate(
-                is_in_my_books=Exists(owned),
-                user_owns_book=Exists(owned),
-                my_books_added_at=Subquery(owned.values("created_at")[:1]),
-                has_sent_to_kindle=Exists(kindle_sent),
-                user_kindle_sent_at=Subquery(kindle_sent.values("created_at")[:1]),
-                latest_submission_at=Subquery(latest_submission),
-            )
-            .defer(
-                "summary",
-                "raw_scraped_metadata",
-                "raw_scrape_payload",
-                "main_content_html",
-                "book_info_html",
-                "dedication_html",
-                "toc",
-                "content_items",
-            )
-            .filter(deleted_at__isnull=True)
-        )
-
-    def get_queryset(self):
-        return filtered_book_queryset(self.base_queryset(), self.request, default_record_type=self.default_record_type)

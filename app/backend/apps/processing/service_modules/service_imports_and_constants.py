@@ -1,94 +1,11 @@
-import json
 import logging
-import os
-import sys
-import threading
-import time
-import uuid
-from concurrent.futures import ThreadPoolExecutor
-from contextlib import contextmanager
 from contextvars import ContextVar
-from datetime import timedelta, time as time_type
-from time import monotonic
-from types import SimpleNamespace
-from urllib.parse import unquote, urljoin, urlparse
-from uuid import uuid4
+from datetime import time as time_type
+from datetime import timedelta
 
-from bs4 import BeautifulSoup
-from config.celery import app as celery_app
 from django.conf import settings
-from django.db import IntegrityError, transaction
-from django.db.models import (
-    Case,
-    CharField,
-    F,
-    IntegerField,
-    Max,
-    OuterRef,
-    Prefetch,
-    Q,
-    Subquery,
-    Value,
-    When,
-)
-from django.db.models.functions import Coalesce
-from django.utils.dateparse import parse_datetime
-from django.utils import timezone
-from kombu import Queue
-from redis import Redis
-from redis.exceptions import RedisError
 
-from apps.catalog.services import find_existing_book_by_source_url
-from apps.catalog.models import BookGroup, CuratedDocumentStatus
-from apps.common.text import clean_display_text, normalize_catalog_text
-from apps.ingestion.models import SourceCatalogEntry, SubmissionOrigin
-from apps.ingestion.pipeline.scraper_support.network import create_session_with_retries
-from apps.ingestion.pipeline.curated_pipeline import curate_scraped_book_data
-from apps.ingestion.pipeline.curated_export import curated_document_with_projection
-from apps.ingestion.pipeline.curated_validation import (
-    SOURCE_CHROME_BLOCK_TAGS,
-    SOURCE_CHROME_CONTAINS_PATTERNS,
-    SOURCE_CHROME_MAX_BLOCK_LENGTH,
-    SOURCE_CHROME_PATTERNS,
-    is_source_chrome_block,
-    source_chrome_hits,
-)
-from apps.ingestion.pipeline.book_manifest import disambiguate_duplicate_content_paths
-from apps.ingestion.services.normalization import promote_leading_front_matter
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.resolution_support import (
-    fetch_source_page_metadata,
-    metadata_entry_defaults,
-    split_display_title,
-    upsert_source_catalog_entry,
-)
-from apps.ingestion.services.submissions_support.persistence import export_payload_from_book
-
-from .models import (
-    BookCreationRequest,
-    BookCreationRequestState,
-    BookCreationState,
-    BookRecord,
-    ProcessingAutomationKind,
-    ProcessingAutomationSettings,
-    ProcessingUiDomainVersion,
-    ProcessingUiProjection,
-    ProcessingSyncState,
-    ProcessingSyncStatus,
-)
-from .source import (
-    capture_source_page_metadata,
-    curate_book,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    generate_exports,
-    normalize_source_url,
-    persist_curated_book,
-    persist_scraped_book,
-    scrape_book,
-    sync_assets,
-)
-
+from ..models import BookCreationRequestState, ProcessingSyncStatus
 
 logger = logging.getLogger(__name__)
 
@@ -120,11 +37,18 @@ INCOMPLETE_CATEGORY_KEYWORDS = (
     "অসম্পূর্ণ",
     "অসম্পূর্ণ বই",
 )
-INCOMPLETE_CATALOG_URL = (
-    "https://{}/genres/"
-    "%E0%A6%85%E0%A6%B8%E0%A6%AE%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3-"
-    "%E0%A6%AC%E0%A6%87/"
-).format(getattr(settings, "SOURCE_SITE_HOST", "") or "")
+
+
+def incomplete_catalog_url():
+    return (
+        "https://{}/genres/"
+        "%E0%A6%85%E0%A6%B8%E0%A6%AE%E0%A6%AA%E0%A7%82%E0%A6%B0%E0%A7%8D%E0%A6%A3-"
+        "%E0%A6%AC%E0%A6%87/"
+    ).format(getattr(settings, "SOURCE_SITE_HOST", "") or "")
+
+
+INCOMPLETE_CATALOG_URL = incomplete_catalog_url()
+
 TERMINAL_STATES = {
     BookCreationRequestState.CREATED,
     BookCreationRequestState.FAILED,

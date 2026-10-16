@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from rest_framework import serializers
 
 from apps.access.models import PermissionGrant, SCOPED_PERMISSION_SCOPES, Bookmark, Highlight, ReadingSession
@@ -18,7 +20,7 @@ class PermissionGrantSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PermissionGrant
-        fields = [
+        fields: ClassVar[list[str]] = [
             "id",
             "user",
             "book",
@@ -72,7 +74,7 @@ class PermissionGrantSerializer(serializers.ModelSerializer):
 
         return attrs
 
-    def get_target_type(self, obj):
+    def get_target_type(self, obj) -> str:
         if obj.book_id:
             return "book"
         if obj.category_id:
@@ -81,7 +83,7 @@ class PermissionGrantSerializer(serializers.ModelSerializer):
             return "writer"
         return "account"
 
-    def get_target_label(self, obj):
+    def get_target_label(self, obj) -> str:
         if obj.book_id:
             return obj.book.title
         if obj.category_id:

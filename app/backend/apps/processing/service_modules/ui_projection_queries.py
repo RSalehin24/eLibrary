@@ -1,3 +1,11 @@
+from ..models import (
+    ProcessingAutomationKind,
+    ProcessingUiDomainVersion,
+    ProcessingUiProjection,
+)
+from . import processing_card_payloads as _cards
+from . import service_imports_and_constants as _constants
+from . import state_serializers as _state
 
 
 def default_processing_summary_payload():
@@ -38,36 +46,46 @@ def default_processing_summary_payload():
 def default_processing_shared_projection_payload(key):
     summary = default_processing_summary_payload()
     shared_payloads = {
-        PROCESSING_CARD_CATALOG_OVERVIEW: {
-            "card": PROCESSING_CARD_CATALOG_OVERVIEW,
+        _constants.PROCESSING_CARD_CATALOG_OVERVIEW: {
+            "card": _constants.PROCESSING_CARD_CATALOG_OVERVIEW,
             "summary": summary["catalog"],
             "notifications": summary["notifications"],
         },
-        PROCESSING_CARD_CATALOG_SYNC: {
-            "card": PROCESSING_CARD_CATALOG_SYNC,
-            "sync": default_sync_state_payload(PROCESSING_SYNC_KEY_CATALOG),
+        _constants.PROCESSING_CARD_CATALOG_SYNC: {
+            "card": _constants.PROCESSING_CARD_CATALOG_SYNC,
+            "sync": _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_CATALOG
+            ),
         },
-        PROCESSING_CARD_CATALOG_AUTOMATION: {
-            "card": PROCESSING_CARD_CATALOG_AUTOMATION,
-            "sync": default_sync_state_payload(PROCESSING_SYNC_KEY_CATALOG),
-            "automation": default_automation_payload(ProcessingAutomationKind.CATALOG),
+        _constants.PROCESSING_CARD_CATALOG_AUTOMATION: {
+            "card": _constants.PROCESSING_CARD_CATALOG_AUTOMATION,
+            "sync": _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_CATALOG
+            ),
+            "automation": _state.default_automation_payload(
+                ProcessingAutomationKind.CATALOG
+            ),
         },
-        PROCESSING_CARD_CREATE_OVERVIEW: {
-            "card": PROCESSING_CARD_CREATE_OVERVIEW,
+        _constants.PROCESSING_CARD_CREATE_OVERVIEW: {
+            "card": _constants.PROCESSING_CARD_CREATE_OVERVIEW,
             "summary": summary["create"],
         },
-        PROCESSING_CARD_ON_HOLD_OVERVIEW: {
-            "card": PROCESSING_CARD_ON_HOLD_OVERVIEW,
+        _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW: {
+            "card": _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW,
             "summary": summary["onHold"],
         },
-        PROCESSING_CARD_INCOMPLETE_OVERVIEW: {
-            "card": PROCESSING_CARD_INCOMPLETE_OVERVIEW,
+        _constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW: {
+            "card": _constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW,
             "summary": summary["incomplete"],
         },
-        PROCESSING_CARD_INCOMPLETE_AUTOMATION: {
-            "card": PROCESSING_CARD_INCOMPLETE_AUTOMATION,
-            "sync": default_sync_state_payload(PROCESSING_SYNC_KEY_INCOMPLETE),
-            "automation": default_automation_payload(ProcessingAutomationKind.INCOMPLETE),
+        _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION: {
+            "card": _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION,
+            "sync": _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_INCOMPLETE
+            ),
+            "automation": _state.default_automation_payload(
+                ProcessingAutomationKind.INCOMPLETE
+            ),
         },
     }
     return shared_payloads.get(key, {})
@@ -77,7 +95,7 @@ def processing_sync_payload_has_activity(payload, *, scope):
     if not isinstance(payload, dict):
         return False
 
-    default_payload = default_sync_state_payload(scope)
+    default_payload = _state.default_sync_state_payload(scope)
     if payload.get("status") != default_payload["status"]:
         return True
     if payload.get("message") != default_payload["message"]:
@@ -103,8 +121,8 @@ def processing_sync_payload_has_activity(payload, *, scope):
 def processing_shared_projection_payloads(*, keys=None):
     requested_keys = [
         key
-        for key in (keys or PROCESSING_SHARED_CARD_KEYS)
-        if key in PROCESSING_SHARED_CARD_KEYS
+        for key in (keys or _constants.PROCESSING_SHARED_CARD_KEYS)
+        if key in _constants.PROCESSING_SHARED_CARD_KEYS
     ]
     if not requested_keys:
         return {}
@@ -113,77 +131,87 @@ def processing_shared_projection_payloads(*, keys=None):
     payloads = {}
 
     if requested_key_set & {
-        PROCESSING_CARD_CATALOG_OVERVIEW,
-        PROCESSING_CARD_CREATE_OVERVIEW,
-        PROCESSING_CARD_ON_HOLD_OVERVIEW,
-        PROCESSING_CARD_INCOMPLETE_OVERVIEW,
+        _constants.PROCESSING_CARD_CATALOG_OVERVIEW,
+        _constants.PROCESSING_CARD_CREATE_OVERVIEW,
+        _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW,
+        _constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW,
     }:
-        summary = processing_summary_payload()
-        if PROCESSING_CARD_CATALOG_OVERVIEW in requested_key_set:
-            payloads[PROCESSING_CARD_CATALOG_OVERVIEW] = {
-                "card": PROCESSING_CARD_CATALOG_OVERVIEW,
+        summary = _cards.processing_summary_payload()
+        if _constants.PROCESSING_CARD_CATALOG_OVERVIEW in requested_key_set:
+            payloads[_constants.PROCESSING_CARD_CATALOG_OVERVIEW] = {
+                "card": _constants.PROCESSING_CARD_CATALOG_OVERVIEW,
                 "summary": summary["catalog"],
                 "notifications": summary["notifications"],
             }
-        if PROCESSING_CARD_CREATE_OVERVIEW in requested_key_set:
-            payloads[PROCESSING_CARD_CREATE_OVERVIEW] = {
-                "card": PROCESSING_CARD_CREATE_OVERVIEW,
+        if _constants.PROCESSING_CARD_CREATE_OVERVIEW in requested_key_set:
+            payloads[_constants.PROCESSING_CARD_CREATE_OVERVIEW] = {
+                "card": _constants.PROCESSING_CARD_CREATE_OVERVIEW,
                 "summary": summary["create"],
             }
-        if PROCESSING_CARD_ON_HOLD_OVERVIEW in requested_key_set:
-            payloads[PROCESSING_CARD_ON_HOLD_OVERVIEW] = {
-                "card": PROCESSING_CARD_ON_HOLD_OVERVIEW,
+        if _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW in requested_key_set:
+            payloads[_constants.PROCESSING_CARD_ON_HOLD_OVERVIEW] = {
+                "card": _constants.PROCESSING_CARD_ON_HOLD_OVERVIEW,
                 "summary": summary["onHold"],
             }
-        if PROCESSING_CARD_INCOMPLETE_OVERVIEW in requested_key_set:
-            payloads[PROCESSING_CARD_INCOMPLETE_OVERVIEW] = {
-                "card": PROCESSING_CARD_INCOMPLETE_OVERVIEW,
+        if _constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW in requested_key_set:
+            payloads[_constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW] = {
+                "card": _constants.PROCESSING_CARD_INCOMPLETE_OVERVIEW,
                 "summary": summary["incomplete"],
             }
 
     if requested_key_set & {
-        PROCESSING_CARD_CATALOG_SYNC,
-        PROCESSING_CARD_CATALOG_AUTOMATION,
+        _constants.PROCESSING_CARD_CATALOG_SYNC,
+        _constants.PROCESSING_CARD_CATALOG_AUTOMATION,
     }:
-        catalog_sync = get_sync_state(PROCESSING_SYNC_KEY_CATALOG)
+        catalog_sync = _state.get_sync_state(_constants.PROCESSING_SYNC_KEY_CATALOG)
         catalog_sync_payload = (
-            serialize_sync_state(catalog_sync, include_remote_pages=False)
+            _state.serialize_sync_state(catalog_sync, include_remote_pages=False)
             if catalog_sync.pk
-            else default_sync_state_payload(PROCESSING_SYNC_KEY_CATALOG)
+            else _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_CATALOG
+            )
         )
-        if PROCESSING_CARD_CATALOG_SYNC in requested_key_set:
-            payloads[PROCESSING_CARD_CATALOG_SYNC] = {
-                "card": PROCESSING_CARD_CATALOG_SYNC,
+        if _constants.PROCESSING_CARD_CATALOG_SYNC in requested_key_set:
+            payloads[_constants.PROCESSING_CARD_CATALOG_SYNC] = {
+                "card": _constants.PROCESSING_CARD_CATALOG_SYNC,
                 "sync": catalog_sync_payload,
             }
-        if PROCESSING_CARD_CATALOG_AUTOMATION in requested_key_set:
-            catalog_automation = get_automation_settings(ProcessingAutomationKind.CATALOG)
-            catalog_automation_payload = (
-                serialize_automation_settings(catalog_automation)
-                if catalog_automation.pk
-                else default_automation_payload(ProcessingAutomationKind.CATALOG)
+        if _constants.PROCESSING_CARD_CATALOG_AUTOMATION in requested_key_set:
+            catalog_automation = _state.get_automation_settings(
+                ProcessingAutomationKind.CATALOG
             )
-            payloads[PROCESSING_CARD_CATALOG_AUTOMATION] = {
-                "card": PROCESSING_CARD_CATALOG_AUTOMATION,
+            catalog_automation_payload = (
+                _state.serialize_automation_settings(catalog_automation)
+                if catalog_automation.pk
+                else _state.default_automation_payload(ProcessingAutomationKind.CATALOG)
+            )
+            payloads[_constants.PROCESSING_CARD_CATALOG_AUTOMATION] = {
+                "card": _constants.PROCESSING_CARD_CATALOG_AUTOMATION,
                 "sync": catalog_sync_payload,
                 "automation": catalog_automation_payload,
             }
 
-    if PROCESSING_CARD_INCOMPLETE_AUTOMATION in requested_key_set:
-        incomplete_sync = get_sync_state(PROCESSING_SYNC_KEY_INCOMPLETE)
-        incomplete_automation = get_automation_settings(ProcessingAutomationKind.INCOMPLETE)
+    if _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION in requested_key_set:
+        incomplete_sync = _state.get_sync_state(
+            _constants.PROCESSING_SYNC_KEY_INCOMPLETE
+        )
+        incomplete_automation = _state.get_automation_settings(
+            ProcessingAutomationKind.INCOMPLETE
+        )
         incomplete_sync_payload = (
-            serialize_sync_state(incomplete_sync, include_remote_pages=False)
+            _state.serialize_sync_state(incomplete_sync, include_remote_pages=False)
             if incomplete_sync.pk
-            else default_sync_state_payload(PROCESSING_SYNC_KEY_INCOMPLETE)
+            else _state.default_sync_state_payload(
+                _constants.PROCESSING_SYNC_KEY_INCOMPLETE
+            )
         )
         incomplete_automation_payload = (
-            serialize_automation_settings(incomplete_automation)
+            _state.serialize_automation_settings(incomplete_automation)
             if incomplete_automation.pk
-            else default_automation_payload(ProcessingAutomationKind.INCOMPLETE)
+            else _state.default_automation_payload(ProcessingAutomationKind.INCOMPLETE)
         )
-        payloads[PROCESSING_CARD_INCOMPLETE_AUTOMATION] = {
-            "card": PROCESSING_CARD_INCOMPLETE_AUTOMATION,
+        payloads[_constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION] = {
+            "card": _constants.PROCESSING_CARD_INCOMPLETE_AUTOMATION,
             "sync": incomplete_sync_payload,
             "automation": incomplete_automation_payload,
         }
@@ -195,17 +223,17 @@ def ensure_processing_ui_rows():
     ProcessingUiDomainVersion.objects.bulk_create(
         [
             ProcessingUiDomainVersion(domain=domain, version=0)
-            for domain in PROCESSING_CARD_KEYS
+            for domain in _constants.PROCESSING_CARD_KEYS
         ],
         ignore_conflicts=True,
     )
     shared_payloads = processing_shared_projection_payloads(
-        keys=PROCESSING_SHARED_CARD_KEYS
+        keys=_constants.PROCESSING_SHARED_CARD_KEYS
     )
     ProcessingUiProjection.objects.bulk_create(
         [
             ProcessingUiProjection(key=key, payload=shared_payloads[key])
-            for key in PROCESSING_SHARED_CARD_KEYS
+            for key in _constants.PROCESSING_SHARED_CARD_KEYS
         ],
         ignore_conflicts=True,
     )
@@ -213,10 +241,10 @@ def ensure_processing_ui_rows():
 
 def rebuild_processing_ui_state(*, keys=None):
     ensure_processing_ui_rows()
-    target_keys = keys or PROCESSING_SHARED_CARD_KEYS
+    target_keys = keys or _constants.PROCESSING_SHARED_CARD_KEYS
     shared_payloads = processing_shared_projection_payloads(keys=target_keys)
     for key in target_keys:
-        if key not in PROCESSING_SHARED_CARD_KEYS:
+        if key not in _constants.PROCESSING_SHARED_CARD_KEYS:
             continue
         ProcessingUiProjection.objects.update_or_create(
             key=key,
@@ -225,7 +253,9 @@ def rebuild_processing_ui_state(*, keys=None):
 
 
 def processing_ui_versions_map(domains=None):
-    target_domains = PROCESSING_CARD_KEYS if domains is None else list(domains)
+    target_domains = (
+        _constants.PROCESSING_CARD_KEYS if domains is None else list(domains)
+    )
     versions = {domain: 0 for domain in target_domains}
     for row in ProcessingUiDomainVersion.objects.filter(domain__in=target_domains):
         versions[row.domain] = int(row.version)
@@ -245,8 +275,8 @@ def processing_ui_versions_diff(previous_versions, *, domains=None):
 def processing_ui_shared_projection_rows(*, keys=None):
     requested_keys = [
         key
-        for key in (keys or PROCESSING_SHARED_CARD_KEYS)
-        if key in PROCESSING_SHARED_CARD_KEYS
+        for key in (keys or _constants.PROCESSING_SHARED_CARD_KEYS)
+        if key in _constants.PROCESSING_SHARED_CARD_KEYS
     ]
     projection_rows = {
         row.key: row

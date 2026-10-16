@@ -1,5 +1,7 @@
 .DS_Store
 .env
+deploy/platform.env
+deploy/tls/
 .env.local
 .env.*.local
 local/env/.env
@@ -43,6 +45,10 @@ app/frontend/dist/
 app/frontend/node_modules/
 app/frontend/.vite/
 app/frontend/.env
+app/web/node_modules/
+app/web/.next/
+app/web/out/
+app/web/next-env.d.ts
 app/frontend/test-results/
 app/frontend/test-artifacts/
 tests/frontend/test-results/

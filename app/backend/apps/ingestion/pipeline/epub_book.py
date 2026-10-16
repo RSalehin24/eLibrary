@@ -269,7 +269,13 @@ def create_epub(book_data):
     # noise — adding it as a "প্রারম্ভ" page would be misleading.
     # Suppress trivially short residuals (story-list lines, title-only text)
     # so they don't appear as a meaningless preamble page.
-    if compact_main_content and not content_items and len(plain_text_from_html(compact_main_content)) >= SHORT_RESIDUAL_MAIN_CONTENT_LENGTH:
+    canonical_body_present = any(
+        section.get("section_type") == "body" and not html_is_blank(section.get("html", ""))
+        for section in book_data.get("canonical_sections", [])
+    )
+    if compact_main_content and not content_items and (
+        canonical_body_present or len(plain_text_from_html(compact_main_content)) >= SHORT_RESIDUAL_MAIN_CONTENT_LENGTH
+    ):
         main_content_title = book_data.get("book_title") or "মূল লেখা"
         builder.add_main_content_page(main_content=compact_main_content, title=main_content_title)
     

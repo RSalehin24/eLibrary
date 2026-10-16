@@ -1,39 +1,97 @@
-"""Compatibility facade for the named services modules."""
-from pathlib import Path as _Path
+"""Retained processing API; implementation modules use regular imports.
 
-_MODULE_DIR = _Path(__file__).with_name("service_modules")
-_MODULE_FILES = (
-    "service_imports_and_constants.py",
-    "catalog_phase_helpers.py",
-    "catalog_phase_normalization.py",
-    "catalog_progress_state.py",
-    "checkpoint_and_runtime_adapters.py",
-    "sync_status_messages.py",
-    "state_serializers.py",
-    "ui_projection_queries.py",
-    "ui_domain_versions.py",
-    "processing_state_queries.py",
-    "catalog_record_sync.py",
-    "incomplete_catalog_fetch.py",
-    "sync_lifecycle_actions.py",
-    "sync_completion.py",
-    "automation_advancement.py",
-    "incomplete_resolution.py",
-    "sync_runner.py",
-    "request_queue_runtime.py",
-    "processing_table_queries.py",
-    "processing_card_payloads.py",
-    "automation_commands.py",
-    "request_processing_persistence.py",
-    "scrape_cache.py",
-    "request_processing_pipeline.py",
-    "maintenance_and_request_actions.py",
-    "request_action_dispatch.py",
+The legacy module exposes hundreds of historical names. Keep compatibility
+without executing source files or merging implementation namespaces.
+"""
 
+from .service_modules import (
+    automation_advancement,
+    automation_commands,
+    automation_schedule,
+    catalog_phase_helpers,
+    catalog_phase_normalization,
+    catalog_progress_state,
+    catalog_record_sync,
+    catalog_refresh,
+    checkpoint_and_runtime_adapters,
+    incomplete_catalog_fetch,
+    incomplete_catalog_queries,
+    incomplete_resolution,
+    maintenance_and_request_actions,
+    processing_card_payloads,
+    processing_state_queries,
+    processing_table_queries,
+    remote_record_queries,
+    request_action_dispatch,
+    request_pipeline_tick,
+    request_processing_persistence,
+    request_processing_pipeline,
+    request_queue_runtime,
+    runtime_dependencies,
+    scrape_cache,
+    service_imports_and_constants,
+    state_serializers,
+    sync_completion,
+    sync_lifecycle_actions,
+    sync_runner,
+    sync_status_messages,
+    ui_domain_versions,
+    ui_projection_queries,
 )
 
-for _module_file in _MODULE_FILES:
-    _module_path = _MODULE_DIR / _module_file
-    exec(compile(_module_path.read_text(encoding="utf-8"), str(_module_path), "exec"), globals())
+_EXPORT_MODULES = (
+    catalog_refresh,
+    automation_schedule,
+    incomplete_catalog_queries,
+    request_pipeline_tick,
+    remote_record_queries,
+    runtime_dependencies,
+    request_action_dispatch,
+    maintenance_and_request_actions,
+    request_processing_pipeline,
+    scrape_cache,
+    request_processing_persistence,
+    automation_commands,
+    processing_card_payloads,
+    processing_table_queries,
+    request_queue_runtime,
+    sync_runner,
+    incomplete_resolution,
+    automation_advancement,
+    sync_completion,
+    sync_lifecycle_actions,
+    incomplete_catalog_fetch,
+    catalog_record_sync,
+    processing_state_queries,
+    ui_domain_versions,
+    ui_projection_queries,
+    state_serializers,
+    sync_status_messages,
+    checkpoint_and_runtime_adapters,
+    catalog_progress_state,
+    catalog_phase_normalization,
+    catalog_phase_helpers,
+    service_imports_and_constants,
+)
+__all__ = [
+    name
+    for name in sorted(
+        {
+            name
+            for module in _EXPORT_MODULES
+            for name in vars(module)
+            if not name.startswith("_")
+        }
+    )
+]
 
-del _Path, _MODULE_DIR, _MODULE_FILES, _module_file, _module_path
+
+def __getattr__(name):
+    for module in _EXPORT_MODULES:
+        if name in vars(module) and not name.startswith("__"):
+            return getattr(module, name)
+    raise AttributeError(f"{__name__!r} has no attribute {name!r}")
+
+
+def __dir__():
+    return sorted(set(globals()) | set(__all__))

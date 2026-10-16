@@ -18,7 +18,7 @@ from apps.ingestion.services.resolution_support_hosts import (
 
 
 def collect_system_dns_ips(host):
-    ips = []
+    ips: list[str] = []
     try:
         addr_info = socket.getaddrinfo(
             host,
@@ -87,7 +87,7 @@ def resolve_a_records_via_udp(host, resolver, timeout=3):
         offset = skip_dns_name(packet, offset)
         offset += 4
 
-    ips = []
+    ips: list[str] = []
     seen = set()
     for _ in range(ancount):
         offset = skip_dns_name(packet, offset)
@@ -135,7 +135,7 @@ def resolve_a_records_via_doh(host, timeout=5):
         return []
 
     answers = payload.get("Answer", []) if isinstance(payload, dict) else []
-    ips = []
+    ips: list[str] = []
     seen = set()
     for answer in answers:
         if not isinstance(answer, dict) or answer.get("type") != 1:
@@ -219,7 +219,7 @@ def get_via_direct_ip_https(session, url, host, ip, **kwargs):
             query = f"{query}&{params_query}" if query else params_query
     request_target = f"{base_path}?{query}" if query else base_path
 
-    merged_headers = {}
+    merged_headers: dict[str, str] = {}
     merged_headers.update(getattr(session, "headers", {}) or {})
     merged_headers.update(provided_headers)
     merged_headers["Host"] = host

@@ -1,37 +1,34 @@
-from django.conf import settings
-from django.contrib.auth import get_user_model, login, logout, update_session_auth_hash
-from django.db import transaction
-from django.db.models import Case, Count, Exists, IntegerField, OuterRef, Prefetch, Q, Value, When
-from django.db.models.functions import Lower
-from django_otp.plugins.otp_totp.models import TOTPDevice
-from rest_framework import generics, status
-from rest_framework.exceptions import ErrorDetail, ValidationError
-from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.response import Response
-from rest_framework.views import APIView
-
+from apps.access.models import ACCOUNT_MANAGEABLE_PERMISSION_SCOPES
 from apps.accounts.serializers import (
     LoginSerializer,
-    ManagedUserCreateSerializer,
-    ManagedUserSerializer,
-    ManagedUserUpdateSerializer,
     PasswordResetConfirmSerializer,
     PasswordResetRequestSerializer,
     PasswordResetValidateSerializer,
-    ProfileSerializer,
-    ProfileUpdateSerializer,
     RegisterSerializer,
     SessionSerializer,
-    TOTPConfirmSerializer,
-    TOTPSetupSerializer,
-    TOTPStatusSerializer,
     UserSerializer,
 )
-from apps.accounts.serializers.support import send_account_setup_email
-from apps.access.models import ACCOUNT_MANAGEABLE_PERMISSION_SCOPES, PermissionGrant
 from apps.common.permissions import IsSuperAdmin
-from apps.common.throttles import LoginRateThrottle, PasswordResetRateThrottle, RegisterRateThrottle
+from apps.common.throttles import (
+    LoginRateThrottle,
+    PasswordResetRateThrottle,
+    RegisterRateThrottle,
+)
+from django.conf import settings
+from django.contrib.auth import get_user_model, login, logout
+from django.db.models import (
+    Case,
+    IntegerField,
+    Q,
+    Value,
+    When,
+)
+from django.db.models.functions import Lower
+from rest_framework import generics, status
+from rest_framework.exceptions import ErrorDetail, ValidationError
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 
 
 def extract_validation_error_message(detail):
@@ -142,27 +139,34 @@ def ordered_managed_users_queryset(queryset, sort_key):
 
 
 class SessionView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def get(self, request):
         user = request.user if request.user.is_authenticated else None
         return Response(
-            SessionSerializer({"authenticated": bool(user), "user": user}, context={"request": request}).data
+            SessionSerializer(
+                {"authenticated": bool(user), "user": user},
+                context={"request": request},
+            ).data
         )
 
 
 class RegisterView(generics.CreateAPIView):
-    permission_classes = [IsAuthenticated, IsSuperAdmin]
+    permission_classes = (IsAuthenticated, IsSuperAdmin)
     serializer_class = RegisterSerializer
-    throttle_classes = [RegisterRateThrottle]
+    throttle_classes = (RegisterRateThrottle,)
 
 
 class DemoLoginView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def get(self, request):
+        if settings.APP_ENV == "production":
+            return Response(status=status.HTTP_404_NOT_FOUND)
         if request.user.is_authenticated:
-            return Response(UserSerializer(request.user, context={"request": request}).data)
+            return Response(
+                UserSerializer(request.user, context={"request": request}).data
+            )
 
         User = get_user_model()
         email = settings.DEMO_USER_EMAIL
@@ -185,29 +189,39 @@ class DemoLoginView(APIView):
 
 
 class LoginView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [LoginRateThrottle]
+    permission_classes = (AllowAny,)
+    throttle_classes = (LoginRateThrottle,)
+    serializer_class = LoginSerializer
 
     def post(self, request):
-        serializer = LoginSerializer(data=request.data, context={"request": request})
+        serializer = self.serializer_class(
+            data=request.data, context={"request": request}
+        )
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError as exc:
-            if isinstance(exc.detail, dict) and "code" in exc.detail and "detail" in exc.detail:
+            if (
+                isinstance(exc.detail, dict)
+                and "code" in exc.detail
+                and "detail" in exc.detail
+            ):
                 code = exc.detail["code"]
                 detail = exc.detail["detail"]
                 if isinstance(code, (list, tuple)):
                     code = code[0]
                 if isinstance(detail, (list, tuple)):
                     detail = detail[0]
-                return Response({"detail": str(detail), "code": str(code)}, status=status.HTTP_400_BAD_REQUEST)
+                return Response(
+                    {"detail": str(detail), "code": str(code)},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             raise
         login(request, serializer.validated_data["user"])
         return Response(UserSerializer(request.user, context={"request": request}).data)
 
 
 class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = (IsAuthenticated,)
 
     def post(self, request):
         logout(request)
@@ -215,11 +229,13 @@ class LogoutView(APIView):
 
 
 class PasswordResetRequestView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [PasswordResetRateThrottle]
+    permission_classes = (AllowAny,)
+    throttle_classes = (PasswordResetRateThrottle,)
 
     def post(self, request):
-        serializer = PasswordResetRequestSerializer(data=request.data, context={"request": request})
+        serializer = PasswordResetRequestSerializer(
+            data=request.data, context={"request": request}
+        )
         try:
             serializer.is_valid(raise_exception=True)
             serializer.save()
@@ -235,12 +251,14 @@ class PasswordResetRequestView(APIView):
 
 
 class PasswordResetConfirmView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         if request.user.is_authenticated:
             return Response(
-                {"detail": "Please log out first before resetting a password from this link."},
+                {
+                    "detail": "Please log out first before resetting a password from this link."
+                },
                 status=status.HTTP_400_BAD_REQUEST,
             )
         serializer = PasswordResetConfirmSerializer(data=request.data)
@@ -267,7 +285,7 @@ class PasswordResetConfirmView(APIView):
 
 
 class PasswordResetValidateView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = (AllowAny,)
 
     def post(self, request):
         serializer = PasswordResetValidateSerializer(data=request.data)

@@ -87,10 +87,7 @@ def test_incomplete_automation_uses_incomplete_sync_remote_pages_source(client, 
         ],
         [],
     ]
-    monkeypatch.setattr(
-        "apps.processing.services.incomplete_sync_remote_pages",
-        lambda: expected_pages,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.incomplete_sync_remote_pages', lambda: expected_pages)
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -142,14 +139,8 @@ def test_incomplete_automation_live_sync_fetches_incrementally_and_resolves_stal
             ]
         return []
 
-    monkeypatch.setattr(
-        "apps.processing.services.should_use_live_incomplete_fetch",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.fetch_live_incomplete_page",
-        fake_fetch_live_incomplete_page,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch', lambda: True)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page', fake_fetch_live_incomplete_page)
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -207,14 +198,8 @@ def test_incomplete_automation_live_sync_pause_and_resume_restarts_from_beginnin
             ]
         return []
 
-    monkeypatch.setattr(
-        "apps.processing.services.should_use_live_incomplete_fetch",
-        lambda: True,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.fetch_live_incomplete_page",
-        fake_fetch_live_incomplete_page,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch', lambda: True)
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page', fake_fetch_live_incomplete_page)
 
     _mutation, _payload = post_processing_mutation(
         client,

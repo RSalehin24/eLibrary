@@ -1,3 +1,4 @@
+from typing import Any
 import hashlib
 
 from bs4 import BeautifulSoup
@@ -82,7 +83,7 @@ def append_unique_entity(entities, item):
 
 
 def extract_book_entities(scraped_data, source_url):
-    entities = []
+    entities: list[dict[str, Any]] = []
     evidences = []
     title = clean_display_text(scraped_data.get("book_title", ""))
     if title:

@@ -1,6 +1,27 @@
+from .job_lifecycle import SubmissionOrigin
 
 
 def create_submission_records(submitter, parsed_entries, auto_process=True, origin=SubmissionOrigin.USER):
+    from .job_lifecycle import (
+        AuditLog,
+        BookSubmission,
+        ResolutionStatus,
+        ReviewState,
+        SubmissionStatus,
+        find_existing_book_by_source_url,
+        normalize_text,
+        validate_source_url,
+    )
+    from .resolution_and_queueing import (
+        find_reusable_submission,
+        fulfill_submission_with_existing_book,
+        queue_submission,
+        resolve_submission,
+    )
+    from .retry_and_deduplication import (
+        capture_source_page_metadata,
+        sync_submission_from_canonical,
+    )
     submissions = []
 
     for entry in parsed_entries:
@@ -104,6 +125,11 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
 
 
 def detect_metadata_duplicate(scraped_data):
+    from .job_lifecycle import (
+        _detect_metadata_duplicate,
+        normalize_scraped_book,
+        texts_are_similar,
+    )
     return _detect_metadata_duplicate(
         scraped_data,
         normalize_scraped_book_fn=normalize_scraped_book,
@@ -112,6 +138,7 @@ def detect_metadata_duplicate(scraped_data):
 
 
 def find_exact_existing_book(scraped_data):
+    from .job_lifecycle import _find_exact_existing_book, normalize_scraped_book
     return _find_exact_existing_book(
         scraped_data,
         normalize_scraped_book_fn=normalize_scraped_book,
@@ -119,6 +146,11 @@ def find_exact_existing_book(scraped_data):
 
 
 def sync_assets(book, job, scraped_data):
+    from .job_lifecycle import (
+        GENERATED_ASSET_LABELS,
+        REQUIRED_GENERATED_ASSET_TYPES,
+        _sync_assets,
+    )
     return _sync_assets(
         book,
         job,
@@ -129,6 +161,8 @@ def sync_assets(book, job, scraped_data):
 
 
 def complete_processed_submission(submission, book, normalized_url, source="scrape"):
+    from .job_lifecycle import _complete_processed_submission, ensure_preview_session
+    from .retry_and_deduplication import sync_deduplicated_submissions
     return _complete_processed_submission(
         submission,
         book,
@@ -140,6 +174,7 @@ def complete_processed_submission(submission, book, normalized_url, source="scra
 
 
 def sync_metadata_relations(book, normalized):
+    from .job_lifecycle import _sync_metadata_relations, replace_book_relations
     return _sync_metadata_relations(
         book,
         normalized,
@@ -148,6 +183,14 @@ def sync_metadata_relations(book, normalized):
 
 
 def persist_scraped_book(submission, job, scraped_data, target_book=None):
+    from .job_lifecycle import (
+        _persist_scraped_book,
+        clean_extracted_dedication_html,
+        find_deleted_book_by_title,
+        find_existing_book_by_source_url,
+        normalize_scraped_book,
+        normalize_source_url,
+    )
     return _persist_scraped_book(
         submission,
         scraped_data,
@@ -163,6 +206,12 @@ def persist_scraped_book(submission, job, scraped_data, target_book=None):
 
 
 def persist_curated_book(submission, job, curated_result, target_book=None):
+    from .job_lifecycle import (
+        _persist_curated_book,
+        find_deleted_book_by_title,
+        find_existing_book_by_source_url,
+        replace_book_relations,
+    )
     return _persist_curated_book(
         curated_result,
         source_url=submission.resolved_url,
@@ -175,5 +224,9 @@ def persist_curated_book(submission, job, curated_result, target_book=None):
 
 
 def cancel_requested_for_job(job):
+    from .job_lifecycle import JobStatus
     job.refresh_from_db(fields=["status", "cancel_requested", "updated_at"])
     return job.status == JobStatus.CANCELLED or job.cancel_requested
+
+
+__all__ = ['cancel_requested_for_job', 'complete_processed_submission', 'create_submission_records', 'detect_metadata_duplicate', 'find_exact_existing_book', 'persist_curated_book', 'persist_scraped_book', 'sync_assets', 'sync_metadata_relations']

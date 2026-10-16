@@ -30,6 +30,7 @@ def _get_scrape_cache_root():
     base = getattr(settings, "RUNTIME_STORAGE_DIR", None)
     if base is None:
         import tempfile
+
         fallback = Path(tempfile.gettempdir()) / _SCRAPE_CACHE_SUBDIR
         fallback.mkdir(parents=True, exist_ok=True)
         return fallback
@@ -145,6 +146,4 @@ class DiskPageCache:
                 self.path.unlink()
                 _scrape_cache_logger.debug("Deleted scrape cache %s.", self.path)
         except OSError:
-            _scrape_cache_logger.debug(
-                "Could not delete scrape cache %s.", self.path
-            )
+            _scrape_cache_logger.debug("Could not delete scrape cache %s.", self.path)

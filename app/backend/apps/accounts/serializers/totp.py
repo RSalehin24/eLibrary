@@ -8,8 +8,10 @@ from .support import build_qr_svg
 class TOTPStatusSerializer(serializers.Serializer):
     enabled = serializers.BooleanField()
     pending_setup = serializers.BooleanField()
-    required = serializers.BooleanField()
     setup_required = serializers.BooleanField()
+
+    def get_fields(self):
+        return {**super().get_fields(), "required": serializers.BooleanField()}
 
 
 class TOTPSetupSerializer(serializers.Serializer):

@@ -1,28 +1,53 @@
+from apps.common.permissions import CanManageProcessing
+from rest_framework.exceptions import ValidationError
+from rest_framework.views import APIView
+
+from ..models import ProcessingAutomationKind
+from ..serializers import (
+    AutomationUpdateSerializer,
+    BulkIdsSerializer,
+    RequestActionSerializer,
+)
+from ..services import (
+    active_sync_scope,
+    apply_request_action,
+    collect_processing_ui_version_updates,
+    create_requests_for_record_ids,
+    get_sync_state,
+    pause_sync,
+    resume_sync,
+    run_catalog_automation,
+    run_incomplete_automation,
+    stop_sync,
+    sync_run_mode,
+    update_automation_settings,
+)
+from . import read_stream_and_sync_start_views as _read_stream_and_sync_start_views
 
 
 class ProcessingSyncPauseView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request, scope=None):
         with collect_processing_ui_version_updates() as versions:
             pause_sync(
-                normalize_sync_scope(
+                _read_stream_and_sync_start_views.normalize_sync_scope(
                     scope,
                     default=active_sync_scope(),
                 )
             )
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )
 
 
 class ProcessingSyncResumeView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request, scope=None):
-        sync_key = normalize_sync_scope(
+        sync_key = _read_stream_and_sync_start_views.normalize_sync_scope(
             scope,
             default=active_sync_scope(),
         )
@@ -30,38 +55,38 @@ class ProcessingSyncResumeView(APIView):
         with collect_processing_ui_version_updates() as versions:
             resume_sync(
                 sync_key,
-                run_mode=requested_resume_run_mode(
+                run_mode=_read_stream_and_sync_start_views.requested_resume_run_mode(
                     request,
                     default=default_run_mode,
                 ),
             )
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )
 
 
 class ProcessingSyncStopView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request, scope=None):
         with collect_processing_ui_version_updates() as versions:
             stop_sync(
-                normalize_sync_scope(
+                _read_stream_and_sync_start_views.normalize_sync_scope(
                     scope,
                     default=active_sync_scope(),
                 )
             )
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )
 
 
 class ProcessingRecordCreateRequestsView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request):
         serializer = BulkIdsSerializer(data=request.data)
@@ -71,8 +96,8 @@ class ProcessingRecordCreateRequestsView(APIView):
                 serializer.validated_data["ids"],
                 actor=request.user,
             )
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
                 extra={"createdCount": len(created)},
             )
@@ -80,7 +105,7 @@ class ProcessingRecordCreateRequestsView(APIView):
 
 
 class ProcessingRequestActionView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request):
         serializer = RequestActionSerializer(data=request.data)
@@ -95,8 +120,8 @@ class ProcessingRequestActionView(APIView):
                 )
         except ValueError as exc:
             raise ValidationError({"detail": str(exc)}) from exc
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
                 extra={"changedCount": len(changed)},
             )
@@ -104,7 +129,7 @@ class ProcessingRequestActionView(APIView):
 
 
 class ProcessingAutomationView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
     kind = None
 
     def post(self, request):
@@ -112,8 +137,8 @@ class ProcessingAutomationView(APIView):
         serializer.is_valid(raise_exception=True)
         with collect_processing_ui_version_updates() as versions:
             update_automation_settings(self.kind, serializer.validated_data)
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )
@@ -128,26 +153,26 @@ class ProcessingIncompleteAutomationView(ProcessingAutomationView):
 
 
 class ProcessingCatalogAutomationRunView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request):
         with collect_processing_ui_version_updates() as versions:
             run_catalog_automation()
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )
 
 
 class ProcessingIncompleteAutomationRunView(APIView):
-    permission_classes = [CanManageProcessing]
+    permission_classes = (CanManageProcessing,)
 
     def post(self, request):
         with collect_processing_ui_version_updates() as versions:
             run_incomplete_automation()
-        return processing_response(
-            processing_mutation_payload(
+        return _read_stream_and_sync_start_views.processing_response(
+            _read_stream_and_sync_start_views.processing_mutation_payload(
                 versions,
             )
         )

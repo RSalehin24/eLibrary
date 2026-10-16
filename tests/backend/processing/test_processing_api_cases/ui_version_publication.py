@@ -104,10 +104,7 @@ def test_processing_request_action_response_excludes_unrelated_version_bumps(
         version_row.save(update_fields=["version", "updated_at"])
         return changed
 
-    monkeypatch.setattr(
-        "apps.processing.views.apply_request_action",
-        apply_action_with_unrelated_bump,
-    )
+    monkeypatch.setattr('apps.processing.view_modules.sync_action_and_automation_views.apply_request_action', apply_action_with_unrelated_bump)
 
     response = client.post(
         "/api/processing/requests/action/",

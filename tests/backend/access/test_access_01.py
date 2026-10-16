@@ -4,6 +4,7 @@ from pathlib import Path as _Path
 _MODULE_DIR = _Path(__file__).with_name("test_access_01_cases")
 _MODULE_FILES = (
     "download_reader_and_kindle.py",
+    "read_once_sessions.py",
     "kindle_smtp_failures.py",
     "kindle_validation_and_html_downloads.py",
 

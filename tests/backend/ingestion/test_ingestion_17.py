@@ -143,7 +143,7 @@ def test_duplicate_review_keep_new_queues_recreate_for_deleted_existing_book(cli
         detected_by="normalized_metadata",
         status=DuplicateReviewStatus.PENDING,
     )
-    monkeypatch.setattr("apps.ingestion.services.submissions.dispatch_processing_job", lambda job, force=False: job)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job", lambda job, force=False: job)
     client.force_login(admin)
 
     response = client.post(

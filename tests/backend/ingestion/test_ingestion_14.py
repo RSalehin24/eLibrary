@@ -114,8 +114,8 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
         "output_folder": str(tmp_path),
     }
 
-    monkeypatch.setattr("apps.ingestion.services.submissions.capture_source_page_metadata", lambda _url: None)
-    monkeypatch.setattr("apps.ingestion.services.submissions.scrape_book", lambda _url: sample)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda _url: None)
+    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", lambda _url: sample)
 
     original_create = Book.objects.create
     conflict_raised = {"value": False}

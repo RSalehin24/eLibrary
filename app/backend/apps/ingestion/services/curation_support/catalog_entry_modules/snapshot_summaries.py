@@ -1,3 +1,12 @@
+from apps.ingestion.models import (
+    CatalogCurationMode,
+    CatalogCurationTrigger,
+    JobStatus,
+    SubmissionOrigin,
+)
+from django.utils import timezone
+
+from . import entry_inspection_queries as _entry_inspection_queries
 
 
 def summarize_source_catalog_snapshots(snapshots):
@@ -27,8 +36,13 @@ def update_source_catalog_snapshot_summary(summary, snapshot):
 
     if status == "processing":
         latest_job_status = (snapshot.get("latest_job_status") or "").strip()
-        latest_submission_status = (snapshot.get("latest_submission_status") or "").strip()
-        if latest_job_status == JobStatus.QUEUED or latest_submission_status == "queued":
+        latest_submission_status = (
+            snapshot.get("latest_submission_status") or ""
+        ).strip()
+        if (
+            latest_job_status == JobStatus.QUEUED
+            or latest_submission_status == "queued"
+        ):
             summary["queued"] += 1
         else:
             summary["processing"] += 1
@@ -40,19 +54,27 @@ def update_source_catalog_snapshot_summary(summary, snapshot):
 
 def source_catalog_entry_snapshots(queryset):
     snapshots = [
-        serialize_source_catalog_entry_inspection(inspection)
-        for inspection in iter_source_catalog_entry_inspections(queryset)
+        _entry_inspection_queries.serialize_source_catalog_entry_inspection(inspection)
+        for inspection in _entry_inspection_queries.iter_source_catalog_entry_inspections(
+            queryset
+        )
     ]
     return snapshots, summarize_source_catalog_snapshots(snapshots)
 
 
 def source_catalog_entry_overview(queryset, entry_statuses=None):
-    selected_statuses = set(entry_statuses or OVERVIEW_CURATION_STATUSES)
+    selected_statuses = set(
+        entry_statuses or _entry_inspection_queries.OVERVIEW_CURATION_STATUSES
+    )
     entries = []
     summary = empty_source_catalog_snapshot_summary()
 
-    for inspection in iter_source_catalog_entry_inspections(queryset):
-        snapshot = serialize_source_catalog_entry_inspection(inspection)
+    for inspection in _entry_inspection_queries.iter_source_catalog_entry_inspections(
+        queryset
+    ):
+        snapshot = _entry_inspection_queries.serialize_source_catalog_entry_inspection(
+            inspection
+        )
         update_source_catalog_snapshot_summary(summary, snapshot)
         if snapshot["curation_status"] in selected_statuses:
             entries.append(snapshot)
@@ -107,7 +129,9 @@ def should_retry_failed_entry(inspection, now=None):
     if activity_at is None:
         return True
 
-    return now - activity_at >= FAILED_AUTOMATION_RETRY_COOLDOWN
+    return (
+        now - activity_at >= _entry_inspection_queries.FAILED_AUTOMATION_RETRY_COOLDOWN
+    )
 
 
 def submission_origin_for_run(run):

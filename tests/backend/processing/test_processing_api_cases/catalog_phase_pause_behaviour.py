@@ -138,10 +138,7 @@ def test_processing_sync_honors_pause_requested_during_page_advance(client, monk
         processing_services.pause_sync()
         return result
 
-    monkeypatch.setattr(
-        "apps.processing.services.upsert_remote_records",
-        pause_after_upsert,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.catalog_record_sync.upsert_remote_records', pause_after_upsert)
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -197,10 +194,7 @@ def test_incomplete_sync_honors_pause_requested_during_batch_advance(client, mon
         processing_services.pause_sync()
         return resolved
 
-    monkeypatch.setattr(
-        "apps.processing.services.resolve_incomplete_records",
-        pause_after_resolve,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.incomplete_resolution.resolve_incomplete_records', pause_after_resolve)
 
     _mutation, payload = post_processing_mutation(
         client,

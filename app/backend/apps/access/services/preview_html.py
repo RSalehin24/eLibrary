@@ -84,6 +84,8 @@ def build_book_info_section(html_fragment):
         "html.parser",
     )
     section = fragment.find("div", class_="book-info-section")
+    if section is None:
+        raise ValueError("The preview section template is invalid.")
     replace_tag_contents(section.find("div", class_="book-info-content"), html_fragment)
     return section
 
@@ -99,6 +101,8 @@ def build_dedication_section(html_fragment, title):
         "html.parser",
     )
     section = fragment.find("div", class_="dedication-section")
+    if section is None:
+        raise ValueError("The preview section template is invalid.")
     replace_tag_contents(section.find("div", class_="dedication-content"), html_fragment)
     return section
 
@@ -114,6 +118,8 @@ def build_front_section(title, html_fragment):
         "html.parser",
     )
     section = fragment.find("div", class_="front-section")
+    if section is None:
+        raise ValueError("The preview section template is invalid.")
     replace_tag_contents(section.find("div", class_="front-section-content"), html_fragment)
     return section
 
@@ -194,7 +200,7 @@ def normalize_preview_html(book, asset):
     updated = normalize_preview_book_sections(soup, dedication_html=book.dedication_html)
 
     for image_tag in soup.find_all("img"):
-        src = (image_tag.get("src") or "").strip()
+        src = str(image_tag.get("src") or "").strip()
         if not is_local_preview_src(src):
             continue
         resolved_path = resolve_preview_image_path(source_dir, src, image_tag, cover_path=cover_path)

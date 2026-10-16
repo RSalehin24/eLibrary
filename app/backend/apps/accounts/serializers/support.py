@@ -170,12 +170,12 @@ def send_link_email(
         **(extra_email_context or {}),
     }
 
-    subject = loader.render_to_string(subject_template_name, email_context)
+    subject: str = loader.render_to_string(subject_template_name, email_context)
     subject = " ".join(subject.splitlines()).strip()
     html_body = loader.render_to_string(email_template_name, email_context)
     text_template_name = f"{email_template_name.rsplit('.', 1)[0]}.txt"
     try:
-        text_body = loader.render_to_string(text_template_name, email_context)
+        text_body: str = loader.render_to_string(text_template_name, email_context)
     except TemplateDoesNotExist:
         text_body = strip_tags(html_body)
 

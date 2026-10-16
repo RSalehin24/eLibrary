@@ -1,0 +1,24 @@
+{% extends "admin/login.html" %}
+{% load i18n %}
+
+{% block extrastyle %}
+  {{ block.super }}
+  <style>
+    #login-form > div { margin-bottom: 16px; }
+    #login-form label { display: block; }
+    #login-form input:not([type="hidden"]) { min-height: 44px; box-sizing: border-box; max-width: 100%; }
+  </style>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <p>{% trans "Use your authenticator code when two-factor authentication is enabled. Complete required setup in your library profile first." %}</p>
+    <p><a href="{{ library_profile_url }}" target="_blank" rel="noopener noreferrer">{% trans "Open library profile" %}</a></p>
+    <form action="{{ app_path }}" method="post" id="login-form">
+      {% csrf_token %}
+      {{ form.as_div }}
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="submit-row"><input type="submit" value="{% trans 'Log in' %}"></div>
+    </form>
+  </div>
+{% endblock %}

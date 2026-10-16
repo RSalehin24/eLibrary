@@ -8,7 +8,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 SOURCE_EXTENSIONS = {".js", ".jsx", ".py", ".sh", ".ts", ".tsx"}
 EXCLUDED_DIR_PARTS = {
     ".git",
@@ -63,6 +62,12 @@ def is_transport_module(path: str) -> bool:
     return "/views/" in path or path.endswith("/views.py") or "/serializers/" in path
 
 
+def uses_runtime_source_loader(path: str, content: str) -> bool:
+    return path.startswith("app/backend/") and bool(
+        re.search(r"\bexec\s*\(\s*compile\s*\(", content)
+    )
+
+
 def main() -> int:
     root = repo_root()
     violations: list[str] = []
@@ -76,14 +81,23 @@ def main() -> int:
             continue
 
         if NUMBERED_SPLIT_MODULE_PATTERN.search(rel_path) or "_parts/" in rel_path:
-            violations.append(f"{rel_path}: numbered split module paths are not allowed")
+            violations.append(
+                f"{rel_path}: numbered split module paths are not allowed"
+            )
 
         content = path.read_text(encoding="utf-8", errors="ignore")
+
+        if uses_runtime_source_loader(rel_path, content):
+            violations.append(
+                f"{rel_path}: import Python modules instead of executing source"
+            )
 
         if rel_path != "tests/scripts/check-architecture-policy.py" and any(
             pattern in content for pattern in GENERATED_SPLIT_LOADER_PATTERNS
         ):
-            violations.append(f"{rel_path}: generated part-module loader is not allowed")
+            violations.append(
+                f"{rel_path}: generated part-module loader is not allowed"
+            )
 
         if (
             rel_path.startswith("app/frontend/src/")
@@ -91,10 +105,14 @@ def main() -> int:
             and "apiFetch" in content
             and not FRONTEND_API_CLIENT_RE.match(rel_path)
         ):
-            violations.append(f"{rel_path}: import API calls through an API-client module")
+            violations.append(
+                f"{rel_path}: import API calls through an API-client module"
+            )
 
         if is_transport_module(rel_path) and TRANSPORT_IO_IMPORT_RE.search(content):
-            violations.append(f"{rel_path}: transport modules must not import external I/O clients")
+            violations.append(
+                f"{rel_path}: transport modules must not import external I/O clients"
+            )
 
     if not violations:
         print("architecture policy passed")

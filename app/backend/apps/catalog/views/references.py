@@ -25,7 +25,7 @@ PROSE_FRAGMENT_PATTERN = r"(^| )({})($| )".format(
 
 
 def annotate_reference_counts(queryset, relation, *, record_type, contributor_roles=None, author=None, series=None, category=None):
-    base_filter = {f"{relation}__deleted_at__isnull": True}
+    base_filter: dict[str, object] = {f"{relation}__deleted_at__isnull": True}
     if contributor_roles:
         if len(contributor_roles) == 1:
             base_filter["book_contributions__role"] = contributor_roles[0]

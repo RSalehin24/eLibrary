@@ -24,34 +24,18 @@ def test_processing_create_again_reuses_own_linked_book_and_finishes_created(
         linked_book=existing_book,
     )
 
-    monkeypatch.setattr(
-        "apps.processing.services.capture_source_page_metadata",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.find_existing_book_by_source_url",
-        lambda *_args, **_kwargs: existing_book,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.find_exact_existing_book",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.detect_metadata_duplicate",
-        lambda *_args, **_kwargs: None,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services.scrape_book",
-        lambda *_args, **_kwargs: {
-            "book_info": "",
-            "main_content": "<p>body</p>",
-        },
-        raising=False,
-    )
-    monkeypatch.setattr(
-        "apps.processing.services._persist_processing_book",
-        lambda *_args, **_kwargs: existing_book,
-    )
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.capture_source_page_metadata', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.capture_source_page_metadata', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_exact_existing_book', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_exact_existing_book', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.detect_metadata_duplicate', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.detect_metadata_duplicate', lambda *_args, **_kwargs: None)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.scrape_book', lambda *_args, **_kwargs: {'book_info': '', 'main_content': '<p>body</p>'}, raising=False)
+    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.scrape_book', lambda *_args, **_kwargs: {'book_info': '', 'main_content': '<p>body</p>'}, raising=False)
+    monkeypatch.setattr('apps.processing.service_modules.request_processing_persistence._persist_processing_book', lambda *_args, **_kwargs: existing_book)
 
     response = client.post(
         "/api/processing/requests/action/",

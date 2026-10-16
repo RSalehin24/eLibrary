@@ -188,6 +188,7 @@ def test_reference_listing_supports_optional_pagination_payload(client):
 @pytest.mark.django_db
 def test_manual_book_creation_uses_manual_listing_and_stays_hidden_from_default_book_page(client):
     user = User.objects.create_user(email="manual-reader@example.com", password="strong-password-123")
+    PermissionGrant.objects.create(user=user, scope=PermissionScope.PHYSICAL_BOOKS_VIEW)
     client.force_login(user)
 
     response = client.post(
