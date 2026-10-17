@@ -1,5 +1,18 @@
 # Protected file delivery
 
+The versioned HTML preview uses the same protected storage delivery as EPUB
+downloads, with `Content-Disposition: inline` and a script-free sandbox policy.
+The source result and book editor also retain separate attachment downloads.
+HTML preview permission is independent from download and processing permission.
+
+`GET /api/v1/catalog/books/<slug>/cover/` serves only ready JPEG/PNG/WebP cover assets
+through the same private storage checks and internal redirect/streaming paths.
+Published, reviewed books allow public cover viewing. Draft covers require an
+active account, completed required TOTP setup and existing book cover permission.
+Missing files return 404; raw storage paths and arbitrary remote images are not
+exposed. The UI uses this cover on cards, details, source results and the editor,
+with a title/author fallback if loading fails.
+
 The versioned reader and EPUB download endpoints authorize every request in
 Django. `PROTECTED_FILES_USE_NGINX=true` then returns an empty response with an
 internal redirect. Only resolved, existing files inside `MEDIA_ROOT` are eligible;

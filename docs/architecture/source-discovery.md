@@ -7,17 +7,39 @@ credential checks as source processing. Missing or unsafe configuration produces
 a disabled form without exposing credentials.
 
 The private `/api/v1/manage/sources/discovery/` endpoint returns options and accepts
-an operation UUID, configuration revision, and 1–200 pages (default 20). Commands
+an operation UUID, configuration revision, and 1–200 pages (default 20). `fetch_all`
+instead follows the archive through its terminal page, with a 2,000-page safety
+ceiling. Reaching that ceiling with another page remaining fails visibly as
+`source_catalog_scan_limit`, preserving earlier results. The main Fetch All
+button and optional Fetch Pages form show progress and cooperative controls
+inline, without leaving the selectable catalog. Commands
 require processing authority and CSRF protection. They persist a logical job and
 dispatch atomically; repeated commands share one operation. PostgreSQL permits
 only one active discovery operation. The worker rechecks authority and the pinned
 configuration before fetching and committing each page.
+
+`catalog_scope=unfinished` selects the same website's `/genres/অসম্পূর্ণ-বই/`
+archive; the scope is pinned into the command and configuration revision. The
+separate `/manage/unfinished/` screen filters source provenance, not failed
+exports. Each committed entry preserves other raw metadata and records the scan.
+A complete unbounded scan resolves records absent from the category. Partial or
+failed scans retain earlier unfinished flags. An empty first page is accepted
+only for a recognized unfinished archive, where it means no unfinished books.
 
 Archive pages use the controlled, bounded source transport and page checkpoints.
 The parser reads ordinary archive links and next-page links, rejects login pages,
 unsafe destinations, invalid metadata, and pagination loops. Each page contains at
 most 1,000 source records. Reaching the chosen page limit records that more pages
 remain rather than claiming a complete scan.
+
+Facet-based archives use the same text-anchor extraction as the retained resolver,
+skipping cover-only links. Their JavaScript pager is followed through server-side
+`_paged` queries while preserving existing filters. A recognized empty archive page
+ends a scan after books have been collected. An empty first page, an unrecognized
+layout, malformed listings, or repeated page contents fail visibly; they never
+produce a successful zero-book sync. Earlier committed pages remain available.
+Historical zero-book successes are labeled “No Books Found” in the interface and
+link back to catalog sync. Successful results link to book selection and creation.
 
 Page commits batch source inserts and updates in a transaction. Unchanged records
 receive a new `last_seen_at` without changing their metadata revision. Changed

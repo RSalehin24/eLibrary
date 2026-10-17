@@ -1,22 +1,18 @@
 .management-workspace { position:relative; padding-top:16px; }
+.book-lifecycle-controls { margin:20px 0; padding:16px 0; border-block:1px solid var(--line); }
+.book-lifecycle-controls h2 { font-size:1rem; }
+.button-danger { color:#902f2f; background:white; border-color:#dcbaba; }
+.button-danger:hover { color:#7b2020; background:#fcf0ef; border-color:#c28b8b; }
 .admin-language { display:flex; justify-content:flex-end; gap:4px; }
 .admin-language button { min-height:44px; padding:8px 16px; background:transparent; color:var(--muted); border:1px solid var(--line); border-radius:8px; }
 .admin-language button[aria-pressed="true"] { background:var(--green); color:white; border-color:var(--green); }
 .management-workspace .workspace { padding-top:20px; }
 .management-workspace .workspace-nav { align-self:start; position:sticky; top:20px; }
+.admin-sidebar { min-width:0; }
 .admin-page-heading { display:flex; align-items:flex-start; justify-content:space-between; flex-wrap:wrap; gap:16px; margin-bottom:24px; }
 .admin-page-heading h1 { margin-bottom:8px; }
 .admin-page-heading p { margin:0; }
 .admin-page-heading .button { padding-inline:16px; }
-.source-sync { display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 24px; padding:20px; background:white; border:1px solid var(--line); border-radius:12px; }
-.source-sync h2 { font-size:1.15rem; margin-bottom:4px; }
-.source-sync p { margin:4px 0; font-size:.85rem; }
-.source-sync>div { min-width:0; flex:1 1 280px; }
-.source-sync>p { flex-basis:100%; }
-.source-sync form { display:flex; align-items:flex-end; flex-wrap:wrap; gap:12px; }
-.source-sync .form-field { margin:0; max-width:150px; font-size:.85rem; }
-.source-sync input { width:100%; padding:8px 12px; }
-.source-website { overflow-wrap:anywhere; }
 .source-catalog { margin-top:24px; }
 .source-filters { align-items:flex-end; margin:0 0 12px; }
 .source-filters .form-field { margin:0; font-size:.85rem; }
@@ -26,9 +22,12 @@
 .source-selection-bar p { margin:0; margin-right:auto; font-size:.88rem; }
 .source-selection-bar .button { font-size:.85rem; padding:8px 16px; }
 .source-table { width:100%; table-layout:fixed; border-collapse:collapse; font-size:.85rem; background:white; border:1px solid var(--line); }
+.source-table caption { padding:8px 12px; text-align:left; background:white; border:1px solid var(--line); border-bottom:0; }
 .source-table th { text-align:left; font-weight:600; background:#f0f2ed; }
 .source-table th,.source-table td { padding:12px; border-bottom:1px solid var(--line); vertical-align:middle; overflow-wrap:anywhere; }
-.source-table th:first-child { width:48px; }
+.source-table th:first-child { width:64px; }
+.source-table .source-check { padding:4px 8px; }
+.source-select-control { display:flex; align-items:center; justify-content:center; width:44px; min-height:44px; cursor:pointer; }
 .source-table th:nth-child(2) { width:30%; }
 .source-table th:nth-child(3) { width:20%; }
 .source-table input[type="checkbox"] { display:block; width:22px; height:22px; accent-color:var(--green); cursor:pointer; }
@@ -55,15 +54,12 @@
 @media(max-width:767px) {
   .management-workspace .workspace-nav { position:static; }
   .admin-language { justify-content:flex-start; }
-  .source-sync { padding:16px; }
-  .source-sync form { width:100%; }
-  .source-sync .form-field { flex:1; max-width:none; min-width:0; }
-  .source-sync form .button { max-width:100%; white-space:normal; }
   .source-table,.source-table tbody { display:block; border:0; }
+  .source-table caption { display:block; }
   .source-table thead { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
-  .source-table tr { display:grid; grid-template-columns:36px minmax(0,1fr); border:1px solid var(--line); border-top:0; padding:16px; }
+  .source-table tr { display:grid; grid-template-columns:44px minmax(0,1fr); border:1px solid var(--line); border-top:0; padding:16px; }
   .source-table td { display:block; padding:4px 0; border:0; grid-column:2; }
-  .source-table .source-check { grid-column:1; grid-row:1 / span 4; padding-top:8px; }
+  .source-table .source-check { grid-column:1; grid-row:1 / span 4; padding:0; }
   .source-table td[data-label]::before { content:attr(data-label) ": "; color:var(--muted); }
   .source-row-actions { display:flex !important; flex-wrap:wrap; gap:8px; align-items:center; }
   .source-selection-bar { padding:12px; }

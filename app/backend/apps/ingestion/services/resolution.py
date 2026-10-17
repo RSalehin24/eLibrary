@@ -7,21 +7,28 @@ from bs4 import BeautifulSoup
 
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline.scraper_support.network import _get_allowed_source_hosts
-from apps.ingestion.pipeline.scraper_support.text import normalize_text, texts_are_similar
+from apps.ingestion.pipeline.scraper_support.text import (
+    normalize_text,
+    texts_are_similar,
+)
+from apps.ingestion.services.catalog_archive import catalog_result_anchors
 from apps.ingestion.services.resolution_support import (
     SEARCH_HEADERS,
     fetch_source_page_metadata,
     get_catalog_url,
-    get_via_direct_ip_https as support_get_via_direct_ip_https,
     is_name_resolution_failure,
     metadata_entry_defaults,
     replace_url_host,
-    resolve_host_with_dns_fallback as support_resolve_host_with_dns_fallback,
     source_request_hosts,
     split_display_title,
     upsert_source_catalog_entry,
 )
-
+from apps.ingestion.services.resolution_support import (
+    get_via_direct_ip_https as support_get_via_direct_ip_https,
+)
+from apps.ingestion.services.resolution_support import (
+    resolve_host_with_dns_fallback as support_resolve_host_with_dns_fallback,
+)
 
 logger = logging.getLogger(__name__)
 CATALOG_URL = get_catalog_url()
@@ -156,12 +163,7 @@ class TitleResolver:
     def parse_catalog_page(self, soup):
         entries = []
         seen = set()
-        for result in soup.select(".facetwp-template .fwpl-result"):
-            text_anchor = result.select_one(".fwpl-item.el-97dha a[href]")
-            anchor = text_anchor or result.select_one("a[href]")
-            if anchor is None:
-                continue
-
+        for anchor in catalog_result_anchors(soup):
             href = urljoin(get_catalog_url(), anchor["href"])
             parsed = urlparse(href)
             if parsed.netloc.lower() not in _get_allowed_source_hosts():

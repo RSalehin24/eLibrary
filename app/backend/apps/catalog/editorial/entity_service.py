@@ -118,12 +118,11 @@ def entity_command(actor, target, command):
                 {"action": "Publication commands apply to collections."}
             )
         if action == "publish" and (
-            not entity.editorial_reviewed_at
-            or not entity.editorial_description.strip()
+            not entity.editorial_description.strip()
             or not entity.collection_books.exists()
         ):
             raise EditorialConflict(
-                "Review a substantive introduction and select books before publication."
+                "Add an introduction and select books before publication."
             )
         entity.state = "published" if action == "publish" else "archived"
     entity.save()

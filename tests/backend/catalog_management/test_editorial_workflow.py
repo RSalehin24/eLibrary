@@ -53,7 +53,7 @@ def test_scoped_editor_can_edit_review_publish_and_withdraw(editor):
     book.refresh_from_db()
     assert book.slug != previous_slug
     assert MetadataVersion.objects.get(book=book).snapshot["title"] == "খসড়া বই"
-    assert command(client, book, "publish").status_code == 409
+    assert command(client, book, "publish").status_code == 200
     assert command(client, book, "review").status_code == 200
     assert MetadataReview.objects.get(book=book).reviewer.email == "editor@library.test"
     assert command(client, book, "publish").status_code == 200
@@ -66,7 +66,7 @@ def test_scoped_editor_can_edit_review_publish_and_withdraw(editor):
     assert client.get(f"/api/v1/catalog/books/{previous_slug}/").status_code == 404
 
 
-def test_unreviewed_editorial_fields_are_not_public(editor):
+def test_published_metadata_is_visible_without_a_manual_review(editor):
     client, book = editor
     book.state = "published"
     book.review_state = "approved"
@@ -76,9 +76,10 @@ def test_unreviewed_editorial_fields_are_not_public(editor):
     book.save()
     response = client.get(f"/api/v1/catalog/books/{book.slug}/")
     assert response.status_code == 200
-    assert "UNREVIEWED" not in response.content.decode()
+    assert response.json()["editorial_description"] == book.editorial_description
+    assert response.json()["seo_title"] == book.seo_title
     assert response.json()["indexable"] is False
-    assert response.json()["alternative_names"] == []
+    assert response.json()["alternative_names"] == book.alternative_names
 
 
 def test_stale_updates_and_commands_cannot_overwrite_a_newer_revision(editor):
@@ -98,7 +99,7 @@ def test_stale_updates_and_commands_cannot_overwrite_a_newer_revision(editor):
     assert not MetadataReview.objects.exists()
 
 
-def test_editing_a_published_book_removes_public_access_until_review(editor):
+def test_editing_a_published_book_keeps_it_visible_without_review(editor):
     client, book = editor
     book.state = "published"
     book.review_state = "approved"
@@ -111,7 +112,9 @@ def test_editing_a_published_book_removes_public_access_until_review(editor):
         ).status_code
         == 200
     )
-    assert client.get(f"/api/v1/catalog/books/{book.slug}/").status_code == 404
+    public = client.get(f"/api/v1/catalog/books/{book.slug}/")
+    assert public.status_code == 200
+    assert public.json()["summary"] == "সংশোধিত"
     assert command(client, book, "review").status_code == 200
     assert client.get(f"/api/v1/catalog/books/{book.slug}/").status_code == 200
 

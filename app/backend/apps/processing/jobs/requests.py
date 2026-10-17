@@ -8,9 +8,10 @@ from rest_framework.exceptions import APIException, PermissionDenied
 
 from apps.access.models import PermissionScope
 from apps.accounts.models import User
-from apps.catalog.models import GeneratedAsset
+from apps.catalog.models import Book, GeneratedAsset
 from apps.common.permissions import user_has_scope
 from apps.processing.job_models import (
+    SOURCE_ACTIVE_STATES,
     BackgroundJob,
     BackgroundJobKind,
     RequestedJobAction,
@@ -43,12 +44,7 @@ class PreparationRequest:
 def request_preparation(actor: User, command: PreparationRequest):
     actor = User.objects.select_for_update().get(pk=actor.pk)
     require_processing_manager(actor)
-    asset = get_object_or_404(
-        GeneratedAsset.objects.select_for_update().filter(
-            book__deleted_at__isnull=True
-        ),
-        pk=command.asset_id,
-    )
+    asset = locked_preparation_asset(command.asset_id)
     if asset.updated_at != command.expected_updated_at:
         raise JobStateConflict(
             "The asset changed. Refresh its information before preparing it."
@@ -62,6 +58,27 @@ def request_preparation(actor: User, command: PreparationRequest):
         )
     except JobConflict as error:
         raise JobStateConflict(str(error)) from error
+
+
+def locked_preparation_asset(identifier):
+    snapshot = get_object_or_404(GeneratedAsset.objects.only("book_id"), pk=identifier)
+    get_object_or_404(
+        Book.objects.select_for_update(), pk=snapshot.book_id, deleted_at__isnull=True
+    )
+    asset = get_object_or_404(
+        GeneratedAsset.objects.select_for_update(),
+        pk=identifier,
+        book_id=snapshot.book_id,
+    )
+    if BackgroundJob.objects.filter(
+        book_id=asset.book_id,
+        kind=BackgroundJobKind.PROCESS_SOURCE,
+        state__in=SOURCE_ACTIVE_STATES,
+    ).exists():
+        raise JobStateConflict(
+            "Finish or cancel source processing before preparing these files."
+        )
+    return asset
 
 
 @dataclass(frozen=True)

@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminDate, AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,7 +10,7 @@ import { AutomationRunHistory } from "@/components/automation-runs";
 import { routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "সময়সূচি ও চলার ইতিহাস" };
+export async function generateMetadata() { return localizeMetadata({ title: "সময়সূচি ও চলার ইতিহাস" }); }
 
 export default async function AutomationPage({ params, searchParams }: { params: Promise<{ identifier: string }>; searchParams: Promise<RouteQuery> }) {
   await requireManagement("automations");

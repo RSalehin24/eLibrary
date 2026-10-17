@@ -1,4 +1,5 @@
 from drf_spectacular.utils import OpenApiParameter, extend_schema
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
@@ -63,8 +64,13 @@ class ManagedEntityListView(VersionedAPIView):
         parameters = ManagedEntityParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
         pagination = BoundedAdminPagination()
+        queryset = filtered_entities(request.user, kind, parameters.validated_data["q"])
+        if role := parameters.validated_data["role"]:
+            if kind != "contributors":
+                raise ValidationError({"role": "Roles apply to contributors."})
+            queryset = queryset.filter(book_contributions__role=role).distinct()
         entries: list | None = pagination.paginate_queryset(
-            filtered_entities(request.user, kind, parameters.validated_data["q"]),
+            queryset,
             request,
             view=self,
         )

@@ -18,7 +18,7 @@ export function EntityCreateForm({ kind }: { kind: EntityKind }) {
   const client = useQueryClient();
   const form = useManagedForm((values: EntityCreate) => createManagedEntity(kind, values), async () => { await client.invalidateQueries({ queryKey: ["private", "catalog-references"] }); });
   if (form.saving.isSuccess) return <section className="notice"><h2><AdminText>{"পরিচিতি তৈরি হয়েছে"}</AdminText></h2>
-    <Link className="button" href={`/manage/entities/${kind}/${form.saving.data.id}/`}><AdminText>{"তথ্য সম্পাদনা ও পর্যালোচনা করুন"}</AdminText></Link></section>;
+    <Link className="button" href={`/manage/entities/${kind}/${form.saving.data.id}/`}><AdminText>{"তথ্য সম্পাদনা করুন"}</AdminText></Link></section>;
   return <form className="editorial-form" onChange={form.markDirty} onSubmit={(event) => {
     event.preventDefault(); if (form.blocked) return;
     const identifier = operation ?? crypto.randomUUID(); setOperation(identifier);

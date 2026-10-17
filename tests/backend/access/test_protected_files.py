@@ -96,5 +96,8 @@ def test_development_streaming_remains_available(settings, tmp_path):
     path = tmp_path / "chapter.xhtml"
     path.write_bytes(b"<p>chapter</p>")
     response = protected_file_response(path, "application/xhtml+xml")
-    assert b"".join(response.streaming_content) == b"<p>chapter</p>"
-    assert "X-Accel-Redirect" not in response
+    try:
+        assert b"".join(response.streaming_content) == b"<p>chapter</p>"
+        assert "X-Accel-Redirect" not in response
+    finally:
+        response.close()

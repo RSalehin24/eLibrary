@@ -8,7 +8,7 @@ test("Kindle history requires a session and stays private", async ({ page }) => 
   await useAccount(page, "kindle_reader"); await page.goto("/kindle/");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
   await expect(page.getByRole("heading", { name: "কিন্ডলে পাঠানোর অনুরোধ", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "পরিচালনা", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("link", { name: "অ্যাডমিন", exact: true })).toHaveCount(0);
 });
 
 test("readers select recipients and cancel their own queued request on a phone", async ({ page }) => {

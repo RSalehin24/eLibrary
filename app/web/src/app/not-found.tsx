@@ -1,6 +1,7 @@
+import { SiteText } from "@/components/site-language";
 import Link from "next/link";
 
 export default function NotFoundPage() {
-  return <section className="empty-state"><h1>পাতাটি পাওয়া যায়নি</h1><p>বইটি প্রকাশিত না-ও হতে পারে, অথবা ঠিকানাটি বদলে গেছে।</p>
-    <Link className="button" href="/catalog/">পাঠাগারে ফিরে যান</Link></section>;
+  return <section className="empty-state"><h1><SiteText>{"পাতাটি পাওয়া যায়নি"}</SiteText></h1><p><SiteText>{"বইটি প্রকাশিত না-ও হতে পারে, অথবা ঠিকানাটি বদলে গেছে।"}</SiteText></p>
+    <Link className="button" href="/catalog/"><SiteText>{"পাঠাগারে ফিরে যান"}</SiteText></Link></section>;
 }

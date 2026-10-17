@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { APIError } from "@/api/http";
 import { useUnsavedChanges } from "./unsaved-changes";
+import { browserLanguage, translateSite } from "./site-language";
 
 export function useManagedForm<Input, Output>(save: (input: Input) => Promise<Output>, onSaved: (output: Output) => Promise<void>) {
   const [dirty, setDirty] = useState(false);
@@ -15,5 +16,5 @@ export function useManagedForm<Input, Output>(save: (input: Input) => Promise<Ou
 }
 
 export function reloadManagedForm() {
-  if (window.confirm("বর্তমান তথ্য খুললে সংরক্ষণ না করা লেখা বাদ যাবে। এগোবেন?")) window.location.reload();
+  if (window.confirm(translateSite(browserLanguage(), "বর্তমান তথ্য খুললে সংরক্ষণ না করা লেখা বাদ যাবে। এগোবেন?"))) window.location.reload();
 }

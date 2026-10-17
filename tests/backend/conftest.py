@@ -7,6 +7,8 @@ import pytest
 @pytest.fixture(autouse=True)
 def isolated_service_settings(settings):
     settings.SOURCE_SITE_HOST = "www.example.com"
+    settings.SOURCE_SITE_CATALOG_URL = ""
+    settings.SOURCE_SITE_FALLBACK_HOSTS = []
     settings.CELERY_TASK_ALWAYS_EAGER = False
     settings.CELERY_RESULT_BACKEND = "cache+memory://"
     settings.PROCESSING_CHECKPOINT_REDIS_URL = ""

@@ -1,6 +1,13 @@
 from rest_framework import serializers
 
-from apps.catalog.models import Book, BookCategory, BookContributor, BookSeries
+from apps.catalog.cover_urls import book_cover_url
+from apps.catalog.models import (
+    Book,
+    BookCategory,
+    BookContributor,
+    BookSeries,
+    ContributorRole,
+)
 from apps.catalog.serializers.editorial import (
     PUBLIC_EDITORIAL_FIELDS,
     ReviewedEditorialSerializer,
@@ -21,6 +28,9 @@ class CatalogQueryParametersSerializer(serializers.Serializer):
 
 
 class CatalogFilterParametersSerializer(CatalogQueryParametersSerializer):
+    contributor_role = serializers.ChoiceField(
+        choices=ContributorRole.choices, allow_blank=True, default=""
+    )
     category = serializers.CharField(
         max_length=255, required=False, allow_blank=True, default=""
     )
@@ -98,6 +108,11 @@ class PublicSeriesSerializer(serializers.ModelSerializer):
 
 
 class PublicBookListSerializer(serializers.ModelSerializer):
+    cover_url = serializers.SerializerMethodField()
+
+    def get_cover_url(self, book) -> str | None:
+        return book_cover_url(book)
+
     slug = serializers.CharField(read_only=True)
     language = serializers.CharField(source="manual_language")
     contributors = PublicContributorSerializer(source="book_contributors", many=True)
@@ -116,6 +131,7 @@ class PublicBookListSerializer(serializers.ModelSerializer):
             "contributors",
             "categories",
             "series",
+            "cover_url",
         )
         read_only_fields = fields
 

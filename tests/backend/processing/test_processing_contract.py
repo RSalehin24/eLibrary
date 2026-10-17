@@ -166,6 +166,9 @@ def test_processing_models_are_registered_in_admin_with_core_fields():
         assert model in admin.site._registry
         model_admin = admin.site._registry[model]
         assert fields.issubset(set(model_admin.get_fields(request)))
+    assert admin.site._registry[BookRecord].get_form(request).base_fields["url"].clean(
+        "example.test/books/example/"
+    ) == "https://example.test/books/example/"
 
 
 def test_processing_related_celery_tasks_are_discoverable():

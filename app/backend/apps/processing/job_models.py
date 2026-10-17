@@ -12,6 +12,7 @@ class BackgroundJobKind(models.TextChoices):
     ACCOUNT_MAIL = "account_mail", "Send account link"
     PROCESS_SOURCE = "process_source", "Process source book"
     DISCOVER_SOURCE = "discover_source", "Discover source catalog"
+    PROCESS_CATALOG = "process_catalog", "Create all eligible books"
 
 
 class BackgroundJobState(models.TextChoices):
@@ -82,6 +83,13 @@ class BackgroundJob(UUIDPrimaryKeyModel, TimeStampedModel):
         blank=True,
         related_name="processing_jobs",
     )
+    parent_job = models.ForeignKey(
+        "self",
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="child_jobs",
+    )
     kind = models.CharField(max_length=24, choices=BackgroundJobKind.choices)
     state = models.CharField(
         max_length=24,
@@ -140,7 +148,7 @@ class BackgroundJob(UUIDPrimaryKeyModel, TimeStampedModel):
                         account__isnull=True,
                     )
                     | models.Q(
-                        kind="discover_source",
+                        kind__in=["discover_source", "process_catalog"],
                         source_record__isnull=True,
                         account__isnull=True,
                         book__isnull=True,
@@ -162,6 +170,13 @@ class BackgroundJob(UUIDPrimaryKeyModel, TimeStampedModel):
                 name="job_one_active_discovery",
                 condition=models.Q(
                     kind="discover_source", state__in=SOURCE_ACTIVE_STATES
+                ),
+            ),
+            models.UniqueConstraint(
+                fields=["kind"],
+                name="job_one_active_catalog_batch",
+                condition=models.Q(
+                    kind="process_catalog", state__in=SOURCE_ACTIVE_STATES
                 ),
             ),
             models.CheckConstraint(

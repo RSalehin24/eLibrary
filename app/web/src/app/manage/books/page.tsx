@@ -1,30 +1,45 @@
-import { AdminNumber, AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { APIError } from "@/api/http";
 import { sessionRequest } from "@/api/server";
 import type { ManagedBooks } from "@/api/types";
+import { localizeMetadata } from "@/lib/metadata-language";
 import { requireManagement } from "@/lib/workspace-session";
+import { catalogStateLabel } from "@/lib/catalog-state";
+import { entityFilters } from "@/lib/catalog-entity";
+import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query";
+import { AdminNumber, AdminText } from "@/components/admin-language";
+import { AdminPagination } from "@/components/admin-pagination";
+import { BookCard } from "@/components/book-card";
+import { Icon } from "@/components/icon";
 
-export const metadata = { title: "বই পরিচালনা" };
-const stateLabels: Record<string, string> = { draft: "খসড়া", processing: "প্রক্রিয়াধীন", needs_review: "পর্যালোচনা প্রয়োজন",
-  ready: "প্রস্তুত", published: "প্রকাশিত", archived: "সংরক্ষিত", soft_deleted: "অপসারিত" };
+export async function generateMetadata() { return localizeMetadata({ title: "সব বই" }); }
 
-export default async function ManagedBooksPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
+export default async function ManagedBooksPage({ searchParams }: { searchParams: Promise<RouteQuery> }) {
   const session = await requireManagement("books");
-  const page = Number((await searchParams).page ?? "1");
-  if (!Number.isInteger(page) || page < 1) notFound();
-  const books = await sessionRequest<ManagedBooks>(`manage/books/?page=${page}`);
-  return <><h1><AdminText>{"বই পরিচালনা"}</AdminText></h1>
-    <div className="account-actions">{session.workspaces.can_create_books && <Link className="button" href="/manage/books/new/"><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></Link>}
-      {session.workspaces.management_sections.includes("sources") && <Link className="button button-quiet" href="/manage/sources/"><AdminText>{"উৎস থেকে বই আনুন"}</AdminText></Link>}</div>
+  const query = await searchParams, page = routePageNumber(query);
+  const filter = new URLSearchParams();
+  for (const key of ["q", "contributor", "contributor_role", "category", "series", "collection", "label"]) {
+    const value = queryValue(query, key);
+    if (value.length > (key === "q" ? 120 : 255)) notFound();
+    if (value) filter.set(key, value);
+  }
+  let books: ManagedBooks;
+  try { books = await sessionRequest<ManagedBooks>(`manage/books/?${filter}&page=${page}`); }
+  catch (error) { if (error instanceof APIError && [400, 404].includes(error.status)) notFound(); throw error; }
+  const filtered = [...filter.keys()].some(key => key !== "q");
+  return <><header className="catalog-list-heading"><div><h1>{filter.get("label") || <AdminText>{"সব বই"}</AdminText>}</h1>
+    <p className="muted"><AdminText>{"খসড়া, প্রস্তুত ও প্রকাশিত সব বই এখানে পাবেন। বই খুলে পড়ুন, ফাইল নামান বা তথ্য সম্পাদনা করুন।"}</AdminText></p></div>
+    <div className="editorial-actions">{session.workspaces.can_create_books && <Link className="button" href="/manage/books/new/"><Icon name="plus" /><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></Link>}
+      {session.workspaces.management_sections.includes("sources") && <Link className="button button-quiet" href="/manage/sources/"><Icon name="source" /><AdminText>{"উৎস থেকে বই আনুন"}</AdminText></Link>}</div></header>
+    <form className="catalog-search" role="search"><label htmlFor="managed-book-query"><AdminText>{"বই, লেখক বা ক্যাটালগ নম্বর দিয়ে খুঁজুন"}</AdminText></label>
+      {[...filter].filter(([key]) => key !== "q").map(([key, value]) => <input key={key} name={key} value={value} type="hidden" />)}
+      <div className="search-row"><input id="managed-book-query" name="q" defaultValue={filter.get("q") ?? ""} maxLength={120} /><button className="button"><Icon name="search" /><AdminText>{"খুঁজুন"}</AdminText></button></div></form>
+    {filtered && <p className="catalog-filter-summary"><AdminText>{"নির্বাচিত লেখক, বিভাগ বা সংগ্রহের বই দেখানো হচ্ছে।"}</AdminText> <Link className="button button-quiet" href="/manage/books/"><Icon name="books" /><AdminText>{"সব বই দেখুন"}</AdminText></Link></p>}
     <p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={books.pagination.total_count} /><AdminText>{"টি বই"}</AdminText></p>
-    <ul className="management-list">{books.entries.map((book) => <li key={book.id}>
-      <div><h2><Link className="text-link" href={`/manage/books/${encodeURIComponent(book.slug)}/`}>{book.title}</Link></h2><p className="muted">{book.catalog_code} · {book.edition || "সংস্করণ উল্লেখ নেই"}</p></div>
-      <span className="status-label"><AdminText>{stateLabels[book.state]}</AdminText></span></li>)}</ul>
-    {!books.entries.length && <p className="empty-state"><AdminText>{"আপনার পরিচালনার তালিকায় কোনো বই নেই।"}</AdminText></p>}
-    <nav className="pagination" aria-label="পরিচালনার তালিকার পাতা">
-      {page > 1 && <Link className="button button-quiet" href={`?page=${page - 1}`}><AdminText>{"আগের পাতা"}</AdminText></Link>}
-      <span><AdminText>{"পাতা "}</AdminText><AdminNumber value={page} /></span>
-      {page * books.pagination.limit < books.pagination.total_count && <Link className="button" href={`?page=${page + 1}`}><AdminText>{"পরের পাতা"}</AdminText></Link>}
-    </nav></>;
+    <ul className="managed-book-grid">{books.entries.map(book => <li key={book.id}><span className="status-label"><AdminText>{catalogStateLabel(book.state)}</AdminText></span>
+      <BookCard book={book} href={`/manage/books/${encodeURIComponent(book.slug)}/`} actionLabel="বই খুলুন" entityHref={(kind, slug, role) => `/manage/books/?${new URLSearchParams({ [entityFilters[kind]]: slug, ...(role ? { contributor_role: role } : {}) })}`} /></li>)}</ul>
+    {!books.entries.length && <section className="empty-state"><Icon name="books" /><h2><AdminText>{filter.size ? "এই খোঁজে কোনো বই পাওয়া যায়নি।" : "এখনও কোনো বই যোগ করা হয়নি।"}</AdminText></h2>
+      {filter.size ? !filtered && <Link className="button button-quiet" href="/manage/books/"><Icon name="refresh" /><AdminText>{"সব বই দেখুন"}</AdminText></Link> : <p><AdminText>{"বই তৈরি করুন অথবা নিজের EPUB যোগ করুন।"}</AdminText></p>}</section>}
+    <AdminPagination pagination={books.pagination} filter={filter.toString()} label="পরিচালনার তালিকার পাতা" /></>;
 }

@@ -10,9 +10,7 @@ import { useUnsavedChanges } from "@/lib/unsaved-changes";
 import { AccountFeedback } from "./account-feedback";
 import { SourceTable } from "./source-table";
 import { useAdminLanguage } from "./admin-language";
-
-type SelectedSource = { entry: SourceEntry; operationId: string };
-const maximumSelection = 100;
+import { sourceSelectionLimit, toggleSourcePage, type SelectedSource } from "@/lib/source-selection";
 
 export function SourceSelection({ entries }: { entries: SourceEntry[] }) {
   const { t, number } = useAdminLanguage();
@@ -37,23 +35,15 @@ export function SourceSelection({ entries }: { entries: SourceEntry[] }) {
     form.saving.mutate({ entries: Object.values(requested).map(({ entry, operationId }) => ({ source_id: entry.id, operation_id: operationId, expected_updated_at: entry.updated_at })) });
   }
   function togglePage() {
-    const available = entries.filter((entry) => entry.can_process || selected[entry.id]);
-    const clear = available.every((entry) => selected[entry.id]);
-    setSelected((current) => {
-      const next = { ...current };
-      for (const entry of available) {
-        if (clear) delete next[entry.id];
-        else if (!next[entry.id] && Object.keys(next).length < maximumSelection) next[entry.id] = { entry, operationId: crypto.randomUUID() };
-      }
-      return next;
-    });
+    setSelected((current) => toggleSourcePage(current, entries));
   }
-  return <><section className="source-selection-bar" aria-label={t("নির্বাচিত বই তৈরি করুন")}><p>{t("নির্বাচিত")}: {number(values.length)} / {number(maximumSelection)}</p>
+  const toolbar = values.length > 0 && <section className="source-selection-bar" aria-label={t("নির্বাচিত বই তৈরি করুন")}><p>{t("নির্বাচিত")}: {number(values.length)} / {number(sourceSelectionLimit)}</p>
     <button type="button" className="button" disabled={!values.length || form.blocked} onClick={() => submit(selected)}>{t("নির্বাচিত বই তৈরি করুন")}</button>
     {!!values.length && <button type="button" className="button button-quiet" disabled={form.blocked} onClick={() => setSelected({})}>{t("নির্বাচন সরান")}</button>}
-    </section>
+    </section>;
+  return <>
     <AccountFeedback error={form.saving.error} />
-    {form.saving.data && <div className="notice" role="status"><p>{t("যে বইগুলো তৈরি শুরু হয়নি, সেগুলো নির্বাচিত আছে।")}</p><ul>{form.saving.data.entries.map((outcome) => <li key={outcome.source_id}>{submitted[outcome.source_id]?.entry.title} · {outcome.accepted ? <Link className="text-link" href={`/manage/jobs/${outcome.operation_id}/`}>{t("সংরক্ষিত কাজ দেখুন →")}</Link> : <span>{t("অনুরোধ হয়নি")}: {outcome.error?.detail}</span>}</li>)}</ul></div>}
+    {form.saving.data && <div className="notice" role="status"><p>{t(form.saving.data.entries.some((outcome) => !outcome.accepted) ? "যে বইগুলো তৈরি শুরু হয়নি, সেগুলো নির্বাচিত আছে।" : "বই তৈরি শুরু হয়েছে।")}</p><ul>{form.saving.data.entries.map((outcome) => <li key={outcome.source_id}>{submitted[outcome.source_id]?.entry.title} · {outcome.accepted ? <Link className="text-link" href={`/manage/jobs/${outcome.operation_id}/`}>{t("সংরক্ষিত কাজ দেখুন →")}</Link> : <span>{t("অনুরোধ হয়নি")}: {outcome.error?.detail}</span>}</li>)}</ul></div>}
     {form.saving.error && <><p className="notice">{t("ফল নিশ্চিত নয়। আবার জমা দেওয়ার আগে কাজের অবস্থা দেখুন।")}</p><ul>{Object.values(submitted).map(({ entry, operationId }) => <li key={entry.id}>{entry.title} <Link className="text-link" href={`/manage/jobs/${operationId}/`}>{t("অনুরোধের অবস্থা দেখুন →")}</Link></li>)}</ul><button type="button" className="button button-quiet" onClick={reloadManagedForm}>{t("বর্তমান তালিকা খুলুন")}</button></>}
-    <SourceTable entries={entries} selected={new Set(Object.keys(selected))} blocked={form.blocked} limitReached={values.length >= maximumSelection} onToggle={toggle} onTogglePage={togglePage} onCreate={(entry) => submit({ [entry.id]: selected[entry.id] ?? { entry, operationId: crypto.randomUUID() } })} /></>;
+    <SourceTable toolbar={toolbar} entries={entries} selected={new Set(Object.keys(selected))} blocked={form.blocked} limitReached={values.length >= sourceSelectionLimit} onToggle={toggle} onTogglePage={togglePage} onCreate={(entry) => submit({ [entry.id]: selected[entry.id] ?? { entry, operationId: crypto.randomUUID() } })} /></>;
 }

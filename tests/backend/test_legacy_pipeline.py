@@ -1,6 +1,8 @@
 from pathlib import Path
+from builtins import open as open_file
 
 from apps.ingestion.services.legacy_adapter import generate_exports, legacy_modules
+from apps.ingestion.pipeline.epub_properties import epub_builder
 
 
 def test_legacy_exports_support_structured_display_values(tmp_path):
@@ -28,7 +30,14 @@ def test_legacy_exports_support_structured_display_values(tmp_path):
     assert "Preview already open" in html
 
 
-def test_legacy_exports_inline_existing_cover_even_if_requested_extension_is_wrong(tmp_path):
+def test_legacy_exports_inline_existing_cover_even_if_requested_extension_is_wrong(tmp_path, monkeypatch):
+    handles = []
+    def track_cover(path, *arguments, **keywords):
+        handle = open_file(path, *arguments, **keywords)
+        if Path(path) == tmp_path / "book_cover.jpg":
+            handles.append(handle)
+        return handle
+    monkeypatch.setattr(epub_builder, "open", track_cover, raising=False)
     (Path(tmp_path) / "book_cover.jpg").write_bytes(b"fake-jpg")
     book_data = {
         "book_title": "রূপান্তর",
@@ -49,6 +58,7 @@ def test_legacy_exports_inline_existing_cover_even_if_requested_extension_is_wro
     html = (Path(tmp_path) / "book.html").read_text(encoding="utf-8")
     assert "data:image/jpeg;base64," in html
     assert "book_cover.jog" not in html
+    assert handles and all(handle.closed for handle in handles)
 
 
 def test_legacy_exports_dedication_section_uses_standard_heading_and_clean_content(tmp_path):

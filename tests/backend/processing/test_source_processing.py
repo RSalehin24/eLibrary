@@ -42,13 +42,13 @@ def test_source_command_is_atomic_idempotent_and_does_not_transfer_ownership(
     assert BackgroundJob.objects.count() == 1 and not UserBook.objects.exists()
 
 
-def test_source_processing_builds_a_review_draft_with_real_protected_exports(
+def test_source_processing_automatically_publishes_verified_protected_exports(
     curated_job,
 ):
     execute(curated_job)
     assert curated_job.state == "succeeded"
     book = curated_job.book
-    assert book.state == book.review_state == "needs_review"
+    assert book.state == "published" and book.review_state == "approved"
     assert not book.indexing_eligible and book.editorial_reviewed_at is None
     assert not UserBook.objects.exists()
     assets = list(GeneratedAsset.objects.filter(book=book))

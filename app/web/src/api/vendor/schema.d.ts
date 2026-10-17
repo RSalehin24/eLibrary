@@ -244,6 +244,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/catalog/books/{slug}/cover/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["book_cover"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/catalog/books/{slug}/editions/": {
         parameters: {
             query?: never;
@@ -268,6 +284,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["catalog_collections_list"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/catalog/entities/{kind}/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_entities_list"];
         put?: never;
         post?: never;
         delete?: never;
@@ -404,6 +436,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/manage/assets/{identifier}/download/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["managed_asset_download"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/manage/assets/{identifier}/prepare/": {
         parameters: {
             query?: never;
@@ -510,7 +558,7 @@ export interface paths {
         get: operations["managed_book_detail"];
         put?: never;
         post?: never;
-        delete?: never;
+        delete: operations["managed_book_remove"];
         options?: never;
         head?: never;
         patch: operations["managed_book_editorial_update"];
@@ -524,6 +572,22 @@ export interface paths {
             cookie?: never;
         };
         get: operations["managed_book_assets"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manage/books/{slug}/controls/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["managed_book_controls"];
         put?: never;
         post?: never;
         delete?: never;
@@ -558,6 +622,22 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["managed_book_publish"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manage/books/{slug}/regenerate/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["managed_book_regenerate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -830,6 +910,22 @@ export interface paths {
         get: operations["source_discovery_options"];
         put?: never;
         post: operations["source_discovery_request"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/manage/sources/process-all/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["catalog_processing_options"];
+        put?: never;
+        post: operations["process_all_catalog_books"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1124,6 +1220,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/reading/books/{slug}/html/": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["reader_html"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/reading/books/{slug}/launch/": {
         parameters: {
             query?: never;
@@ -1355,6 +1467,7 @@ export interface components {
             contributors: components["schemas"]["PublicContributor"][];
             categories: components["schemas"]["PublicCategory"][];
             series: components["schemas"]["PublicSeries"][];
+            readonly cover_url: string | null;
             readonly state: components["schemas"]["LifecycleStateEnum"];
             readonly review_state: components["schemas"]["ReviewStateEnum"];
             readonly record_type: components["schemas"]["RecordTypeEnum"];
@@ -1388,6 +1501,8 @@ export interface components {
             readonly next_run_at: string;
             readonly source_max_pages: number;
             readonly processing_limit: number;
+            readonly fetch_all: boolean;
+            readonly process_all: boolean;
             readonly run_as_name: string;
             /** Format: date-time */
             readonly updated_at: string;
@@ -1407,6 +1522,10 @@ export interface components {
             source_max_pages: number;
             /** @default 0 */
             processing_limit: number;
+            /** @default false */
+            fetch_all: boolean;
+            /** @default false */
+            process_all: boolean;
             /** Format: uuid */
             operation_id: string;
         };
@@ -1427,6 +1546,9 @@ export interface components {
             readonly processing_succeeded: number;
             readonly processing_rejected: number;
             readonly missed_occurrences: number;
+            readonly process_all: boolean;
+            /** Format: uuid */
+            readonly bulk_operation_id: string | null;
             /** Format: date-time */
             readonly created_at: string;
         };
@@ -1451,6 +1573,10 @@ export interface components {
             source_max_pages: number;
             /** @default 0 */
             processing_limit: number;
+            /** @default false */
+            fetch_all: boolean;
+            /** @default false */
+            process_all: boolean;
             /** Format: date-time */
             expected_updated_at: string;
         };
@@ -1464,6 +1590,14 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             readonly kind: components["schemas"]["BackgroundJobKindEnum"];
+            /** @default 0 */
+            readonly bulk_total: number;
+            /** @default 0 */
+            readonly bulk_queued: number;
+            /** @default 0 */
+            readonly bulk_rejected: number;
+            /** Format: uuid */
+            readonly parent_job_id: string | null;
             readonly state: components["schemas"]["BackgroundJobStateEnum"];
             readonly requested_action: components["schemas"]["RequestedActionEnum"] | components["schemas"]["BlankEnum"];
             readonly book: components["schemas"]["BackgroundBook"] | null;
@@ -1504,6 +1638,14 @@ export interface components {
             /** Format: uuid */
             readonly id: string;
             readonly kind: components["schemas"]["BackgroundJobKindEnum"];
+            /** @default 0 */
+            readonly bulk_total: number;
+            /** @default 0 */
+            readonly bulk_queued: number;
+            /** @default 0 */
+            readonly bulk_rejected: number;
+            /** Format: uuid */
+            readonly parent_job_id: string | null;
             readonly state: components["schemas"]["BackgroundJobStateEnum"];
             readonly requested_action: components["schemas"]["RequestedActionEnum"] | components["schemas"]["BlankEnum"];
             readonly book: components["schemas"]["BackgroundBook"] | null;
@@ -1543,9 +1685,10 @@ export interface components {
          *     * `account_mail` - Send account link
          *     * `process_source` - Process source book
          *     * `discover_source` - Discover source catalog
+         *     * `process_catalog` - Create all eligible books
          * @enum {string}
          */
-        BackgroundJobKindEnum: "prepare_epub" | "deliver_kindle" | "account_mail" | "process_source" | "discover_source";
+        BackgroundJobKindEnum: "prepare_epub" | "deliver_kindle" | "account_mail" | "process_source" | "discover_source" | "process_catalog";
         /**
          * @description * `queued` - Queued
          *     * `running` - Running
@@ -1565,10 +1708,23 @@ export interface components {
         };
         /** @enum {unknown} */
         BlankEnum: "";
+        BookControls: {
+            /** Format: date-time */
+            book_revision: string;
+            can_regenerate: boolean;
+            regeneration_problem: (components["schemas"]["RegenerationProblemEnum"] | components["schemas"]["NullEnum"]) | null;
+            can_remove: boolean;
+            /** Format: uuid */
+            active_operation_id: string | null;
+        };
         BookCounts: {
             total: number;
             draft: number;
+            processing: number;
+            ready: number;
             published: number;
+            archived: number;
+            /** @description Deprecated compatibility field. Always zero; manual editorial review is not required. */
             editorial_pending: number;
         };
         BookCreate: {
@@ -1667,6 +1823,20 @@ export interface components {
             updated_at: string;
             preview_text: string;
         };
+        CatalogProcessingCommand: {
+            /** Format: uuid */
+            operation_id: string;
+            configuration_revision: string;
+        };
+        CatalogProcessingOptions: {
+            configuration_revision: string | null;
+            total_sources: number;
+            eligible_sources: number;
+            /** Format: uuid */
+            active_operation_id: string | null;
+            /** Format: uuid */
+            latest_operation_id: string | null;
+        };
         CatalogReference: {
             /** Format: uuid */
             id: string;
@@ -1676,6 +1846,12 @@ export interface components {
             entries: components["schemas"]["CatalogReference"][];
             has_more: boolean;
         };
+        /**
+         * @description * `all` - all
+         *     * `unfinished` - unfinished
+         * @enum {string}
+         */
+        CatalogScopeEnum: "all" | "unfinished";
         /**
          * @description * `retry` - retry
          *     * `link` - link
@@ -1792,6 +1968,7 @@ export interface components {
             readonly book_title: string;
             readonly book_slug: string;
             readonly selector: components["schemas"]["TextSelection"] | null;
+            readonly legacy_cfi: string | null;
             readonly text: string;
             readonly note: string;
             readonly chapter_href: string;
@@ -1917,6 +2094,7 @@ export interface components {
             contributors: components["schemas"]["PublicContributor"][];
             categories: components["schemas"]["PublicCategory"][];
             series: components["schemas"]["PublicSeries"][];
+            readonly cover_url: string | null;
             readonly state: components["schemas"]["LifecycleStateEnum"];
             readonly review_state: components["schemas"]["ReviewStateEnum"];
             /** Format: double */
@@ -1992,6 +2170,7 @@ export interface components {
             contributors: components["schemas"]["PublicContributor"][];
             categories: components["schemas"]["PublicCategory"][];
             series: components["schemas"]["PublicSeries"][];
+            readonly cover_url: string | null;
             readonly state: components["schemas"]["LifecycleStateEnum"];
             readonly review_state: components["schemas"]["ReviewStateEnum"];
             readonly record_type: components["schemas"]["RecordTypeEnum"];
@@ -2169,6 +2348,8 @@ export interface components {
          * @enum {string}
          */
         NextStepEnum: "login" | "totp_setup";
+        /** @enum {unknown} */
+        NullEnum: null;
         OperationAccepted: {
             /** Format: uuid */
             operation_id: string;
@@ -2278,6 +2459,12 @@ export interface components {
             readonly checksum: string;
             /** Format: date-time */
             readonly updated_at: string;
+            readonly file_available: boolean;
+            readonly download_url: string | null;
+            readonly reader_ready: boolean;
+            readonly reader_update_available: boolean;
+            /** Format: uuid */
+            readonly active_preparation_id: string | null;
         };
         /**
          * @description * `pending` - Pending
@@ -2308,6 +2495,7 @@ export interface components {
             contributors: components["schemas"]["PublicContributor"][];
             categories: components["schemas"]["PublicCategory"][];
             series: components["schemas"]["PublicSeries"][];
+            readonly cover_url: string | null;
             readonly summary: string;
             readonly record_type: components["schemas"]["RecordTypeEnum"];
             readonly manual_publisher: string;
@@ -2334,6 +2522,7 @@ export interface components {
             contributors: components["schemas"]["PublicContributor"][];
             categories: components["schemas"]["PublicCategory"][];
             series: components["schemas"]["PublicSeries"][];
+            readonly cover_url: string | null;
         };
         PublicCategory: {
             /** Format: uuid */
@@ -2385,15 +2574,30 @@ export interface components {
          */
         PurposeEnum: "setup" | "reset";
         ReaderAccess: {
+            cover_url: string | null;
+            html_url: string | null;
             can_read: boolean;
             can_download: boolean;
             can_send_kindle: boolean;
             prepared: boolean;
             /** Format: uuid */
             active_session_id: string | null;
+            reading_progress: components["schemas"]["ReaderProgress"] | null;
+            /** Format: date-time */
+            last_opened_at: string | null;
         };
         ReaderChapter: {
             path: string;
+            spine_index?: number;
+            idref?: string;
+            spine_step?: number;
+            href?: string;
+            label: string;
+        };
+        ReaderNavigation: {
+            chapter_index: number | null;
+            fragment: string;
+            depth: number;
             label: string;
         };
         ReaderProgress: {
@@ -2409,6 +2613,7 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
             chapters: components["schemas"]["ReaderChapter"][];
+            navigation?: components["schemas"]["ReaderNavigation"][];
             resource_base: string;
             reading_progress: components["schemas"]["ReaderProgress"];
         };
@@ -2421,6 +2626,26 @@ export interface components {
          * @enum {string}
          */
         RecordTypeEnum: "digital" | "manual";
+        RegenerateBook: {
+            /** Format: date-time */
+            expected_updated_at: string;
+            /** Format: uuid */
+            operation_id: string;
+        };
+        RegenerationAccepted: {
+            /** Format: uuid */
+            operation_id: string;
+            status_url: string;
+            book: components["schemas"]["ManagedBookDetail"];
+        };
+        /**
+         * @description * `paper_book` - paper_book
+         *     * `processing_access_required` - processing_access_required
+         *     * `unfinished_work` - unfinished_work
+         *     * `source_unavailable` - source_unavailable
+         * @enum {string}
+         */
+        RegenerationProblemEnum: "paper_book" | "processing_access_required" | "unfinished_work" | "source_unavailable";
         /**
          * @description * `` - None
          *     * `pause` - Pause
@@ -2502,6 +2727,12 @@ export interface components {
             /** Format: date-time */
             readonly updated_at: string;
         };
+        SourceContentSummary: {
+            verification: components["schemas"]["SourceVerification"] | null;
+            body_character_count: number;
+            chapter_count: number;
+            check_completeness: boolean;
+        };
         SourceCounts: {
             total: number;
             unlinked: number;
@@ -2509,11 +2740,15 @@ export interface components {
             removed: number;
         };
         SourceDiscoveryCommand: {
+            /** @default all */
+            catalog_scope: components["schemas"]["CatalogScopeEnum"];
             /** Format: uuid */
             operation_id: string;
             configuration_revision: string;
             /** @default 20 */
             max_pages: number;
+            /** @default false */
+            fetch_all: boolean;
         };
         SourceDiscoveryOptions: {
             /** @default true */
@@ -2529,6 +2764,7 @@ export interface components {
             latest_operation_id: string | null;
         };
         SourceEntry: {
+            readonly content_summary: components["schemas"]["SourceContentSummary"] | null;
             /** Format: uuid */
             id: string;
             title: string;
@@ -2554,6 +2790,7 @@ export interface components {
             pagination: components["schemas"]["AdminPagination"];
         };
         SourceIssue: {
+            verification: components["schemas"]["SourceVerification"] | null;
             /** Format: uuid */
             id: string;
             /** Format: date-time */
@@ -2597,6 +2834,14 @@ export interface components {
             expected_updated_at: string;
             /** Format: uuid */
             source_id: string;
+        };
+        SourceVerification: {
+            verified: boolean;
+            source_pages: number;
+            fetched_pages: number;
+            expected_chapters: number;
+            collected_chapters: number;
+            issues: string[];
         };
         TOTPSetup: {
             provisioning_uri: string;
@@ -3227,6 +3472,17 @@ export interface operations {
                 category?: string;
                 collection?: string;
                 contributor?: string;
+                /**
+                 * @description * `author` - Author
+                 *     * `translator` - Translator
+                 *     * `compiler` - Compiler
+                 *     * `editor` - Editor
+                 *     * `illustrator` - Illustrator
+                 *     * `cover_artist` - Cover artist
+                 *     * `publisher` - Publisher
+                 *     * `other` - Other
+                 */
+                contributor_role?: "author" | "translator" | "compiler" | "editor" | "illustrator" | "cover_artist" | "publisher" | "other" | "";
                 cursor?: string;
                 limit?: number;
                 page?: number;
@@ -3282,6 +3538,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
+    book_cover: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
                 };
             };
         };
@@ -3350,6 +3627,59 @@ export interface operations {
                 };
             };
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
+    catalog_entities_list: {
+        parameters: {
+            query?: {
+                cursor?: string;
+                limit?: number;
+                page?: number;
+                q?: string;
+                /**
+                 * @description * `author` - Author
+                 *     * `translator` - Translator
+                 *     * `compiler` - Compiler
+                 *     * `editor` - Editor
+                 *     * `illustrator` - Illustrator
+                 *     * `cover_artist` - Cover artist
+                 *     * `publisher` - Publisher
+                 *     * `other` - Other
+                 */
+                role?: "author" | "translator" | "compiler" | "editor" | "illustrator" | "cover_artist" | "publisher" | "other" | "";
+            };
+            header?: never;
+            path: {
+                kind: "categories" | "collections" | "contributors" | "series";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublicEntityCollection"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3729,6 +4059,27 @@ export interface operations {
             };
         };
     };
+    managed_asset_download: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                identifier: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string;
+                };
+            };
+        };
+    };
     managed_asset_prepare: {
         parameters: {
             query?: never;
@@ -4022,6 +4373,17 @@ export interface operations {
                 category?: string;
                 collection?: string;
                 contributor?: string;
+                /**
+                 * @description * `author` - Author
+                 *     * `translator` - Translator
+                 *     * `compiler` - Compiler
+                 *     * `editor` - Editor
+                 *     * `illustrator` - Illustrator
+                 *     * `cover_artist` - Cover artist
+                 *     * `publisher` - Publisher
+                 *     * `other` - Other
+                 */
+                contributor_role?: "author" | "translator" | "compiler" | "editor" | "illustrator" | "cover_artist" | "publisher" | "other" | "";
                 limit?: number;
                 page?: number;
                 q?: string;
@@ -4145,6 +4507,58 @@ export interface operations {
             };
         };
     };
+    managed_book_remove: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No response body */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
     managed_book_editorial_update: {
         parameters: {
             query?: never;
@@ -4241,6 +4655,27 @@ export interface operations {
             };
         };
     };
+    managed_book_controls: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BookControls"];
+                };
+            };
+        };
+    };
     managed_book_epub_upload: {
         parameters: {
             query?: never;
@@ -4321,6 +4756,65 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ManagedBookDetail"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
+    managed_book_regenerate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegenerateBook"];
+                "application/x-www-form-urlencoded": components["schemas"]["RegenerateBook"];
+                "multipart/form-data": components["schemas"]["RegenerateBook"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RegenerationAccepted"];
                 };
             };
             400: {
@@ -4639,6 +5133,17 @@ export interface operations {
                 limit?: number;
                 page?: number;
                 q?: string;
+                /**
+                 * @description * `author` - Author
+                 *     * `translator` - Translator
+                 *     * `compiler` - Compiler
+                 *     * `editor` - Editor
+                 *     * `illustrator` - Illustrator
+                 *     * `cover_artist` - Cover artist
+                 *     * `publisher` - Publisher
+                 *     * `other` - Other
+                 */
+                role?: "author" | "translator" | "compiler" | "editor" | "illustrator" | "cover_artist" | "publisher" | "other" | "";
             };
             header?: never;
             path: {
@@ -4991,10 +5496,12 @@ export interface operations {
                  *     * `account_mail` - Send account link
                  *     * `process_source` - Process source book
                  *     * `discover_source` - Discover source catalog
+                 *     * `process_catalog` - Create all eligible books
                  */
-                kind?: "prepare_epub" | "deliver_kindle" | "account_mail" | "process_source" | "discover_source";
+                kind?: "prepare_epub" | "deliver_kindle" | "account_mail" | "process_source" | "discover_source" | "process_catalog";
                 limit?: number;
                 page?: number;
+                parent_job?: string;
                 /**
                  * @description * `queued` - Queued
                  *     * `running` - Running
@@ -5384,6 +5891,11 @@ export interface operations {
     managed_sources_list: {
         parameters: {
             query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `unfinished` - unfinished
+                 */
+                catalog_scope?: "all" | "unfinished";
                 limit?: number;
                 page?: number;
                 q?: string;
@@ -5525,7 +6037,13 @@ export interface operations {
     };
     source_discovery_options: {
         parameters: {
-            query?: never;
+            query?: {
+                /**
+                 * @description * `all` - all
+                 *     * `unfinished` - unfinished
+                 */
+                catalog_scope?: "all" | "unfinished";
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -5562,6 +6080,82 @@ export interface operations {
                 "application/json": components["schemas"]["SourceDiscoveryCommand"];
                 "application/x-www-form-urlencoded": components["schemas"]["SourceDiscoveryCommand"];
                 "multipart/form-data": components["schemas"]["SourceDiscoveryCommand"];
+            };
+        };
+        responses: {
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OperationAccepted"];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["APIError"];
+                };
+            };
+        };
+    };
+    catalog_processing_options: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogProcessingOptions"];
+                };
+            };
+        };
+    };
+    process_all_catalog_books: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CatalogProcessingCommand"];
+                "application/x-www-form-urlencoded": components["schemas"]["CatalogProcessingCommand"];
+                "multipart/form-data": components["schemas"]["CatalogProcessingCommand"];
             };
         };
         responses: {
@@ -6054,6 +6648,7 @@ export interface operations {
     personal_bookmarks: {
         parameters: {
             query?: {
+                book?: string;
                 cursor?: string;
                 limit?: number;
                 page?: number;
@@ -6149,18 +6744,30 @@ export interface operations {
                 category?: string;
                 collection?: string;
                 contributor?: string;
+                /**
+                 * @description * `author` - Author
+                 *     * `translator` - Translator
+                 *     * `compiler` - Compiler
+                 *     * `editor` - Editor
+                 *     * `illustrator` - Illustrator
+                 *     * `cover_artist` - Cover artist
+                 *     * `publisher` - Publisher
+                 *     * `other` - Other
+                 */
+                contributor_role?: "author" | "translator" | "compiler" | "editor" | "illustrator" | "cover_artist" | "publisher" | "other" | "";
                 cursor?: string;
                 limit?: number;
                 page?: number;
                 q?: string;
                 series?: string;
                 /**
-                 * @description * `owned` - owned
+                 * @description * `all` - all
+                 *     * `owned` - owned
                  *     * `saved` - saved
                  *     * `recent` - recent
                  *     * `granted` - granted
                  */
-                view?: "owned" | "saved" | "recent" | "granted";
+                view?: "all" | "owned" | "saved" | "recent" | "granted";
             };
             header?: never;
             path?: never;
@@ -6458,6 +7065,7 @@ export interface operations {
     personal_highlights: {
         parameters: {
             query?: {
+                book?: string;
                 cursor?: string;
                 limit?: number;
                 page?: number;
@@ -6624,6 +7232,27 @@ export interface operations {
                 };
                 content: {
                     "application/json": string;
+                };
+            };
+        };
+    };
+    reader_html: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slug: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/html": string;
                 };
             };
         };

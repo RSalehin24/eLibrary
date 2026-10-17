@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,7 @@ import { AutomationsList } from "@/components/automations-list";
 import { routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "স্বয়ংক্রিয় কাজ" };
+export async function generateMetadata() { return localizeMetadata({ title: "স্বয়ংক্রিয় কাজ" }); }
 
 export default async function AutomationsPage({ searchParams }: { searchParams: Promise<RouteQuery> }) {
   await requireManagement("automations");

@@ -61,14 +61,15 @@ def link_duplicate(job, entry, values):
 
 
 def restart_source_job(job, entry, choice):
-    if job.book_id and choice != "resume_preparation":
+    regeneration_retry = job.input.get("regenerate_book") and choice == "retry"
+    if job.book_id and choice != "resume_preparation" and not regeneration_retry:
         raise JobStateConflict(
             "Resume the existing draft instead of collecting a second book."
         )
-    if choice == "resume_preparation":
+    if choice == "resume_preparation" or regeneration_retry:
         checked_source_book(job)
-        if not job.checkpoint.get("document_ref"):
-            raise JobStateConflict("The draft has no recoverable source document.")
+    if choice == "resume_preparation" and not job.checkpoint.get("document_ref"):
+        raise JobStateConflict("The draft has no recoverable source document.")
     if choice == "separate" and job.error_code != "source_duplicate":
         raise JobStateConflict(
             "A separate book decision requires a reviewed duplicate."
@@ -78,6 +79,11 @@ def restart_source_job(job, entry, choice):
     job.input = {**job.input, "resolution": choice}
     if choice == "retry":
         job.checkpoint = {
+            **(
+                {"catalog_revision": job.checkpoint["catalog_revision"]}
+                if regeneration_retry
+                else {}
+            ),
             "source_revision": entry.updated_at.isoformat(),
             "source_url": entry.source_url,
         }
@@ -108,7 +114,7 @@ def resolve_source_job(actor, identifier, values):
             "Inspect the current source and catalog record before choosing this action."
         )
     expected_source = job.checkpoint.get(
-        "source_revision", job.input["command"]["source_revision"]
+        "source_revision", job.input["command"].get("source_revision")
     )
     if (
         values["choice"] in {"link", "separate", "resume_preparation"}

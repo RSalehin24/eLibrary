@@ -4,9 +4,15 @@ from apps.catalog.views.managed_entities import (
     ManagedEntityListView,
 )
 from apps.catalog.views.relationships import BookRelationshipsView
+from apps.catalog.views.entity_directory import PublicEntityListView
 from django.urls import path
 
 catalog_entity_routes = [
+    path(
+        "catalog/entities/<str:kind>/",
+        PublicEntityListView.as_view(),
+        name="catalog-entities",
+    ),
     path(
         "manage/books/<str:slug>/relationships/",
         BookRelationshipsView.as_view(),

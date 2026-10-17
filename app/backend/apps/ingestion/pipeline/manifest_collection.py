@@ -1,3 +1,4 @@
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol, cast
@@ -14,6 +15,7 @@ class CollectionOptions:
     limits: dict[str, Any]
     page_cache: Any = None
     output_directory: Path | None = None
+    cover_downloader: Callable[[str, str, Any], str] | None = None
 
 
 class ManifestCollector:
@@ -31,6 +33,7 @@ class ManifestCollector:
             )
         folder.mkdir(parents=True, exist_ok=True)
         cover_url = manifest.extract_cover_url(soup, url)
+        download_cover = self.options.cover_downloader or manifest.download_cover_asset
         return {
             "title": title,
             "title_author": title_author,
@@ -40,9 +43,7 @@ class ManifestCollector:
             "book_type": manifest.term_display(terms, "ld_course_category", "category"),
             "output_folder": str(folder),
             "cover_source_url": cover_url,
-            "cover": manifest.download_cover_asset(
-                cover_url, str(folder), self.context.session
-            ),
+            "cover": download_cover(cover_url, str(folder), self.context.session),
         }
 
     def contents(self, soup, request):
@@ -94,6 +95,9 @@ class ManifestCollector:
             output_folder=metadata["output_folder"],
             sections_payload=sections,
         )
+        if self.options.cover_downloader is not None:
+            # Export assets are local files; the original URL remains provenance only.
+            projection["cover"] = metadata["cover"]
         document = manifest.build_manifest_from_projection(
             url,
             projection,

@@ -4,7 +4,10 @@ import type { BookCollection } from "@/api/types";
 import { entityFilters, entityLabels, getPublicEntity, type EntityKind, type EntityPageProps } from "@/lib/catalog-entity";
 import { routeSlug } from "@/lib/route-slug";
 import { canonicalURL } from "@/lib/site";
-import { catalogPageNumber } from "@/lib/route-query";
+import { catalogPageNumber, queryValue } from "@/lib/route-query";
+import { contributorRoles } from "@/lib/contributor-roles";
+import { CatalogBrowseNav } from "./catalog-browse-nav";
+import { SiteText } from "./site-language";
 import { BookCard } from "./book-card";
 import { CatalogPagination } from "./catalog-pagination";
 import { StructuredData } from "./structured-data";
@@ -12,16 +15,18 @@ import { Breadcrumbs } from "./breadcrumbs";
 
 export async function CatalogEntityPage({ kind, ...props }: EntityPageProps & { kind: EntityKind }) {
   const entity = await getPublicEntity(kind, routeSlug((await props.params).slug));
-  const page = catalogPageNumber(await props.searchParams);
+  const query = await props.searchParams, page = catalogPageNumber(query), role = kind === "contributors" ? queryValue(query, "role") : "";
+  if (role && !Object.hasOwn(contributorRoles, role)) notFound();
   const parameters = new URLSearchParams({ [entityFilters[kind]]: entity.slug, page: String(page) });
+  if (role) parameters.set("contributor_role", role);
   const books = await publicRequest<BookCollection>(`catalog/books/?${parameters}`);
   if (page > 1 && !books.entries.length) notFound();
   const pathname = `/${kind}/${encodeURIComponent(entity.slug)}/`;
   return <><Breadcrumbs entries={[{ name: "পাঠাগার", path: "/catalog/" }, { name: entity.name, path: pathname }]} />
-    <header className="page-title"><p className="eyebrow">{entityLabels[kind]}</p><h1>{entity.name}</h1>
+    <CatalogBrowseNav current={`/${kind}/`} /><header className="page-title"><p className="eyebrow"><SiteText>{entityLabels[kind]}</SiteText></p><h1>{entity.name}</h1>
       {entity.editorial_description && <p className="book-description">{entity.editorial_description}</p>}</header>
     <div className="book-grid">{books.entries.map((book) => <BookCard key={book.id} book={book} />)}</div>
-    <CatalogPagination pathname={pathname} page={page} hasMore={books.has_more} />
+    <CatalogPagination pathname={pathname} page={page} hasMore={books.has_more} filters={role ? { role } : undefined} />
     {kind === "contributors" && <StructuredData data={{ "@context": "https://schema.org", "@type": "Person", name: entity.name,
       url: canonicalURL(pathname), ...(entity.editorial_description ? { description: entity.editorial_description } : {}),
       ...(entity.alternative_names.length ? { alternateName: entity.alternative_names } : {}) }} />}

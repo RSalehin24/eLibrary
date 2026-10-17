@@ -6,6 +6,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework.exceptions import APIException
 
 from apps.accounts.models import User
+from apps.ingestion.catalog_processing.commands import request_catalog_processing
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.source_discovery.queries import current_discovery_job
 from apps.ingestion.source_processing.commands import request_source_processing
@@ -13,6 +14,8 @@ from apps.ingestion.source_workspace.queries import source_entries
 from apps.processing.automation_models import AutomationRun
 from apps.processing.job_models import BackgroundJob, BackgroundJobState
 from apps.processing.jobs.attempts import checkpoint_attempt, owned_job
+from apps.processing.jobs.execution_errors import ExecutionFailure
+from apps.processing.jobs.failures import FailureKind
 
 
 def automation_selections(job, run):
@@ -56,12 +59,45 @@ def enqueue_selected_source(ownership, selection, run):
     return job
 
 
+@transaction.atomic
+def dispatch_all_catalog(ownership, run):
+    snapshot = current_discovery_job(ownership.job_id)
+    User.objects.select_for_update(no_key=True).get(pk=snapshot.requested_by_id)
+    parent = owned_job(ownership)
+    if not checkpoint_attempt(
+        ownership, parent.checkpoint, "scheduling_source_processing"
+    ):
+        return False
+    try:
+        batch = request_catalog_processing(
+            parent.requested_by,
+            {
+                "operation_id": uuid5(run.pk, "process-all"),
+                "configuration_revision": parent.input["command"][
+                    "configuration_revision"
+                ],
+            },
+            run,
+        )
+    except APIException:
+        raise ExecutionFailure(
+            FailureKind.TRANSIENT, "catalog_processing_already_active"
+        ) from None
+    return checkpoint_attempt(
+        ownership,
+        {**parent.checkpoint, "automation_batch_job_id": str(batch.pk)},
+        "scheduling_source_processing",
+    )
+
+
 def dispatch_automation_sources(ownership):
     run = (
         AutomationRun.objects.select_related("job")
         .filter(job_id=ownership.job_id)
         .first()
     )
+    if run is not None and run.process_all:
+        return dispatch_all_catalog(ownership, run)
     if run is None or not run.processing_limit:
         return True
     parent = BackgroundJob.objects.get(pk=ownership.job_id)

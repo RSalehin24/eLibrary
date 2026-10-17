@@ -25,6 +25,7 @@ def occurrence_job(automation, due_at):
             "operation_id": uuid5(automation.pk, due_at.isoformat()),
             "configuration_revision": configured["configuration_revision"],
             "max_pages": automation.source_max_pages,
+            "fetch_all": automation.fetch_all,
         },
     )
 
@@ -34,6 +35,7 @@ def enqueue_occurrence(automation, due_at, missed):
         "automation": automation,
         "due_at": due_at,
         "processing_limit": automation.processing_limit,
+        "process_all": automation.process_all,
         "missed_occurrences": missed,
     }
     try:

@@ -14,5 +14,5 @@ export function canonicalURL(path: string) {
 }
 
 export function bengaliNumber(value: number) {
-  return new Intl.NumberFormat("bn").format(value);
+  return new Intl.NumberFormat("bn", { numberingSystem: "beng" }).format(value);
 }

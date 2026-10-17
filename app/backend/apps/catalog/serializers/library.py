@@ -8,7 +8,7 @@ from apps.catalog.serializers.public import (
 
 class LibraryParametersSerializer(DiscoveryParametersSerializer):
     view = serializers.ChoiceField(
-        choices=["owned", "saved", "recent", "granted"], default="owned"
+        choices=["all", "owned", "saved", "recent", "granted"], default="all"
     )
 
 

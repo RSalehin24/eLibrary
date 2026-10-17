@@ -1,13 +1,16 @@
 import { applyAppearance, restoreAnchor, scrollFraction, visibleAnchor, type ReaderAppearance, type ReadingAnchor } from "./reader-document";
 import { documentLink } from "./reader-links";
 import type { ReadingPosition } from "./reading-position";
-import { jumpToSelection } from "./reader-annotations";
+import { jumpToSelection, jumpToRange } from "./reader-annotations";
+import { cfiRange } from "./reader-cfi";
 import { observeReaderDocument } from "./reader-observation";
+import { bindReaderInteraction } from "./reader-interaction";
+import type { ReaderGesture } from "./reader-gestures";
 
 export type FrameLocation = { fraction: number; anchor: ReadingAnchor | null };
 export type FrameBindings = { src: string; appearance: ReaderAppearance; position: ReadingPosition;
   onPosition: (position: ReadingPosition) => void; onNavigate: (target: URL) => boolean;
-  onExternal: (href: string) => void; onFailure: () => void; onReady: () => void; onDocument: (document: Document) => void };
+  onExternal: (href: string) => void; onFailure: () => void; onRestoreFailure: () => void; onReady: () => void; onDocument: (document: Document) => void; onPage: (direction: number) => void; onShortcut: (event: KeyboardEvent) => void; onGesture: (gesture: ReaderGesture) => void };
 
 export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBindings, location: FrameLocation) {
   const document = frame.contentDocument;
@@ -21,6 +24,11 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
   applyAppearance(document, bindings.appearance);
   if (location.anchor || !jumpToFragment(document, bindings.position.fragment)) restoreAnchor(document, location.anchor, location.fraction);
   if (bindings.position.selection && !location.anchor) jumpToSelection(document, bindings.position.selection);
+  if (bindings.position.legacyCfi && !location.anchor) {
+    const range = cfiRange(document, bindings.position.legacyCfi);
+    if (range && (!bindings.position.legacyText || range.toString().trim() === bindings.position.legacyText.trim())) jumpToRange(document, range);
+    else bindings.onRestoreFailure();
+  }
   let width = frame.clientWidth;
   let height = frame.clientHeight;
   const scroll = () => {
@@ -29,10 +37,12 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
   const link = (event: MouseEvent) => followDocumentLink(document, bindings, event);
   document.addEventListener("scroll", scroll, { passive: true });
   document.addEventListener("click", link);
+  const stopInteraction = bindReaderInteraction(document, bindings.onPage, { shortcut: bindings.onShortcut, gesture: bindings.onGesture });
   const stopObserving = observeReaderDocument(document, () => {
     if (Math.abs(scrollFraction(document) - location.fraction) > 0.0001) scroll();
   });
   const observer = new ResizeObserver(() => {
+    applyAppearance(document, bindings.appearance);
     restoreAnchor(document, location.anchor, location.fraction);
     width = frame.clientWidth; height = frame.clientHeight;
   });
@@ -40,12 +50,13 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
   scroll();
   bindings.onReady();
   bindings.onDocument(document);
-  return () => { stopObserving(); document.removeEventListener("scroll", scroll); document.removeEventListener("click", link); observer.disconnect(); };
+  return () => { stopInteraction(); stopObserving(); document.removeEventListener("scroll", scroll); document.removeEventListener("click", link); observer.disconnect(); };
 }
 
 function recordLocation(document: Document, bindings: FrameBindings, location: FrameLocation) {
   location.fraction = scrollFraction(document);
-  location.anchor = visibleAnchor(document);
+  // Reflow may reveal earlier text on a page; retain the passage being adjusted.
+  if (!window.document.querySelector("dialog[open]")) location.anchor = visibleAnchor(document);
   bindings.onPosition({ chapter: bindings.position.chapter, offset: location.fraction });
 }
 

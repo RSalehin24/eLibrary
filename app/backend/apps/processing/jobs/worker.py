@@ -6,6 +6,7 @@ from django.db import DatabaseError
 
 from apps.accounts.link_mail.worker import run_account_mail
 from apps.delivery.worker import run_kindle_delivery
+from apps.ingestion.catalog_processing.worker import run_catalog_processing
 from apps.ingestion.source_discovery.worker import run_source_discovery
 from apps.ingestion.source_processing.worker import run_source_processing
 from apps.processing.job_models import (
@@ -35,6 +36,8 @@ def execute_claimed_job(ownership):
         return run_source_processing(ownership)
     if job.kind == BackgroundJobKind.DISCOVER_SOURCE:
         return run_source_discovery(ownership)
+    if job.kind == BackgroundJobKind.PROCESS_CATALOG:
+        return run_catalog_processing(ownership)
     raise ExecutionFailure(FailureKind.PERMANENT, "unsupported_job_kind")
 
 

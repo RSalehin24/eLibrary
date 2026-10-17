@@ -1,4 +1,7 @@
+from typing import ClassVar
+
 from django.contrib import admin
+from django.db import models
 
 from .models import (
     BookCreationRequest,
@@ -12,6 +15,7 @@ from .models import (
 
 @admin.register(BookRecord)
 class BookRecordAdmin(admin.ModelAdmin):
+    formfield_overrides: ClassVar[dict] = {models.URLField: {"assume_scheme": "https"}}
     list_display = (
         "name",
         "category",

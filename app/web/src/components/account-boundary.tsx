@@ -36,7 +36,7 @@ function useAccountEvents(client: QueryClient, resetIdentity: () => void) {
 
 export function AccountBoundary() {
   const client = useQueryClient();
-  const session = useQuery({ queryKey: ["private", "session"], queryFn: ({ signal }) => readSession(signal), refetchOnWindowFocus: "always" });
+  const session = useQuery({ queryKey: ["private", "session"], queryFn: ({ signal }) => readSession(signal), refetchOnMount: "always", refetchOnWindowFocus: "always" });
   const resetIdentity = useAccountIdentity(client, session.data);
   useAccountEvents(client, resetIdentity);
   return null;

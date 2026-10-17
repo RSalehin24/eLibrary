@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 const require = createRequire(new URL("../../app/web/package.json", import.meta.url));
 const { defineConfig, devices } = require("playwright/test");
 
-const mobileJourneys = /(?:discovery|login|workspaces|personal-library|pwa|reader|uploads)\.spec\.mjs$/;
+const mobileJourneys = /(?:catalog-usability|discovery|login|workspaces|personal-library|pwa|reader|reader-language|reader-legacy|uploads|jobs|book-lifecycle|admin-usability|admin-console|site-language|ux-workflows)\.spec\.mjs$/;
 
 export default defineConfig({
   testDir: "./e2e",

@@ -1,28 +1,21 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
-import { adminLanguageCookie, translateAdmin, type AdminLanguage } from "@/lib/admin-language";
+import { translateAdmin, type AdminLanguage } from "@/lib/admin-language";
 import { jobTimestamp } from "@/lib/job-status";
+import { SiteLanguageSwitch, useSiteLanguage } from "./site-language";
 
-const LanguageContext = createContext<AdminLanguage>("bn");
+export function AdminLanguageProvider({ children }: { initial: AdminLanguage; children: React.ReactNode }) {
+  return <div className="management-workspace" lang={useSiteLanguage().language}>{children}</div>;
+}
 
-export function AdminLanguageProvider({ initial, children }: { initial: AdminLanguage; children: React.ReactNode }) {
-  const [language, setLanguage] = useState(initial);
-  function changeLanguage(next: AdminLanguage) {
-    document.cookie = `${adminLanguageCookie}=${next}; Path=/; Max-Age=31536000; SameSite=Lax${location.protocol === "https:" ? "; Secure" : ""}`;
-    setLanguage(next);
-  }
-  return <LanguageContext.Provider value={language}><div className="management-workspace" lang={language}>
-    <div className="admin-language" role="group" aria-label="Language / ভাষা">
-      <button type="button" lang="bn" aria-pressed={language === "bn"} onClick={() => changeLanguage("bn")}>বাংলা</button>
-      <button type="button" lang="en" aria-pressed={language === "en"} onClick={() => changeLanguage("en")}>English</button>
-    </div>{children}</div></LanguageContext.Provider>;
+export function AdminLanguageSwitch() {
+  return <SiteLanguageSwitch />;
 }
 
 export function useAdminLanguage() {
-  const language = useContext(LanguageContext);
+  const { language, number } = useSiteLanguage();
   return { language, t: (text: string) => translateAdmin(language, text),
-    number: (value: number) => new Intl.NumberFormat(language).format(value) };
+    number };
 }
 
 export function AdminText({ children }: { children: string }) {
@@ -35,4 +28,8 @@ export function AdminNumber({ value }: { value: number }) {
 
 export function AdminDate({ value }: { value: string | null }) {
   return jobTimestamp(value, useAdminLanguage().language);
+}
+
+export function AdminNavigation({ label, children, className }: { label: string; children: React.ReactNode; className?: string }) {
+  return <nav className={className} aria-label={useAdminLanguage().t(label)}>{children}</nav>;
 }

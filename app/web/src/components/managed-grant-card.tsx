@@ -1,11 +1,10 @@
 "use client";
 
-import { AdminText } from "@/components/admin-language";
+import { AdminDate, AdminText } from "@/components/admin-language";
 import { useRef } from "react";
 import { updateManagedGrant } from "@/api/managed-access";
 import type { ManagedGrant, ManagedGrantUpdate } from "@/api/types";
 import { accessScopes } from "@/lib/access-status";
-import { jobTimestamp } from "@/lib/job-status";
 import { reloadManagedForm, useManagedForm } from "@/lib/managed-form";
 import { AccountFeedback } from "./account-feedback";
 import { AccountField } from "./account-field";
@@ -14,8 +13,8 @@ export function ManagedGrantCard({ grant, editable, onSaved }: { grant: ManagedG
   const revision = useRef(grant.updated_at);
   const form = useManagedForm((values: ManagedGrantUpdate) => updateManagedGrant(grant.user, grant.id, values), async (updated) => { revision.current = updated.updated_at; await onSaved(updated); });
   const scope = Object.hasOwn(accessScopes, grant.scope) ? accessScopes[grant.scope as keyof typeof accessScopes] : "রক্ষণাবেক্ষণের অনুমতি";
-  return <li className="job-card" data-grant-id={grant.id}><div className="job-heading"><h3>{scope}</h3><span className="status-label">{grant.effective ? "কার্যকর" : grant.is_active ? "মেয়াদ শেষ" : "প্রত্যাহৃত"}</span></div>
-    <p><AdminText>{"পরিধি: "}</AdminText>{grant.target_type === "account" ? "সব বই" : grant.target_label}</p><p className="muted"><AdminText>{"মেয়াদ শেষ: "}</AdminText>{grant.expires_at ? jobTimestamp(grant.expires_at) : "নির্দিষ্ট নয়"}</p>
+  return <li className="job-card" data-grant-id={grant.id}><div className="job-heading"><h3><AdminText>{scope}</AdminText></h3><span className="status-label"><AdminText>{grant.effective ? "কার্যকর" : grant.is_active ? "মেয়াদ শেষ" : "প্রত্যাহৃত"}</AdminText></span></div>
+    <p><AdminText>{"পরিধি: "}</AdminText>{grant.target_type === "account" ? <AdminText>{"সব বই"}</AdminText> : grant.target_label}</p><p className="muted"><AdminText>{"মেয়াদ শেষ: "}</AdminText>{grant.expires_at ? <AdminDate value={grant.expires_at} /> : <AdminText>{"নির্দিষ্ট নয়"}</AdminText>}</p>
     {editable && Object.hasOwn(accessScopes, grant.scope) ? <form onChange={form.markDirty} onReset={form.discard} onSubmit={(event) => {
       event.preventDefault(); const fields = new FormData(event.currentTarget); const expiry = String(fields.get("expiry") ?? "");
       form.saving.mutate({ expected_updated_at: revision.current, notes: String(fields.get(`grant-note-${grant.id}`)), ...(expiry === localDateTime(grant.expires_at) ? {} : { expires_at: expiry ? new Date(expiry).toISOString() : null }) });

@@ -2,6 +2,7 @@ from django.db import IntegrityError, transaction
 from django.utils import timezone
 
 from apps.accounts.models import User
+from apps.ingestion.source_processing.policy import MAX_SOURCE_PAGES
 from apps.processing.job_models import BackgroundJob, BackgroundJobKind, JobDispatch
 from apps.processing.jobs.requests import JobStateConflict, require_processing_manager
 
@@ -42,8 +43,13 @@ def create_discovery_job(actor, identifier, command):
 def request_source_discovery(actor, values):
     actor = User.objects.select_for_update(no_key=True).get(pk=actor.pk)
     require_processing_manager(actor)
-    configured = discovery_configuration()
+    catalog_scope = values.get("catalog_scope", "all")
+    configured = discovery_configuration(catalog_scope)
     command = {**configured, "max_pages": values["max_pages"]}
+    if catalog_scope == "unfinished":
+        command["catalog_scope"] = catalog_scope
+    if values.get("fetch_all"):
+        command.update(fetch_all=True, max_pages=MAX_SOURCE_PAGES)
     if values["configuration_revision"] != configured["configuration_revision"]:
         raise JobStateConflict(
             "The configured source changed. Inspect its current address before discovery."

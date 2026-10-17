@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteText } from "@/components/site-language";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { signIn } from "@/api/auth";
@@ -32,14 +34,14 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
     event.preventDefault(); const fields = new FormData(event.currentTarget);
     login.mutate({ email: String(fields.get("email")), password: String(fields.get("password")),
       otp_token: String(fields.get("otp_token") || "") });
-  }}><p className="eyebrow">আপনার ব্যক্তিগত পাঠাগার</p><h1>অ্যাকাউন্টে প্রবেশ করুন</h1>
-    <p className="login-description">আপনার বই, বুকমার্ক আর নোটের কাছে ফিরে যান।</p>
-    <div className="form-field"><label htmlFor="email">ইমেইল</label><input id="email" name="email" type="email" autoComplete="username" onChange={changeCredentials} disabled={login.isPending} required /></div>
-    <div className="form-field"><label htmlFor="password">পাসওয়ার্ড</label><input id="password" name="password" type="password" autoComplete="current-password" maxLength={4096} onChange={changeCredentials} disabled={login.isPending} required /></div>
-    {codeRequired && <div className="form-field"><label htmlFor="otp">দুই ধাপের নিরাপত্তা কোড</label><input ref={codeInput} id="otp" name="otp_token" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}([0-9]{2})?" maxLength={8} disabled={login.isPending} required aria-describedby="otp-help" />
-      <p id="otp-help" className="muted">আপনার অথেনটিকেটর অ্যাপের বর্তমান কোড দিন।</p></div>}
-    {login.error && <p className={codeRequested ? "login-challenge" : "field-error"} role="alert">{loginErrorMessage(login.error)}</p>}
-    <button className="button" type="submit" disabled={login.isPending}>{login.isPending ? "প্রবেশ করা হচ্ছে…" : "প্রবেশ করুন"}</button>
-    <Link className="text-link" href="/reset-password/">পাসওয়ার্ড ভুলে গেছেন?</Link>
+  }}><p className="eyebrow"><SiteText>{"আপনার ব্যক্তিগত পাঠাগার"}</SiteText></p><h1><SiteText>{"অ্যাকাউন্টে প্রবেশ করুন"}</SiteText></h1>
+    <p className="login-description"><SiteText>{"আপনার বই, বুকমার্ক আর নোটের কাছে ফিরে যান।"}</SiteText></p>
+    <div className="form-field"><label htmlFor="email"><SiteText>{"ইমেইল"}</SiteText></label><input id="email" name="email" type="email" autoComplete="username" onChange={changeCredentials} disabled={login.isPending} required /></div>
+    <div className="form-field"><label htmlFor="password"><SiteText>{"পাসওয়ার্ড"}</SiteText></label><input id="password" name="password" type="password" autoComplete="current-password" maxLength={4096} onChange={changeCredentials} disabled={login.isPending} required /></div>
+    {codeRequired && <div className="form-field"><label htmlFor="otp"><SiteText>{"দুই ধাপের নিরাপত্তা কোড"}</SiteText></label><input ref={codeInput} id="otp" name="otp_token" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}([0-9]{2})?" maxLength={8} disabled={login.isPending} required aria-describedby="otp-help" />
+      <p id="otp-help" className="muted"><SiteText>{"আপনার অথেনটিকেটর অ্যাপের বর্তমান কোড দিন।"}</SiteText></p></div>}
+    {login.error && <p className={codeRequested ? "login-challenge" : "field-error"} role="alert"><SiteText>{loginErrorMessage(login.error)}</SiteText></p>}
+    <button className="button" type="submit" disabled={login.isPending}>{login.isPending ? <SiteText>{"প্রবেশ করা হচ্ছে…"}</SiteText> : <SiteText>{"প্রবেশ করুন"}</SiteText>}</button>
+    <Link className="text-link" href="/reset-password/"><SiteText>{"পাসওয়ার্ড ভুলে গেছেন?"}</SiteText></Link>
   </form>;
 }

@@ -26,12 +26,19 @@ class SourceDiscoveryOptionsSerializer(serializers.Serializer):
     latest_operation_id = serializers.UUIDField(allow_null=True)
 
 
-class SourceDiscoveryCommandSerializer(serializers.Serializer):
+class SourceDiscoveryScopeSerializer(serializers.Serializer):
+    catalog_scope = serializers.ChoiceField(
+        choices=("all", "unfinished"), default="all"
+    )
+
+
+class SourceDiscoveryCommandSerializer(SourceDiscoveryScopeSerializer):
     operation_id = serializers.UUIDField()
     configuration_revision = serializers.RegexField(r"^[0-9a-f]{64}$")
     max_pages = serializers.IntegerField(
         min_value=1, max_value=MAX_DISCOVERY_PAGES, default=DEFAULT_DISCOVERY_PAGES
     )
+    fetch_all = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         reject_unknown_fields(self)
@@ -43,11 +50,14 @@ class SourceDiscoveryView(VersionedAPIView):
 
     @extend_schema(
         operation_id="source_discovery_options",
+        parameters=[SourceDiscoveryScopeSerializer],
         responses={200: SourceDiscoveryOptionsSerializer, 403: APIErrorSerializer},
     )
     def get(self, request):
+        parameters = SourceDiscoveryScopeSerializer(data=request.query_params)
+        parameters.is_valid(raise_exception=True)
         try:
-            values = discovery_options()
+            values = discovery_options(parameters.validated_data["catalog_scope"])
         except ExecutionFailure:
             values = {
                 "configured": False,

@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,7 +7,7 @@ import { entityLabels } from "@/lib/catalog-entity";
 import { managedEntityKind } from "@/lib/managed-entity";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "পরিচিতি তৈরি" };
+export async function generateMetadata() { return localizeMetadata({ title: "পরিচিতি তৈরি" }); }
 
 export default async function CreateEntityPage({ params }: { params: Promise<{ kind: string }> }) {
   const kind = managedEntityKind((await params).kind);

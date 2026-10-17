@@ -24,6 +24,8 @@ class SourceAutomation(UUIDPrimaryKeyModel, TimeStampedModel):
     occurrence_number = models.PositiveIntegerField(default=0)
     source_max_pages = models.PositiveSmallIntegerField(default=20)
     processing_limit = models.PositiveSmallIntegerField(default=0)
+    fetch_all = models.BooleanField(default=False)
+    process_all = models.BooleanField(default=False)
     run_as = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -65,6 +67,7 @@ class AutomationRun(UUIDPrimaryKeyModel, TimeStampedModel):
         related_name="automation_execution",
     )
     processing_limit = models.PositiveSmallIntegerField(default=0)
+    process_all = models.BooleanField(default=False)
     missed_occurrences = models.PositiveIntegerField(default=0)
 
     class Meta:

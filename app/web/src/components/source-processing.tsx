@@ -3,14 +3,16 @@
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { processSource } from "@/api/source-processing";
 import type { SourceEntry, SourceProcessingCommand } from "@/api/types";
 import { useManagedForm } from "@/lib/managed-form";
 import { AccountFeedback } from "./account-feedback";
 
 export function SourceProcessing({ entry }: { entry: SourceEntry }) {
+  const client = useQueryClient();
   const [identifier, setIdentifier] = useState<string | null>(null);
-  const form = useManagedForm((values: SourceProcessingCommand) => processSource(entry.id, values), async () => {});
+  const form = useManagedForm((values: SourceProcessingCommand) => processSource(entry.id, values), async () => { await client.invalidateQueries({ queryKey: ["private", "sources"] }); });
   return <section className="account-section"><h2><AdminText>{"উৎস থেকে বই প্রস্তুত"}</AdminText></h2><p><AdminText>{"উৎসের লেখা সংগ্রহ, খসড়া তৈরি ও EPUB বানানোর কাজ আলাদা করে চলবে। প্রকাশের আগে সম্পাদকের পর্যালোচনা প্রয়োজন।"}</AdminText></p>
     {entry.active_operation_id && <Link className="text-link" href={`/manage/jobs/${entry.active_operation_id}/`}><AdminText>{"চলমান কাজ ও করণীয় দেখুন →"}</AdminText></Link>}
     {!entry.active_operation_id && entry.latest_operation_id && <p><Link className="text-link" href={`/manage/jobs/${entry.latest_operation_id}/`}><AdminText>{"সর্বশেষ কাজ ও করণীয় দেখুন →"}</AdminText></Link></p>}

@@ -48,8 +48,11 @@ def test_scoped_editors_count_only_manageable_books_without_other_domains(client
     assert data["books"] == {
         "total": 2,
         "draft": 1,
+        "processing": 0,
+        "ready": 0,
         "published": 1,
-        "editorial_pending": 1,
+        "archived": 0,
+        "editorial_pending": 0,
     }
     assert data["sources"] is None and data["accounts"] is None
     assert data["work"]["processing"] is None and data["work"]["account_mail"] is None

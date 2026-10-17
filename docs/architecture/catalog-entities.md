@@ -1,7 +1,10 @@
 # Entity and book relationship administration
 
-`/manage/entities/` links private contributor, category, series, and curated
-collection lists. Lists search names and verified aliases in SQL, paginate at
+`/manage/entities/` opens the contributor list immediately, with shared tabs for
+categories, series and collections. Each row has Edit and View Books actions;
+related-book links include drafts within the manager's permission scope.
+Contributor lists can filter author, translator, editor, publisher and other roles.
+Lists search names and aliases in SQL, paginate at
 1–100 records, and fetch only their displayed fields. Full editorial text is
 loaded on the detail page. All responses prohibit private caching.
 
@@ -30,9 +33,16 @@ Collections accept at most 100 unique book UUIDs in explicit order. Selection
 replacement, metadata, review reset, and audit writes share one transaction.
 Missing or deleted selections roll back the entire command. Detail responses
 include ordered book IDs and labels in one joined query. Publication requires
-a reviewed nonempty introduction and selected books. The public collection feed
-continues to expose only eligible public books. Saving edits clears approval;
-review must be renewed before edited collection content becomes public.
+a nonempty introduction and selected books. The public collection feed
+continues to expose only eligible public books. Saved metadata is visible without
+a separate manual-review step; revisions, authorization and validation still apply.
+The existing review API remains compatible for older clients.
+
+Public `/contributors/`, `/categories/` and `/series/` pages list names associated
+with public books. Their bounded search/pagination API is
+`/api/v1/catalog/entities/<kind>/`. Draft-only names remain private. Contributor
+role filters match the role on the same published book and persist through book
+links and pagination. Signed cursors are bound to the directory kind and role.
 
 Reference searches at `/api/v1/manage/catalog-references/` return at most 100
 IDs/names (the UI requests 24), plus `has_more`. Book results respect metadata

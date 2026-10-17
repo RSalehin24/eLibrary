@@ -7,8 +7,8 @@ import { BookInformation } from "@/components/book-information";
 import { routeSlug } from "@/lib/route-slug";
 import { catalogEntityPath } from "@/lib/catalog-entity";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { SaveBookButton } from "@/components/save-book-button";
 import { RelatedEditions } from "@/components/related-editions";
+import { BookReadingSummary } from "@/components/book-reading-summary";
 
 type BookParameters = { params: Promise<{ slug: string }> };
 
@@ -29,8 +29,9 @@ export default async function BookDetailPage({ params }: BookParameters) {
   return <>
     <Breadcrumbs entries={[{ name: "পাঠাগার", path: "/catalog/" }, { name: book.title, path: `/books/${encodeURIComponent(book.slug)}/` }]} />
     <BookInformation book={book} entityPath={catalogEntityPath}>
-        <BookActions slug={book.slug} recordType={book.record_type} /><SaveBookButton slug={book.slug} />
+        <BookActions slug={book.slug} recordType={book.record_type} />
     </BookInformation>
+    {book.record_type !== "manual" && <BookReadingSummary slug={book.slug} />}
     <RelatedEditions slug={book.slug} />
     <StructuredData data={{ "@context": "https://schema.org", "@type": "Book", name: book.title,
       url: canonicalURL(`/books/${encodeURIComponent(book.slug)}/`), ...(book.language ? { inLanguage: book.language } : {}),

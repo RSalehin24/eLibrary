@@ -1,3 +1,4 @@
+
 import { AdminText } from "@/components/admin-language";
 import type { EditorialValues } from "@/lib/editorial-fields";
 import { EditorialField } from "./editorial-field";
@@ -18,6 +19,6 @@ export function EditorialSEOFields({ values, errors, pending }: FieldProps) {
     <EditorialField name="seo_description" label="সার্চের বর্ণনা (ঐচ্ছিক)" value={values.seo_description} errors={errors.seo_description} multiline maxLength={320} />
     <EditorialField name="social_image_url" label="সামাজিক মাধ্যমের ছবির HTTPS ঠিকানা (ঐচ্ছিক)" value={values.social_image_url} errors={errors.social_image_url} maxLength={1000} />
     <label className="checkbox-field"><input type="checkbox" name="indexing_eligible" defaultChecked={values.indexing_eligible} /><AdminText>{"সার্চ ইঞ্জিনে দেখানোর অনুমতি"}</AdminText></label>
-    <p className="muted"><AdminText>{"সম্পাদকীয় বর্ণনা ও অনুমোদিত পর্যালোচনা থাকলে এই অনুমতি কার্যকর হবে।"}</AdminText></p>
+    <p className="muted"><AdminText>{"বিবরণ যোগ করা থাকলে প্রকাশিত তথ্য সার্চ ইঞ্জিনে দেখা যাবে।"}</AdminText></p>
   </fieldset>;
 }

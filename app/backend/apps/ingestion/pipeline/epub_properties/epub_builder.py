@@ -453,11 +453,8 @@ class EpubBuilder:
         image_name = os.path.basename(cover_image_path)
         # create_page=False prevents ebooklib from generating its own cover.xhtml
         # so the EPUB does not end up with two cover pages.
-        self.book.set_cover(
-            image_name,
-            open(cover_image_path, "rb").read(),
-            create_page=False,
-        )
+        with open(cover_image_path, "rb") as cover:
+            self.book.set_cover(image_name, cover.read(), create_page=False)
 
         html_content = self.render_template(
             "cover_page.html",

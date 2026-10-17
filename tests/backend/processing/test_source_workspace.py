@@ -13,6 +13,29 @@ pytestmark = pytest.mark.django_db
 SOURCES = "/api/v1/manage/sources/"
 
 
+@pytest.mark.parametrize("chaptered", [False, True])
+def test_source_detail_reports_content_counts_without_exposing_book_text(
+    client, processor, chaptered
+):
+    entry = source_entry(700)
+    body = "<p>private-book-text</p>"
+    items = [{"title": "Chapter", "content": body}] if chaptered else []
+    book = link_book(entry, {"main_content_html": body, "content_items": items})
+    response = client.get(SOURCES + f"{entry.pk}/")
+    assert response.status_code == 200
+    summary = response.json()["content_summary"]
+    assert summary == {
+        "body_character_count": 34 if chaptered else 17,
+        "chapter_count": int(chaptered),
+        "check_completeness": not chaptered,
+        "verification": None,
+    }
+    assert "private-book-text" not in response.content.decode()
+    assert client.get(SOURCES).json()["entries"][0]["content_summary"] is None
+    book.refresh_from_db()
+    assert book.state == "draft"
+
+
 @pytest.fixture
 def processor(client):
     user = User.objects.create_user(email="source-processor@library.test")

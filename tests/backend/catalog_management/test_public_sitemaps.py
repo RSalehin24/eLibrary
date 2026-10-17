@@ -24,7 +24,7 @@ def test_sitemap_contains_only_canonical_indexable_public_records(client):
     book.save()
     excluded = [eligible_book() for _ in range(4)]
     excluded[0].indexing_eligible = False
-    excluded[1].editorial_reviewed_at = None
+    excluded[1].review_state = "rejected"
     excluded[2].editorial_description = " \n\t "
     excluded[3].state = "draft"
     for entry in excluded:

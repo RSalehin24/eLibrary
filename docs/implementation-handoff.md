@@ -1,4 +1,725 @@
-# Implementation handoff — 16 October 2026
+# Implementation handoff — 17 October 2026
+
+## Current correction — obsolete dashboard review counter (17 October 2026)
+
+The user found “পর্যালোচনা বাকি” still counting every book after manual review
+was removed. The dashboard was counting empty `editorial_reviewed_at` timestamps,
+including on published books, and omitting legacy `needs_review` records from its
+draft total. The review counter is removed in Bengali and English. Drafts now
+include both `draft` and legacy `needs_review`; processing, ready, published and
+archived statuses have separate counts. The deprecated API `editorial_pending`
+field stays zero for compatibility. No stored book states or files were changed.
+Automation guidance also describes automatic publication after successful checks.
+
+Verification: **13 focused backend tests**, **57 web units**, **15 overview browser
+journeys** across Chromium, WebKit and Linux Firefox, including phone/no-JavaScript
+and bilingual cases. Production build, ESLint, strict TypeScript, mypy (221 files),
+affected Ruff/format checks, OpenAPI validation/generated contracts, file-size and
+architecture policies, and whitespace checks passed. Evidence is
+`test-artifacts/foundation/overview-review-*.log`. The restarted preview returned
+HTTP 200; actual dashboard counts reconciled, with no review counter, and its
+screenshot was visually inspected (`overview-review-dashboard.png`). Processing
+continues normally, so live totals change as new books publish. Delivery workers
+remain off; no dependencies, migrations, commit or push were added.
+
+## Active correction — original workflows and reader UX (17 October 2026)
+
+The corrections below are implemented and have passed the recorded checks. The
+user rejected the earlier parity claim; subjective design acceptance and a
+zero-bug guarantee must not be inferred from automated verification. Older
+checkpoints below are historical and are superseded by this section.
+
+Latest explicit requirements:
+
+- Show real author/category/series/collection lists immediately, with links to
+  their books. Make All Books easy to reach from public/personal pages, with
+  actual covers/authors and search. Kindle and My Notes need consistent icons.
+- Expose Add to My Books on book actions; the default personal list must include
+  saved books and reading history rather than opening an unrelated empty owned list.
+- Remove manual editorial approval from book/entity workflows. On 17 October the
+  user explicitly chose **automatic publication after successful source checks**.
+  Keep validation, permissions, stale revisions and source/file safety checks.
+- Automatically compare available source pages/chapters and generated HTML/EPUB
+  text. A missing/broken app export is an application defect, not a source category.
+- Restore the source website's **Unfinished Books** category as its own list and
+  catalog refresh. Keep it distinct from failed jobs or missing collected chapters.
+- Fullscreen reading must show **only the book**: no control toggle, exit button,
+  page bar or save-status text. Use Escape/double-tap to exit. Compare the retained
+  reader and verify actual `দস্যু বনহুর সমগ্র ৪`, not just synthetic short fixtures.
+
+Implemented corrections include direct entity lists/role filters and related books;
+public author/category/series directories; visible All Books navigation/cards;
+Add/Remove from My Books with the combined default feed; review-free saved
+metadata/publication; the source unfinished category; strict source/text/export
+verification and automatic publishing with stop/replay guards. Reader controls
+are grouped into settings; fullscreen/focus shows only book content, including
+when an app update is waiting. Escape/double-tap exits. Appearance changes retain
+the passage across page reflow; generated chapter wrappers no longer add a second
+40px reader margin. Mobile navigation wraps at enlarged text sizes. Search fields
+and author lists use the shared visual system, with consistent action icons.
+
+Passing backend evidence is `catalog-repair-backend-release.log`: **1,437 passed,
+13 live tests deselected**, with warnings treated as errors. The final publication
+guards also passed **312 focused cases** in
+`catalog-repair-backend-final-verified.log`; these overlap the full suite and are
+not an additional 312 distinct tests. Current web units pass **56**, retained
+frontend units **154**; mypy passes **221 files**. Production build, ESLint,
+strict TypeScript, versioned OpenAPI/generation, migration consistency, affected
+Python lint and architecture/file-size policies pass.
+
+The broad browser matrix passed **333 journeys**: 169 Chromium, 123 across
+WebKit/Android/iPhone and 41 Linux Firefox. Evidence is
+`catalog-repair-browser-final.log`, `catalog-repair-browser-platforms-final.log`
+and `catalog-repair-browser-firefox-verified.log`. The final visual refinements
+also passed **25 layout rechecks** in `catalog-repair-browser-layout-final.log`
+and `catalog-repair-browser-layout-firefox.log`. The final served build passed
+**31 additional checks** for bilingual feedback, directories, personal-book
+actions and manual creation: `catalog-repair-browser-delivery.log` (10),
+`catalog-repair-browser-directories-delivery.log` (12),
+`catalog-repair-browser-firefox-delivery.log` (6) and
+`catalog-repair-browser-creation-delivery.log` (3). These repeated checks are not
+separate feature-coverage claims.
+
+Actual regeneration **72f2c41b-d286-45d0-b380-44d5addf7cad** (দস্যু বনহুর সমগ্র ৪)
+and **855d5f7c-28c1-49f6-9f77-900e60445aaf** (Devdas) both succeeded and published
+through automatic source/export/reader checks, with no manual review. Source
+unfinished discovery **b0726b5c-3428-40ba-a544-05842c2e36ce** succeeded and the
+separate list contains **60 source-marked entries**. Evidence uses
+`catalog-repair-real-execution.log` and `catalog-repair-verified-content-final.*`.
+The actual reader's 20 contents entries, 112,503-character chapter and full-viewport
+fullscreen with zero visible buttons were checked; screenshots are
+`catalog-repair-reader-*.png`. Preview source processing, dispatcher and scheduler
+are restored. Delivery workers remain off.
+
+The first complete run had environment errors (engine Redis address and inherited
+source fallback settings); deterministic isolation and explicit local Redis
+corrected them. Browser runs exposed duplicate/old labels, enlarged navigation
+width, reader reflow and the fullscreen update notice, all fixed. The reader test
+now uses the reference web proxy instead of a redundant broad route interception
+that raced reload cancellation. Source browser fixtures now include actual
+HTML and cover files in the reference database, in addition to their EPUB. This
+prevents file tests from selecting arbitrary unrelated or EPUB-only records.
+Private synthetic fixtures must never enter `bangla_library_preview`. Repeated
+reference seeding exposed catalog sequence exhaustion: allocation now reuses an
+available slot after the monotonic range is exhausted, retaining the existing
+code format, locking and explicit failure when every slot is occupied. Reference
+seeding now synchronizes codes after adding relationships; 200 existing synthetic
+reference records were corrected through the same service without deleting data.
+
+Legacy sourced records without processing evidence cannot bypass automatic
+verification through manual publication; manually added records without a source
+retain direct publication. Blocked publication displays the specific next step
+in Bengali and English rather than a misleading stale-edit message. Only known
+source-check messages are displayed; arbitrary server diagnostics stay hidden.
+The TypeScript unit harness now uses the application's ES2022 target so native
+Error subclasses behave as they do in production.
+
+The completed build is served at http://localhost:3000/; the direct admin book
+list is http://localhost:3000/manage/books/. Preview APIs and reference services
+were restarted and returned HTTP 200. Actual admin/author/catalog/unfinished
+pages and phone/reader screenshots were visually inspected. Real covers loaded,
+HTML opened a new tab, and Read, Kindle and Add to My Books actions were present.
+Final live-page evidence is `catalog-repair-final-qa-delivery.log` and
+`catalog-repair-final-*.png`. Several earlier interrupted/failed logs remain under
+`catalog-repair-*`; use only passing final evidence in completion claims. In-app
+Browser still fails bootstrap (`missing sandboxPolicy`); approved Playwright and
+its pinned Linux Firefox simulator are the fallback.
+
+Only simulators are available. Physical devices, external Kindle arrival,
+independent-machine capacity and a fresh staging host remain unverified. No
+dependency or migration was added during these corrections; delivery workers
+remain off. No commit or push was requested.
+
+Product Design installation was offered; no connection was confirmed, so it is
+skipped. No additional plugin is required to keep implementing the application.
+
+## Current checkpoint — retained reader features and final verification (17 October 2026)
+
+The identified original-app gaps are implemented: regeneration/removal controls,
+nested EPUB 3/NCX contents, pinch/tap reader gestures, and supported original
+text-CFI bookmarks/highlights and package-relative reading locations. Existing
+notes remain intact when an edition no longer matches; the reader reports an
+unresolvable position rather than selecting unrelated text. Unicode offsets,
+escaped CFI assertions and quotations are checked before restoring a selection.
+See [the feature comparison and acceptance limits](operations/feature-parity.md).
+
+Older prepared books remain readable. Their managed EPUB exposes **Update Reader
+Files** to add navigation/spine metadata explicitly, with processing overlap and
+revision checks. Reader safety preparation stays version **1**; only the new
+manifest metadata is version **2**. Do not invalidate existing safe reader files
+by conflating those versions. No dependency or migration was added in this
+continuation, and no test, lint rule or type check was weakened.
+
+Final verification passed:
+
+- **1,401 backend/tools tests**, with warnings treated as errors; 13 live-source
+  tests were deselected for this simulator-only acceptance.
+- **51 current web units** and **154 retained frontend units**.
+- **323 browser journeys**: 143 broad Chromium journeys, 80 additional
+  reader/lifecycle journeys across WebKit, Android, iPhone and Linux Firefox,
+  and 100 admin/product journeys across all five profiles.
+- Production build, ESLint, strict TypeScript, mypy (214 configured files),
+  OpenAPI validation with `--fail-on-warn`, generated contract consistency,
+  migration consistency, affected Ruff/formatting, architecture/file-size
+  policies and `git diff --check`.
+
+Passing evidence is ignored under `test-artifacts/foundation/`:
+`reader-legacy-backend-verified.log`, `reader-legacy-browser-final.log`,
+`reader-legacy-platforms-final.log`, `reader-legacy-platform-firefox-final.log`,
+`reader-legacy-product.log`, `reader-legacy-product-firefox.log`,
+`reader-legacy-build-verified.log`, and the `reader-legacy-*-verified.log`
+type/lint checks. Earlier failed runs remain available; some exposed regressions
+that were fixed, and the last broad-run setup errors were corrected by pointing
+at reference API 8002 and waiting for HTTP readiness before running the suite.
+
+Actual Devdas reader update `d7e60e1d-3fdb-4ab0-83ac-c8336b58fa8d` completed
+on its first attempt: manifest version 2, 20 contents entries and 20 spine
+resources. Its real cover and 9,887-character first body chapter were checked on
+desktop and phone, with no horizontal overflow. Screenshots of book actions,
+contents, two-page reading and Bengali immersive reading were visually inspected.
+The book remains `needs_review` and unapproved. Evidence:
+`reader-legacy-real-update-evidence.json`,
+`reader-legacy-real-evidence.json`, and `reader-legacy-real-*.png`.
+
+Preview remains http://localhost:3000/ with API 8000 / `bangla_library_preview`.
+Reference web 3001 proxies Next 3002 / API 8002 / `bangla_library`; synthetic
+fixtures stay restricted to that reference database. Preview processing-only
+worker, dispatcher and scheduler are restored; the worker answered `pong` and
+preview readiness/login returned HTTP 200. Delivery workers remain stopped.
+Inspect current processes rather than relying on historical PIDs. Pause the
+preview worker before another complete Redis/engine test run.
+
+The existing Browser plugin and approved Playwright 1.64.0 installation were
+used; no additional plugin was installed. The in-app browser bootstrap still
+fails with `missing sandboxPolicy`, so repository Playwright and the documented
+pinned Firefox container provide the browser evidence. Only simulators are
+available. Physical devices, external Kindle arrival, independent-machine
+capacity and a fresh staging host remain unverified. Passing checks establish
+the tested behavior; they do not establish subjective design acceptance or a
+zero-bug guarantee.
+
+## Current checkpoint — book regeneration and removal (17 October 2026)
+
+The current managed editor now exposes bilingual Regenerate Book and Remove Book
+controls before files and metadata. Regeneration reuses source-processing jobs,
+pins actor/source/book revisions, preserves edited metadata, personal records,
+old assets and prepared sessions, and returns the book to review. Explicit retry
+and preparation recovery retain completed content/exports. Removal retains data
+and files while blocking catalog/reader access. No existing preview book was
+removed. See [the contracts and recovery rules](architecture/catalog-records.md#regeneration-and-removal).
+
+Fixed the controls' inconsistent timezone serialization, a translation collision
+with the catalog heading, keyboard focus after confirmation, cramped enlarged-text
+navigation/dialog headings, and stale capabilities after saving metadata. Added
+concurrent-request, scope/revocation, stale-input, uncertain-response, retention,
+embedded-cover and preparation-recovery regressions. No dependency or migration
+was added; OpenAPI/TypeScript were generated using the documented tooling.
+
+Verification: the full backend/tools run passed **1,383 tests**, with warnings as
+errors and 13 live tests deselected. The final focused run passed **29 tests**,
+including two final regressions added after the full run was collected. Current
+web units passed **42 tests**. The production build, lint, strict TypeScript,
+mypy (213 files), OpenAPI validation with `--fail-on-warn`, migration consistency,
+Ruff/formatting, architecture/size policies and `git diff --check` passed.
+The final broad Chromium run passed **139 journeys**; the new controls passed
+another **20 journeys** across WebKit, Android/iPhone simulators and Linux Firefox.
+Dialog/mobile screenshots were inspected. Logs use the `lifecycle-*` prefix under
+ignored `test-artifacts/foundation/`. Earlier failed runs are retained as evidence;
+use `lifecycle-browser-verified.log`, `lifecycle-browser-matrix-restored.log`,
+`lifecycle-browser-matrix-firefox-restored.log`, `lifecycle-backend-complete.log`
+and `lifecycle-backend-release.log` for the passing final results.
+
+Actual Devdas regeneration operation `25388629-d6ab-4fb6-8dc6-c6cdebd5e82d`
+completed on its first attempt: 20 prepared spine resources, a 140,712-byte EPUB,
+the real cover embedded in that EPUB, all resources present, and one before/after
+content snapshot. The book remains `needs_review`, without editorial approval;
+it was not published. Evidence: `lifecycle-real-regeneration-evidence.json`.
+The short Shakespeare draft remains flagged and was not regenerated/published.
+
+The host simulator stopped after the successful Chromium run. Colima was restarted
+with its existing disk, and only retained foundation PostgreSQL/Redis and the
+preview broker containers were started. Preview/reference servers were restored;
+the data and completed regeneration survived. The other four browser profiles
+then passed their final control checks. Delivery workers remain stopped. Inspect
+current listeners/processes before restoring processing/dispatcher/scheduler;
+the pre-restart process identifiers are stale. Preview is still port 3000 with
+`bangla_library_preview`; reference port 3001 proxies 3002/8002 with `bangla_library`.
+The in-app browser still fails bootstrap (`missing sandboxPolicy`); approved
+repository Playwright and the pinned Firefox container were used.
+
+Continue the [remaining reader parity work](operations/feature-parity.md). Complete
+legacy parity and zero bugs are not established; do not claim either.
+
+## Current checkpoint — reader, covers and feature comparison (17 October 2026)
+
+The user requested confirmation of complete original-app feature parity, better
+UI/UX and no bugs. That confirmation is **not established**. Continue from
+[the explicit comparison and remaining work](operations/feature-parity.md);
+automated passing results are not subjective design acceptance or a zero-bug
+guarantee. This checkpoint supersedes earlier reader/cover and verification notes.
+
+Implemented and checked:
+
+- Public/private book details, source results and managed editors share permitted
+  Read/Continue, Open HTML and Send to Kindle actions. Missing original EPUB bytes
+  hide download/delivery while an existing prepared publication remains readable.
+  The Kindle composer retains explicit recipients; opening it does not send mail.
+- Real JPEG/PNG/WebP covers use protected delivery with draft/public authorization
+  and title/author fallbacks. Cover-only CDN downloads use a fresh cookie-free,
+  bounded transport and do not extend the host policy for book/chapter content.
+  Recovered the actual covers for the two existing preview drafts without
+  replacing exported EPUB/HTML bytes or changing publication/editorial status.
+- The EPUB reader has scroll/single/spread views, text resizing, font/theme/line
+  spacing/width preferences, contents, full-book inert-text search, page/chapter
+  navigation, keyboard/swipe handling and immersive fullscreen/focus. Restored
+  the original Ctrl/Command theme/text shortcuts with form/dialog exclusions.
+  Live font/view/viewport changes preserve the visible passage. Native fullscreen
+  uses the document root so app-update notices stay visible.
+- WebKit parent-owned chapter keyboard handlers now work with the iframe and
+  resource sandbox. Explicit `script-src 'none'` continues to block authored
+  scripts, inline event handlers and JavaScript URLs; injected browser probes
+  verify this boundary. Chapter resources remain account/session protected.
+- Electronic-book details show personal reading percentage, last opening and
+  book-specific notes through the shared note workspace. API filters bind signed
+  cursors to account, annotation kind and book; another account's notes/progress
+  are never included. The new notes regression uses its own account, preserving
+  the reading fixtures' initial positions across browser profiles.
+- Fixed hidden PWA prompts by rendering updates outside the hidden admin/reader
+  footer; updates still wait for unfinished work and save the current position.
+  Fixed the initial session-response race, stale source status after job creation,
+  and overflowing catalog codes at 320px with 200% text.
+- Closed EPUB cover handles and database connections owned by legacy engine
+  threads. Shutdown signals/joins those threads. Retained stream tests now
+  consume their files, and processing API fixtures explicitly restore their own
+  default rows after transactional test cleanup. Warnings remain errors.
+- Updated stale browser labels/selectors while preserving the actual workflows.
+  Upload tests use a unique valid ZIP comment so cached preparation cannot hide
+  the preparation workflow. Tests still exercise conflicts, uncertain writes,
+  permissions, actual bytes, CSP, failure retries and draft preservation.
+
+Current-build browser verification: **282 journeys passed** — 134 broad Chromium
+journeys, 11 reader/detail journeys in each of the other four profiles, 20
+admin/result journeys in all five profiles, and four additional reader-update
+journeys. Profiles are Chromium, WebKit, Linux Firefox, Android and iPhone
+simulators. **41 current web units and 154 retained frontend units** passed.
+Production build, ESLint, strict TypeScript, mypy (210 configured files), affected
+Ruff/formatting, migration consistency and architecture/file-size checks passed.
+The versioned OpenAPI contract passed validation with `--fail-on-warn`; OpenAPI
+and TypeScript files were generated using the documented tools.
+
+The final full backend/tools run passed **1,361 tests**, with warnings treated as
+errors; **13 live-source tests were deselected** because this acceptance uses
+simulators. The log is `reader-parity-backend-verified.log`. No test, lint rule or
+type check was weakened. The initial full run exposed retained resource leaks
+and a physical-book response assertion that needed the two new nullable summary
+fields; both were corrected before this clean run.
+
+Actual Devdas visual checks opened 20 spine resources, inspected the first body
+chapter (9,887 visible characters), confirmed the real cover and found no
+horizontal overflow. Immersive reading occupied 870/1,000px on desktop and
+722/844px on phone. Phone/desktop screenshots were visually inspected. The short
+Shakespeare draft remains flagged at 0 source chapters / 524 characters; file
+generation is not certification that the source supplied a complete book.
+
+Evidence is ignored under `test-artifacts/foundation/`: `reader-parity-*-verified.log`,
+`reader-parity-product-release.log`, `reader-parity-build-release.log`,
+`reader-parity-unit-release.log`, `reader-parity-legacy-units.log`,
+`reader-parity-final-real-evidence.json`, and `reader-parity-final-*.png`.
+The in-app browser bootstrap still fails with `missing sandboxPolicy`; the
+approved repository Playwright runner and pinned Firefox container were used.
+No dependencies, subagents, permission grants, commits, fake preview seeds or
+publication changes were introduced. Only simulators are available.
+
+Continue at http://localhost:3000/ and `/manage/sources/`. Preview API 8000 uses
+**bangla_library_preview**. Reference web 3001 proxies Next3002/API8002 using
+**bangla_library**, with synthetic source configuration. Fresh browser fixtures
+are restricted to that reference database. Detached preview/reference servers
+are running; inspect listeners rather than reusing old PIDs. Delivery workers
+remain stopped and no external mail was sent. The preview processing-only worker,
+dispatcher and source scheduler were restored after the Redis pub/sub engine
+tests finished. The worker answered `pong`; preview liveness/readiness and the
+public page returned HTTP 200. Reference services have no workers. Do not run another full
+engine test suite alongside the preview worker; pause it first.
+
+## Current checkpoint — reading actions and shared product design (17 October 2026)
+
+The user again rejected the overall interface and specifically reported missing
+reading controls and HTML opening as a download. This checkpoint supersedes the
+previous design descriptions. The original book detail was opened at 5173 and
+its hero/action implementation compared. Do not claim subjective design
+acceptance, original-feature parity or production deployment from these checks.
+
+Implemented:
+
+- Consolidated the shared visual foundation across public pages, account forms
+  and management: one set of colors, surfaces, type sizing, control sizes and
+  responsive spacing. Branding/header/footer rules live in `branding.css`,
+  shared foundations in `globals.css`, public/account layouts in `product.css`
+  and admin-specific layouts in `admin-console.css`. Replaced conflicting
+  earlier presentation rules instead of appending another general override.
+- Public navigation shows its active section. Workspace links have consistent
+  icons and visible labels. The home page has functional shortcuts to books,
+  notes and browsing. Empty published catalogs are stated accurately; no fake
+  books were added or drafts published to fill the page.
+- Public cards and details use reusable title/author covers. Book details put
+  reading actions above facts and descriptions. Phone details keep a compact
+  cover beside the title and full-width actions below, rather than pushing the
+  reading button beneath a large cover. Profile and login forms share the same
+  form styling, and all existing Bengali/English behavior remains available.
+- Source results show the book, author, editorial state and editing/job links.
+  Shared **Read Book / Continue Reading** and **Open HTML** controls appear
+  above generated files on source results and the book editor. Public book
+  details use those same controls. EPUB/HTML attachment downloads remain
+  separate. Physical book editors omit the electronic-file section.
+- Added `/api/v1/reading/books/<slug>/html/`: authenticated inline HTML,
+  existing preview permission, existing serialized read-once consumption,
+  private/no-store/noindex headers, script/form/network restrictions, protected
+  Nginx storage delivery and development streaming. Access metadata offers
+  `html_url` only for an available, permitted HTML file and never consumes an
+  opening. Missing/failed/removed files and disabled accounts are denied.
+  Processing/download permission alone does not grant HTML preview access.
+- HTML links use a separate tab with `noopener noreferrer`; the source/editor
+  remains open. Reader actions launch/resume the existing prepared EPUB reader.
+  Permissions refresh on public-page refocus and poll in the managed result.
+  The actual 16-chapter Devdas book opened in both reader and HTML preview.
+  Browser verification found 149,240 visible HTML characters and opened an
+  actual chapter in the prepared reader; it does not stop at a cover/title.
+  The reading inspection intercepts progress writes to preserve account position.
+- All four primary creation actions remain visible on phones. A new regression
+  checks that desktop sync/eligible-book/schedule information aligns with its
+  corresponding button. The short-text advisory on the Shakespeare sample is
+  retained; opening that file is not certification of completeness.
+
+Verification: **76 focused backend tests**, **35 web unit tests**, and **115
+browser journeys** passed. Browser checks cover 21 admin/language/result journeys
+and two reader/public-detail journeys in each of Chromium, WebKit, Linux Firefox,
+Android and iPhone simulators. They open real HTML tabs, inspect book text and
+inline headers, open actual prepared reader content, and check permission-denied
+states. The final toolbar alignment adjustment passed 55 targeted reruns.
+**120 additional layout observations** across 320–1920px, both languages and
+200% text reported no horizontal overflow or browser exceptions; published
+reference book details were also inspected at four widths in both languages.
+The final grouped admin toolbar received another 16 width/language observations
+without overflow. The first book row measured about 665px on desktop and
+759px/778px on the Bengali/English phone layouts after the completed sync loaded.
+Production build, ESLint, TypeScript, mypy (210 files), affected Ruff/format,
+migration consistency, architecture/file-size policies and whitespace checks
+passed. OpenAPI and TypeScript schemas were generated using their tools; the
+unchanged legacy schema warnings/errors remain in the generation log. Full
+legacy-suite parity, physical devices and production deployment remain unverified.
+
+Evidence is ignored under `test-artifacts/foundation/`: `redesign-*-final.log`,
+`redesign-viewports-final.json`, `redesign-final-measurements.json`, reviewed
+`redesign-final-{desktop,phone}-{home,admin,book}-{en,bn}.png` and the original
+book-page comparison. Browser bootstrap still fails with `missing sandboxPolicy`;
+repository Playwright and the already approved pinned Firefox container were
+used. No dependency, subagent, permission grant, commit, publication, fake data
+seed or deletion was introduced.
+
+Continue using http://localhost:3000/ and `/manage/sources/`. A chaptered result is
+`/manage/sources/90692eaf-0b50-400a-9c7e-35911f6be9c8/`. Preview API 8000 uses
+**bangla_library_preview**. Reference API 8002/frontend 3001 and original Vite
+5173 retain **bangla_library**. Inspect current listeners rather than relying on
+older PIDs below. Existing credentials and background processing are preserved;
+delivery workers remain stopped. Only simulators are available.
+
+## Current checkpoint — usable book results and consistent design (17 October 2026)
+
+The user rejected the previous design again and identified two concrete failures:
+the source detail displayed EPUB/HTML format names without download controls,
+and Bengali dates included English AM/UTC. This checkpoint supersedes the older
+layout descriptions below. Do not equate automated checks with user acceptance.
+
+Implemented:
+
+- Public/admin screens share green/neutral colors, control sizing and local
+  Noto Sans Bengali assets reused from the existing EPUB fonts. Removed the
+  duplicate admin workflow navigation, dark/blue admin styling, large summary
+  cards, public sample-book illustration and conflicting old source-card rules.
+  The catalog has one compact action toolbar followed by search and book rows.
+  Selection actions appear when books are selected. Main actions and all admin
+  sections remain visible on phones; no hamburger or disclosure hides them.
+- Measured actual preview first-row position improved from approximately
+  **932px to 581px on desktop**, and **1,425px to 783px at 390×844**. Both
+  languages and 320px/200% text were checked. These are measurements, not a
+  claim that the user has accepted the design.
+- Source detail is now a book-result page headed by title and editorial state.
+  It offers EPUB/HTML downloads, file sizes/availability, distinct online-reader
+  preparation state, direct editing/review/publishing and job links. Source URL
+  and last-seen information follow the result. Linked books do not repeat the
+  creation form. A file already prepared for reading does not offer another
+  preparation request. Missing files and denied download access are explicit.
+- The book editor exposes generated files before the form and keeps
+  save/review/publish controls above its fields. Profiles have section anchors
+  and a wider two-column identity/photo layout; section navigation preserves
+  unsaved values. The public home leads with book search and published books.
+- Added permission-checked `/api/v1/manage/assets/<uuid>/download/`. It requires
+  processing authority **and** the existing book download entitlement; a
+  processing-only account gains no new file permission. Actual private draft
+  EPUB/HTML files stream in development and use protected Nginx redirects in
+  production, with attachment filenames, correct MIME, no-store/noindex,
+  nosniff and sandbox headers. Disabled accounts, removed books and unavailable
+  files are rejected. Asset metadata returns actual availability, supported
+  download URL, prepared-reader state and active preparation identifier.
+- Source detail returns chapter/character counts without exposing text. A
+  chapterless text shorter than 1,000 characters gets an advisory warning
+  before the file controls. Counts are detail-only; list SQL remains bounded.
+  A longer text is not thereby certified complete. The reported Shakespeare
+  sample has **0 chapters / 524 characters** and is visibly flagged. Its actual
+  EPUB (**4,455 bytes**) and HTML (**10,734 bytes**) both downloaded with HTTP
+  200. The draft and its previous attempts remain intact and unpublished.
+- Bengali dates now read like `১৭ অক্টোবর, ২০২৬, ০৩:১৮ (ইউটিসি)` using an
+  explicit Bengali numbering system and 24-hour clock. English retains Latin
+  digits and UTC. Safari's different default numbering system is covered;
+  shared numeric formatting also uses explicit Bengali/Latin digits.
+
+Verification: **65 focused backend tests**, **35 web unit tests**, and **100
+focused browser checks** passed: 19 admin/language/result journeys plus one
+reader journey in each of Chromium, WebKit, Linux Firefox, Android and iPhone
+simulators. The final small layout adjustments received targeted reruns.
+The last public-header/result-page build passed another 32 language/result
+journeys across Chromium, WebKit, Android and iPhone, and the 43 layout
+observations were repeated without overflow. Real
+download checks inspect returned MIME/attachment headers and EPUB ZIP bytes.
+Missing-file, permission, preparation and short-content paths have regressions.
+The expanded backend checks exposed unclosed streams in three existing test
+paths; those responses are now consumed/closed while all assertions remain.
+Warnings remain errors. No checks were skipped or weakened.
+
+An additional **43 layout observations** covered home/help/catalog/profile/admin
+at eight widths from 320–1920px and enlarged text, with no horizontal overflow.
+Production build, TypeScript, ESLint, mypy (**210 files**), affected Ruff/format,
+migration consistency, architecture/file-size policies and whitespace checks
+passed. OpenAPI and TypeScript schemas were generated with their tools; the
+existing legacy API serializer/collision warnings remain in the generator log.
+The new versioned routes validate and type-check. Full legacy-suite parity,
+physical devices, external email and production deployment were not established.
+
+Evidence and reviewed screenshots are ignored under `test-artifacts/foundation/`:
+`ux-{backend,build,types,lint,unit,browser,firefox,reader}-final.log`,
+`ux-reader-firefox-final.log`, `ux-polish-final.log`, `ux-viewports-final.json`,
+`ux-final-evidence.json` and `ux-final-*.png`. The original UI was opened again
+at 5173 for comparison and left intact. The in-app browser failed to connect
+(`missing sandboxPolicy`); repository Playwright and the approved pinned
+Firefox container provided verification. No new dependency, subagent, commit,
+push, data deletion, permission grant or publication was performed.
+
+Continue using http://localhost:3000/ and `/manage/sources/`. API 8000 uses
+**bangla_library_preview**; reference API 8002 and reader frontend 3001 use the
+preserved test database. The original Vite reference runs on 5173. Delivery
+workers remain stopped. Inspect active processes before restarting, preserve
+existing credentials and do not seed fixtures into the user-facing preview.
+
+## Current checkpoint — whole-site languages and admin controls (17 October 2026)
+
+This checkpoint supersedes the older interface and runtime descriptions below.
+The user requires **Bengali and English throughout the new website**, visible
+administrative controls, no link underlines, one configured automated book
+source, and retained manual EPUB upload. Only simulators are available.
+
+Implemented:
+
+- A shared language switch covers public pages, authentication/recovery,
+  personal books/notes, profile/security, Kindle, reader controls and all
+  management screens. Authored text, accessible labels, controlled page titles,
+  dates, numbers, file-picker labels and supported field-validation messages
+  follow the preference. Switching preserves typed values, selected files/books
+  and reader settings. The whitelisted `library-language` cookie persists across
+  reload/navigation; the old admin cookie remains a compatibility fallback.
+  Book titles, author names, chapter text and personal notes remain original
+  data. Unknown diagnostic strings remain inspectable. Offline content presents
+  both languages without caching account or book responses.
+- Administration has a dedicated header, always-visible section navigation,
+  compact tables and native dialogs. **Fetch All**, **Process All** and
+  **Schedule Automation** are direct controls above the summary panels and
+  remain within the initial 390×844 phone viewport. Manual book creation and
+  EPUB upload remain available. Link underlines and decorative management
+  arrows have been removed; hover/focus feedback remains visible.
+- Fetch All follows the catalog through its terminal page. A 2,000-page safety
+  ceiling produces a visible failure if pages still remain; it cannot report a
+  full scan from a capped result. Bounded fetching remains available.
+- Process All queues the entire eligible catalog through a durable
+  `process_catalog` parent, rather than the current page or a 100-record browser
+  selection. It excludes linked books, active jobs and unresolved failures.
+  Batches of 50 pin source revisions and use deterministic child identifiers,
+  saved pending work and a UUID cursor. Permission/configuration fencing,
+  idempotency, pause/resume and interrupted-attempt recovery remain enforced.
+  **Pause Queueing/Stop Queueing** affect remaining dispatch; already queued
+  child jobs continue and expose their own controls. Parent success means book
+  jobs were queued, not that all children succeeded or were published.
+- Schedules select full/bounded catalog fetching and full/bounded/no book
+  creation, with first date, local time, IANA zone, frequency and enable control.
+  Run history links to the batch parent and counts actual child book jobs.
+  Existing schedules retain bounded defaults. Source lists/options/schedules
+  poll while visible; failures provide explicit refresh feedback.
+- Optional external/unavailable/oversized covers use a generated cover. Their
+  original URL remains provenance, never a local export path. Book/chapter
+  requests remain restricted to the one configured source and its www alias.
+  Generated migration `processing.0013_catalog_batch_controls` adds the batch
+  kind/parent relationship, active-batch constraint and automation mode fields.
+  OpenAPI and the TypeScript schema were regenerated using their tools.
+
+Verification completed:
+
+- **155 focused backend cases** passed: 83 catalog/discovery/automation cases
+  and 72 worker/API/pipeline/recovery/reading cases, including optional external
+  covers, a 105-record batch, exclusions, partial rejection, permission changes,
+  duplicate prevention and paused recovery.
+- **34 web unit tests** and **80 focused browser checks** passed. The latter
+  comprise 14 console/usability/site-language checks, one reader-language check
+  and one historical-empty-catalog check in each of Chromium, WebKit, Linux
+  Firefox, Android and iPhone simulators. Checks cover full-fetch/full-processing
+  commands, schedule saving, selection/typed-file retention, validation messages,
+  title switching, permissions, lost-response blocking and 320px/200% text.
+  Submission tests intercept writes; fake records are not seeded into the
+  application preview. Reader checks use the preserved test database on 8002.
+- ESLint, strict TypeScript, production build, mypy (208 files), affected Python
+  Ruff/formatting, migration consistency, OpenAPI validation, architecture/file
+  size policies and whitespace checks passed. Logs and reviewed desktop/phone
+  screenshots are under ignored `test-artifacts/foundation/`, with
+  `admin-console-*-final.log`, `reader-language-*-final.log`,
+  `admin-controls-*-final.log` and `admin-console-final-*.png` names.
+- Live Fetch All job `253149fc-fb23-407e-ac8c-b4e88bf31334` succeeded through
+  **71 pages / 4,169 encountered listings**, including a recognized terminal
+  page. The catalog has over 4,160 distinct real source entries; repeated
+  listings and later source changes mean that count differs from encounters.
+- Live UI-created **দেবদাস**, job `c8a3575e-d386-447d-9cd9-f14709c52176`,
+  succeeded through **17 pages / 16 chapters**, approximately 147,388 body
+  characters, a 105,400-byte EPUB and 419,484-byte HTML asset. Both assets are
+  ready and the book remains `needs_review`, without automatic publication.
+  Sanitized evidence: `admin-controls-live-chaptered-verified.json`.
+- The earlier English source sample, job
+  `b7393c5d-abad-4099-9142-70f77d3fd405`, succeeded after the cover fix, but its
+  source page supplies only a 524-character introduction and no chapter links.
+  Its unpublished review draft and attempt history are preserved. Do not count
+  that sample as proof of a complete book import or publish it without review.
+
+Current preview: http://localhost:3000/; creation controls:
+http://localhost:3000/manage/sources/. The API on 8000, processing-only Celery
+worker, dispatcher and source-automation scheduler use **bangla_library_preview**.
+The scheduler has no saved preview schedules yet. Delivery workers remain stopped.
+API readiness returned 200 and the processing worker replied `pong`. The isolated
+reader verification frontend on 3001 uses reference API 8002 and the preserved
+**bangla_library** test database. Do not seed the preview, print private runtime
+files/fixture credentials, or start delivery workers. Inspect ports/processes
+before restarting; older PIDs below are historical.
+
+The in-app browser bootstrap failed with `missing sandboxPolicy`; verification
+used the already approved repository Playwright installation. Native macOS
+Firefox fails upstream, so Firefox ran in the approved pinned Playwright Docker
+image. No dependencies, subagents, commits, pushes, destructive cleanup,
+external email delivery or physical-device checks were introduced. The complete
+legacy suite and original-app workflow parity are **not established** by these
+focused results; do not claim production acceptance from them.
+
+## Catalog sync correction — 17 October 2026
+
+The reported job `e3dfd5b5-bec7-400c-933f-632ea0274f55` fetched a real archive
+containing 60 book records, but its parser recognized neither the facet listing
+nor the JavaScript pager. It incorrectly completed with zero records. That job
+and its saved page remain intact. Discovery now shares text-anchor extraction
+with the retained resolver, follows `_paged` queries, and rejects unrecognized,
+initially empty, malformed, or repeated pages instead of reporting empty success.
+Known empty terminal pages end a scan while preserving prior committed books.
+Historical zero-book successes show “No Books Found” with a link to sync again;
+populated results link directly to selecting books for creation in both languages.
+
+A fresh authenticated live sync, `2e087f75-4399-4024-90b2-db98f0ee5d9a`, succeeded
+in the preview database: 20 pages, 1,200 encountered records, and 1,195 distinct
+saved listings. More pages remain beyond the requested limit. This verifies live
+catalog discovery; it does not establish full live book-generation acceptance.
+Manual upload and the single configured website policy remain available.
+
+Verification: 61 focused backend cases (including 15 archive regressions), 30 web
+unit tests, and 40 browser checks across Chromium, WebKit, Linux Firefox, Android,
+and iPhone simulators passed. ESLint, TypeScript, mypy (202 files), scoped source
+Ruff/format checks, architecture/file-size policies, and the production build
+passed. The populated live catalog, working selection controls, old-job warning,
+and desktop/phone screenshots were checked directly. These are focused checks;
+the entire backend suite was not rerun for this correction. The retained resolver
+still has its pre-existing broad-exception lint findings outside the extracted
+catalog logic; this change does not suppress them.
+
+## Latest checkpoint — UI comparison and bilingual administration (17 October)
+
+The user rejected the new UI and its awkward Bengali wording. They explicitly
+want **both English and Bengali** for administration. Do not equate passing
+automated tests with usability or parity with the original application.
+
+The original Vite app was opened and visually compared with the replacement.
+It has dedicated Catalog, Create, On Hold, Incomplete, Multi-page TOC and
+Reprocessing workflows. The replacement had verbose instructions, scattered
+source/job controls, and lists starting below the first screen. Its full parity
+with those original workflows is **not established**. Keep the original app.
+
+Implemented and verified in this continuation:
+
+- Administration has an English/Bengali switch. It preserves typed values,
+  selected records and native menu state, and remembers its supported preference
+  in a cookie used by private server rendering. Translations cover management
+  navigation, creation, book/editorial fields, entities, processing, automations,
+  users and invitations. Public browsing, the personal profile and reader remain
+  Bengali; do not claim application-wide bilingual support.
+- The source screen is now a compact creation workspace with catalog sync,
+  search/status filters, a selectable table, select-all/clear, one-book creation,
+  bulk creation and existing job links. Unavailable sources remain disabled;
+  selected snapshots and operation identifiers are retained. The 100-book limit,
+  partial outcomes, and uncertain-response replay protection remain enforced.
+  Manual entry/EPUB upload remains available. The source provider is still
+  configured externally and remains the only automated provider.
+- Phone navigation uses a native disclosure. Creation controls remain within
+  the first phone screen at normal text size; selection remains usable at 320px
+  and 200% text. Without JavaScript the navigation disclosure stays open.
+- Overview copy is shorter, wait ages use seconds/minutes/hours/days, processing
+  counts link to their filters, and readable issue explanations replace raw codes
+  in the overview. Job details retain diagnostic codes.
+- The preview now uses a separate **bangla_library_preview** PostgreSQL database
+  on the existing localhost 55432 instance. Only the two previously supplied
+  administrator/reading-reader accounts and their existing sessions were copied;
+  passwords and account security were preserved. It starts with zero books,
+  sources and failed/queued jobs. The original **bangla_library** test database
+  and all its records remain intact; nothing was deleted. Do not seed fixtures
+  into the application preview again.
+- The browser fixture guard now requires the exact **bangla_library** name and
+  port 55432, and rejects production. Six regressions cover rejection before any
+  write and supported port representations. The former port-only check also
+  accepted the application preview database and has been fixed.
+
+Verification: **40 focused browser checks** passed (eight each in Chromium,
+WebKit, Linux Firefox, Android and iPhone simulators); **29 web unit tests** and
+**six fixture-safety tests** passed. Web lint/type checking/production build,
+affected Python lint/formatting, architecture/file-size policies and whitespace
+checks passed. Browser submission tests intercept writes and do not create fake
+records in the preview. Existing UI assertions were updated for the new labels
+and table, without removing permission/outcome checks. The complete older suite
+was not rerun in this continuation; its previous evidence below is historical.
+
+The original administrator credentials were used for an actual successful login
+to the separated preview. Disabled OTP remains absent. Reviewed actual-preview
+screenshots: `admin-preview-{en,bn,phone}.png`; sanitized login/count evidence:
+`admin-preview-verification.json`. Logs are `admin-usability-{build,browsers,
+firefox,unit}-final.log` under ignored `test-artifacts/foundation/`. No live-site
+import, physical-device acceptance or external email delivery was established.
+
+Current local runtime:
+
+- New app: http://localhost:3000/, creation: `/manage/sources/`; Next PID 56030.
+- Preview API: 8000, PID 50447, using **bangla_library_preview**.
+- Original UI/reference: http://localhost:5173/, PID 50584, proxying original API
+  8002, PID 50461, using preserved **bangla_library**.
+- Preview processing worker PID 50734 and dispatcher PID 50742 use the existing
+  preview RabbitMQ project and new database. Delivery workers/schedulers remain stopped. Worker
+  control ping returned `pong`, and API readiness returned HTTP 200.
+- Ignored `ui-runtime.py`/`ui-runtime.json` now default to the separated preview
+  database and disable the legacy engine there. Explicit environment values take
+  precedence, allowing the original API to retain its original database/engine.
+  Never print these private files or the account/session transfer file.
+
+Inspect processes before restarting. Keep full browser fixture runs on a
+dedicated test API/frontend connected to **bangla_library**, not the user-facing
+preview. The new focused usability checks can run safely on the preview because
+they intercept all submissions. No commits, pushes, destructive cleanup, new
+dependencies or subagents were used.
 
 ## Latest checkpoint — administration and book creation
 

@@ -88,6 +88,19 @@ class ManagedBookDetailView(VersionedAPIView):
             ).data
         )
 
+    @extend_schema(
+        operation_id="managed_book_remove",
+        request=ExpectedRevisionSerializer,
+        responses={
+            204: None,
+            **{key: value for key, value in COMMAND_RESPONSES.items() if key != 200},
+        },
+    )
+    def delete(self, request, slug):
+        from .book_controls import remove_book_response
+
+        return remove_book_response(request, slug)
+
 
 class ReviewBookEditorialView(VersionedAPIView):
     permission_classes = (IsAuthenticated,)

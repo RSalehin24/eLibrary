@@ -6,6 +6,7 @@ from apps.ingestion.pipeline.manifest_collection import (
     ManifestCollector,
 )
 
+from .covers import download_source_cover
 from .page_cache import ControlledSourceContext, SourcePageCache
 from .policy import MAX_SOURCE_PAGES
 from .storage import source_job_directory
@@ -16,7 +17,9 @@ def curate_source_job(ownership, job):
     cache = SourcePageCache(ownership, job.checkpoint)
     folder = source_job_directory(job.pk) / str(ownership.attempt_id)
     limits = normalize_manifest_limits({"max_nodes": MAX_SOURCE_PAGES})
-    options = CollectionOptions(limits, output_directory=folder)
+    options = CollectionOptions(
+        limits, output_directory=folder, cover_downloader=download_source_cover
+    )
     with ControlledSourceSession(cache.boundary) as session:
         context = ControlledSourceContext(session, cache)
         pages = ManifestCollector(context, options).collect(

@@ -16,6 +16,7 @@ from apps.processing.job_serializers import (
 from .commands import request_source_processing
 from .issues import source_issue
 from .resolution import resolve_source_job
+from .verification_serializers import SourceVerificationSerializer
 
 
 class SourceProcessingCommandSerializer(PreparationCommandSerializer):
@@ -52,6 +53,7 @@ class SourceCandidateSerializer(serializers.ModelSerializer):
 
 
 class SourceIssueSerializer(serializers.Serializer):
+    verification = SourceVerificationSerializer(allow_null=True)
     id = serializers.UUIDField()
     expected_updated_at = serializers.DateTimeField()
     title = serializers.CharField()

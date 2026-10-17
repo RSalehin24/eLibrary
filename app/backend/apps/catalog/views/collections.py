@@ -1,10 +1,9 @@
-from django.db.models import Case, IntegerField, Q, Value, When
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from apps.catalog.discovery.cursors import discovery_page
-from apps.catalog.discovery.entities import public_entities
+from apps.catalog.discovery.entity_directory import directory_queryset
 from apps.catalog.serializers.entities import (
     PublicEntityCollectionSerializer,
     PublicEntityListSerializer,
@@ -12,24 +11,10 @@ from apps.catalog.serializers.entities import (
 from apps.catalog.serializers.public import CollectionParametersSerializer
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
-from apps.common.text import normalize_catalog_text
 
 
 def collection_queryset(query):
-    queryset = public_entities("collections").only("id", "name", "slug", "created_at")
-    if not query:
-        return queryset.annotate(search_rank=Value(0, output_field=IntegerField()))
-    normalized = normalize_catalog_text(query)
-    return queryset.filter(
-        Q(normalized_name__contains=normalized)
-        | Q(normalized_aliases__contains=normalized)
-    ).annotate(
-        search_rank=Case(
-            When(normalized_name=normalized, then=Value(0)),
-            default=Value(1),
-            output_field=IntegerField(),
-        )
-    )
+    return directory_queryset("collections", {"q": query})
 
 
 class PublicCollectionsView(VersionedAPIView):

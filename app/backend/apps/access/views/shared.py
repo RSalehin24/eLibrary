@@ -19,7 +19,7 @@ from apps.access.models import (
     default_preview_expiry,
 )
 from apps.access.reading.launch import active_reader_session
-from apps.access.storage import asset_file_exists, open_asset_stream
+from apps.access.storage import asset_file_exists, asset_is_available, open_asset_stream
 from apps.catalog.models import GeneratedAssetStatus
 from apps.common.models import LifecycleState, ReviewState
 from apps.common.permissions import user_has_scope
@@ -101,16 +101,6 @@ def read_asset_bytes(asset):
             asset.file.close()
 
     raise Http404("Asset file is not available.")
-
-
-def asset_is_available(asset):
-    if asset is None:
-        return False
-    if asset.file and asset.file.name and asset_file_exists(asset.file):
-        return True
-    if asset.legacy_path:
-        return Path(asset.legacy_path).exists()
-    return False
 
 
 def clear_missing_asset(asset):

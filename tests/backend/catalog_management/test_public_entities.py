@@ -21,7 +21,7 @@ pytestmark = pytest.mark.django_db
         ("series", Series, BookSeries, "series"),
     ],
 )
-def test_public_entity_requires_a_published_book_and_hides_unreviewed_content(
+def test_public_entity_requires_a_published_book_without_manual_review(
     client, kind, model, link, field
 ):
     entity = model.objects.create(
@@ -35,7 +35,7 @@ def test_public_entity_requires_a_published_book_and_hides_unreviewed_content(
     book.save()
     response = client.get(path)
     assert response.status_code == 200
-    assert "UNREVIEWED" not in response.content.decode()
+    assert response.json()["editorial_description"] == entity.editorial_description
     assert response.json()["indexable"] is False
     entity.editorial_reviewed_at = timezone.now()
     entity.indexing_eligible = True

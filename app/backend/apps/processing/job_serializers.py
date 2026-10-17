@@ -27,6 +27,15 @@ class BackgroundSourceSerializer(serializers.ModelSerializer):
 
 
 class BackgroundJobSerializer(serializers.ModelSerializer):
+    bulk_total = serializers.IntegerField(
+        source="checkpoint.bulk_total", read_only=True, default=0
+    )
+    bulk_queued = serializers.IntegerField(
+        source="checkpoint.bulk_queued", read_only=True, default=0
+    )
+    bulk_rejected = serializers.IntegerField(
+        source="checkpoint.bulk_rejected", read_only=True, default=0
+    )
     can_edit_book = serializers.BooleanField(read_only=True)
     book = BackgroundBookSerializer(read_only=True, allow_null=True)
     source_record = BackgroundSourceSerializer(read_only=True, allow_null=True)
@@ -63,6 +72,10 @@ class BackgroundJobSerializer(serializers.ModelSerializer):
         fields: tuple[str, ...] = (
             "id",
             "kind",
+            "bulk_total",
+            "bulk_queued",
+            "bulk_rejected",
+            "parent_job_id",
             "state",
             "requested_action",
             "book",
@@ -116,6 +129,7 @@ class BackgroundJobCollectionSerializer(serializers.Serializer):
 
 
 class JobParametersSerializer(serializers.Serializer):
+    parent_job = serializers.UUIDField(required=False)
     page = serializers.IntegerField(min_value=1, default=1)
     limit = serializers.IntegerField(min_value=1, max_value=100, default=50)
     state = serializers.ChoiceField(choices=BackgroundJobState.choices, required=False)
@@ -140,7 +154,25 @@ class OperationAcceptedSerializer(serializers.Serializer):
 
 
 class ProcessingAssetSerializer(serializers.ModelSerializer):
+    file_available = serializers.BooleanField(read_only=True)
+    download_url = serializers.CharField(read_only=True, allow_null=True)
+    reader_ready = serializers.BooleanField(read_only=True)
+    reader_update_available = serializers.BooleanField(read_only=True)
+    active_preparation_id = serializers.UUIDField(read_only=True, allow_null=True)
+
     class Meta:
         model = GeneratedAsset
-        fields = ("id", "asset_type", "status", "file_size", "checksum", "updated_at")
+        fields = (
+            "id",
+            "asset_type",
+            "status",
+            "file_size",
+            "checksum",
+            "updated_at",
+            "file_available",
+            "download_url",
+            "reader_ready",
+            "reader_update_available",
+            "active_preparation_id",
+        )
         read_only_fields = fields

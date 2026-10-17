@@ -46,7 +46,9 @@ def test_resources_are_protected_and_sandboxed(reader):
     response = client.get(path)
     assert response.status_code == 200
     assert "বাংলা বইয়ের প্রথম পাতা" in b"".join(response.streaming_content).decode()
-    assert "sandbox allow-same-origin" in response["Content-Security-Policy"]
+    policy = response["Content-Security-Policy"]
+    assert "script-src 'none';" in policy
+    assert "sandbox allow-same-origin allow-scripts" in policy
     assert "default-src 'none'" in response["Content-Security-Policy"]
     assert data["resource_base"] in response["Content-Security-Policy"]
     assert "img-src 'self'" not in response["Content-Security-Policy"]
@@ -106,9 +108,9 @@ def test_read_once_allows_current_session_but_rejects_a_second_launch(reader):
     data = launch(client, book).json()
     assert launch(client, book).status_code == 403
     assert client.get(f"/api/v1/reading/sessions/{data['id']}/").status_code == 200
-    assert (
-        client.get(data["resource_base"] + "OEBPS/chapter-2.xhtml").status_code == 200
-    )
+    chapter = client.get(data["resource_base"] + "OEBPS/chapter-2.xhtml")
+    assert chapter.status_code == 200
+    assert b"".join(chapter.streaming_content)
     assert BookOpeningRecord.objects.filter(user=user, book=book).count() == 1
 
 
@@ -134,6 +136,38 @@ def test_download_action_requires_an_available_ready_asset(reader):
     assert access["can_download"] is False
 
 
+def test_book_reading_summary_uses_only_the_current_accounts_saved_progress(reader):
+    client, _, book, _, _ = reader
+    path = f"/api/v1/reading/books/{book.slug}/access/"
+    assert client.get(path).json()["reading_progress"] is None
+    session = launch(client, book).json()
+    values = {"last_location": "chapter:0:0.5", "progress_percent": 25}
+    assert (
+        client.put(
+            f"/api/v1/reading/sessions/{session['id']}/progress/", values, format="json"
+        ).status_code
+        == 200
+    )
+    summary = client.get(path).json()
+    assert summary["reading_progress"] == values and summary["last_opened_at"]
+    stranger = User.objects.create_user(email="progress-stranger@library.test")
+    client.force_authenticate(stranger)
+    other = client.get(path).json()
+    assert other["reading_progress"] is None and other["last_opened_at"] is None
+
+
+def test_missing_epub_hides_delivery_and_download_but_preserves_prepared_reading(
+    reader,
+):
+    client, _, book, asset, _ = reader
+    asset.file = ""
+    asset.legacy_path = "/unavailable/book.epub"
+    asset.save()
+    access = client.get(f"/api/v1/reading/books/{book.slug}/access/").json()
+    assert access["can_read"] and access["prepared"]
+    assert not access["can_download"] and not access["can_send_kindle"]
+
+
 def test_resources_do_not_select_book_content_blobs(reader, django_assert_num_queries):
     client, _, book, _, _ = reader
     data = launch(client, book).json()
@@ -143,6 +177,7 @@ def test_resources_do_not_select_book_content_blobs(reader, django_assert_num_qu
     assert all(
         '"main_content_html"' not in entry["sql"] for entry in queries.captured_queries
     )
+    assert b"".join(response.streaming_content)
 
 
 def test_read_once_does_not_grant_download_permission(reader):

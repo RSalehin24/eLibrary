@@ -29,6 +29,7 @@ def reader_session_data(session):
         "book_slug": session.book.slug,
         "expires_at": session.expires_at,
         "chapters": session.prepared_publication.manifest["chapters"],
+        "navigation": session.prepared_publication.manifest.get("navigation", []),
         "resource_base": reader_resource_base(session.pk),
         "reading_progress": ReaderProgressSerializer(state).data,
     }
@@ -117,10 +118,13 @@ def protected_resource_response(publication, asset_path, resource_source):
     if resource is None or not target.is_file():
         raise Http404("Reader resource not found.")
     response = protected_file_response(target, resource["media_type"])
+    # WebKit needs script-capable sandboxing for parent-owned event listeners;
+    # CSP still forbids every authored script, handler, and JavaScript URL.
     response["Content-Security-Policy"] = (
-        f"default-src 'none'; img-src {resource_source} data:; "
+        f"default-src 'none'; script-src 'none'; img-src {resource_source} data:; "
         f"style-src {resource_source} 'unsafe-inline'; font-src {resource_source}; "
-        "frame-ancestors 'self'; base-uri 'none'; form-action 'none'; sandbox allow-same-origin"
+        "frame-ancestors 'self'; base-uri 'none'; form-action 'none'; "
+        "sandbox allow-same-origin allow-scripts"
     )
     response["X-Content-Type-Options"] = "nosniff"
     response["X-Frame-Options"] = "SAMEORIGIN"

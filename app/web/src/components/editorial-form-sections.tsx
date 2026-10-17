@@ -1,9 +1,12 @@
 "use client";
 
+import { SiteDiv } from "@/components/site-language";
+
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import type { EditorialCommand } from "@/api/editorial";
 import type { ManagedBookDetail } from "@/api/types";
+import { Icon } from "./icon";
 import { EditorialField } from "./editorial-field";
 import { EditorialTextFields } from "./editorial-metadata-fields";
 
@@ -21,10 +24,9 @@ export function BookMetadataFields({ book, errors, pending }: FieldGroupProps) {
 type ActionProps = { book: ManagedBookDetail; pending: boolean; dirty: boolean; onCommand: (action: EditorialCommand) => void };
 
 export function EditorialActions({ book, pending, dirty, onCommand }: ActionProps) {
-  return <div className="editorial-actions" aria-label="পর্যালোচনা ও প্রকাশ">
-    <button className="button button-quiet" disabled={pending || dirty} onClick={() => onCommand("review")}><AdminText>{"পর্যালোচনা অনুমোদন করুন"}</AdminText></button>
-    <button className="button" disabled={pending || dirty || !book.editorial_reviewed_at || book.state === "published"} onClick={() => onCommand("publish")}><AdminText>{"প্রকাশ করুন"}</AdminText></button>
-    <button className="button button-quiet" disabled={pending || dirty || book.state !== "published"} onClick={() => onCommand("withdraw")}><AdminText>{"প্রকাশনা প্রত্যাহার করুন"}</AdminText></button>
-    {book.state === "published" && book.review_state === "approved" && <Link className="text-link" href={`/books/${encodeURIComponent(book.slug)}/`}><AdminText>{"প্রকাশিত পরিচিতি দেখুন →"}</AdminText></Link>}
-  </div>;
+  return <SiteDiv className="editorial-actions" aria-label="প্রকাশনা">
+    <button className="button" disabled={pending || dirty || book.state === "published"} onClick={() => onCommand("publish")}><Icon name="upload" /><AdminText>{"প্রকাশ করুন"}</AdminText></button>
+    <button className="button button-quiet" disabled={pending || dirty || book.state !== "published"} onClick={() => onCommand("withdraw")}><Icon name="logout" /><AdminText>{"প্রকাশনা প্রত্যাহার করুন"}</AdminText></button>
+    {book.state === "published" && <Link className="text-link" href={`/books/${encodeURIComponent(book.slug)}/`}><Icon name="external" /><AdminText>{"প্রকাশিত পরিচিতি দেখুন →"}</AdminText></Link>}
+  </SiteDiv>;
 }

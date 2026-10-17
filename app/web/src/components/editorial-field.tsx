@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteFieldErrors } from "./site-field-errors";
+
 import { useAdminLanguage } from "./admin-language";
 
 type EditorialFieldProps = { name: string; label: string; value: string; errors?: string[]; multiline?: boolean; maxLength: number };
@@ -10,6 +12,6 @@ export function EditorialField({ name, label, value, errors, multiline, maxLengt
     "aria-invalid": Boolean(errors?.length), "aria-describedby": errors?.length ? `${name}-error` : undefined };
   return <div className="form-field"><label htmlFor={name}>{t(label)}</label>
     {multiline ? <textarea {...attributes} rows={5} /> : <input {...attributes} />}
-    {errors?.length ? <p className="field-error" id={`${name}-error`}>{errors.join(" ")}</p> : null}
+    {errors?.length ? <p className="field-error" id={`${name}-error`}><SiteFieldErrors errors={errors} /></p> : null}
   </div>;
 }

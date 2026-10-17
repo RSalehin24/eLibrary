@@ -24,7 +24,7 @@ def public_entities(kind):
     if kind == "collections":
         return (
             related_public_entities(CuratedCollection, CollectionBook, "collection_id")
-            .filter(state="published", editorial_reviewed_at__isnull=False)
+            .filter(state="published")
             .exclude(editorial_description__regex=r"^\s*$")
         )
     raise Http404

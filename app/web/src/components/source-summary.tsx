@@ -1,11 +1,12 @@
-import { AdminDate, AdminText } from "@/components/admin-language";
-import Link from "next/link";
+
+import { AdminText } from "@/components/admin-language";
 import type { SourceEntry } from "@/api/types";
-import { sourceStatus } from "@/lib/source-status";
+import { catalogStateLabel } from "@/lib/catalog-state";
+import { BookCover } from "./book-cover";
+import { ReaderBookCover } from "./reader-book-cover";
 
 export function SourceSummary({ entry }: { entry: SourceEntry }) {
-  return <><div className="job-heading"><h2>{entry.title}</h2><span className="status-label">{sourceStatus(entry)}</span></div>
-    <p>{entry.author_line || "লেখকের তথ্য নেই"}</p><p className="muted"><AdminText>{"উৎসে শেষ দেখা: "}</AdminText><AdminDate value={entry.last_seen_at} /></p>
-    {entry.book && <p><AdminText>{"সংযুক্ত বই: "}</AdminText>{entry.book.title}{entry.can_edit_book && <><br /><Link className="text-link" href={`/manage/books/${encodeURIComponent(entry.book.slug)}/`}><AdminText>{"বইয়ের তথ্য পর্যালোচনা করুন →"}</AdminText></Link></>}</p>}
-  </>;
+  const book = entry.book && !entry.book.deleted_at ? entry.book : null;
+  return <div className="source-book-overview">{book ? <ReaderBookCover slug={book.slug} title={book.title} author={entry.author_line} /> : <BookCover title={entry.title} author={entry.author_line} />}<div><p className="eyebrow"><AdminText>বইয়ের পরিচিতি</AdminText></p><h1>{book?.title ?? entry.title}</h1><p className="muted">{entry.author_line || <AdminText>লেখকের তথ্য নেই</AdminText>}</p>
+    <span className="status-label"><AdminText>{book ? catalogStateLabel(book.state) : "এখনও বই তৈরি হয়নি"}</AdminText></span></div></div>;
 }

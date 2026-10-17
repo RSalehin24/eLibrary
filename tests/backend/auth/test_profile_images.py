@@ -51,8 +51,10 @@ def test_profile_images_are_normalized_private_and_do_not_invalidate_sessions(
     with Image.open(user.profile_image.path) as result:
         assert result.format == "PNG" and max(result.size) == 512
         assert "Comment" not in result.info
-    assert client.get(URL)["Content-Type"] == "image/png"
-    assert client.get(URL)["Cache-Control"] == "private, no-store"
+    image = client.get(URL)
+    assert image["Content-Type"] == "image/png"
+    assert image["Cache-Control"] == "private, no-store"
+    assert b"".join(image.streaming_content).startswith(b"\x89PNG")
     assert (
         client.get("/api/v1/auth/session/").json()["user"]["profile_image_url"] == url
     )

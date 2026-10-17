@@ -7,6 +7,7 @@ import { readSourceIssue, resolveSourceIssue } from "@/api/source-processing";
 import type { BackgroundJobDetail, SourceIssue, SourceResolution } from "@/api/types";
 import { reloadManagedForm, useManagedForm } from "@/lib/managed-form";
 import { AccountFeedback } from "./account-feedback";
+import { SourceVerification } from "./source-verification";
 
 const decisions: Record<SourceResolution["choice"], string> = {
   retry: "মূল উৎস আবার সংগ্রহ করুন", link: "আগের বইয়ের সঙ্গে এই উৎস সংযুক্ত করুন",
@@ -33,9 +34,9 @@ function SourceDecision({ job, issue }: { job: BackgroundJobDetail; issue: Sourc
     event.preventDefault(); const fields = new FormData(event.currentTarget), book = String(fields.get("book_id") || ""), candidate = issue.candidates.find((entry) => entry.id === book);
     form.saving.mutate({ expected_updated_at: issue.expected_updated_at, choice, ...(choice === "link" && candidate ? { book_id: book, expected_book_updated_at: candidate.updated_at } : {}) });
   }}><h2><AdminText>{job.error_code === "source_duplicate" ? "একই নামে বই পাওয়া গেছে" : "উৎসের কাজের করণীয়"}</AdminText></h2>
-    <p>{issue.title} {issue.author_line && `· ${issue.author_line}`}</p><p className="muted"><AdminText>{"যাচাইয়ের সমস্যা: "}</AdminText><AdminNumber value={issue.error_count} /><AdminText>{" · সতর্কতা: "}</AdminText><AdminNumber value={issue.warning_count} /></p>
+    <p>{issue.title} {issue.author_line && `· ${issue.author_line}`}</p><SourceVerification verification={issue.verification} /><p className="muted"><AdminText>{"যাচাইয়ের সমস্যা: "}</AdminText><AdminNumber value={issue.error_count} /><AdminText>{" · সতর্কতা: "}</AdminText><AdminNumber value={issue.warning_count} /></p>
     <div className="form-field"><label htmlFor="source-resolution"><AdminText>{"করণীয় নির্বাচন করুন"}</AdminText></label><select id="source-resolution" value={choice} disabled={form.blocked} onChange={(event) => setChoice(event.target.value as SourceResolution["choice"])}>
-      {choices.map((decision) => <option value={decision} key={decision}>{decisions[decision]}</option>)}</select></div>
+      {choices.map((decision) => <option value={decision} key={decision}><AdminText>{decisions[decision]}</AdminText></option>)}</select></div>
     {choice === "link" && <div className="form-field"><label htmlFor="source-candidate"><AdminText>{"সংযুক্ত করার বই"}</AdminText></label><select id="source-candidate" name="book_id" required disabled={form.blocked} defaultValue=""><option value=""><AdminText>{"বই নির্বাচন করুন"}</AdminText></option>{issue.candidates.map((book) => <option key={book.id} value={book.id}>{book.title} · {book.catalog_code}</option>)}</select></div>}
     {choice === "separate" && <p className="notice"><AdminText>{"আগের বই অক্ষত থাকবে। এই উৎসের আলাদা খসড়া সম্পাদকের যাচাইয়ে যাবে।"}</AdminText></p>}
     {choice === "retry" && <p className="muted"><AdminText>{"আগের সংগ্রহের বদলে উৎসের বর্তমান লেখা আবার আনা হবে।"}</AdminText></p>}

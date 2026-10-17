@@ -40,7 +40,11 @@ def source_payload(folder):
 
 
 def curated_source(folder, source_url=SOURCE_URL):
-    return curate_scraped_book_data(source_url, source_payload(folder))
+    result = curate_scraped_book_data(source_url, source_payload(folder))
+    result["source_snapshot"]["pages"] = [
+        {"url": source_url, "status": "fetched", "status_code": 200}
+    ]
+    return result
 
 
 def execute_source_job(job):

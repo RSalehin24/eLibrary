@@ -8,6 +8,7 @@ from apps.catalog.models import Book, GeneratedAsset
 from apps.processing.job_models import BackgroundJobKind
 from apps.processing.jobs.commands import JobCommand, enqueue_job
 from automation_fixtures import create_automation
+from regeneration_fixtures import create_regeneration_fixture
 from source_processing_fixtures import create_source_job, curated_source
 
 from tests.backend.access.reader_fixtures import write_epub
@@ -83,3 +84,8 @@ def curated_job(source_job, tmp_path):
     source_job.checkpoint = {"document_ref": write_artifact(source_job.pk, result)}
     source_job.save()
     return source_job
+
+
+@pytest.fixture
+def regeneration(source_job, tmp_path):
+    return create_regeneration_fixture(source_job, tmp_path)

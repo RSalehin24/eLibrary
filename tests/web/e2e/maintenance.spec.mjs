@@ -8,7 +8,7 @@ test("maintenance password and optional authenticator form works without JavaScr
   const context = await browser.newContext({ javaScriptEnabled: false, viewport: { width: 320, height: 800 } });
   const page = await context.newPage(); await page.goto(`${apiOrigin}/admin/login/`);
   await expect(page.getByLabel("Authenticator code (if enabled):", { exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Open library profile", exact: true })).toHaveAttribute("href", "http://127.0.0.1:3000/profile/");
+  await expect(page.getByRole("link", { name: "Open library profile", exact: true })).toHaveAttribute("href", new URL("/profile/", process.env.FOUNDATION_WEB_URL ?? "http://127.0.0.1:3000").href);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-artifacts/foundation/maintenance-login-320.png", fullPage: true });
   await page.getByLabel("Email:", { exact: true }).fill(fixture.maintenance_administrator.email);

@@ -1,5 +1,29 @@
 # Protected reading increment
 
+Book details, the source result and the managed book editor share the same
+**Read Book / Continue Reading**, **Open HTML**, and permitted **Send to Kindle**
+controls. Reading uses the existing prepared
+EPUB session; preparation and file downloads are separate actions. The public
+book page puts reading controls above metadata and descriptions, including on
+phones. Physical books retain their reading-log workflow.
+
+Authenticated electronic-book details also show the current account's saved
+percentage, last opening and book-specific notes. The shared personal-notes
+workspace supplies note details, revision-checked editing and explicit deletion.
+`GET /api/v1/me/{bookmarks,highlights}/?book=<slug>` filters before pagination;
+signed cursors bind the account, annotation kind and book filter. Notes remain
+available to their author after reading access expires. Reading summaries never
+create a reading session or consume read-once access.
+
+**Open HTML** opens `/api/v1/reading/books/<slug>/html/` in a new tab with
+`noopener noreferrer`. The access response includes `html_url` only when a
+ready HTML file exists and the account has its existing preview entitlement.
+Reading this metadata never consumes an opening. Opening the file uses the
+same account lock and read-once policy as the retained preview, returns inline
+HTML with private/no-store/noindex headers, and disables scripts, forms and
+external requests with CSP. Missing files do not consume an opening. File
+downloads remain separate attachments and require their existing entitlement.
+
 The reader uses account-bound session UUIDs in `/reader/<uuid>/`. Session IDs
 grant no access independently: Django checks the authenticated account,
 expiry, book deletion, ownership or an active scoped reader grant on every
@@ -38,7 +62,10 @@ package spine; labels come from visible chapter headings with numbered fallback.
 The package structure follows the [W3C EPUB specification](https://www.w3.org/TR/epub-33/).
 Archive limits address [Python's documented decompression hazards](https://docs.python.org/3.12/library/zipfile.html#decompression-pitfalls).
 
-Prepared XHTML runs in a sandboxed iframe with scripts disabled. CSP limits
+Prepared XHTML runs in a sandboxed iframe with authored scripts disabled. Both
+iframe and resource sandbox allow the parent's event handlers to operate in
+WebKit; explicit `script-src 'none'` still blocks every authored script, inline
+handler and JavaScript URL. CSP limits
 styles, images and fonts to the current session's resource prefix, allows inline
 styles/data images, and restricts embedding to the same origin. Preparation
 removes automatic refresh redirects and base tags while preserving XML/SVG
@@ -47,7 +74,8 @@ must be prepared again before opening. A browser regression confirms that an
 embedded image cannot request unrelated authenticated routes. The development streaming fallback has matching
 authorization and no-store headers. Django's public media route is limited to
 profile images; generated and prepared book directories have no public route.
-Production Nginx internal-file delivery still needs implementation.
+Production Nginx internal-file delivery is implemented and locally verified;
+see [protected file delivery](protected-file-delivery.md).
 
 An operator can prepare an existing ready EPUB using the installed environment:
 
@@ -57,15 +85,51 @@ PYTHONPATH=app/backend .venv/bin/python app/backend/manage.py prepare_reader_ass
 
 This command needs the application's database/storage settings. A managed
 preparation action and persisted worker/dispatch/recovery implementation are now
-available; see [background jobs](background-jobs.md). Real RabbitMQ interruption
-verification still awaits image approval. The UI accurately identifies books
+available; see [background jobs](background-jobs.md). The UI accurately identifies books
 whose resources are not prepared.
+
+Reader metadata has a separate `manifest_version` (currently 2). A contents/CFI
+metadata upgrade does not change the safety-policy version or invalidate an
+existing reading session. Managed assets expose `reader_update_available`; an
+older prepared book offers **Update Reader Files** while staying readable.
+Explicit preparation rebuilds its directory atomically and retains previous
+files. Source regeneration and reader updates serialize through the book lock;
+an unfinished source job blocks a competing update and supplies its progress link.
+
+EPUB 3 `toc` navigation and EPUB 2 NCX retain their hierarchy, labels and local
+section fragments. Only readable spine targets become buttons. External,
+traversing, queried and missing targets are excluded. Contents parsing uses
+bounded metadata, at most 2,000 entries and depth 8; unusable optional navigation
+falls back to the spine. External DTD declarations are discarded without a
+network request, while internal declarations/entities are rejected. The UI uses
+nested semantic lists and ordinary buttons, with the existing dialog focus rules.
 
 ## Reading and progress
 
-The current screen provides chapter navigation, a keyboard accessible contents
-dialog, appearance controls, protected EPUB download, and account-specific
-progress. It debounces progress writes by two seconds and saves during sustained
+The reader provides scrolling, single-page and two-page views (one page on narrow
+screens), actual page/chapter navigation, swipe and keyboard navigation, text-size
+controls, fonts, themes, line spacing and reading width. Appearance preferences
+are validated and persisted locally; unavailable storage has a visible notice.
+Contents and full-book text search open accessible dialogs. Search parses inert
+chapter text, supports Bengali, returns up to 100 exact matches and reports
+unavailable chapters with an explicit retry.
+
+Fullscreen uses the document root. Browsers without native fullscreen offer a
+viewport-filling focus mode. Immersive reading shows only the book: the header,
+toolbar, page/chapter bars and save-status text are hidden. Escape or double-tap
+returns to the controls; F also toggles fullscreen/focus. Text size and view
+selection are grouped in Reading Settings. The
+retained Ctrl/Command 1/2/3 and +/− shortcuts change theme/text size. Shortcuts do
+not intercept editing or open dialogs. Reader settings explain these controls
+in both interface languages.
+
+Double taps toggle immersive fullscreen/focus; pinching resizes text and a
+stationary two-finger tap cycles themes. Swipes are limited to paged views.
+Gestures ignore links, controls, existing selections, cancellations and slow or
+vertical drags. Synthetic touch/mouse follow-up events cannot toggle twice.
+Buttons, keyboard controls and text selection remain available.
+
+Account-specific progress debounces writes by two seconds and saves during sustained
 reading every fifteen seconds. Writes are serialized; newer pending positions
 replace obsolete pending positions. Failures remain visible and offer a retry.
 The launch command is not automatically replayed. Unload saving is best effort.
@@ -82,7 +146,16 @@ plain text, colors, tags, and notes. Both are tied to the prepared publication,
 so a replacement EPUB does not display marks from another edition. The reader
 can create and revisit bookmarks, select text, save a highlight/quote, and restore
 its marks after reloading. Legacy CFI values remain stored and readable as notes;
-the new renderer does not treat them as validated text offsets.
+the reader now resolves supported legacy text points/ranges into the current
+document. The bounded parser follows [EPUB CFI's structural and UTF-16 offset rules](https://w3c.github.io/epub-specs/epub33/epubcfi/),
+checks spine/item identity and element/text assertions, and rejects unsupported
+media locations, malformed syntax and out-of-range targets. A legacy highlight
+is painted only when the resolved text matches the original quotation. Its
+original CFI and note are retained. A missing/stale target shows an explicit
+bilingual notice rather than marking different text. Existing chapter/fraction
+bookmarks continue to work, and original package-relative reading paths and
+fragments open their actual chapter. Annotations from a different prepared
+publication remain excluded by the existing edition filter.
 
 Personal notes use account-filtered, signed cursor collections with short
 previews and separate full details. They remain available to their author after
@@ -91,6 +164,11 @@ its revision; simultaneous editors receive one success and one `409` conflict.
 Deletion requires an explicit user action. All mutations enforce session CSRF.
 
 ## Verification and remaining scope
+
+The counts below describe earlier increments. Current reader, cover, bilingual
+detail/notes and full-suite evidence is recorded at the top of
+[the handoff](../implementation-handoff.md). The original-app comparison and
+remaining parity work are explicit in [feature comparison](../operations/feature-parity.md).
 
 The new reader backend tests plus seven retained access cases passed 40 tests;
 after adding annotations, resource isolation, and profile/security, the complete
@@ -120,8 +198,10 @@ remain unverified. This increment does not complete the reader phase.
 ## WebKit chapter observation
 
 WebKit 27.2 suppresses document scroll/selection callbacks inside chapters whose
-sandbox disallows scripts. The parent page observes changes every 200 ms while
-visible, without enabling authored scripts. Resize geometry changes are excluded
+sandbox disallows scripts. The current CSP/sandbox combination permits parent
+callbacks while still prohibiting authored scripts; regressions inject authored
+scripts and inline handlers and verify that neither executes. The parent also
+observes changes every 200 ms while visible. Resize geometry changes are excluded
 until the saved text anchor is restored. Progress flushes capture the actual
 position synchronously, including before an accepted PWA update. Navigation from
 an internal chapter link reconciles the iframe URL with the reader's chapter

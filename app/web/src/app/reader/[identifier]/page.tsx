@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { notFound } from "next/navigation";
 import { sessionRequest } from "@/api/server";
 import { APIError } from "@/api/http";
@@ -5,7 +6,7 @@ import type { ReaderSession } from "@/api/types";
 import { BookReader } from "@/components/book-reader";
 import { requireReader } from "@/lib/workspace-session";
 
-export const metadata = { title: "বই পড়ুন", robots: { index: false, follow: false } };
+export async function generateMetadata() { return localizeMetadata({ title: "বই পড়ুন", robots: { index: false, follow: false } }); }
 
 export default async function ReaderPage({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;

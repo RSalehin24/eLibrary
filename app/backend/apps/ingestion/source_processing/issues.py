@@ -16,7 +16,7 @@ def available_source_choices(job):
     choices = ["cancel"]
     entry = job.source_record
     expected = job.checkpoint.get(
-        "source_revision", job.input["command"]["source_revision"]
+        "source_revision", job.input["command"].get("source_revision")
     )
     unchanged = entry is not None and entry.updated_at.isoformat() == expected
     if not job.book_id:
@@ -30,11 +30,16 @@ def available_source_choices(job):
     book = Book.objects.only("updated_at", "state", "deleted_at").get(pk=job.book_id)
     if (
         unchanged
-        and source_document_available(job)
+        and (source_document_available(job) or job.input.get("regenerate_book"))
         and book.deleted_at is None
         and book.state != "published"
         and book.updated_at.isoformat() == job.checkpoint.get("catalog_revision")
     ):
+        if job.input.get("regenerate_book"):
+            return [
+                "resume_preparation" if source_document_available(job) else "retry",
+                *choices,
+            ]
         return ["resume_preparation", *choices]
     return choices
 
@@ -52,6 +57,7 @@ def source_issue(identifier):
         pk__in=job.checkpoint.get("duplicate_book_ids", []), deleted_at__isnull=True
     ).order_by("id")
     return {
+        "verification": summary.get("verification"),
         "id": job.pk,
         "expected_updated_at": job.updated_at,
         "title": summary.get(

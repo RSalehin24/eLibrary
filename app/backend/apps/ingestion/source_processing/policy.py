@@ -14,6 +14,21 @@ MAX_SOURCE_PAGES = 2000
 SENSITIVE_QUERY_PARTS = ("token", "secret", "password", "auth", "nonce", "key")
 
 
+def sensitive_source_query(url):
+    query = parse_qs(url.query)
+    public_pager = (
+        url.path == "/wp-admin/admin-ajax.php"
+        and query.get("action") == ["ld30_ajax_pager"]
+        and query.get("context") == ["course_content_shortcode"]
+    )
+    return any(
+        part in key.lower()
+        for key in query
+        if not (public_pager and key == "pager_nonce")
+        for part in SENSITIVE_QUERY_PARTS
+    )
+
+
 def source_hosts():
     host = str(settings.SOURCE_SITE_HOST).strip().lower()
     if not host:
@@ -39,11 +54,7 @@ def require_source_url(value, allowed):
             or url.password
             or url.fragment
         )
-        sensitive = any(
-            part in key.lower()
-            for key in parse_qs(url.query)
-            for part in SENSITIVE_QUERY_PARTS
-        )
+        sensitive = sensitive_source_query(url)
     except (ValueError, ValidationError):
         invalid, sensitive = True, True
     if invalid or sensitive:

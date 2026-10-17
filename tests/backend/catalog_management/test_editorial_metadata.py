@@ -66,14 +66,16 @@ def test_alias_normalization_survives_partial_save():
     assert book.normalized_aliases == "pather panchali\nবড় গল্প"
 
 
-def test_only_reviewed_aliases_are_used_in_public_search(client):
+def test_published_book_aliases_are_searchable_without_review(client):
     book = Book.objects.create(
         title="পথের পাঁচালী",
         state="published",
         review_state="approved",
         alternative_names=["Pather Panchali"],
     )
-    assert not client.get("/api/v1/catalog/books/?q=Pather").json()["entries"]
+    assert client.get("/api/v1/catalog/books/?q=Pather").json()["entries"][0][
+        "id"
+    ] == str(book.pk)
     book.editorial_reviewed_at = timezone.now()
     book.save()
     assert client.get("/api/v1/catalog/books/?q=Pather").json()["entries"][0][
@@ -96,11 +98,11 @@ def test_reviewed_contributor_aliases_match_linked_books(client):
     ] == str(book.id)
 
 
-def test_indexing_requires_eligibility_review_and_substantive_description():
+def test_indexing_requires_eligibility_and_substantive_description():
     book = Book(
         title="বই", indexing_eligible=True, editorial_description="সম্পাদিত পরিচিতি"
     )
-    assert book.is_indexable is False
+    assert book.is_indexable is True
     book.editorial_reviewed_at = timezone.now()
     assert book.is_indexable is True
     book.editorial_description = "   "

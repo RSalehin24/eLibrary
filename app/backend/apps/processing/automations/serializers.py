@@ -30,6 +30,8 @@ class AutomationSerializer(serializers.ModelSerializer):
             "next_run_at",
             "source_max_pages",
             "processing_limit",
+            "fetch_all",
+            "process_all",
             "run_as_name",
             "updated_at",
         )
@@ -65,6 +67,8 @@ class AutomationCommandSerializer(serializers.Serializer):
     time_zone = serializers.CharField(max_length=64)
     source_max_pages = serializers.IntegerField(min_value=1, max_value=200, default=20)
     processing_limit = serializers.IntegerField(min_value=0, max_value=100, default=0)
+    fetch_all = serializers.BooleanField(default=False)
+    process_all = serializers.BooleanField(default=False)
 
     def validate(self, attrs):
         reject_unknown_fields(self)
@@ -91,6 +95,12 @@ class AutomationUpdateSerializer(AutomationCommandSerializer):
 
 
 class AutomationRunSerializer(serializers.ModelSerializer):
+    bulk_operation_id = serializers.UUIDField(
+        source="job.checkpoint.automation_batch_job_id",
+        read_only=True,
+        allow_null=True,
+        default=None,
+    )
     processing_count = serializers.IntegerField(read_only=True)
     processing_active = serializers.IntegerField(read_only=True)
     processing_attention = serializers.IntegerField(read_only=True)
@@ -116,6 +126,8 @@ class AutomationRunSerializer(serializers.ModelSerializer):
             "processing_succeeded",
             "processing_rejected",
             "missed_occurrences",
+            "process_all",
+            "bulk_operation_id",
             "created_at",
         )
         read_only_fields = fields

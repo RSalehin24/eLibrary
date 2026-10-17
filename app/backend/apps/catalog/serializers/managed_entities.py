@@ -4,7 +4,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.catalog.editorial.entity_policy import ENTITY_KINDS
-from apps.catalog.models import Contributor
+from apps.catalog.models import Contributor, ContributorRole
 from apps.catalog.serializers.editorial import (
     EDITORIAL_DETAIL_FIELDS,
     EDITORIAL_FIELDS,
@@ -65,6 +65,9 @@ class ManagedEntityCollectionSerializer(serializers.Serializer):
 
 
 class ManagedEntityParametersSerializer(serializers.Serializer):
+    role = serializers.ChoiceField(
+        choices=ContributorRole.choices, allow_blank=True, default=""
+    )
     page = serializers.IntegerField(min_value=1, default=1)
     limit = serializers.IntegerField(min_value=1, max_value=100, default=50)
     q = serializers.CharField(max_length=120, default="", allow_blank=True)

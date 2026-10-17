@@ -38,7 +38,7 @@ def test_library_returns_only_owned_metadata_and_own_progress(
     )
     ReadingSession.objects.create(user=stranger, book=book, progress_percent=90)
     with django_assert_num_queries(4):
-        response = client.get("/api/v1/me/books/")
+        response = client.get("/api/v1/me/books/?view=owned")
     entry = response.json()["entries"][0]
     assert entry["id"] == str(book.pk)
     assert entry["progress_percent"] == 42

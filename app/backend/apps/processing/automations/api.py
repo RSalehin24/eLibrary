@@ -47,6 +47,8 @@ def automation_queryset():
         "next_run_at",
         "source_max_pages",
         "processing_limit",
+        "fetch_all",
+        "process_all",
         "run_as_id",
         "updated_at",
         "run_as__id",
@@ -68,25 +70,35 @@ def automation_runs(automation):
             "job__id",
             "job__state",
             "processing_limit",
+            "process_all",
+            "job__checkpoint",
             "missed_occurrences",
             "created_at",
         )
         .annotate(
-            processing_count=Count("processing_jobs"),
+            processing_count=Count(
+                "processing_jobs", filter=Q(processing_jobs__kind="process_source")
+            ),
             processing_active=Count(
                 "processing_jobs",
                 filter=Q(
-                    processing_jobs__state__in=["queued", "running", "retry_wait"]
+                    processing_jobs__kind="process_source",
+                    processing_jobs__state__in=["queued", "running", "retry_wait"],
                 ),
             ),
             processing_attention=Count(
                 "processing_jobs",
                 filter=Q(
-                    processing_jobs__state__in=["failed", "needs_attention", "paused"]
+                    processing_jobs__kind="process_source",
+                    processing_jobs__state__in=["failed", "needs_attention", "paused"],
                 ),
             ),
             processing_succeeded=Count(
-                "processing_jobs", filter=Q(processing_jobs__state="succeeded")
+                "processing_jobs",
+                filter=Q(
+                    processing_jobs__kind="process_source",
+                    processing_jobs__state="succeeded",
+                ),
             ),
             processing_rejected=Coalesce(
                 Cast("job__checkpoint__automation_rejected_count", IntegerField()), 0

@@ -1,9 +1,11 @@
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.catalog.models import BookSource
 from apps.ingestion.models import SourceCatalogEntry
+from seed_source_media import create_source_media
 
 
 def create_source_fixture(identity, reading_book):
+    create_source_media(reading_book)
     entries = [
         SourceCatalogEntry.objects.create(
             source_url=f"https://source.example.test/books/{identity}/{number}/",

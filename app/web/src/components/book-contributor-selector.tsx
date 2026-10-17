@@ -1,16 +1,18 @@
 "use client";
 
-import { AdminText } from "@/components/admin-language";
+import { AdminText, useAdminLanguage } from "@/components/admin-language";
 import { useId, useState } from "react";
 import type { BookRelationships, CatalogReference } from "@/api/types";
 import { CatalogReferenceSearch } from "./catalog-reference-search";
+import { contributorRoles as roleLabels } from "@/lib/contributor-roles";
 import { moveReference } from "@/lib/reference-order";
 
 type Selection = BookRelationships["contributors"][number];
-const roleLabels: Record<Selection["role"], string> = { author: "লেখক", translator: "অনুবাদক", compiler: "সংকলক", editor: "সম্পাদক", illustrator: "অলংকরণ", cover_artist: "প্রচ্ছদশিল্পী", publisher: "প্রকাশক", other: "অন্যান্য" };
+
 
 export function BookContributorSelector({ initialSelection, disabled, errors, onChange }: { initialSelection: Selection[]; disabled: boolean; errors?: string[]; onChange: () => void }) {
   const id = useId();
+  const { t } = useAdminLanguage();
   const [selected, setSelected] = useState(initialSelection);
   const [role, setRole] = useState<Selection["role"]>("author");
   function accept(entries: Selection[]) { setSelected(entries); onChange(); }
@@ -27,9 +29,9 @@ export function BookContributorSelector({ initialSelection, disabled, errors, on
     <CatalogReferenceSearch kind="contributors" label="সহযোগী" disabled={disabled || selected.length >= 100} excluded={selected.filter((entry) => entry.role === role).map((entry) => entry.id)} onChoose={choose} errors={errors} />
     <input type="hidden" name="contributors" value={JSON.stringify(selected.map(({ id, role }) => ({ id, role })))} />
     <ol className="reference-selection">{selected.map((entry, index) => <li key={`${entry.id}:${entry.role}`}><span>{entry.name} · <AdminText>{roleLabels[entry.role]}</AdminText></span>
-      <div className="editorial-actions"><button className="button button-quiet" type="button" aria-label={`${entry.name} (${roleLabels[entry.role]}): আগে নিন`} disabled={disabled || index === 0} onClick={() => move(index, -1)}><AdminText>{"আগে"}</AdminText></button>
-        <button className="button button-quiet" type="button" aria-label={`${entry.name} (${roleLabels[entry.role]}): পরে নিন`} disabled={disabled || index === selected.length - 1} onClick={() => move(index, 1)}><AdminText>{"পরে"}</AdminText></button>
-        <button className="button button-quiet" type="button" aria-label={`${entry.name} (${roleLabels[entry.role]}): নির্বাচন বাদ দিন`} onClick={() => accept(selected.filter((_, position) => position !== index))}><AdminText>{"বাদ দিন"}</AdminText></button></div>
+      <div className="editorial-actions"><button className="button button-quiet" type="button" aria-label={`${entry.name} (${t(roleLabels[entry.role])}): ${t("আগে নিন")}`} disabled={disabled || index === 0} onClick={() => move(index, -1)}><AdminText>{"আগে"}</AdminText></button>
+        <button className="button button-quiet" type="button" aria-label={`${entry.name} (${t(roleLabels[entry.role])}): ${t("পরে নিন")}`} disabled={disabled || index === selected.length - 1} onClick={() => move(index, 1)}><AdminText>{"পরে"}</AdminText></button>
+        <button className="button button-quiet" type="button" aria-label={`${entry.name} (${t(roleLabels[entry.role])}): ${t("নির্বাচন বাদ দিন")}`} onClick={() => accept(selected.filter((_, position) => position !== index))}><AdminText>{"বাদ দিন"}</AdminText></button></div>
     </li>)}</ol>
   </fieldset>;
 }

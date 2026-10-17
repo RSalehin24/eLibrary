@@ -26,6 +26,7 @@ from apps.processing.jobs.requests import (
     control_background_job,
     request_preparation,
 )
+from apps.processing.managed_assets import processing_assets
 
 COMMAND_RESPONSES = {
     202: OperationAcceptedSerializer,
@@ -59,7 +60,7 @@ class BackgroundJobListView(VersionedAPIView):
         filters = {
             key: value
             for key, value in parameters.validated_data.items()
-            if key in {"state", "kind", "book", "automation_run"}
+            if key in {"state", "kind", "book", "automation_run", "parent_job"}
         }
         pagination = BoundedAdminPagination()
         entries: list[BackgroundJob] | None = pagination.paginate_queryset(
@@ -114,7 +115,7 @@ class ProcessingAssetListView(VersionedAPIView):
         )
         return Response(
             ProcessingAssetSerializer(
-                book.generated_assets.order_by("asset_type"), many=True
+                processing_assets(book, request.user), many=True
             ).data
         )
 

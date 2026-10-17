@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteText } from "@/components/site-language";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -23,13 +25,13 @@ export function AccountSettings({ initialProfile, nextPath }: { initialProfile: 
     await Promise.all([client.invalidateQueries({ queryKey: ["private", "session"] }), client.invalidateQueries({ queryKey: ["private", "profile"] })]);
     router.refresh();
   }
-  return <div className="account-settings">{notice && <p role="status">{notice}</p>}
-    {profileQuery.error && <p className="field-error" role="alert">বর্তমান প্রোফাইল পাওয়া যায়নি। আবার তথ্য দেখুন।</p>}
-    <div className="account-actions"><button className="button button-quiet" onClick={() => window.location.reload()}>বর্তমান তথ্য দেখুন</button><p className="muted">নতুন তথ্য খুললে সংরক্ষণ না করা ফর্ম আবার লিখতে হতে পারে।</p></div>
-    <ProfileIdentityForm profile={profile} onSaved={onSaved} />
-    <ProfileImageForm profile={profile} onSaved={onSaved} />
-    <SecuritySettings profile={profile} nextPath={nextPath} onChanged={refreshSecurity} />
-    <ProfilePasswordForm profile={profile} onSaved={onSaved} />
-    {profile.can_configure_kindle && <ProfileKindleForm profile={profile} onSaved={onSaved} />}
+  return <div className="account-settings">{notice && <p role="status"><SiteText>{notice}</SiteText></p>}
+    {profileQuery.error && <p className="field-error" role="alert"><SiteText>{"বর্তমান প্রোফাইল পাওয়া যায়নি। আবার তথ্য দেখুন।"}</SiteText></p>}
+    <nav className="account-section-nav"><a href="#profile-identity"><SiteText>আপনার পরিচয়</SiteText></a><a href="#profile-security"><SiteText>দুই ধাপের নিরাপত্তা</SiteText></a><a href="#profile-password"><SiteText>পাসওয়ার্ড বদলান</SiteText></a>{profile.can_configure_kindle && <a href="#profile-kindle"><SiteText>কিন্ডলের ঠিকানা</SiteText></a>}</nav>
+    <div className="profile-section-grid" id="profile-identity"><ProfileIdentityForm profile={profile} onSaved={onSaved} /><ProfileImageForm profile={profile} onSaved={onSaved} /></div>
+    <div id="profile-security"><SecuritySettings profile={profile} nextPath={nextPath} onChanged={refreshSecurity} /></div>
+    <div id="profile-password"><ProfilePasswordForm profile={profile} onSaved={onSaved} /></div>
+    {profile.can_configure_kindle && <div id="profile-kindle"><ProfileKindleForm profile={profile} onSaved={onSaved} /></div>}
+    <div className="account-actions"><button className="button button-quiet" onClick={() => window.location.reload()}><SiteText>বর্তমান তথ্য দেখুন</SiteText></button></div>
   </div>;
 }

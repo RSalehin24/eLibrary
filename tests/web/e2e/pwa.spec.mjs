@@ -39,7 +39,7 @@ test("root manifest supplies standalone launch and correctly sized maskable icon
 test("public installation previews show the Bengali workspace at phone and desktop sizes", async ({ page }) => {
   for (const [name, width, height] of [["phone", 390, 844], ["desktop", 1280, 720]]) {
     await page.setViewportSize({ width, height }); await page.goto("/");
-    await expect(page.getByRole("heading", { name: "বইয়ের পাতায় ফিরে আসুন।" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "আপনার পরের বইটি খুঁজুন" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await page.screenshot({ path: `test-artifacts/foundation/install-${name}.png` });
   }
@@ -65,7 +65,7 @@ test("an accepted update waits for unsaved editorial work and leaves other tabs 
   await useAccount(page, "editor");
   await page.goto(`${proxy.origin}/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`); await controlled(page);
   const otherPage = await page.context().newPage(); await otherPage.goto(`${proxy.origin}/catalog/`);
-  const field = page.getByLabel("সংক্ষিপ্ত পরিচিতি", { exact: true });
+  const field = page.getByLabel("সংক্ষিপ্ত বিবরণ", { exact: true });
   const note = [await field.inputValue(), "হালনাগাদের আগে সংরক্ষিত"].filter(Boolean).join(" · ");
   await field.fill(note);
   proxy.revision += 1;
@@ -138,6 +138,14 @@ test("accepted reader updates save the latest position before reloading", async 
   proxy.revision += 1;
   await page.evaluate(async () => (await navigator.serviceWorker.getRegistration()).update());
   const update = page.getByRole("button", { name: "হালনাগাদ করে আবার খুলুন" }); await expect(update).toBeVisible();
+  const fullscreen = await page.evaluate(() => document.fullscreenEnabled === true);
+  await page.getByRole("button", { name: fullscreen ? "পূর্ণ পর্দা" : "শুধু বই দেখুন", exact: true }).click();
+  await expect(update).not.toBeVisible();
+  await expect(page.locator(".reader-toolbar")).not.toBeVisible();
+  await expect(page.locator("button:visible")).toHaveCount(0);
+  await page.locator(".reader-frame").click({ position: { x: 100, y: 80 } });
+  await page.keyboard.press("Escape");
+  await expect(update).toBeVisible();
   await page.frameLocator(".reader-frame").locator("body").evaluate(() => { const root = document.scrollingElement; root.scrollTop = (root.scrollHeight - root.clientHeight) * .4; });
   await expect(page.getByText("অবস্থান সংরক্ষণ হচ্ছে…", { exact: true })).toBeVisible();
   const saved = page.waitForResponse((response) => response.url().endsWith("/progress/") && response.request().method() === "PUT" && response.status() === 200);
@@ -198,7 +206,7 @@ test("app updates preserve unfinished access management forms", async ({ page })
   await expect(update).toBeVisible(); await update.click();
   await expect(page.locator(".pwa-controls").getByRole("alert")).toContainText("অসম্পূর্ণ লেখা আগে সংরক্ষণ করুন");
   await expect(page.getByLabel("পাঠকের নাম", { exact: true })).toHaveValue("সংরক্ষণ না করা নাম");
-  await page.getByRole("button", { name: "লেখা বাদ দিন", exact: true }).click();
+  await page.getByRole("button", { name: "পরিবর্তন বাতিল করুন", exact: true }).click();
   await page.getByLabel("অনুমতির মন্তব্য", { exact: true }).fill("নতুন অনুমতির লেখা");
   await update.click(); await expect(page.locator(".pwa-controls").getByRole("alert")).toContainText("অসম্পূর্ণ লেখা আগে সংরক্ষণ করুন");
   await expect(page.getByLabel("অনুমতির মন্তব্য", { exact: true })).toHaveValue("নতুন অনুমতির লেখা");

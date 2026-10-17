@@ -20,8 +20,8 @@ export function createHighlight(identifier: string, values: HighlightInput) {
   return apiMutation<Highlight>(`reading/sessions/${identifier}/highlights/`, { method: "POST", body: JSON.stringify(values) });
 }
 
-export function personalAnnotations(kind: AnnotationKind, parameters: { cursor?: string; signal: AbortSignal }) {
-  return apiRequest<PersonalBookmarks | PersonalHighlights>(`me/${kind}/?${new URLSearchParams({ cursor: parameters.cursor ?? "" })}`, { signal: parameters.signal });
+export function personalAnnotations(kind: AnnotationKind, parameters: { cursor?: string; book?: string; signal: AbortSignal }) {
+  return apiRequest<PersonalBookmarks | PersonalHighlights>(`me/${kind}/?${new URLSearchParams({ cursor: parameters.cursor ?? "", ...(parameters.book ? { book: parameters.book } : {}) })}`, { signal: parameters.signal });
 }
 
 export function personalAnnotation(kind: AnnotationKind, identifier: string, signal: AbortSignal) {

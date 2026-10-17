@@ -1,6 +1,8 @@
 # Personal library and paper reading
 
-`/my-books/` defaults to ownership and provides saved, recent, and granted views.
+`/my-books/` defaults to a combined list of owned, saved and previously read
+books. Owned, saved, recent and granted tabs remain available. Book actions expose
+Add to My Books / Remove from My Books and a direct link to the personal list.
 Saving a book records an idempotent personal preference; it creates neither
 ownership nor permissions. Private metadata requires ownership or current reader
 scope. Expired or revoked grants remove private books from the saved and granted

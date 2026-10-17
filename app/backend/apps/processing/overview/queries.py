@@ -112,20 +112,29 @@ def overview_work(actor):
 
 
 def book_counts(actor):
-    return (
+    counts = (
         metadata_managed_books(actor)
-        .values("id", "state", "editorial_reviewed_at")
+        .values("id", "state")
         .aggregate(
             total=Count("id", distinct=True),
-            draft=Count("id", distinct=True, filter=Q(state=LifecycleState.DRAFT)),
+            draft=Count(
+                "id",
+                distinct=True,
+                filter=Q(state__in=[LifecycleState.DRAFT, LifecycleState.NEEDS_REVIEW]),
+            ),
+            processing=Count(
+                "id", distinct=True, filter=Q(state=LifecycleState.PROCESSING)
+            ),
+            ready=Count("id", distinct=True, filter=Q(state=LifecycleState.READY)),
             published=Count(
                 "id", distinct=True, filter=Q(state=LifecycleState.PUBLISHED)
             ),
-            editorial_pending=Count(
-                "id", distinct=True, filter=Q(editorial_reviewed_at__isnull=True)
+            archived=Count(
+                "id", distinct=True, filter=Q(state=LifecycleState.ARCHIVED)
             ),
         )
     )
+    return {**counts, "editorial_pending": 0}
 
 
 def source_counts():

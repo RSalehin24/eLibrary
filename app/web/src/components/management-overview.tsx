@@ -23,7 +23,15 @@ export function ManagementOverviewWorkspace({ initial }: { initial: ManagementOv
     <button className="button button-quiet" onClick={() => void refresh()} disabled={snapshot.isFetching || work.isFetching}>{t("সব তথ্য আবার দেখুন")}</button></div>
     {(snapshot.isError || work.isError) && <p className="field-error" role="alert">{t("হালনাগাদ তথ্য পাওয়া যায়নি। প্রদর্শিত তথ্য আগের অবস্থার হতে পারে।")}</p>}
     <div className="overview-grid">
-      {books && <section className="account-section"><h2>{t("আপনার পরিচালনাযোগ্য বই")}</h2><dl className="book-facts"><div><dt>{t("মোট")}</dt><dd>{number(books.total)}</dd></div><div><dt>{t("খসড়া")}</dt><dd>{number(books.draft)}</dd></div><div><dt>{t("প্রকাশিত")}</dt><dd>{number(books.published)}</dd></div><div><dt>{t("সম্পাদকীয় পর্যালোচনা বাকি")}</dt><dd>{number(books.editorial_pending)}</dd></div></dl><Link className="text-link" href="/manage/books/">{t("বই দেখুন →")}</Link></section>}
+      {books && <section className="account-section"><h2>{t("আপনার পরিচালনাযোগ্য বই")}</h2>
+        <dl className="book-facts">
+          <div><dt>{t("মোট")}</dt><dd>{number(books.total)}</dd></div>
+          <div><dt>{t("খসড়া")}</dt><dd>{number(books.draft)}</dd></div>
+          <div><dt>{t("প্রক্রিয়াধীন")}</dt><dd>{number(books.processing)}</dd></div>
+          <div><dt>{t("প্রস্তুত")}</dt><dd>{number(books.ready)}</dd></div>
+          <div><dt>{t("প্রকাশিত")}</dt><dd>{number(books.published)}</dd></div>
+          <div><dt>{t("আর্কাইভে")}</dt><dd>{number(books.archived)}</dd></div>
+        </dl><Link className="text-link" href="/manage/books/">{t("বই দেখুন →")}</Link></section>}
       {sources && <section className="account-section"><h2>{t("ওয়েবসাইটের বই")}</h2><dl className="book-facts"><div><dt>{t("মোট")}</dt><dd>{number(sources.total)}</dd></div><div><dt>{t("অসংযুক্ত")}</dt><dd>{number(sources.unlinked)}</dd></div><div><dt>{t("বই সংযুক্ত")}</dt><dd>{number(sources.linked)}</dd></div><div><dt>{t("সংযুক্ত বই অপসারিত")}</dt><dd>{number(sources.removed)}</dd></div></dl><Link className="text-link" href="/manage/sources/?status=unlinked">{t("অসংযুক্ত উৎস দেখুন →")}</Link></section>}
       {accounts && <section className="account-section"><h2>{t("পাঠকের হিসাব")}</h2><dl className="book-facts"><div><dt>{t("মোট")}</dt><dd>{number(accounts.total)}</dd></div><div><dt>{t("সক্রিয়")}</dt><dd>{number(accounts.active)}</dd></div><div><dt>{t("প্রথম প্রবেশের প্রস্তুতি বাকি")}</dt><dd>{number(accounts.setup_pending)}</dd></div></dl><Link className="text-link" href="/manage/users-access/?status=setup_pending">{t("প্রস্তুতি বাকি হিসাব দেখুন →")}</Link></section>}
     </div><div className="overview-grid overview-work">

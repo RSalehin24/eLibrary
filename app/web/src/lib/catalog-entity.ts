@@ -7,15 +7,12 @@ import type { PublicEntity } from "@/api/types";
 import { routeSlug } from "./route-slug";
 import { canonicalURL } from "./site";
 import { catalogPageNumber, type RouteQuery } from "./route-query";
+export { catalogEntityPath } from "./catalog-entity-path";
 
 export type EntityKind = "contributors" | "categories" | "series" | "collections";
 export type EntityPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<RouteQuery> };
 export const entityLabels: Record<EntityKind, string> = { contributors: "লেখক ও সহযোগী", categories: "বইয়ের বিভাগ", series: "বইয়ের সিরিজ", collections: "সম্পাদকের নির্বাচন" };
 export const entityFilters: Record<EntityKind, string> = { contributors: "contributor", categories: "category", series: "series", collections: "collection" };
-
-export function catalogEntityPath(kind: EntityKind, slug: string) {
-  return `/${kind}/${encodeURIComponent(slug)}/`;
-}
 
 export const getPublicEntity = cache(async (kind: EntityKind, slug: string) => {
   let entity: PublicEntity;

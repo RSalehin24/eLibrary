@@ -13,6 +13,7 @@ from apps.processing.source import generate_exports
 from .export_checkpoint import checkpointed_exports, record_export_checkpoint
 from .guards import require_export_authority
 from .queries import current_source_job
+from .regeneration_exports import regenerated_export_payload
 from .storage import source_job_directory
 
 
@@ -33,6 +34,10 @@ def export_payload(ownership, result):
         copyfile(path, folder / path.name)
         payload["cover"] = path.name
     payload["output_folder"] = str(folder)
+    if current_source_job(ownership.job_id).input.get("regenerate_book"):
+        payload = regenerated_export_payload(
+            require_export_authority(ownership), payload
+        )
     return payload
 
 

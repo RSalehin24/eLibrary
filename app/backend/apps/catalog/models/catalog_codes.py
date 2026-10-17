@@ -225,6 +225,18 @@ def is_book_catalog_code(value):
     return True
 
 
+def available_book_sequence(sequences):
+    next_sequence = max(sequences, default=UNKNOWN_RELATION_SEQUENCE) + 1
+    if next_sequence <= BOOK_SEQUENCE_MASK:
+        return next_sequence
+    for sequence in range(1, BOOK_SEQUENCE_MASK + 1):
+        if sequence not in sequences:
+            return sequence
+    raise ValueError(
+        "Book catalog code capacity exceeded for this writer/category pair."
+    )
+
+
 def build_book_catalog_code(book):
     from .books import Book
 
@@ -240,7 +252,7 @@ def build_book_catalog_code(book):
         except ValueError:
             pass
 
-    latest_sequence = UNKNOWN_RELATION_SEQUENCE
+    used_sequences = set()
     queryset = Book.objects.exclude(pk=book.pk).exclude(catalog_code__isnull=True).exclude(catalog_code="")
     for existing_code in queryset.values_list("catalog_code", flat=True).iterator():
         try:
@@ -248,11 +260,9 @@ def build_book_catalog_code(book):
         except ValueError:
             continue
         if decoded["category_sequence"] == category_sequence and decoded["writer_sequence"] == writer_sequence:
-            latest_sequence = max(latest_sequence, decoded["book_sequence"])
+            used_sequences.add(decoded["book_sequence"])
 
-    next_sequence = latest_sequence + 1
-    if next_sequence > BOOK_SEQUENCE_MASK:
-        raise ValueError("Book catalog code capacity exceeded for this writer/category pair.")
+    next_sequence = available_book_sequence(used_sequences)
 
     payload = (
         (BOOK_PAYLOAD_TAG << (BOOK_CHECK_BITS + BOOK_SEQUENCE_BITS + (ENTITY_SEQUENCE_BITS * 2)))

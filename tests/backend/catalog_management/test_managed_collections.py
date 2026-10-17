@@ -124,7 +124,7 @@ def test_collection_publication_review_withdrawal_and_redirects():
     renamed = client.patch(
         path, entity_revision(published.json(), name="নতুন নির্বাচিত সংগ্রহ"), format="json"
     ).json()
-    assert client.get(public).status_code == 404
+    assert client.get(public).status_code == 200
     reviewed = client.post(
         path, entity_revision(renamed, action="review"), format="json"
     ).json()

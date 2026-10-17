@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteFieldErrors } from "./site-field-errors";
+
 import { AdminText } from "@/components/admin-language";
 import { useRef, useState } from "react";
 import { createManagedGrant } from "@/api/managed-access";
@@ -32,11 +34,11 @@ export function ManagedGrantForm({ account, onSaved }: { account: ManagedAccount
       {Object.entries(targetKinds).map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select></div>
     {kind !== "account" && <AccessTargetSelector key={kind} kind={kind} disabled={form.blocked} errors={form.errors[kind === "author" ? "contributor" : kind]} />}
     <div className="form-field"><label htmlFor="grant-scope"><AdminText>{"যে কাজের অনুমতি"}</AdminText></label><select id="grant-scope" name="scope" value={scope} aria-invalid={!!form.errors.scope?.length} aria-describedby={form.errors.scope?.length ? "grant-scope-error" : undefined} disabled={form.blocked} onChange={(event) => setScope(event.target.value as ManagedGrantCreate["scope"])}>{shownScopes.map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select>
-      {form.errors.scope?.length ? <p id="grant-scope-error" className="field-error" role="alert">{form.errors.scope.join(" ")}</p> : null}</div>
+      {form.errors.scope?.length ? <p id="grant-scope-error" className="field-error" role="alert"><SiteFieldErrors errors={form.errors.scope} /></p> : null}</div>
     <div className="form-field"><label htmlFor="grant-expiry"><AdminText>{"মেয়াদ শেষ (আপনার স্থানীয় সময়, ঐচ্ছিক)"}</AdminText></label><input id="grant-expiry" name="expires_at" type="datetime-local" max="9999-12-31T23:59" aria-invalid={!!form.errors.expires_at?.length} aria-describedby={form.errors.expires_at?.length ? "grant-expiry-error" : undefined} disabled={form.blocked} />
-      {form.errors.expires_at?.length ? <p id="grant-expiry-error" className="field-error" role="alert">{form.errors.expires_at.join(" ")}</p> : null}</div>
+      {form.errors.expires_at?.length ? <p id="grant-expiry-error" className="field-error" role="alert"><SiteFieldErrors errors={form.errors.expires_at} /></p> : null}</div>
     <AccountField name="notes" label="অনুমতির মন্তব্য" multiline maxLength={2000} errors={form.errors.notes} disabled={form.blocked} />
-    {form.errors.non_field_errors?.length ? <p className="field-error" role="alert">{form.errors.non_field_errors.join(" ")}</p> : null}
+    {form.errors.non_field_errors?.length ? <p className="field-error" role="alert"><SiteFieldErrors errors={form.errors.non_field_errors} /></p> : null}
     <AccountFeedback error={form.saving.error} conflictMessage="অনুমতি বা অনুরোধের অবস্থা বদলেছে। তালিকার বর্তমান তথ্য দেখে সিদ্ধান্ত নিন।" />
     <div className="account-actions"><button className="button" disabled={form.blocked}><AdminText>{"অনুমতি যোগ করুন"}</AdminText></button>{form.saving.error && <button className="button button-quiet" type="button" disabled={form.saving.isPending} onClick={reloadManagedForm}><AdminText>{"বর্তমান তথ্য খুলুন"}</AdminText></button>}</div>
     {form.saving.isSuccess && <p role="status"><AdminText>{"অনুমতি সংরক্ষিত হয়েছে।"}</AdminText></p>}</form>;

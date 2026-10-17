@@ -11,7 +11,8 @@ function localForwarder(port) {
   });
 }
 
-const servers = [localForwarder(3000), localForwarder(8000)];
-await Promise.all(servers.map((server, index) => new Promise((resolve, reject) => { server.once("error", reject); server.listen(index === 0 ? 3000 : 8000, "127.0.0.1", resolve); })));
+const ports = [Number(new URL(process.env.FOUNDATION_WEB_URL ?? "http://127.0.0.1:3000").port), Number(new URL(process.env.FOUNDATION_READER_API_URL ?? "http://127.0.0.1:8000").port)];
+const servers = ports.map(localForwarder);
+await Promise.all(servers.map((server, index) => new Promise((resolve, reject) => { server.once("error", reject); server.listen(ports[index], "127.0.0.1", resolve); })));
 const runner = spawn("node", ["app/web/node_modules/playwright/cli.js", "test", "--config", "tests/web/playwright.config.mjs", ...process.argv.slice(2)], { stdio: "inherit" });
 runner.once("exit", (code) => { for (const server of servers) { server.closeAllConnections(); server.close(); } process.exitCode = code ?? 1; });

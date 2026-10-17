@@ -37,8 +37,13 @@ class OverviewWorkSerializer(serializers.Serializer):
 class BookCountsSerializer(serializers.Serializer):
     total = serializers.IntegerField()
     draft = serializers.IntegerField()
+    processing = serializers.IntegerField()
+    ready = serializers.IntegerField()
     published = serializers.IntegerField()
-    editorial_pending = serializers.IntegerField()
+    archived = serializers.IntegerField()
+    editorial_pending = serializers.IntegerField(
+        help_text="Deprecated compatibility field. Always zero; manual editorial review is not required."
+    )
 
 
 class SourceCountsSerializer(serializers.Serializer):

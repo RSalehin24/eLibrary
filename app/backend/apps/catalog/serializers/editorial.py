@@ -34,13 +34,6 @@ class ReviewedEditorialSerializer(serializers.ModelSerializer):
     indexable = serializers.BooleanField(source="is_indexable", read_only=True)
     alternative_names = VerifiedAlternativeNamesField(read_only=True)
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if not instance.editorial_reviewed_at:
-            for field in EDITORIAL_FIELDS[:-1]:
-                data[field] = [] if field == "alternative_names" else ""
-        return data
-
 
 class ExpectedRevisionSerializer(serializers.Serializer):
     expected_updated_at = serializers.DateTimeField()

@@ -21,7 +21,7 @@ export function ManagedJobs({ initial, filter }: { initial: BackgroundJobCollect
     return <Link key={state} href={`?${parameters}`} aria-current={(query.get("state") ?? "") === state ? "page" : undefined}>{t(state ? jobStates[state as keyof typeof jobStates] : "সব কাজ")}</Link>;
   })}</nav><form className="job-filters" method="get"><label htmlFor="job-state">{t("কাজের অবস্থা")}</label>
     <select id="job-state" name="state" defaultValue={query.get("state") ?? ""}><option value="">{t("সব কাজ")}</option>{Object.entries(jobStates).map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}</select>
-    {query.get("automation_run") && <input type="hidden" name="automation_run" value={query.get("automation_run") ?? ""} />}<button className="button button-quiet">{t("তালিকা দেখুন")}</button></form>
+    {["automation_run", "parent_job"].map((key) => query.get(key) && <input key={key} type="hidden" name={key} value={query.get(key) ?? ""} />)}<button className="button button-quiet">{t("তালিকা দেখুন")}</button></form>
     {jobs.isError && <p className="notice" role="alert">{t("হালনাগাদ অবস্থা পাওয়া যায়নি।")} <button className="button button-quiet" onClick={() => void jobs.refetch()}>{t("আবার দেখুন")}</button></p>}
     <p className="muted">{t("মোট")}: {number(data.pagination.total_count)}</p>
     <ul className="job-list">{data.entries.map((job) => <li className="job-card" key={job.id}><JobSummary job={job} /><Link className="text-link" href={`/manage/jobs/${job.id}/`}>{t("বিস্তারিত ও করণীয় →")}</Link></li>)}</ul>

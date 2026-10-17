@@ -67,6 +67,7 @@ def test_download_and_reader_launch_are_protected(tmp_path, client):
     allowed = client.get(f"/api/access/books/{book.slug}/download/epub/")
     assert allowed.status_code == 200
     assert_content_disposition_filename(allowed.headers["Content-Disposition"], "Access Book.epub")
+    assert b"".join(allowed.streaming_content) == b"epub"
 
     PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
@@ -146,6 +147,9 @@ def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grant
     assert cover_response.status_code == 200
     assert html_response.status_code == 200
     assert epub_response.status_code == 200
+    assert b"".join(cover_response.streaming_content) == b"cover"
+    assert b"".join(epub_response.streaming_content) == b"epub"
+    assert b"<html" in html_response.content
 
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
     assert launch.status_code == 200
@@ -187,6 +191,8 @@ def test_download_uses_current_book_title_for_cover_and_epub_filenames(tmp_path,
     assert cover_response.status_code == 200
     assert_content_disposition_filename(epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub")
     assert_content_disposition_filename(cover_response.headers["Content-Disposition"], "বর্তমান বই নাম.jpg")
+    assert b"".join(epub_response.streaming_content) == b"epub"
+    assert b"".join(cover_response.streaming_content) == b"cover"
 
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
     manifest_path = launch.json()["manifest_url"].replace("http://testserver", "")
@@ -195,6 +201,7 @@ def test_download_uses_current_book_title_for_cover_and_epub_filenames(tmp_path,
     reader_epub_response = client.get(reader_epub_path)
     assert reader_epub_response.status_code == 200
     assert_content_disposition_filename(reader_epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub")
+    assert b"".join(reader_epub_response.streaming_content) == b"epub"
 
 
 @pytest.mark.django_db

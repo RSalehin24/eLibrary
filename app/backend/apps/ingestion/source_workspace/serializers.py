@@ -9,10 +9,16 @@ from apps.catalog.models import Book
 from apps.common.api_serializers import AdminPaginationSerializer
 from apps.ingestion.pipeline.scraper_support.network import normalize_source_url
 from apps.ingestion.source_processing.policy import require_source_url, source_hosts
+from apps.ingestion.source_processing.verification_serializers import (
+    SourceVerificationSerializer,
+)
 from apps.processing.jobs.execution_errors import ExecutionFailure
 
 
 class SourceParametersSerializer(serializers.Serializer):
+    catalog_scope = serializers.ChoiceField(
+        choices=("all", "unfinished"), default="all"
+    )
     q = serializers.CharField(
         max_length=200, required=False, default="", allow_blank=True
     )
@@ -52,9 +58,18 @@ def present_source_url(value):
         return None
 
 
+class SourceContentSummarySerializer(serializers.Serializer):
+    verification = SourceVerificationSerializer(allow_null=True)
+    body_character_count = serializers.IntegerField()
+    chapter_count = serializers.IntegerField()
+    check_completeness = serializers.BooleanField()
+
+
 class SourceEntrySerializer(serializers.Serializer):
+    content_summary = serializers.SerializerMethodField()
     id = serializers.UUIDField(source="entry.id")
     title = serializers.CharField(source="entry.title")
+
     author_line = serializers.CharField(source="entry.author_line")
     source_url = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(source="entry.created_at")
@@ -75,6 +90,10 @@ class SourceEntrySerializer(serializers.Serializer):
         allow_null=True,
         read_only=True,
     )
+
+    @extend_schema_field(SourceContentSummarySerializer(allow_null=True))
+    def get_content_summary(self, snapshot):
+        return self.context.get("content_summary")
 
     def get_can_process(self, snapshot) -> bool:
         if snapshot.book is not None or getattr(

@@ -5,7 +5,7 @@ from django.conf import settings
 from ebooklib import epub
 
 
-def create_reading_book(user):
+def create_reading_book(user, customize=None):
     from apps.access.reading.preparation import prepare_epub_asset
     from apps.catalog.models import Book, GeneratedAsset, GeneratedAssetType, UserBook
 
@@ -16,7 +16,7 @@ def create_reading_book(user):
         Path(settings.MEDIA_ROOT) / "protected" / "reader-fixtures" / f"{book.pk}.epub"
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    write_reader_fixture(path)
+    write_reader_fixture(path, customize)
     asset = GeneratedAsset.objects.create(
         book=book,
         asset_type=GeneratedAssetType.EPUB,
@@ -28,7 +28,7 @@ def create_reading_book(user):
     return {"id": str(book.pk), "slug": book.slug, "title": book.title}
 
 
-def write_reader_fixture(path):
+def write_reader_fixture(path, customize=None):
     publication = epub.EpubBook()
     publication.set_identifier(str(uuid4()))
     publication.set_title("পড়ার পরীক্ষার বই")
@@ -49,4 +49,6 @@ def write_reader_fixture(path):
     publication.toc = chapters
     publication.add_item(epub.EpubNcx())
     publication.add_item(epub.EpubNav())
+    if customize:
+        customize(publication, chapters)
     epub.write_epub(str(path), publication)

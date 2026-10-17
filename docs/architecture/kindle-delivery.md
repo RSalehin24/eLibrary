@@ -1,11 +1,19 @@
 # Asynchronous Kindle delivery
 
-`/kindle/` shows the account's requests. Public/private book actions link to a
+`/kindle/` shows the account's requests. Public/private book details, the source
+result and the managed book editor share the same **Send to Kindle** action.
+Those actions link to a
 recipient selector when the backend grants Kindle access. Readers explicitly
 select up to ten addresses currently configured in their profile. Ownership or
 an active book/category/author/global SEND_KINDLE grant is required independently
 of reading/download/metadata permissions. Required TOTP setup still precedes
 private workspaces.
+
+The action requires an available ready EPUB as well as Kindle permission.
+Missing EPUB bytes hide download/delivery actions while a previously prepared
+publication can remain readable. Processing authority alone grants neither
+reading nor sending. The selector retains explicit recipient selection and
+per-address outcomes; opening it does not send mail.
 
 `GET/POST /api/v1/delivery/books/<slug>/kindle/` provides private options and
 accepts a revision-checked command. The body contains a client-generated
@@ -92,8 +100,8 @@ uncertain-command handling, private isolation, and all eight planned widths were
 covered. The phone selector screenshot was inspected. OpenAPI, strict typing,
 Ruff/formatting, ESLint, Node helpers, and build checks passed.
 
-Live RabbitMQ transport/recovery, end-to-end device arrival, administrative
-uncertainty resolution, supported cross-browser/physical-device checks,
-production routing/configuration, and measured capacity remain outstanding.
-The full legacy suite is not passing. This increment does not complete the
-reader/reliability phases or authorize production deployment/external mail.
+The latest backend/browser evidence supersedes these historical increment
+counts; see [the implementation handoff](../implementation-handoff.md) and
+[feature comparison](../operations/feature-parity.md). Simulator checks do not
+establish external-device arrival or complete original-UI parity. They do not
+authorize external mail or production deployment.

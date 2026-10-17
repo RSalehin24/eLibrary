@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteFieldErrors } from "./site-field-errors";
+
 import { AdminText } from "@/components/admin-language";
 import { useId, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -29,6 +31,6 @@ export function CatalogReferenceSearch({ kind, label, disabled, excluded = [], o
       </select></div>
     {references.data?.has_more && <p className="muted"><AdminText>{"প্রথম ২৪টি ফল দেখানো হচ্ছে। আরও নির্দিষ্ট নাম দিয়ে খুঁজুন।"}</AdminText></p>}
     {!references.isFetching && !references.isError && !references.data?.entries.length && <p className="muted"><AdminText>{"এই নামে কোনো ফল পাওয়া যায়নি।"}</AdminText></p>}
-    {errors?.length ? <p id={`${id}-error`} className="field-error" role="alert">{errors.join(" ")}</p> : null}
+    {errors?.length ? <p id={`${id}-error`} className="field-error" role="alert"><SiteFieldErrors errors={errors} /></p> : null}
   </>;
 }

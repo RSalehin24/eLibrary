@@ -6,9 +6,14 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.access.models import Bookmark, Highlight, HighlightColor, HighlightKind
+from apps.catalog.serializers.public import CollectionParametersSerializer
 
 MAX_NOTE_LENGTH = 5000
 MAX_SELECTED_TEXT_LENGTH = 5000
+
+
+class PersonalAnnotationParametersSerializer(CollectionParametersSerializer):
+    book = serializers.CharField(max_length=255, required=False, allow_blank=True)
 
 
 class TextSelectionSerializer(serializers.Serializer):
@@ -88,6 +93,7 @@ class HighlightDetailSerializer(serializers.ModelSerializer):
     book_title = serializers.CharField(source="book.title", read_only=True)
     book_slug = serializers.CharField(source="book.slug", read_only=True)
     selector = serializers.SerializerMethodField()
+    legacy_cfi = serializers.SerializerMethodField()
     tags = serializers.ListField(child=serializers.CharField(), read_only=True)
 
     class Meta:
@@ -97,6 +103,7 @@ class HighlightDetailSerializer(serializers.ModelSerializer):
             "book_title",
             "book_slug",
             "selector",
+            "legacy_cfi",
             "text",
             "note",
             "chapter_href",
@@ -117,6 +124,17 @@ class HighlightDetailSerializer(serializers.ModelSerializer):
             return None
         selector = TextSelectionSerializer(data=payload)
         return selector.validated_data if selector.is_valid() else None
+
+    @extend_schema_field(serializers.CharField(allow_null=True))
+    def get_legacy_cfi(self, annotation):
+        value = annotation.cfi_range
+        return (
+            value
+            if value.startswith("epubcfi(")
+            and value.endswith(")")
+            and len(value) <= 1024
+            else None
+        )
 
 
 class BookmarkCollectionSerializer(serializers.Serializer):

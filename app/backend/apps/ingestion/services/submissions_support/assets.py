@@ -25,6 +25,8 @@ def content_type_for_suffix(path):
         return "image/jpeg"
     if suffix == ".webp":
         return "image/webp"
+    if suffix == ".png":
+        return "image/png"
     if suffix == ".html":
         return "text/html"
     return "application/octet-stream"

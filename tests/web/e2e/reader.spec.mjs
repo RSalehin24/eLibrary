@@ -24,7 +24,7 @@ test("reader launches from the book page and navigates chapters safely", async (
   await useAccount(page, "reading_reader");
   await page.goto(`/books/${encodeURIComponent(fixture.reading_book.slug)}/`);
   await expect(page.getByRole("link", { name: "EPUB ডাউনলোড" })).toBeVisible();
-  await page.getByRole("button", { name: "বই পড়ুন", exact: true }).click();
+  await page.getByRole("button", { name: "বই পড়ুন", exact: true }).or(page.getByRole("link", { name: "পড়া চালিয়ে যান", exact: true })).click();
   await expect(page).toHaveURL(/\/reader\/[0-9a-f-]+\/$/);
   const content = page.frameLocator(".reader-frame");
   await expect(content.getByRole("heading", { name: "প্রথম অধ্যায়" })).toBeVisible();
@@ -52,7 +52,7 @@ test("reader exposes failed progress writes and retries the latest position", as
     await failedSave;
     await expect(page.locator(".reader-save-status [role=alert]")).toContainText("পড়ার অবস্থান সংরক্ষণ হয়নি");
     await content.evaluate(() => { const root = document.scrollingElement; root.scrollTop = (root.scrollHeight - root.clientHeight) * 0.55; });
-    await expect(page.locator(".reader-toolbar")).toContainText(/2[78]%/);
+    await expect(page.locator(".reader-save-status")).toContainText(/(?:2[78]|২[৭৮])%/);
     await expect(page.getByRole("button", { name: "আবার সংরক্ষণ করুন" })).toBeVisible();
     proxy.failProgress = false;
     await page.getByRole("button", { name: "আবার সংরক্ষণ করুন" }).click();
@@ -132,7 +132,7 @@ test("reader preserves position across resizing and remains usable at 320 pixels
   await openReader(page);
   const body = page.frameLocator(".reader-frame").locator("body");
   await body.evaluate(() => { const root = document.scrollingElement; root.scrollTop = (root.scrollHeight - root.clientHeight) * .45; });
-  await expect(page.getByText(/2[23]% পড়া হয়েছে/)).toBeVisible();
+  await expect(page.getByText(/(?:2[23]|২[২৩])% পড়া হয়েছে/)).toBeVisible();
   for (const width of [320, 375, 390, 768, 820, 1024, 1366, 1920]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

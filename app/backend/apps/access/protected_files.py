@@ -1,3 +1,4 @@
+import mimetypes
 from pathlib import Path
 from urllib.parse import quote
 
@@ -31,11 +32,15 @@ def protected_file_response(path, content_type=None):
 def protected_download_response(asset, filename):
     from apps.access.storage import open_asset_stream
 
+    content_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     if not settings.PROTECTED_FILES_USE_NGINX:
         return FileResponse(
-            open_asset_stream(asset), as_attachment=True, filename=filename
+            open_asset_stream(asset),
+            as_attachment=True,
+            filename=filename,
+            content_type=content_type,
         )
     path = asset.file.path if asset.file and asset.file.name else asset.legacy_path
-    response = protected_file_response(path, "application/epub+zip")
+    response = protected_file_response(path, content_type)
     response["Content-Disposition"] = content_disposition_header(True, filename)
     return response

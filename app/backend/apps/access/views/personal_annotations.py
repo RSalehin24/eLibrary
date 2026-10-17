@@ -11,6 +11,7 @@ from apps.access.annotation_serializers import (
     BookmarkSummarySerializer,
     HighlightDetailSerializer,
     HighlightSummarySerializer,
+    PersonalAnnotationParametersSerializer,
     PersonalBookmarksSerializer,
     PersonalHighlightsSerializer,
 )
@@ -21,18 +22,21 @@ from apps.access.reading.annotations import (
     personal_annotations,
     update_annotation,
 )
-from apps.catalog.serializers.public import CollectionParametersSerializer
 from apps.common.api import VersionedAPIView
 
 from .reader_annotations import collection_response
 
 
 def personal_annotation_page(request, model):
-    parameters = CollectionParametersSerializer(data=request.query_params)
+    parameters = PersonalAnnotationParametersSerializer(data=request.query_params)
     parameters.is_valid(raise_exception=True)
-    scope = f"personal:{model._meta.label}:{request.user.pk}"
+    book = parameters.validated_data.get("book", "")
+    scope = f"personal:{model._meta.label}:{request.user.pk}:{book}"
+    queryset = personal_annotations(request.user, model)
+    if book:
+        queryset = queryset.filter(book__slug=book)
     return annotation_page(
-        annotation_summaries(personal_annotations(request.user, model)),
+        annotation_summaries(queryset),
         parameters.validated_data,
         scope,
     )
@@ -43,7 +47,7 @@ class PersonalBookmarksView(VersionedAPIView):
 
     @extend_schema(
         operation_id="personal_bookmarks",
-        parameters=[CollectionParametersSerializer],
+        parameters=[PersonalAnnotationParametersSerializer],
         responses={200: PersonalBookmarksSerializer},
     )
     def get(self, request):
@@ -56,7 +60,7 @@ class PersonalHighlightsView(VersionedAPIView):
 
     @extend_schema(
         operation_id="personal_highlights",
-        parameters=[CollectionParametersSerializer],
+        parameters=[PersonalAnnotationParametersSerializer],
         responses={200: PersonalHighlightsSerializer},
     )
     def get(self, request):

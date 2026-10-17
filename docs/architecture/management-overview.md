@@ -7,8 +7,12 @@ snapshots through `/api/v1/manage/overview/` and `/api/v1/manage/overview/work/`
 ## What administrators can see
 
 - Metadata administrators see counts for their manageable books only: total,
-  drafts, published records, and outstanding editorial review. Scoped grants,
-  deletion, and revocation use the existing catalog authorization query.
+  drafts, processing, ready, published and archived records. Legacy `needs_review`
+  records count as drafts, matching their current catalog label; they do not
+  require manual approval. Published books remain published regardless of the
+  old editorial-review timestamp. Scoped grants, deletion and revocation use the
+  existing catalog authorization query. The deprecated `editorial_pending` API
+  field remains zero for compatibility and is not displayed.
 - Global processors see source counts with exact catalog linkage, including
   unlinked and removed records, and processing-job state counts.
 - Global access administrators see account counts and invitation work for
@@ -48,17 +52,13 @@ issue queries join the book title without reading full content.
 
 ## Verification boundary
 
-Eleven PostgreSQL cases cover roles, scoped books, deletion/revocation, exact source
+Thirteen PostgreSQL cases cover lifecycle counts without manual review, roles,
+scoped books, deletion/revocation, exact source
 links, future retries, resumed queue age, protected/reset mail isolation, detail
 links, missing completion timestamps, and fixed query counts after adding 100 jobs.
-The current foundation regression run passed 706 backend tests. Four focused Chromium Overview journeys and ten
-responsive checks passed, including no-JavaScript rendering, work-only polling,
-failure navigation, all eight widths, and 200% text. Phone/desktop screenshots
-were inspected. TypeScript, ESLint, mypy, Ruff, OpenAPI validation, and the
-standalone production build passed.
-The complete Chromium run passed all 101 journeys against the standalone build.
-
-Source-processing/automation runs still need the new persisted workflow, so their
-outcomes are not fabricated here. Live broker/worker interruption, physical-device
-installation, production deployment, and the agreed capacity measurements remain
-unverified. This increment does not complete the administration phase.
+Browser regression coverage includes Bengali/English counts with no review
+counter, automatic-publication guidance in automation, no-JavaScript rendering,
+work-only polling and permission-scoped failure navigation. Phone/desktop
+screenshots are inspected against the served production build. Current results
+and remaining simulator acceptance limits are recorded in
+[the implementation handoff](../implementation-handoff.md).

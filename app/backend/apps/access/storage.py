@@ -31,3 +31,11 @@ def open_asset_stream(asset):
         if legacy_path.exists():
             return legacy_path.open("rb")
     raise Http404("Asset file is not available.")
+
+
+def asset_is_available(asset):
+    if asset is None:
+        return False
+    if asset.file and asset.file.name and asset_file_exists(asset.file):
+        return True
+    return bool(asset.legacy_path and Path(asset.legacy_path).is_file())

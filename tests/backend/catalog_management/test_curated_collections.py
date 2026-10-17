@@ -48,7 +48,7 @@ def test_collection_feed_is_lightweight_and_detail_is_reviewed(
     "changes",
     [
         {"state": "draft"},
-        {"editorial_reviewed_at": None},
+        {"state": "archived"},
         {"editorial_description": " \n "},
     ],
 )

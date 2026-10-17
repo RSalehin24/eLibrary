@@ -5,7 +5,7 @@ import pytest
 from apps.access.models import Bookmark, Highlight, PreviewAccessSession
 from apps.access.publication_models import PreparationState, PreparedPublication
 from apps.accounts.models import User
-from apps.catalog.models import UserBook
+from apps.catalog.models import Book, UserBook
 from django.db import IntegrityError, transaction
 from django.test import Client
 from django.utils import timezone
@@ -237,6 +237,46 @@ def test_personal_annotation_lists_are_bounded_and_lightweight(
         User.objects.create_user(email="cursor-stranger@library.test")
     )
     assert client.get(f"/api/v1/me/highlights/?{parameters}").status_code == 400
+
+
+@pytest.mark.parametrize(
+    "kind,model", [("bookmarks", Bookmark), ("highlights", Highlight)]
+)
+def test_personal_notes_filter_by_book_and_bind_cursors_to_that_book(
+    reader, kind, model
+):
+    client, user, book, _, _ = reader
+    other = Book.objects.create(title="Other notes book", slug="other-notes-book")
+    stranger = User.objects.create_user(email="book-notes-stranger@library.test")
+    model.objects.bulk_create(
+        [
+            model(
+                user=user,
+                book=book,
+                **(
+                    {"location": f"legacy-{index}"}
+                    if kind == "bookmarks"
+                    else {"cfi_range": f"legacy-{index}"}
+                ),
+            )
+            for index in range(2)
+        ]
+    )
+    model.objects.create(user=user, book=other)
+    model.objects.create(user=stranger, book=book)
+    path = f"/api/v1/me/{kind}/"
+    first = client.get(path, {"book": book.slug, "limit": 1}).json()
+    assert len(first["entries"]) == 1 and first["has_more"]
+    assert first["entries"][0]["book_slug"] == book.slug
+    cursor = first["next_cursor"]
+    following = client.get(
+        path, {"book": book.slug, "limit": 1, "cursor": cursor}
+    ).json()
+    assert len(following["entries"]) == 1 and not following["has_more"]
+    assert client.get(path, {"book": other.slug, "cursor": cursor}).status_code == 400
+    assert client.get(path, {"cursor": cursor}).status_code == 400
+    assert client.get(path, {"book": "unknown"}).json()["entries"] == []
+    assert client.get(path, {"book": "x" * 256}).status_code == 400
 
 
 def test_annotation_mutations_require_csrf(reader, annotation_session):

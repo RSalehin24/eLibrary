@@ -80,13 +80,12 @@ def review_book_editorial(user, book_id, expected_updated_at):
 @transaction.atomic
 def publish_book(user, book_id, expected_updated_at):
     book = revision_checked_book(user, book_id, expected_updated_at)
-    if book.review_state != ReviewState.APPROVED or not book.editorial_reviewed_at:
-        raise EditorialConflict("Review the current metadata before publication.")
     problem = source_publication_problem(book)
     if problem:
         raise EditorialConflict(problem)
     book.state = LifecycleState.PUBLISHED
-    book.save(update_fields=["state", "updated_at"])
+    book.review_state = ReviewState.APPROVED
+    book.save(update_fields=["state", "review_state", "updated_at"])
     return book
 
 

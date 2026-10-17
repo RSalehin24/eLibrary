@@ -25,6 +25,6 @@ export function AccountMailDetail({ initial }: { initial: AccountMailOperation }
     {job.error_code && <p className="field-error"><AdminText>{"সমস্যার পরিচয়: "}</AdminText><code>{job.error_code}</code></p>}
     {job.state === "needs_attention" && <p className="notice"><AdminText>{"ইমেইল গৃহীত হয়েছিল কি না নিশ্চিত নয়। স্বয়ংক্রিয়ভাবে আবার পাঠানো হবে না। নতুন আমন্ত্রণ চাইলে পাঠকের হিসাব থেকে পাঠান; পুরোনো লিংক বন্ধ হয়ে যাবে।"}</AdminText></p>}
     {query.isError && <p role="alert" className="field-error"><AdminText>{"বর্তমান অবস্থা পাওয়া যায়নি।"}</AdminText></p>}<AccountFeedback error={command.error} />
-    <div className="account-actions">{job.actions.filter(isJobAction).map((action) => <button key={action} className="button button-quiet" disabled={command.isPending || !!command.error || query.isError} onClick={() => command.mutate(action)}>{jobActions[action]}</button>)}
+    <div className="account-actions">{job.actions.filter(isJobAction).map((action) => <button key={action} className="button button-quiet" disabled={command.isPending || !!command.error || query.isError} onClick={() => command.mutate(action)}><AdminText>{jobActions[action]}</AdminText></button>)}
       <button className="button button-quiet" onClick={() => void refresh()} disabled={command.isPending || query.isFetching}><AdminText>{"বর্তমান অবস্থা দেখুন"}</AdminText></button></div></section>;
 }

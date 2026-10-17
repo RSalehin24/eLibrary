@@ -7,10 +7,10 @@ test("phone invitation workflow creates a restricted reader and controls queued 
   const email = `browser-invitation-${randomUUID()}@example.test`;
   await page.getByLabel("পাঠকের ইমেইল", { exact: true }).fill(email);
   await page.getByLabel("পাঠকের নাম", { exact: true }).fill("নতুন আমন্ত্রিত পাঠক");
-  await page.getByLabel("দুই ধাপে প্রবেশ আবশ্যক", { exact: true }).check();
-  const save = page.getByRole("button", { name: "আমন্ত্রণ পাঠানোর অনুরোধ করুন", exact: true });
+  await page.getByLabel("দুই ধাপের নিরাপত্তা বাধ্যতামূলক", { exact: true }).check();
+  const save = page.getByRole("button", { name: "আমন্ত্রণ পাঠান", exact: true });
   expect((await save.boundingBox()).height).toBeGreaterThanOrEqual(44); await save.click();
-  await expect(page.getByRole("heading", { name: "আমন্ত্রণের অনুরোধ সংরক্ষিত হয়েছে", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "আমন্ত্রণ পাঠানোর কাজ যোগ হয়েছে", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "আমন্ত্রণের অবস্থা দেখুন", exact: true }).click();
   await expect(page.getByRole("heading", { name: "আমন্ত্রণের ইমেইল", exact: true })).toBeVisible();
   const firstPath = new URL(page.url()).pathname;
@@ -20,12 +20,12 @@ test("phone invitation workflow creates a restricted reader and controls queued 
   await page.getByRole("button", { name: "স্থগিত করুন", exact: true }).click(); await expect(page.locator(".status-label")).toHaveText("স্থগিত");
   await page.getByRole("button", { name: "আবার চালু করুন", exact: true }).click(); await expect(page.locator(".status-label")).toHaveText("অপেক্ষমাণ");
   await page.getByRole("button", { name: "বাতিল করুন", exact: true }).click(); await expect(page.locator(".status-label")).toHaveText("বাতিল");
-  await page.getByRole("link", { name: "পাঠকের হিসাব ও অনুমতি দেখুন →", exact: true }).click();
+  await page.getByRole("link", { name: "অ্যাকাউন্ট ও অনুমতি দেখুন", exact: true }).click();
   await expect(page.getByRole("heading", { name: "নতুন আমন্ত্রিত পাঠক", exact: true })).toBeVisible();
-  await expect(page.getByText("প্রবেশ: সক্রিয় · দুই ধাপ: প্রস্তুতি বাকি", { exact: true })).toBeVisible();
+  await expect(page.getByText("প্রবেশ: সক্রিয় · দুই ধাপ: সেটআপ বাকি", { exact: true })).toBeVisible();
   await page.getByRole("button", { name: "নতুন আমন্ত্রণের লিংক পাঠান", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "নতুন আমন্ত্রণের অনুরোধ সংরক্ষিত হয়েছে" })).toBeVisible();
-  await page.getByRole("link", { name: "আমন্ত্রণের অবস্থা দেখুন →", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "নতুন আমন্ত্রণ পাঠানোর কাজ যোগ হয়েছে" })).toBeVisible();
+  await page.getByRole("link", { name: "আমন্ত্রণের অবস্থা দেখুন", exact: true }).click();
   expect(new URL(page.url()).pathname).not.toBe(firstPath);
   await expect(page.locator(".status-label")).toHaveText("অপেক্ষমাণ");
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, nofollow");
@@ -38,7 +38,7 @@ test("phone invitation workflow creates a restricted reader and controls queued 
 test("invitation validation preserves editable fields and uncertain writes retain their identifier", async ({ page }) => {
   await useAccount(page, "access_manager"); await page.goto("/manage/users-access/invite/");
   const email = page.getByLabel("পাঠকের ইমেইল", { exact: true }); await email.fill(fixture.managed_reader.email);
-  const save = page.getByRole("button", { name: "আমন্ত্রণ পাঠানোর অনুরোধ করুন", exact: true }); await save.click();
+  const save = page.getByRole("button", { name: "আমন্ত্রণ পাঠান", exact: true }); await save.click();
   await expect(email).toHaveAttribute("aria-invalid", "true"); await expect(save).toBeEnabled();
   const writes = [];
   await page.route("**/api/v1/manage/invitations/", async (route) => {
@@ -47,7 +47,7 @@ test("invitation validation preserves editable fields and uncertain writes retai
   await email.fill(`uncertain-${randomUUID()}@example.test`); await save.click();
   await expect(save).toBeDisabled(); await expect(page.locator(".account-form").getByRole("alert")).toContainText("ফলাফল নিশ্চিত করা যায়নি");
   expect(writes).toHaveLength(1);
-  await expect(page.getByRole("link", { name: "এই অনুরোধের অবস্থা দেখুন →", exact: true })).toHaveAttribute("href", `/manage/users-access/mail/${writes[0].operation_id}/`);
+  await expect(page.getByRole("link", { name: "এই অনুরোধের অবস্থা দেখুন", exact: true })).toHaveAttribute("href", `/manage/users-access/mail/${writes[0].operation_id}/`);
 });
 
 test("anonymous reset request has generic feedback and respects private session boundaries", async ({ page }) => {
@@ -93,5 +93,5 @@ test("invitation forms remain usable at 320 pixels with 200 percent text", async
   await page.goto("/manage/users-access/invite/"); await page.addStyleTag({ content: "html { font-size: 200%; }" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await expect(page.getByLabel("পাঠকের ইমেইল", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "আমন্ত্রণ পাঠানোর অনুরোধ করুন", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "আমন্ত্রণ পাঠান", exact: true })).toBeVisible();
 });

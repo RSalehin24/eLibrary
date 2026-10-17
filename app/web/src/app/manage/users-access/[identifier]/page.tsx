@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,7 @@ import { ManagedAccountWorkspace } from "@/components/managed-account-workspace"
 import { routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "হিসাব ও অনুমতি পরিচালনা" };
+export async function generateMetadata() { return localizeMetadata({ title: "হিসাব ও অনুমতি পরিচালনা" }); }
 
 export default async function ManagedAccountPage({ params, searchParams }: { params: Promise<{ identifier: string }>; searchParams: Promise<RouteQuery> }) {
   const raw = (await params).identifier; if (!/^[1-9][0-9]*$/.test(raw) || !Number.isSafeInteger(Number(raw))) notFound();

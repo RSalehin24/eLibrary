@@ -67,7 +67,5 @@ class EditorialMetadata(models.Model):
     @property
     def is_indexable(self):
         return bool(
-            self.indexing_eligible
-            and self.editorial_reviewed_at
-            and clean_display_text(self.editorial_description)
+            self.indexing_eligible and clean_display_text(self.editorial_description)
         )

@@ -20,7 +20,10 @@ def managed_book_queryset(user, parameters):
         "review_state",
         "record_type",
     )
-    queryset = filter_public_books(queryset, parameters)
+    if collection := parameters.get("collection"):
+        queryset = queryset.filter(collection_books__collection__slug=collection)
+    filters = {**parameters, "collection": ""}
+    queryset = filter_public_books(queryset, filters)
     return with_public_relations(
         search_public_books(queryset, parameters["q"])
     ).order_by(

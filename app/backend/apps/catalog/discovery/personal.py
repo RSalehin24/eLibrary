@@ -75,6 +75,13 @@ def personal_feed(actor, view):
             else Book.objects.none()
         )
     visible = visible_personal_books(actor)
+    if view == "all":
+        return visible.filter(
+            Q(user_books__user=actor)
+            | Q(saved_by__user=actor)
+            | Q(reading_sessions__user=actor)
+            | Q(physical_reading_logs__user=actor)
+        ).distinct()
     if view == "saved":
         return visible.filter(
             pk__in=SavedBook.objects.filter(user=actor).values("book_id")

@@ -2,9 +2,9 @@ import { test, expect, fixture, useAccount } from "./fixtures.mjs";
 
 test("saved and granted library views do not transfer ownership", async ({ page }) => {
   await useAccount(page, "personal_reader"); await page.goto(`/books/${encodeURIComponent(fixture.book.slug)}/`);
-  await page.getByRole("button", { name: "পরে পড়ার জন্য রাখুন", exact: true }).click();
-  await expect(page.getByRole("button", { name: "সংরক্ষিত তালিকা থেকে সরান", exact: true })).toBeVisible();
-  await page.goto("/my-books/?view=saved"); await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "আমার বইয়ে যোগ করুন", exact: true }).click();
+  await expect(page.getByRole("button", { name: "আমার বই থেকে সরান", exact: true })).toBeVisible();
+  await page.goto("/my-books/"); await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
   await page.goto("/my-books/?view=owned"); await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "অনুমতি পাওয়া বই", exact: true }).click();
   await expect(page.getByRole("heading", { name: fixture.personal.private.title, exact: true })).toBeVisible();

@@ -30,7 +30,15 @@ current authority. Saving a schedule explicitly changes execution authority to
 the saving administrator. Disabling prevents future runs; existing work remains
 visible and controllable through Jobs.
 
-Each run discovers at most 1–200 archive pages. A processing limit of zero only
+Schedules choose full-catalog fetching (`fetch_all`) or a limit of 1–200 archive
+pages. Processing can queue every eligible book (`process_all`), use a bounded
+limit, or only fetch the catalog. Full mode creates one durable catalog batch
+with a run association and a deterministic identifier. Run history links to that
+parent's queueing controls and counts actual child book jobs separately. A retry
+cannot duplicate the batch or accepted children. The main creation screen opens
+the schedule form directly and links to saved schedules and their next run times.
+
+In bounded mode, a processing limit of zero only
 collects metadata. A limit of 1–100 snapshots that many recently seen, unlinked
 sources, excluding active or failed source operations. Each selected record
 keeps its original revision and a deterministic child operation UUID. A pause,

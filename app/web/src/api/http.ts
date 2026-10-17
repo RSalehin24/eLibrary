@@ -1,12 +1,14 @@
-type ErrorDetails = { code?: string; fieldErrors?: Record<string, string[]> };
+type ErrorDetails = { code?: string; detail?: string; fieldErrors?: Record<string, string[]> };
 
 export class APIError extends Error {
   readonly code: string;
+  readonly detail: string;
   readonly fieldErrors: Record<string, string[]>;
 
   constructor(message: string, readonly status: number, details: ErrorDetails = {}) {
     super(message);
     this.code = details.code ?? "request_failed";
+    this.detail = details.detail ?? "";
     this.fieldErrors = details.fieldErrors ?? {};
   }
 }
@@ -25,6 +27,7 @@ async function responseError(response: Response) {
   if (!payload || typeof payload !== "object") return new APIError(message, response.status);
   return new APIError(message, response.status, {
     code: "code" in payload && typeof payload.code === "string" ? payload.code : undefined,
+    detail: "detail" in payload && typeof payload.detail === "string" ? payload.detail : undefined,
     fieldErrors: errorFields("field_errors" in payload ? payload.field_errors : undefined),
   });
 }

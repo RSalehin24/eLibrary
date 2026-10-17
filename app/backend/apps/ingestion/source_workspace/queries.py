@@ -46,7 +46,12 @@ def source_entries(parameters):
         "linked": {"linked": True, "removed": False},
         "removed": {"removed": True},
     }
-    return queryset.filter(**filters.get(parameters["status"], {}))
+    queryset = queryset.filter(**filters.get(parameters["status"], {}))
+    if parameters.get("catalog_scope") == "unfinished":
+        from .unfinished import unfinished_source_query
+
+        queryset = queryset.filter(unfinished_source_query())
+    return queryset
 
 
 def source_book_map(entries):

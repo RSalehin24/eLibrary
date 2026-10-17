@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,7 +8,7 @@ import type { BackgroundJobDetail } from "@/api/types";
 import { JobDetail } from "@/components/job-detail";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "কাজের অবস্থা" };
+export async function generateMetadata() { return localizeMetadata({ title: "কাজের অবস্থা" }); }
 
 export default async function JobPage({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;

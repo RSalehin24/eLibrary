@@ -4,10 +4,12 @@ from xml.etree import ElementTree
 
 from .epub_archive import MAX_XML_BYTES, read_entry
 from .epub_paths import InvalidEpub, referenced_path
+from .navigation import publication_navigation
 
 PACKAGE_NAMESPACE = {"opf": "http://www.idpf.org/2007/opf"}
 CONTAINER_NAMESPACE = {"c": "urn:oasis:names:tc:opendocument:xmlns:container"}
 DOCUMENT_TYPES = {"application/xhtml+xml", "text/html"}
+READER_MANIFEST_VERSION = 2
 
 
 def read_xml(archive, entry):
@@ -28,7 +30,11 @@ def publication_manifest(archive: zipfile.ZipFile, entries):
     package = read_xml(archive, entries[package_path])
     resources = manifest_resources(package, package_path, entries)
     chapters = spine_chapters(package, resources)
-    return {"chapters": chapters, "resources": list(resources.values())}
+    return {
+        "chapters": chapters,
+        "resources": list(resources.values()),
+        "navigation": publication_navigation(archive, resources, chapters),
+    }
 
 
 def manifest_resources(package, package_path, entries):
@@ -47,19 +53,35 @@ def manifest_resources(package, package_path, entries):
             "path": path,
             "media_type": media_type,
             "size": entries[path].file_size,
+            "href": item.attrib["href"],
+            "navigation_type": "nav"
+            if "nav" in item.attrib.get("properties", "").split()
+            else "ncx"
+            if media_type == "application/x-dtbncx+xml"
+            else "",
         }
     return resources
 
 
 def spine_chapters(package, resources):
-    chapters: list[dict[str, str]] = []
-    for item in package.findall("opf:spine/opf:itemref", PACKAGE_NAMESPACE):
+    chapters: list[dict[str, str | int]] = []
+    spine = package.find("opf:spine", PACKAGE_NAMESPACE)
+    if spine is None:
+        raise InvalidEpub("EPUB contains no readable chapters.")
+    for index, item in enumerate(spine):
         resource = resources.get(item.attrib["idref"])
         if resource is None or resource["media_type"] not in DOCUMENT_TYPES:
             raise InvalidEpub("EPUB chapter is missing or unsupported.")
         if item.attrib.get("linear", "yes") != "no":
             chapters.append(
-                {"path": resource["path"], "label": f"অধ্যায় {len(chapters) + 1}"}
+                {
+                    "path": resource["path"],
+                    "label": f"অধ্যায় {len(chapters) + 1}",
+                    "spine_index": index,
+                    "idref": item.attrib["idref"],
+                    "spine_step": (list(package).index(spine) + 1) * 2,
+                    "href": resource["href"],
+                }
             )
     if not chapters:
         raise InvalidEpub("EPUB contains no readable chapters.")

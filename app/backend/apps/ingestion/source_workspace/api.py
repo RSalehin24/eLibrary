@@ -9,6 +9,7 @@ from apps.common.pagination import BoundedAdminPagination
 from apps.common.permissions import CanManageProcessing
 from apps.ingestion.models import SourceCatalogEntry
 
+from .content import source_content_summary
 from .queries import source_entries, source_snapshots
 from .serializers import (
     SourceEntryCollectionSerializer,
@@ -57,6 +58,10 @@ class SourceEntryDetailView(VersionedAPIView):
         entry = get_object_or_404(
             source_entries({"q": "", "status": "all"}), pk=identifier
         )
+        snapshot = source_snapshots([entry], request.user)[0]
         return Response(
-            SourceEntrySerializer(source_snapshots([entry], request.user)[0]).data
+            SourceEntrySerializer(
+                snapshot,
+                context={"content_summary": source_content_summary(snapshot.book)},
+            ).data
         )

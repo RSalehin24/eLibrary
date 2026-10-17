@@ -1,3 +1,4 @@
+
 import { AdminDate, AdminNumber, AdminText } from "@/components/admin-language";
 import type { BackgroundJobDetail } from "@/api/types";
 import { jobStage } from "@/lib/job-status";
@@ -9,7 +10,7 @@ export function JobFacts({ job }: { job: BackgroundJobDetail }) {
 }
 
 export function JobAttempts({ job }: { job: BackgroundJobDetail }) {
-  return <><h2><AdminText>{"সর্বশেষ চেষ্টাগুলো"}</AdminText></h2><ol className="job-list">{job.attempts.map((attempt) => <li className="job-card" key={attempt.id}><strong><AdminText>{"চেষ্টা "}</AdminText><AdminNumber value={attempt.number} /> · {jobStage(attempt.stage)}</strong>
+  return <><h2><AdminText>{"সর্বশেষ চেষ্টাগুলো"}</AdminText></h2><ol className="job-list">{job.attempts.map((attempt) => <li className="job-card" key={attempt.id}><strong><AdminText>{"চেষ্টা "}</AdminText><AdminNumber value={attempt.number} /> · <AdminText>{jobStage(attempt.stage)}</AdminText></strong>
     <p className="muted"><AdminDate value={attempt.created_at} /><AdminText>{" · শেষ: "}</AdminText><AdminDate value={attempt.finished_at} /></p>{attempt.error_code && <p className="field-error"><code>{attempt.error_code}</code></p>}</li>)}</ol>
     {!job.attempts.length && <p className="muted"><AdminText>{"কাজটি এখনও শুরু হয়নি।"}</AdminText></p>}</>;
 }

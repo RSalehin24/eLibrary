@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteText } from "@/components/site-language";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { cancelKindle, kindleOperation } from "@/api/kindle";
 import type { KindleOperation as Operation } from "@/api/types";
@@ -16,9 +18,9 @@ export function KindleOperation({ initial }: { initial: Operation }) {
   useUpdateParticipant({ dirty: cancellation.isPending });
   async function refresh() { if ((await status.refetch()).isSuccess) cancellation.reset(); }
   return <section className="account-section"><KindleSummary operation={status.data} />
-    {status.data.recipients.some((recipient) => recipient.outcome === "accepted") && <p className="muted">মেইল সার্ভার ইতিমধ্যে গ্রহণ করেছে এমন বই বাতিল করে ফেরানো যাবে না।</p>}
+    {status.data.recipients.some((recipient) => recipient.outcome === "accepted") && <p className="muted"><SiteText>{"মেইল সার্ভার ইতিমধ্যে গ্রহণ করেছে এমন বই বাতিল করে ফেরানো যাবে না।"}</SiteText></p>}
     <AccountFeedback error={cancellation.error} conflictMessage="পাঠানোর অবস্থা বদলেছে। বর্তমান ফল দেখে সিদ্ধান্ত নিন।" />
-    {status.isError && <p className="field-error" role="alert">হালনাগাদ অবস্থা পাওয়া যায়নি।</p>}
-    <div className="account-actions">{status.data.can_cancel && <button className="button button-quiet" disabled={cancellation.isPending || !!cancellation.error || status.isError} onClick={() => cancellation.mutate()}>পাঠানো বাতিল করুন</button>}
-      <button className="button button-quiet" disabled={cancellation.isPending || status.isFetching} onClick={() => void refresh()}>বর্তমান অবস্থা দেখুন</button></div></section>;
+    {status.isError && <p className="field-error" role="alert"><SiteText>{"হালনাগাদ অবস্থা পাওয়া যায়নি।"}</SiteText></p>}
+    <div className="account-actions">{status.data.can_cancel && <button className="button button-quiet" disabled={cancellation.isPending || !!cancellation.error || status.isError} onClick={() => cancellation.mutate()}><SiteText>{"পাঠানো বাতিল করুন"}</SiteText></button>}
+      <button className="button button-quiet" disabled={cancellation.isPending || status.isFetching} onClick={() => void refresh()}><SiteText>{"বর্তমান অবস্থা দেখুন"}</SiteText></button></div></section>;
 }

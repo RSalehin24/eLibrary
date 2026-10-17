@@ -78,7 +78,11 @@ def test_digital_books_do_not_receive_physical_logs_and_paper_books_have_no_epub
         "can_download": False,
         "prepared": False,
         "can_send_kindle": False,
+        "html_url": None,
+        "cover_url": None,
         "active_session_id": None,
+        "reading_progress": None,
+        "last_opened_at": None,
     }
     book.record_type = "digital"
     book.save()

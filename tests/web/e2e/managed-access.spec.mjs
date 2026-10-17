@@ -18,12 +18,12 @@ test("phone access workflow saves accounts and manages a scoped grant without tr
   await useAccount(page, "access_manager"); await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(accountPath("managed_reader"));
   await page.getByLabel("পাঠকের নাম", { exact: true }).fill("অনুমতির পরীক্ষার পাঠক");
-  await page.getByRole("button", { name: "হিসাব সংরক্ষণ করুন", exact: true }).click();
-  await expect(page.getByRole("status").filter({ hasText: "হিসাবের পরিবর্তন সংরক্ষিত হয়েছে" })).toBeVisible();
+  await page.getByRole("button", { name: "অ্যাকাউন্ট সংরক্ষণ করুন", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "অ্যাকাউন্টের পরিবর্তন সংরক্ষিত হয়েছে" })).toBeVisible();
   await page.getByLabel("অনুমতির পরিধি", { exact: true }).selectOption("book");
   await page.getByLabel("বই, বিভাগ বা লেখকের নাম খুঁজুন").fill(fixture.reading_book.title);
-  await expect(page.getByLabel("লক্ষ্য নির্বাচন করুন")).toBeEnabled();
-  await page.getByLabel("লক্ষ্য নির্বাচন করুন").selectOption(fixture.reading_book.id);
+  await expect(page.getByLabel("বই, বিভাগ বা লেখক বেছে নিন")).toBeEnabled();
+  await page.getByLabel("বই, বিভাগ বা লেখক বেছে নিন").selectOption(fixture.reading_book.id);
   const save = page.getByRole("button", { name: "অনুমতি যোগ করুন", exact: true });
   expect((await save.boundingBox()).height).toBeGreaterThanOrEqual(44);
   await save.click(); const card = page.locator("[data-grant-id]");
@@ -51,10 +51,10 @@ test("stale account edits preserve the draft and never automatically replay", as
   await expect(page.getByText("অনুমতি সংরক্ষিত হয়েছে।", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: "অন্য জায়গায় পরিবর্তন", exact: true })).toBeVisible();
   const writes = []; page.on("request", (request) => { if (request.method() === "PATCH") writes.push(request); });
-  await page.getByRole("button", { name: "হিসাব সংরক্ষণ করুন", exact: true }).click();
+  await page.getByRole("button", { name: "অ্যাকাউন্ট সংরক্ষণ করুন", exact: true }).click();
   await expect(page.locator(".account-settings").getByRole("alert")).toContainText("তথ্যটি অন্য জায়গায় বদলেছে");
   await expect(name).toHaveValue("অসম্পূর্ণ লেখা রাখা হবে");
-  await expect(page.getByRole("button", { name: "হিসাব সংরক্ষণ করুন", exact: true })).toBeDisabled(); expect(writes).toHaveLength(1);
+  await expect(page.getByRole("button", { name: "অ্যাকাউন্ট সংরক্ষণ করুন", exact: true })).toBeDisabled(); expect(writes).toHaveLength(1);
 });
 
 test("uncertain grant writes stop resubmission and keep the selected scope", async ({ page }) => {
@@ -74,8 +74,8 @@ test("uncertain grant writes stop resubmission and keep the selected scope", asy
 test("self and staff account details have no management forms", async ({ page }) => {
   await useAccount(page, "access_manager");
   for (const account of ["access_manager", "administrator"]) {
-    await page.goto(accountPath(account)); await expect(page.getByRole("button", { name: "হিসাব সংরক্ষণ করুন", exact: true })).toHaveCount(0);
-    await expect(page.getByText("নিজের হিসাব বা এই সংরক্ষিত প্রশাসনিক হিসাব এখান থেকে বদলানো যাবে না।")).toBeVisible();
+    await page.goto(accountPath(account)); await expect(page.getByRole("button", { name: "অ্যাকাউন্ট সংরক্ষণ করুন", exact: true })).toHaveCount(0);
+    await expect(page.getByText("নিজের বা সুরক্ষিত অ্যাডমিন অ্যাকাউন্ট এখানে বদলানো যাবে না।")).toBeVisible();
   }
 });
 
@@ -91,9 +91,9 @@ test("target search cancels obsolete reads and never applies their results", asy
   const search = page.getByLabel("বই, বিভাগ বা লেখকের নাম খুঁজুন");
   await search.fill(fixture.reading_book.title); await expect.poll(() => queries.includes(fixture.reading_book.title)).toBe(true);
   await search.fill(fixture.update_book.title);
-  await expect(page.getByLabel("লক্ষ্য নির্বাচন করুন")).toBeDisabled();
+  await expect(page.getByLabel("বই, বিভাগ বা লেখক বেছে নিন")).toBeDisabled();
   await expect(page.locator(`option[value="${fixture.update_book.id}"]`)).toHaveCount(1);
-  release(); await expect(page.getByLabel("লক্ষ্য নির্বাচন করুন")).toBeEnabled();
+  release(); await expect(page.getByLabel("বই, বিভাগ বা লেখক বেছে নিন")).toBeEnabled();
   await expect(page.locator(`option[value="${fixture.reading_book.id}"]`)).toHaveCount(0);
-  await expect(page.getByLabel("লক্ষ্য নির্বাচন করুন")).toHaveValue("");
+  await expect(page.getByLabel("বই, বিভাগ বা লেখক বেছে নিন")).toHaveValue("");
 });

@@ -1,5 +1,8 @@
 "use client";
 
+import { FilePicker } from "./file-picker";
+
+
 import { AdminText } from "@/components/admin-language";
 import { useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -22,7 +25,7 @@ export function BookEpubUpload({ editor }: { editor: BookEditor }) {
     <form ref={element} onSubmit={(event) => {
       event.preventDefault(); if (!file || blocked) return;
       upload.mutate(file, { onSuccess: async () => { setFile(null); element.current?.reset(); await client.invalidateQueries({ queryKey: ["private", "processing-assets", book.slug] }); } });
-    }}><div className="form-field"><label htmlFor="book-epub"><AdminText>{"বইয়ের EPUB ফাইল"}</AdminText></label><input id="book-epub" name="epub" type="file" accept=".epub,application/epub+zip" required disabled={blocked} onChange={(event) => { setFile(event.target.files?.[0] ?? null); upload.reset(); }} /></div>
+    }}><div className="form-field"><label htmlFor="book-epub"><AdminText>{"বইয়ের EPUB ফাইল"}</AdminText></label><FilePicker id="book-epub" name="epub" type="file" accept=".epub,application/epub+zip" required disabled={blocked} onChange={(event) => { setFile(event.target.files?.[0] ?? null); upload.reset(); }} /></div>
       <button className="button" disabled={!file || blocked}><AdminText>{upload.isPending ? "আপলোড হচ্ছে…" : "EPUB আপলোড করুন"}</AdminText></button>
     </form>{dirty && <p className="notice"><AdminText>{"আপলোডের আগে বইয়ের অসম্পূর্ণ তথ্য সংরক্ষণ করুন।"}</AdminText></p>}
     <AccountFeedback error={upload.error} />

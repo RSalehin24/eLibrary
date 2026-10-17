@@ -9,6 +9,7 @@ from django.db.models import (
     When,
 )
 
+from apps.catalog.cover_urls import with_cover_asset
 from apps.catalog.discovery.entities import public_entities
 from apps.catalog.discovery.publication import public_books
 from apps.catalog.models import (
@@ -35,7 +36,7 @@ def published_books():
 
 
 def with_public_relations(queryset):
-    return queryset.prefetch_related(
+    return with_cover_asset(queryset).prefetch_related(
         Prefetch(
             "book_contributors",
             queryset=BookContributor.objects.select_related("contributor").only(
@@ -73,10 +74,19 @@ def with_public_relations(queryset):
     )
 
 
+def filter_contributor_books(queryset, parameters):
+    filters = {}
+    if parameters["contributor"]:
+        filters["book_contributors__contributor__slug"] = parameters["contributor"]
+    if role := parameters.get("contributor_role"):
+        filters["book_contributors__role"] = role
+    return queryset.filter(**filters)
+
+
 def filter_public_books(queryset, parameters):
+    queryset = filter_contributor_books(queryset, parameters)
     for parameter, relation in (
         ("category", "book_categories__category__slug"),
-        ("contributor", "book_contributors__contributor__slug"),
         ("series", "book_series__series__slug"),
     ):
         if parameters[parameter]:
@@ -95,15 +105,12 @@ def matching_search_term(normalized):
         Q(contributor__normalized_name__contains=normalized)
         | Q(
             contributor__normalized_aliases__contains=normalized,
-            contributor__editorial_reviewed_at__isnull=False,
         )
     )
     return (
         Q(catalog_code=normalized.upper())
         | Q(normalized_title__contains=normalized)
-        | Q(
-            normalized_aliases__contains=normalized, editorial_reviewed_at__isnull=False
-        )
+        | Q(normalized_aliases__contains=normalized)
         | Q(pk__in=contributors.values("book_id"))
     )
 

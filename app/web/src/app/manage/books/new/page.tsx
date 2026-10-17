@@ -1,9 +1,10 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import { notFound } from "next/navigation";
 import { BookCreateForm } from "@/components/book-create-form";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "বইয়ের নথি তৈরি" };
+export async function generateMetadata() { return localizeMetadata({ title: "বইয়ের নথি তৈরি" }); }
 
 export default async function NewCatalogBookPage() {
   const session = await requireManagement("books", "/manage/books/new/");

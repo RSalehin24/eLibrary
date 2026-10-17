@@ -8,7 +8,6 @@ performs job dispatch, and runs periodic stale worker checks.
 import json
 import logging
 import threading
-import time
 from datetime import datetime, timezone
 
 from .constants import *
@@ -41,6 +40,7 @@ class JobEngine:
         self._thread = None
         self._pubsub = None
         self._stale_thread = None
+        self._stopping = threading.Event()
 
     def start(self):
         """Start the engine: recover state, subscribe to channels, begin loop."""
@@ -49,6 +49,7 @@ class JobEngine:
             return
 
         self._running = True
+        self._stopping.clear()
 
         recover_state(self.redis, self.heartbeat_timeout)
 
@@ -80,6 +81,7 @@ class JobEngine:
     def stop(self):
         """Stop the engine gracefully."""
         self._running = False
+        self._stopping.set()
         if self._pubsub:
             try:
                 self._pubsub.unsubscribe()
@@ -87,6 +89,8 @@ class JobEngine:
                 pass
         if self._thread:
             self._thread.join(timeout=3.0)
+        if self._stale_thread:
+            self._stale_thread.join(timeout=3.0)
         if self._pubsub:
             try:
                 self._pubsub.close()
@@ -101,6 +105,13 @@ class JobEngine:
         return self._running
 
     def _event_loop(self):
+        from django.db import connections
+        try:
+            self._process_events()
+        finally:
+            connections.close_all()
+
+    def _process_events(self):
         """Process pub/sub messages in a loop."""
         while self._running:
             try:
@@ -119,9 +130,17 @@ class JobEngine:
                     logger.exception("Error handling message on channel %s", message.get("channel"))
 
     def _stale_check_loop(self):
+        from django.db import connections
+        try:
+            self._check_stale_workers()
+        finally:
+            connections.close_all()
+
+    def _check_stale_workers(self):
         """Periodically check for stale workers."""
         while self._running:
-            time.sleep(self.heartbeat_check_interval)
+            if self._stopping.wait(self.heartbeat_check_interval):
+                break
             try:
                 stale = check_stale_workers(self.redis, self.heartbeat_timeout)
                 if stale:

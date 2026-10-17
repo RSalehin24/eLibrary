@@ -16,7 +16,7 @@ from apps.catalog.models import GeneratedAsset, GeneratedAssetType
 
 from .document_safety import PREPARATION_VERSION, safe_document
 from .epub_archive import MAX_ARCHIVE_BYTES, checked_entries, read_entry
-from .epub_manifest import DOCUMENT_TYPES, publication_manifest
+from .epub_manifest import DOCUMENT_TYPES, READER_MANIFEST_VERSION, publication_manifest
 from .epub_paths import InvalidEpub, resource_path
 
 
@@ -58,6 +58,7 @@ def extract_publication(snapshot, destination):
             manifest = publication_manifest(archive, entries)
             extract_resources(archive, entries, (manifest, destination))
             manifest["preparation_version"] = PREPARATION_VERSION
+            manifest["manifest_version"] = READER_MANIFEST_VERSION
         return manifest
     except (KeyError, UnicodeError, ElementTree.ParseError, zipfile.BadZipFile) as exc:
         raise InvalidEpub("EPUB metadata or resources are invalid.") from exc
@@ -137,7 +138,10 @@ def write_publication(publication, snapshot):
 
 
 def publication_files_available(publication):
-    if publication.manifest.get("preparation_version") != PREPARATION_VERSION:
+    if (
+        publication.manifest.get("preparation_version") != PREPARATION_VERSION
+        or publication.manifest.get("manifest_version") != READER_MANIFEST_VERSION
+    ):
         return False
     directory = publication_directory(publication)
     return all(

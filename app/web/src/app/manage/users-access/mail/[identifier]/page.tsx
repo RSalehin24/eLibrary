@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,7 +8,7 @@ import type { AccountMailOperation } from "@/api/types";
 import { AccountMailDetail } from "@/components/account-mail-detail";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "আমন্ত্রণের অবস্থা" };
+export async function generateMetadata() { return localizeMetadata({ title: "আমন্ত্রণের অবস্থা" }); }
 
 export default async function MailOperationPage({ params }: { params: Promise<{ identifier: string }> }) {
   const { identifier } = await params;

@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteText } from "@/components/site-language";
+
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { deleteAnnotation, updateNote, type AnnotationKind } from "@/api/annotations";
@@ -21,13 +23,13 @@ export function AnnotationNote({ annotation, kind, onSaved }: { annotation: Book
   return <section className="annotation-note"><p>{annotation.book_title} · {annotation.chapter_label}</p>
     {"text" in annotation && <blockquote>{annotation.text}</blockquote>}
     <form onSubmit={(event) => { event.preventDefault(); saving.mutate(); }}>
-      <label htmlFor={`note-${annotation.id}`}>আপনার নোট</label><textarea id={`note-${annotation.id}`} rows={5} maxLength={5000} value={note} onChange={(event) => setNote(event.target.value)} />
-      {failed && <p className="notice" role="alert">{failed instanceof APIError && failed.code === "state_conflict" ? "নোটটি অন্য জায়গায় বদলেছে। আবার খুলে নতুন তথ্য দেখুন।" : "পরিবর্তন সংরক্ষণ হয়নি। আবার চেষ্টা করুন।"}</p>}
-      <div className="annotation-actions"><button className="button" disabled={saving.isPending || deleting.isPending}>নোট সংরক্ষণ করুন</button>
-        <button className="button button-quiet" type="button" onClick={() => setRemove(true)}>মুছে ফেলুন</button></div>
+      <label htmlFor={`note-${annotation.id}`}><SiteText>{"আপনার নোট"}</SiteText></label><textarea id={`note-${annotation.id}`} rows={5} maxLength={5000} value={note} onChange={(event) => setNote(event.target.value)} />
+      {failed && <p className="notice" role="alert">{failed instanceof APIError && failed.code === "state_conflict" ? <SiteText>{"নোটটি অন্য জায়গায় বদলেছে। আবার খুলে নতুন তথ্য দেখুন।"}</SiteText> : <SiteText>{"পরিবর্তন সংরক্ষণ হয়নি। আবার চেষ্টা করুন।"}</SiteText>}</p>}
+      <div className="annotation-actions"><button className="button" disabled={saving.isPending || deleting.isPending}><SiteText>{"নোট সংরক্ষণ করুন"}</SiteText></button>
+        <button className="button button-quiet" type="button" onClick={() => setRemove(true)}><SiteText>{"মুছে ফেলুন"}</SiteText></button></div>
     </form>
-    {remove && <div className="notice"><p>এই {kind === "bookmarks" ? "বুকমার্ক" : "দাগ ও নোট"} মুছে ফেলবেন?</p><div className="annotation-actions">
-      <button className="button" disabled={deleting.isPending || saving.isPending} onClick={() => deleting.mutate()}>হ্যাঁ, মুছে ফেলুন</button><button className="button button-quiet" onClick={() => setRemove(false)}>ফিরে যান</button>
+    {remove && <div className="notice"><p><SiteText>{"এই "}</SiteText>{kind === "bookmarks" ? <SiteText>{"বুকমার্ক"}</SiteText> : <SiteText>{"দাগ ও নোট"}</SiteText>}<SiteText>{" মুছে ফেলবেন?"}</SiteText></p><div className="annotation-actions">
+      <button className="button" disabled={deleting.isPending || saving.isPending} onClick={() => deleting.mutate()}><SiteText>{"হ্যাঁ, মুছে ফেলুন"}</SiteText></button><button className="button button-quiet" onClick={() => setRemove(false)}><SiteText>{"ফিরে যান"}</SiteText></button>
     </div></div>}
   </section>;
 }

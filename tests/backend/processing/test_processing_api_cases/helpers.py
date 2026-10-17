@@ -24,11 +24,21 @@ from apps.processing.services import (
     PROCESSING_SYNC_KEY_INCOMPLETE,
     dispatch_sync_task,
     get_sync_state,
+    get_automation_settings,
 )
 from apps.processing.tasks import (
     kickoff_book_creation_request_task,
     run_processing_sync_task,
 )
+
+
+@pytest.fixture(autouse=True)
+def persisted_processing_defaults(db):
+    # Transactional tests flush migration-seeded defaults; recreate this fixture's baseline.
+    for kind in ProcessingAutomationKind.values:
+        for state in (get_sync_state(kind), get_automation_settings(kind)):
+            if state.pk is None:
+                state.save()
 
 
 def login_processing_admin(client, email="processing-admin@example.com"):

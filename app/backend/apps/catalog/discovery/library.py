@@ -22,7 +22,7 @@ def library_books(user):
 
 def library_queryset(user, parameters):
     queryset = annotate_personal_books(
-        personal_feed(user, parameters.get("view", "owned")), user
+        personal_feed(user, parameters.get("view", "all")), user
     ).only(*PUBLIC_BOOK_FIELDS, "state", "review_state", "record_type")
     queryset = filter_public_books(queryset, parameters)
     return with_public_relations(search_public_books(queryset, parameters["q"]))

@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { notFound } from "next/navigation";
 import { sessionRequest } from "@/api/server";
 import { APIError } from "@/api/http";
@@ -8,7 +9,7 @@ import { requireManagement } from "@/lib/workspace-session";
 import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { AdminText } from "@/components/admin-language";
 
-export const metadata = { title: "কাজ পরিচালনা" };
+export async function generateMetadata() { return localizeMetadata({ title: "কাজ পরিচালনা" }); }
 
 export default async function JobsPage({ searchParams }: { searchParams: Promise<RouteQuery> }) {
   await requireManagement("jobs");
@@ -17,10 +18,11 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   if (state && !Object.hasOwn(jobStates, state)) notFound();
   const parameters = new URLSearchParams({ page: String(page) });
   if (state) parameters.set("state", state);
-  const automationRun = queryValue(query, "automation_run");
-  if (automationRun) {
-    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(automationRun)) notFound();
-    parameters.set("automation_run", automationRun);
+  for (const key of ["automation_run", "parent_job"]) {
+    const identifier = queryValue(query, key);
+    if (!identifier) continue;
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(identifier)) notFound();
+    parameters.set(key, identifier);
   }
   let initial: BackgroundJobCollection;
   try { initial = await sessionRequest<BackgroundJobCollection>(`manage/jobs/?${parameters}`); }

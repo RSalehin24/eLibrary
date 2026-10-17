@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminNumber, AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -9,7 +10,7 @@ import { accountStatuses } from "@/lib/access-status";
 import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "ব্যবহারকারী ও অনুমতি" };
+export async function generateMetadata() { return localizeMetadata({ title: "ব্যবহারকারী ও অনুমতি" }); }
 
 export default async function ManagedAccountsPage({ searchParams }: { searchParams: Promise<RouteQuery> }) {
   await requireManagement("users-access"); const query = await searchParams;

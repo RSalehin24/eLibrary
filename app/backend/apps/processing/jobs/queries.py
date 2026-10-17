@@ -23,6 +23,7 @@ def job_queryset(user):
             "book_id",
             "asset_id",
             "source_record_id",
+            "parent_job_id",
             "checkpoint",
             "attempt_count",
             "max_attempts",

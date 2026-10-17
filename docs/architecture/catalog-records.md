@@ -67,7 +67,8 @@ editorial approval, and return the record to review without granting ownership.
 Concurrent uploads using the same revision produce one success and one conflict.
 
 Use **পড়ার জন্য প্রস্তুত করুন** under reading assets, inspect the persisted job,
-then review and publish the book. Reader preparation sanitizes document bodies
+then publish the book. A manual editorial-review step is not required. Reader
+preparation sanitizes document bodies
 and verifies resource contents through the existing worker. The form preserves
 failed selections, blocks uploading over unfinished metadata, and never replays
 an uncertain upload. A dispatcher and processing worker must be running to
@@ -81,3 +82,46 @@ and uncertain commands. [Entity and relationship administration](catalog-entitie
 adds author/category/series/collection editors, remote relationship selectors,
 and explicit edition grouping. Public cross-edition browsing and the remaining
 physical-book reader workspace are outstanding parts of the accepted plan.
+
+## Regeneration and removal
+
+The managed editor exposes **Regenerate Book** and **Remove Book** beside the
+editorial controls, before generated files and metadata. Both have Bengali and
+English confirmation dialogs, preserve keyboard focus, and block commands while
+the form has unsaved changes, an operation is pending, or a response is uncertain.
+Reloading is explicit; a regeneration request retains its original operation UUID
+and a direct job-status link.
+
+`GET /api/v1/manage/books/<slug>/controls/` checks current scoped metadata access,
+returns the editor's exact serialized revision, explains unavailable regeneration,
+and exposes active jobs only to processing managers. `POST .../regenerate/`
+requires an operation UUID, `expected_updated_at`, metadata access to the book
+and global processing authority. Only digital books linked to the configured
+website are eligible; manually uploaded digital books keep their upload action.
+Paper books omit regeneration. Unknown fields are rejected.
+
+Regeneration reuses the source-processing queue, with explicit regeneration input
+and pinned source/book revisions. Actor, source and book locks serialize competing
+commands; replaying the same command returns the existing operation. Unfinished
+work blocks regeneration and removal. The worker rechecks both permissions and
+revisions before fetching, exporting, replacing assets and preparing the reader.
+Metadata changes during execution stop replacement for explicit review.
+
+The book identity, edited metadata, contributor/category/series relationships,
+previous files, prepared reader publications and personal records are retained.
+New source content and immutable asset references commit together. Existing valid
+covers are reused if the source supplies none, including the EPUB's embedded
+cover. Content changes have before/after metadata snapshots. Regeneration clears
+legacy approval while processing. Complete source/text/export verification and
+reader preparation publish the regenerated book automatically, as explicitly
+requested by the user. Missing chapters or broken exports block publication.
+Failed fetches can be explicitly retried. Failed preparation resumes the same
+exports without repeating content replacement or its history entries.
+
+`DELETE /api/v1/manage/books/<slug>/` requires current scoped metadata authority,
+CSRF protection and `expected_updated_at`. It records a metadata snapshot and
+audit, sets the removal timestamp/state, and returns 204. It does not delete files,
+notes or ownership rows. Removed books stop appearing in the public/managed
+catalog and existing reader sessions lose access; personal notes remain private
+and accessible to their owner. Browser removal verification uses disposable
+reference fixtures only, never existing preview books.

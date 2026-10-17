@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -8,7 +9,7 @@ import { BookRelationshipsForm } from "@/components/book-relationships-form";
 import { routeSlug } from "@/lib/route-slug";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "বইয়ের সম্পর্ক ও সংস্করণ" };
+export async function generateMetadata() { return localizeMetadata({ title: "বইয়ের সম্পর্ক ও সংস্করণ" }); }
 
 export default async function BookRelationshipsPage({ params }: { params: Promise<{ slug: string }> }) {
   const slug = routeSlug((await params).slug);

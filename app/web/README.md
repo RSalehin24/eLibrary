@@ -53,25 +53,30 @@ From `app/web`, run `npm run generate:api`. Do not edit generated contracts.
 
 ## Browser verification
 
-`tests/web` uses synthetic records in the isolated `elibrary-foundation` database
+`tests/web` uses synthetic records in the isolated reference database
 on port 55432. Its fixture generator rejects production databases and writes
 random credentials to a new, mode-0600 file outside the repository. It does not
 reset existing application data. Generate a fresh fixture for each full browser
 run because editorial tests intentionally save and publish their own records.
 
-The currently approved runner is the installed legacy Playwright package:
+Use the approved Playwright 1.64.0 runner from this workspace:
 
 ```sh
-FOUNDATION_FIXTURE_PATH=/private/tmp/library-preview.json app/frontend/node_modules/.bin/playwright test --config tests/web/playwright.config.mjs --project=chromium
+FOUNDATION_FIXTURE_PATH=/private/tmp/library-preview.json app/web/node_modules/.bin/playwright test --config tests/web/playwright.config.mjs --project=chromium
 ```
 
 Run this from the repository root with both servers available. For a production
 artifact whose canonical origin differs from the local browser URL, also set
 `FOUNDATION_CANONICAL_ORIGIN` to the build's `PUBLIC_SITE_URL`.
 
-See `docs/architecture/verification-tooling.md` for the pending supported-browser
-tooling proposal. Physical device installation, performance targets, and the
-remaining reader/admin journeys have not passed acceptance yet.
+Restart the development reference API between complete runs to reset its
+disposable LocMem login quota; production throttles stay enabled. Never seed
+synthetic fixtures into the separate `bangla_library_preview` user preview.
+Set `FOUNDATION_WEB_URL` and `FOUNDATION_API_URL` when using the reference ports.
+See `docs/architecture/verification-tooling.md` for approved browser bundles and
+the pinned Linux Firefox simulator. Current reader/admin simulator results are
+recorded in `docs/implementation-handoff.md`; physical device installation,
+external Kindle arrival and independent-machine performance remain unverified.
 
 For the complete UI suite, configure Django's SMTP backend with a loopback host
 and synthetic sender (see `docs/implementation-handoff.md`). Kindle requests
@@ -79,14 +84,19 @@ require mail readiness even when the worker is stopped and no mail is sent.
 
 ## Catalog administration
 
-`/manage/entities/` manages contributors, categories, series, and curated
-collections with reviewed editorial metadata, remote selection, and explicit
+`/manage/entities/` directly lists contributors, with category, series and curated
+collection tabs, related-book links, role filters, remote selection and explicit
 collection ordering. Global metadata managers create entities; scoped editors
 edit their exact granted contributor/category. Book editors link to
 `/manage/books/<slug>/relationships/` for contributor roles, categories, ordered
 series, and edition grouping. Those associations require global metadata access
 because they also determine scoped permissions. See
 `docs/architecture/catalog-entities.md` for transactions, validation, and tests.
+Public author/category/series directories link to their books. My Books opens a
+combined personal list with visible Add/Remove controls on book pages. Manual
+review is not required; source books publish automatically after source, export
+and reader checks. `/manage/unfinished/` tracks the source website's unfinished
+category separately from application processing failures.
 
 ## Protected reader
 
@@ -94,14 +104,22 @@ The reader uses account-bound UUID sessions and prepared, sandboxed EPUB
 chapters. Book permissions and expiry are checked by Django for each request.
 Existing EPUBs need preparation outside reader requests; see
 `docs/architecture/reader-access.md` for the operator command and limits.
-The current screen includes chapters, appearance, downloads, progress with
-visible save failures, bookmarks, highlights/quotes, and private notes with
-revision conflicts. `/profile/` includes names, password/session changes, Kindle
+The reader includes scroll/single/spread views, fullscreen/focus, text/font/theme
+settings, nested EPUB 3/NCX contents, chapter/full-book search,
+keyboard/swipe/pinch/tap navigation, progress with visible save failures,
+bookmarks, highlights/quotes, and private notes with revision conflicts. Supported
+original text CFIs and package-relative locations retain their target checks;
+older prepared books offer an explicit reader-file update while remaining
+readable. Book details show account-specific progress and notes;
+book/source/editor surfaces share reading, HTML and permitted Kindle actions.
+Real protected cover assets have a title/author fallback. See
+`docs/operations/feature-parity.md` for the original-app comparison and remaining
+validation limits. `/profile/` includes names, password/session changes, Kindle
 addresses, and authenticator setup/login. See `docs/architecture/account-settings.md`.
 `/kindle/` adds selected-recipient requests, private history, per-address outcomes,
 and revision-checked cancellation. The delivery worker and a loopback SMTP server
 verify acceptance/uncertainty handling; live RabbitMQ/device arrival remain work.
-See `docs/architecture/kindle-delivery.md`. Profile-image editing remains work.
+See `docs/architecture/kindle-delivery.md`. Profile-image upload/removal is available.
 Password-link confirmation/setup uses
 `/create-password/` and `/reset-password/confirm/` with CSRF, nonce consumption,
 TOTP policy, and draft/update guards. See `docs/architecture/password-links.md`.

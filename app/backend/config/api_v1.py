@@ -65,20 +65,24 @@ from apps.processing.api_v1 import (
     PrepareAssetView,
     ProcessingAssetListView,
 )
+from apps.processing.managed_assets import ManagedAssetDownloadView
 from apps.processing.overview.api import ManagementOverviewView, OverviewWorkView
 from django.urls import path
 
 from config.account_mail_urls import account_mail_routes
 from config.automation_urls import automation_routes
+from config.book_control_urls import book_control_routes
 from config.catalog_creation_urls import catalog_creation_routes
 from config.catalog_entity_urls import catalog_entity_routes
 from config.health_urls import health_routes
 from config.personal_library_urls import personal_library_routes
+from config.reader_file_urls import reader_file_routes
 from config.source_processing_urls import urlpatterns as source_processing_routes
 
 app_name = "api_v1"
 urlpatterns = [
     *health_routes,
+    *reader_file_routes,
     *personal_library_routes,
     *catalog_creation_routes,
     *catalog_entity_routes,
@@ -197,6 +201,11 @@ urlpatterns = [
         name="managed-asset-prepare",
     ),
     path(
+        "manage/assets/<uuid:identifier>/download/",
+        ManagedAssetDownloadView.as_view(),
+        name="managed-asset-download",
+    ),
+    path(
         "manage/books/<str:slug>/assets/",
         ProcessingAssetListView.as_view(),
         name="managed-book-assets",
@@ -211,6 +220,7 @@ urlpatterns = [
         ReviewBookEditorialView.as_view(),
         name="managed-book-review",
     ),
+    *book_control_routes,
     path(
         "manage/books/<str:slug>/publish/",
         PublishBookView.as_view(),

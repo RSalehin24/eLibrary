@@ -19,7 +19,7 @@ def published_book(**fields):
     return Book.objects.create(state="published", review_state="approved", **fields)
 
 
-def test_public_feed_exposes_only_published_approved_undeleted_metadata(client):
+def test_public_feed_exposes_published_undeleted_metadata_without_manual_review(client):
     visible = published_book(
         title="বাংলা গল্প",
         summary="সম্পাদিত পরিচিতি",
@@ -27,13 +27,18 @@ def test_public_feed_exposes_only_published_approved_undeleted_metadata(client):
         raw_scrape_payload={"secret": "PRIVATE"},
     )
     Book.objects.create(title="খসড়া", state="draft", review_state="approved")
-    Book.objects.create(title="অপর্যালোচিত", state="published", review_state="pending")
+    pending = Book.objects.create(
+        title="অপর্যালোচিত", state="published", review_state="pending"
+    )
     Book.objects.create(title="প্রস্তুত", state="ready", review_state="approved")
     withdrawn = published_book(title="প্রত্যাহৃত")
     withdrawn.soft_delete()
     response = client.get(CATALOG_URL)
     assert response.status_code == 200
-    assert [entry["id"] for entry in response.json()["entries"]] == [str(visible.id)]
+    assert {entry["id"] for entry in response.json()["entries"]} == {
+        str(visible.id),
+        str(pending.id),
+    }
     assert "PRIVATE" not in response.content.decode()
     assert "summary" not in response.json()["entries"][0]
     assert response["Cache-Control"] == "private, no-store"
@@ -57,6 +62,7 @@ def test_public_detail_contains_visible_metadata_without_content_or_asset_paths(
         "title",
         "slug",
         "catalog_code",
+        "cover_url",
         "language",
         "edition",
         "contributors",

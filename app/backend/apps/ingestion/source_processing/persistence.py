@@ -43,8 +43,8 @@ def persist_source_book(ownership, result):
         result, source_url=job.source_record.source_url, target_book=book
     )
     book.state, book.review_state = (
-        LifecycleState.NEEDS_REVIEW,
-        ReviewState.NEEDS_REVIEW,
+        LifecycleState.PROCESSING,
+        ReviewState.PENDING,
     )
     book.save(update_fields=["state", "review_state", "updated_at"])
     entry = job.source_record

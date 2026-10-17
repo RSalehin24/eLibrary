@@ -13,8 +13,10 @@ path; application code and navigation contain no provider name. Only that host
 and its `www` alias are permitted. A different website in
 `SOURCE_SITE_FALLBACK_HOSTS` makes the configuration invalid rather than adding
 another provider. Existing manual record entry and EPUB upload remain available.
-The overview's **উৎস থেকে বই আনুন** shortcut opens the collection controls and
-the three visible steps: collect listings, select books, request preparation.
+The overview's **ওয়েবসাইট থেকে বই তৈরি / Create from Website** shortcut opens
+catalog sync and the selectable book table. **সব বইয়ের তথ্য আনুন / Fetch All**
+collects the full catalog; **নির্বাচিত বই তৈরি করুন / Create Selected Books**
+queues the selected records. Manual entry/upload remains a separate direct link.
 
 ## Collection and checkpoints
 
@@ -26,6 +28,14 @@ Responses are limited to 8 MiB; source HTML checkpoints and documents are limite
 to 64 MiB and collection to 2,000 pages. Optional source authentication cookies
 are read from the existing protected configuration file, bounded and limited to
 configured domains. Credentials are never returned by the workspace.
+
+Optional covers permit the configured source host, its `www` alias and that
+host's `cdn.` subdomain. CDN images use a separate bounded transport with source
+authentication cookies cleared. Redirects stay within that CDN host; book and
+chapter URLs retain the stricter source policy. Downloaded covers must verify
+as JPEG, PNG or WebP with at most 20 million pixels. Unavailable, disallowed,
+invalid or oversized optional media falls back to a generated cover. A remote
+URL remains provenance and is never treated as a local export file.
 
 HTML pages are stored as protected immutable artifacts, with the committed index
 referenced by the job checkpoint. Page boundaries recheck actor permissions,
@@ -41,8 +51,9 @@ is never reassigned by the worker.
 
 ## Drafts, exports, and decisions
 
-New books start in `needs_review`, without indexing eligibility or editorial
-approval. The source's direct catalog relationship supports alternate URLs from
+New books start in `needs_review` internally while processing, displayed as Draft.
+Manual editorial approval is not required. Successful automatic verification and
+reader preparation publish the book; indexing eligibility remains explicit. The source's direct catalog relationship supports alternate URLs from
 the configured website without replacing an existing `BookSource` or changing
 the linked book.
 
@@ -60,8 +71,24 @@ asset references. Previous valid files remain available. Publication rechecks
 the actor, source, catalog revision, and current attempt and honors a late stop
 request. Source drafts cannot be published with unresolved work or missing HTML
 and EPUB assets. Source processing prepares checksum-addressed reader resources
-before success, and publication requires those resources to be ready. If that
-step fails, recovery reuses completed exports and checks their pinned asset
+before success, and publication requires those resources to be ready.
+
+Verification reruns document validation against fetched-page evidence, requires
+all available contents pages and chapters, and compares collected source text
+with its assigned book sections. Generated HTML and EPUB body text must match
+the curated content. Missing text blocks publication, even when earlier stored
+validation reported success. Short complete source text remains valid. The source
+website's unfinished category is separate from extraction/export failures.
+
+Automatic publication rechecks permissions, source/book/asset revisions and stop
+requests under locks, records its evidence in the audit log and checkpoints the
+publication transaction. Recovery after publication verifies the pinned edition
+instead of publishing twice. Old jobs or sourced records without verification
+evidence require regeneration before a manual publish command can succeed.
+Publication feedback explains the required action in Bengali and English rather
+than treating every blocked check as a stale edit. Manually added records without
+a source retain direct publication. If that step fails, recovery reuses completed
+exports and checks their pinned asset
 revision instead of replacing them.
 
 Failed exports can resume the existing unchanged draft. A manual recovery decision
@@ -84,6 +111,44 @@ and exposes the original operation links. No bulk or resolution mutation is
 automatically replayed. Pending selections and decisions participate in the PWA
 unsaved-work guard. Source lists and job summaries omit source HTML and book
 bodies; issue details use the compact checkpoint summary.
+
+## Process All
+
+`GET/POST /api/v1/manage/sources/process-all/` exposes eligible counts and creates
+one durable `process_catalog` parent. It requires processing authority, CSRF,
+an operation UUID and the displayed configuration revision. There is at most one
+active catalog batch. The worker snapshots eligible, pre-existing unlinked
+sources in batches of 50 using a UUID cursor, excluding active and failed work.
+It rechecks permission/configuration and pins each source revision before
+dispatch. Deterministic child identifiers and saved pending batches allow
+pause/resume or attempt recovery without duplicate book jobs. This action is
+independent of the current filter, page and explicit-selection limit of 100.
+
+Inline progress and job detail distinguish queued and rejected entries, with
+links to child jobs filtered by `parent_job`. Pause Queueing and Stop Queueing
+control dispatch of remaining entries; already queued book jobs continue. Parent
+success means queueing finished, not that every child book has completed or been
+published. Existing book jobs have their own progress and recovery controls.
+Generated drafts still require editorial review; an available introduction alone
+does not prove that the source supplied the complete published book.
+
+## Inspecting generated files
+
+`GET /api/v1/manage/books/<slug>/assets/` returns each file's availability,
+download URL, online-reader readiness and active preparation identifier, without
+storage paths. Existence is checked independently of the saved `ready` status.
+The source-result page and book editor show EPUB/HTML downloads, missing-file
+states and preparation controls near the beginning of the workflow. Editorial
+save/review/publish actions stay visible above the long form.
+
+`GET /api/v1/manage/assets/<uuid>/download/` requires global processing authority
+and the existing book download entitlement, rechecked on every request. A
+processing-only grant does not create download authority. Disabled accounts,
+removed books, missing/failed assets and unsupported formats are rejected.
+Development streams actual file bytes; production uses the existing protected
+Nginx redirect. Both return an attachment with the correct EPUB/HTML MIME type,
+private/no-store, noindex and nosniff headers. HTML attachments also use a sandbox
+policy; raw generated HTML is not rendered inside the application.
 
 ## Verification and remaining work
 

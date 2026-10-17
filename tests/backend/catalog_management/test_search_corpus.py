@@ -58,12 +58,11 @@ def test_representative_bengali_and_reviewed_romanized_intents(
     ]
 
 
-def test_corpus_identifier_and_unreviewed_alias_boundaries(client, corpus):
+def test_corpus_identifier_and_published_aliases_do_not_require_review(client, corpus):
     book = corpus[0]
     response = client.get("/api/v1/catalog/books/", {"q": book.catalog_code.lower()})
     assert [entry["id"] for entry in response.json()["entries"]] == [str(book.pk)]
     Book.objects.filter(pk=book.pk).update(editorial_reviewed_at=None)
-    assert (
-        client.get("/api/v1/catalog/books/", {"q": "Pather Panchali"}).json()["entries"]
-        == []
-    )
+    assert client.get("/api/v1/catalog/books/", {"q": "Pather Panchali"}).json()[
+        "entries"
+    ][0]["id"] == str(book.pk)

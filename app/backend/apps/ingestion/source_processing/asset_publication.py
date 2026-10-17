@@ -11,6 +11,8 @@ from apps.ingestion.services.submissions_support.assets import (
 from apps.processing.jobs.attempts import AttemptLost, checkpoint_attempt
 
 from .guards import checked_source_book, locked_source_job, require_export_authority
+from .regeneration import commit_regenerated_content
+from .documents import read_source_result
 
 
 def stored_source_assets(ownership, paths):
@@ -40,6 +42,10 @@ def commit_source_assets(ownership, stored):
     book = checked_source_book(job)
     if not checkpoint_attempt(ownership, job.checkpoint, "publishing_source_assets"):
         return False
+    if job.input.get("regenerate_book") and not job.checkpoint.get("content_committed"):
+        commit_regenerated_content(
+            job, book, read_source_result(job.pk, job.checkpoint["document_ref"])
+        )
     for kind, properties in stored.items():
         GeneratedAsset.objects.update_or_create(
             book=book, asset_type=kind, defaults=properties

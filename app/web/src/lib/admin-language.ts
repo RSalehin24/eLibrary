@@ -2,6 +2,9 @@ import { adminFormMessages } from "./admin-form-messages";
 import { adminJobMessages } from "./admin-job-messages";
 import { adminAccessMessages } from "./admin-access-messages";
 import { adminAutomationMessages } from "./admin-automation-messages";
+import { siteEnglishMessages } from "./site-messages";
+import { adminConsoleMessages } from "./admin-console-messages";
+import { adminFeatureMessages } from "./admin-feature-messages";
 
 export type AdminLanguage = "bn" | "en";
 export const adminLanguageCookie = "library-admin-language";
@@ -11,8 +14,10 @@ export function adminLanguage(value: string | undefined): AdminLanguage {
 }
 
 export function translateAdmin(language: AdminLanguage, text: string): string {
-  const translation = adminMessages[text.trim()];
-  return translation ? text.replace(text.trim(), translation[language]) : text;
+  const key = text.trim();
+  const translated = Object.hasOwn(adminMessages, key) ? adminMessages[key][language] : language === "en" && Object.hasOwn(siteEnglishMessages, key) ? siteEnglishMessages[key] : undefined;
+  const value = translated?.match(/[←→↗]/) ? translated.replace(/\s*[←→↗]\s*/g, " ").trim() : translated;
+  return value !== undefined ? text.replace(key, value) : text;
 }
 
 type Translation = Readonly<Record<AdminLanguage, string>>;
@@ -21,13 +26,24 @@ export const adminMessages: Readonly<Record<string, Translation>> = {
   ...adminJobMessages,
   ...adminAccessMessages,
   ...adminAutomationMessages,
+  ...adminConsoleMessages,
+  ...adminFeatureMessages,
+  "বাছা সংস্করণ:": { bn: "বাছা সংস্করণ:", en: "Selected Edition:" },
+  "অ্যাডমিন মেনু": { bn: "অ্যাডমিন মেনু", en: "Admin Menu" },
+  "আর্কাইভে": { bn: "আর্কাইভে", en: "Archived" },
+  "প্রথমে উপরের তালিকা হালনাগাদ করুন বাটনে চাপুন। তারপর এখান থেকে বই নির্বাচন করতে পারবেন।": { bn: "প্রথমে উপরের তালিকা হালনাগাদ করুন বাটনে চাপুন। তারপর এখান থেকে বই নির্বাচন করতে পারবেন।", en: "Start with Sync Catalog above. Then select books here to create them." },
+  "আগে নিন": { bn: "উপরে নিন", en: "Move Up" },
+  "পরে নিন": { bn: "নিচে নিন", en: "Move Down" },
+  "নির্বাচন বাদ দিন": { bn: "নির্বাচন বাতিল করুন", en: "Remove Selection" },
+  "পরিবর্তন সংরক্ষিত হয়েছে।": { bn: "পরিবর্তন সংরক্ষিত হয়েছে।", en: "Changes saved." },
+  "বর্তমান তথ্য খুললে সংরক্ষণ না করা লেখা বাদ যাবে। এগোবেন?": { bn: "আবার খুললে সংরক্ষণ না করা পরিবর্তন বাদ যাবে। এগোবেন?", en: "Reloading will discard unsaved changes. Continue?" },
   "পরিচালনা": { bn: "অ্যাডমিন", en: "Admin" },
   "সারসংক্ষেপ": { bn: "সারসংক্ষেপ", en: "Overview" },
   "পরিচালনার নেভিগেশন": { bn: "অ্যাডমিন মেনু", en: "Admin navigation" },
   "পরিচালনার প্রধান কাজ": { bn: "বই তৈরি ও পরিচালনা", en: "Book creation and management" },
   "বইয়ের উৎস": { bn: "বই তৈরি করুন", en: "Create Books" },
   "উৎস": { bn: "বই তৈরি", en: "Create Books" },
-  "বই": { bn: "সব বই", en: "Books" },
+  "বই": { bn: "বই", en: "books" },
   "পরিচিতি": { bn: "লেখক ও বিভাগ", en: "Authors & Categories" },
   "কাজ": { bn: "প্রসেসিং", en: "Processing" },
   "স্বয়ংক্রিয় কাজ": { bn: "অটোমেশন", en: "Automation" },
@@ -91,7 +107,6 @@ export const adminMessages: Readonly<Record<string, Translation>> = {
   "মোট": { bn: "মোট", en: "Total" },
   "খসড়া": { bn: "খসড়া", en: "Drafts" },
   "প্রকাশিত": { bn: "প্রকাশিত", en: "Published" },
-  "সম্পাদকীয় পর্যালোচনা বাকি": { bn: "পর্যালোচনা বাকি", en: "Awaiting Review" },
   "অসংযুক্ত": { bn: "বই তৈরি হয়নি", en: "Not Created" },
   "বই সংযুক্ত": { bn: "বই যুক্ত আছে", en: "Book Linked" },
   "সংযুক্ত বই অপসারিত": { bn: "বই মুছে ফেলা হয়েছে", en: "Book Removed" },

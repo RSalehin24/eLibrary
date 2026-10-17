@@ -48,6 +48,7 @@ def create_books(identity):
         Category,
         Contributor,
     )
+    from apps.catalog.services import sync_book_catalog_code
     from apps.common.models import LifecycleState, ReviewState
     from django.utils import timezone
 
@@ -66,6 +67,7 @@ def create_books(identity):
         )
         BookContributor.objects.create(book=book, contributor=author, role="author")
         BookCategory.objects.create(book=book, category=category)
+        sync_book_catalog_code(book)
         books.append(book)
     return books
 
@@ -88,23 +90,37 @@ def create_collection(identity, books):
     return {"slug": collection.slug, "name": collection.name}
 
 
+def require_foundation_database():
+    from django.conf import settings
+
+    database = settings.DATABASES["default"]
+    if (
+        settings.APP_ENV == "production"
+        or database["NAME"] != "bangla_library"
+        or str(database["PORT"]) != "55432"
+    ):
+        raise RuntimeError("Browser fixtures require bangla_library on port 55432.")
+
+
 def seed_fixture():
     from apps.access.models import PermissionGrant, PermissionScope, ReadingSession
     from apps.catalog.models import Book, UserBook
-    from django.conf import settings
     from django.db import transaction
 
-    if (
-        settings.APP_ENV == "production"
-        or settings.DATABASES["default"]["PORT"] != 55432
-    ):
-        raise RuntimeError("Preview fixtures require the isolated foundation database.")
+    require_foundation_database()
     identity = uuid4().hex[:8]
     with transaction.atomic():
         books = create_books(identity)
         collection = create_collection(identity, books)
         owner, reader = create_account(identity, "reader")
         administrator_user, administrator = create_account(identity, "administrator")
+        from seed_lifecycle import (
+            create_lifecycle_fixture,
+            create_reader_update_fixture,
+        )
+
+        lifecycle_books = create_lifecycle_fixture(administrator_user)
+        reader_update_books = create_reader_update_fixture(administrator_user)
         _, maintenance_administrator = create_account(uuid4().hex[:8], "administrator")
         _, catalog_administrator = create_account(uuid4().hex[:8], "administrator")
         editor, scoped_editor = create_account(identity, "editor")
@@ -131,6 +147,10 @@ def seed_fixture():
         )
         reading_user, reading_reader = create_account(uuid4().hex[:8], "reading-reader")
         reading_book = create_reading_book(reading_user)
+        from seed_legacy_reader import create_legacy_reader_fixture
+
+        legacy_user, legacy_reader = create_account(uuid4().hex[:8], "legacy-reader")
+        legacy_reading = create_legacy_reader_fixture(legacy_user)
         kindle_user, kindle_reader = create_account(uuid4().hex[:8], "kindle-reader")
         kindle_user.kindle_emails = ["reader@kindle.com", "other@kindle.com"]
         kindle_user.save(update_fields=["kindle_emails"])
@@ -187,6 +207,8 @@ def seed_fixture():
         "reading_reader": reading_reader,
         "kindle_reader": kindle_reader,
         "reading_book": reading_book,
+        "legacy_reader": legacy_reader,
+        "legacy_reading": legacy_reading,
         "preparation_job": preparation_job,
         "update_reader": update_reader,
         "update_book": update_book,
@@ -202,6 +224,8 @@ def seed_fixture():
         "sources": sources,
         "overview": overview,
         "source_processing": source_processing,
+        "lifecycle_books": lifecycle_books,
+        "reader_update_books": reader_update_books,
     }
 
 

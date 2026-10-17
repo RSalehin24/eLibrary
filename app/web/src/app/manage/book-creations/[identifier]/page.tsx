@@ -1,3 +1,4 @@
+import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminText } from "@/components/admin-language";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -6,7 +7,7 @@ import { sessionRequest } from "@/api/server";
 import type { ManagedBookDetail } from "@/api/types";
 import { requireManagement } from "@/lib/workspace-session";
 
-export const metadata = { title: "নতুন বইয়ের নথির অবস্থা" };
+export async function generateMetadata() { return localizeMetadata({ title: "নতুন বইয়ের নথির অবস্থা" }); }
 
 export default async function BookCreationStatusPage({ params }: { params: Promise<{ identifier: string }> }) {
   const session = await requireManagement("books"), { identifier } = await params;

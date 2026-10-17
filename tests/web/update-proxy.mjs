@@ -19,7 +19,12 @@ export class UpdateProxy {
         outgoing.end(worker.replace(/library-static-[0-9a-f]{20}/, `library-static-test-update-${this.revision}`));
         return;
       }
-      const upstream = request(new URL(incoming.url, "http://127.0.0.1:3000"), { method: incoming.method, headers: { ...incoming.headers, host: "127.0.0.1:3000" } }, (response) => { outgoing.writeHead(response.statusCode, response.headers); response.pipe(outgoing); });
+      const target = new URL(process.env.FOUNDATION_WEB_URL ?? "http://127.0.0.1:3000");
+      const upstream = request(new URL(incoming.url, target), { method: incoming.method, headers: { ...incoming.headers, host: target.host } }, (response) => {
+        const headers = { ...response.headers };
+        if (headers["content-security-policy"]) headers["content-security-policy"] = headers["content-security-policy"].replaceAll(target.origin, this.origin);
+        outgoing.writeHead(response.statusCode, headers); response.pipe(outgoing);
+      });
       upstream.on("error", () => { outgoing.writeHead(502); outgoing.end("Test upstream unavailable."); });
       incoming.pipe(upstream);
     });

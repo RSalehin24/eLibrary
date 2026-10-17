@@ -1,5 +1,7 @@
 "use client";
 
+import { SiteText, SiteInput } from "@/components/site-language";
+
 import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { useState } from "react";
 import { searchBooks } from "@/api/catalog";
@@ -22,16 +24,16 @@ export function CatalogSearch({ initialQuery, initialBooks, page }: SearchProps)
   const currentPage = debounced === initialQuery ? page : 1;
   return <>
     <form action="/catalog/" className="search-form" role="search">
-      <label className="visually-hidden" htmlFor="catalog-query">বই বা লেখকের নাম</label>
-      <input id="catalog-query" name="q" value={query} maxLength={120}
+      <label className="visually-hidden" htmlFor="catalog-query"><SiteText>{"বই বা লেখকের নাম"}</SiteText></label>
+      <SiteInput id="catalog-query" name="q" value={query} maxLength={120}
         onChange={(event) => setQuery(event.target.value)} placeholder="বই বা লেখকের নাম লিখুন" />
-      <button className="button" type="submit">খুঁজুন</button>
+      <button className="button" type="submit"><SiteText>{"খুঁজুন"}</SiteText></button>
     </form>
-    <div aria-live="polite">{results.isFetching && <p className="muted">বই খোঁজা হচ্ছে…</p>}
-      {results.error && <p className="notice" role="alert">বই খোঁজা যায়নি। আবার চেষ্টা করুন।</p>}</div>
+    <div aria-live="polite">{results.isFetching && <p className="muted"><SiteText>{"বই খোঁজা হচ্ছে…"}</SiteText></p>}
+      {results.error && <p className="notice" role="alert"><SiteText>{"বই খোঁজা যায়নি। আবার চেষ্টা করুন।"}</SiteText></p>}</div>
     {results.data?.entries.length ? <div className="book-grid" aria-busy={results.isFetching}>
       {results.data.entries.map((book) => <BookCard key={book.id} book={book} />)}</div>
-      : <div className="empty-state"><h2>কোনো বই পাওয়া যায়নি</h2><p>অন্য নাম বা ছোট একটি শব্দ দিয়ে খুঁজুন।</p></div>}
+      : <div className="empty-state"><h2><SiteText>{debounced ? "কোনো বই পাওয়া যায়নি" : "এখনও কোনো বই প্রকাশিত হয়নি"}</SiteText></h2><p><SiteText>{debounced ? "অন্য নাম বা ছোট একটি শব্দ দিয়ে খুঁজুন।" : "প্রকাশিত বই এখানে দেখা যাবে। ব্যক্তিগত বই পাবেন আমার বই পাতায়।"}</SiteText></p></div>}
     {results.data && !results.isPlaceholderData && <CatalogPagination pathname="/catalog/" page={currentPage} hasMore={results.data.has_more} query={debounced} />}
   </>;
 }

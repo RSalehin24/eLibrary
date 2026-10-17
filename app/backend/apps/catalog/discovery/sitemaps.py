@@ -13,9 +13,9 @@ def indexable_records(kind):
     if kind not in SITEMAP_KINDS:
         raise Http404
     queryset = published_books() if kind == "books" else public_entities(kind)
-    return queryset.filter(
-        indexing_eligible=True, editorial_reviewed_at__isnull=False
-    ).exclude(editorial_description__regex=r"^\s*$")
+    return queryset.filter(indexing_eligible=True).exclude(
+        editorial_description__regex=r"^\s*$"
+    )
 
 
 def sitemap_batches():
