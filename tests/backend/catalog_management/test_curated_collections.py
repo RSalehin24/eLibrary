@@ -34,7 +34,12 @@ def test_collection_feed_is_lightweight_and_detail_is_reviewed(
     with django_assert_num_queries(1):
         response = client.get("/api/v1/catalog/collections/")
     assert response.json()["entries"] == [
-        {"id": str(collection.id), "name": collection.name, "slug": collection.slug}
+        {
+            "id": str(collection.id),
+            "name": collection.name,
+            "slug": collection.slug,
+            "book_count": 2,
+        }
     ]
     detail = client.get(
         f"/api/v1/catalog/entities/collections/{collection.slug}/"

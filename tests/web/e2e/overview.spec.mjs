@@ -8,16 +8,18 @@ test("book totals show lifecycle counts without a manual-review counter in eithe
   expect(books.total).toBe(books.draft + books.processing + books.ready + books.published + books.archived);
   await page.goto("/manage/");
   for (const [language, title, labels] of [
-    ["bn", "বইয়ের তালিকা", ["মোট", "খসড়া", "প্রক্রিয়াধীন", "প্রস্তুত", "প্রকাশিত", "আর্কাইভে"]],
-    ["en", "Books", ["Total", "Drafts", "Processing", "Ready", "Published", "Archived"]],
+    ["bn", "বইয়ের তালিকা", ["মোট", "প্রক্রিয়াধীন", "প্রকাশিত", "আর্কাইভে", "প্রকাশের অপেক্ষায়"]],
+    ["en", "Books", ["Total", "Processing", "Published", "Archived", "Awaiting Publication"]],
   ]) {
     await page.getByRole("button", { name: language === "bn" ? "বাংলা" : "English", exact: true }).click();
     const card = page.locator("section.account-section").filter({ has: page.getByRole("heading", { name: title, exact: true }) });
-    for (const [index, key] of ["total", "draft", "processing", "ready", "published", "archived"].entries()) {
+    for (const [index, key] of ["total", "processing", "published", "archived", "awaiting"].entries()) {
       const row = card.locator(".book-facts > div").filter({ has: page.locator("dt", { hasText: new RegExp(`^${labels[index]}$`) }) });
-      await expect(row.locator("dd")).toHaveText(new Intl.NumberFormat(language, { numberingSystem: language === "bn" ? "beng" : "latn" }).format(books[key]));
+      const count = key === "awaiting" ? books.draft + books.ready : books[key];
+      if (key === "awaiting" && count === 0) await expect(row).toHaveCount(0);
+      else await expect(row.locator("dd")).toHaveText(new Intl.NumberFormat(language, { numberingSystem: language === "bn" ? "beng" : "latn" }).format(count));
     }
-    await expect(page.getByText(/পর্যালোচনা বাকি|সম্পাদকীয় পর্যালোচনা|Awaiting Review/)).toHaveCount(0);
+    await expect(page.getByText(/পর্যালোচনা বাকি|সম্পাদকীয় পর্যালোচনা|Awaiting Review|Drafts|^খসড়া$/)).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   }
   await page.goto("/manage/automations/");

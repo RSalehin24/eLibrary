@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Protocol, cast
 
 from . import book_manifest as manifest
+from .source_html import preserve_single_flow_body
 
 
 class OutputFolderProvider(Protocol):
@@ -72,6 +73,7 @@ class ManifestCollector:
             series=metadata["series"],
             book_type=metadata["book_type"],
         )
+        sections = preserve_single_flow_body(sections)
         structure = manifest.classify_manifest_structure(
             nodes,
             sections["content_items"],

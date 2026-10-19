@@ -1,0 +1,5 @@
+.book-detail-preview { margin-block:32px; padding-block:24px; border-block:1px solid var(--line); overflow-wrap:anywhere; }
+.book-detail-preview>section+section { margin-block-start:28px; }
+.book-detail-contents { padding-inline-start:1.5em; }
+.book-detail-contents ol { padding-inline-start:clamp(4px,2vw,12px); }
+.book-detail-contents li { padding-block:5px; line-height:1.7; }

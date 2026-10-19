@@ -27,13 +27,19 @@ def epub_export_text(path):
         )
 
 
-def verify_export_text(result, paths):
+def verify_reading_text(result, actual):
     expected = Counter(
         text
         for section in result["document"].get("sections", [])
         if section.get("section_type") == "body"
         and (text := canonical_text(section.get("html", "")))
     )
+    return bool(expected) and all(
+        actual.count(body) >= count for body, count in expected.items()
+    )
+
+
+def verify_export_text(result, paths):
     html_path = paths[GeneratedAssetType.HTML]
     if html_path.stat().st_size > MAX_EXPANDED_BYTES:
         raise InvalidEpub("HTML export exceeds the size limit.")
@@ -41,9 +47,7 @@ def verify_export_text(result, paths):
         canonical_text(html_path.read_text(encoding="utf-8-sig")),
         epub_export_text(paths[GeneratedAssetType.EPUB]),
     )
-    return bool(expected) and all(
-        text.count(body) >= count for text in actual for body, count in expected.items()
-    )
+    return all(verify_reading_text(result, text) for text in actual)
 
 
 def require_verified_exports(result, paths):

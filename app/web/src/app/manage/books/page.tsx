@@ -11,6 +11,9 @@ import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query"
 import { AdminNumber, AdminText } from "@/components/admin-language";
 import { AdminPagination } from "@/components/admin-pagination";
 import { BookCard } from "@/components/book-card";
+import { CatalogFiltersForm } from "@/components/catalog-filters-form";
+import { CatalogExportControls } from "@/components/catalog-export-controls";
+import { catalogFilterKeys } from "@/lib/catalog-filters";
 import { Icon } from "@/components/icon";
 
 export async function generateMetadata() { return localizeMetadata({ title: "সব বই" }); }
@@ -19,7 +22,7 @@ export default async function ManagedBooksPage({ searchParams }: { searchParams:
   const session = await requireManagement("books");
   const query = await searchParams, page = routePageNumber(query);
   const filter = new URLSearchParams();
-  for (const key of ["q", "contributor", "contributor_role", "category", "series", "collection", "label"]) {
+  for (const key of ["q", ...catalogFilterKeys, "label"]) {
     const value = queryValue(query, key);
     if (value.length > (key === "q" ? 120 : 255)) notFound();
     if (value) filter.set(key, value);
@@ -32,9 +35,8 @@ export default async function ManagedBooksPage({ searchParams }: { searchParams:
     <p className="muted"><AdminText>{"খসড়া, প্রস্তুত ও প্রকাশিত সব বই এখানে পাবেন। বই খুলে পড়ুন, ফাইল নামান বা তথ্য সম্পাদনা করুন।"}</AdminText></p></div>
     <div className="editorial-actions">{session.workspaces.can_create_books && <Link className="button" href="/manage/books/new/"><Icon name="plus" /><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></Link>}
       {session.workspaces.management_sections.includes("sources") && <Link className="button button-quiet" href="/manage/sources/"><Icon name="source" /><AdminText>{"উৎস থেকে বই আনুন"}</AdminText></Link>}</div></header>
-    <form className="catalog-search" role="search"><label htmlFor="managed-book-query"><AdminText>{"বই, লেখক বা ক্যাটালগ নম্বর দিয়ে খুঁজুন"}</AdminText></label>
-      {[...filter].filter(([key]) => key !== "q").map(([key, value]) => <input key={key} name={key} value={value} type="hidden" />)}
-      <div className="search-row"><input id="managed-book-query" name="q" defaultValue={filter.get("q") ?? ""} maxLength={120} /><button className="button"><Icon name="search" /><AdminText>{"খুঁজুন"}</AdminText></button></div></form>
+    <CatalogFiltersForm key={filter.toString()} pathname="/manage/books/" initial={Object.fromEntries(filter)} />
+    <CatalogExportControls scope="managed" filters={Object.fromEntries(filter)} />
     {filtered && <p className="catalog-filter-summary"><AdminText>{"নির্বাচিত লেখক, বিভাগ বা সংগ্রহের বই দেখানো হচ্ছে।"}</AdminText> <Link className="button button-quiet" href="/manage/books/"><Icon name="books" /><AdminText>{"সব বই দেখুন"}</AdminText></Link></p>}
     <p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={books.pagination.total_count} /><AdminText>{"টি বই"}</AdminText></p>
     <ul className="managed-book-grid">{books.entries.map(book => <li key={book.id}><span className="status-label"><AdminText>{catalogStateLabel(book.state)}</AdminText></span>

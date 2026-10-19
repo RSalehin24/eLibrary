@@ -46,7 +46,8 @@ function markRange(document: Document, range: Range, annotation: Highlight) {
 
 export function jumpToHighlight(document: Document, annotation: Highlight) {
   if (!annotation.selector) return false;
-  return jumpToSelection(document, annotation.selector);
+  const range = selectionRange(document, annotation.selector);
+  return range ? range.toString().trim() === annotation.text.trim() && jumpToRange(document, range) : false;
 }
 
 export function jumpToSelection(document: Document, selector: { start: number; end: number }) {
@@ -55,12 +56,13 @@ export function jumpToSelection(document: Document, selector: { start: number; e
 }
 
 export function jumpToRange(document: Document, range: Range) {
-  const element = range?.startContainer.parentElement;
+  const element = range.startContainer.nodeType === 1 ? range.startContainer as Element : range.startContainer.parentElement;
   if (!element) return false;
-  const rectangle = range!.getClientRects()[0];
+  const rectangle = range.getClientRects()[0] ?? (range.startContainer.nodeType === 1 ? element.getBoundingClientRect() : null);
+  if (!rectangle || rectangle.width === 0 && rectangle.height === 0) return false;
   const root = document.scrollingElement ?? document.documentElement;
-  if (rectangle && isPaged(document)) root.scrollLeft = Math.floor((rectangle.left + root.scrollLeft) / root.clientWidth) * root.clientWidth;
-  else if (rectangle) root.scrollTop += rectangle.top - root.clientHeight / 3;
+  if (isPaged(document)) root.scrollLeft = Math.floor((rectangle.left + root.scrollLeft) / root.clientWidth) * root.clientWidth;
+  else root.scrollTop += rectangle.top - root.clientHeight / 3;
   const selection = document.getSelection();
   if (!range.collapsed) { selection?.removeAllRanges(); selection?.addRange(range); }
   return true;

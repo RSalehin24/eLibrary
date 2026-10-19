@@ -1,11 +1,11 @@
 import json
-import re
 from typing import ClassVar
 
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.access.models import Bookmark, Highlight, HighlightColor, HighlightKind
+from apps.access.reading.bookmark_positions import normalized_bookmark_position
 from apps.catalog.serializers.public import CollectionParametersSerializer
 
 MAX_NOTE_LENGTH = 5000
@@ -13,7 +13,14 @@ MAX_SELECTED_TEXT_LENGTH = 5000
 
 
 class PersonalAnnotationParametersSerializer(CollectionParametersSerializer):
+    include_counts = serializers.BooleanField(default=False)
     book = serializers.CharField(max_length=255, required=False, allow_blank=True)
+    view = serializers.ChoiceField(
+        choices=["all", "highlights", "notes", "quotes"], default="all"
+    )
+    color = serializers.ChoiceField(
+        choices=HighlightColor.choices, allow_blank=True, default=""
+    )
 
 
 class TextSelectionSerializer(serializers.Serializer):
@@ -40,10 +47,7 @@ class BookmarkCreateSerializer(serializers.Serializer):
     )
 
     def validate_location(self, value):
-        if not re.fullmatch(r"chapter:\d+:(?:0(?:\.\d+)?|1(?:\.0+)?)", value):
-            raise serializers.ValidationError("Choose a valid reading position.")
-        _, chapter, fraction = value.split(":")
-        return f"chapter:{int(chapter)}:{float(fraction):.4f}"
+        return normalized_bookmark_position(value)
 
 
 class HighlightCreateSerializer(serializers.Serializer):
@@ -150,6 +154,8 @@ class HighlightCollectionSerializer(serializers.Serializer):
 
 
 class AnnotationUpdateSerializer(serializers.Serializer):
+    color = serializers.ChoiceField(choices=HighlightColor.choices, required=False)
+    kind = serializers.ChoiceField(choices=HighlightKind.choices, required=False)
     expected_updated_at = serializers.DateTimeField()
     note = serializers.CharField(max_length=MAX_NOTE_LENGTH, allow_blank=True)
 
@@ -174,13 +180,22 @@ class HighlightSummarySerializer(AnnotationSummarySerializer):
     kind = serializers.ChoiceField(choices=HighlightKind.choices)
 
 
+class AnnotationCountsSerializer(serializers.Serializer):
+    highlights = serializers.IntegerField()
+    notes = serializers.IntegerField()
+    quotes = serializers.IntegerField()
+    bookmarks = serializers.IntegerField()
+
+
 class PersonalBookmarksSerializer(serializers.Serializer):
+    counts = AnnotationCountsSerializer(required=False)
     entries = BookmarkSummarySerializer(many=True)
     next_cursor = serializers.CharField(allow_null=True)
     has_more = serializers.BooleanField()
 
 
 class PersonalHighlightsSerializer(serializers.Serializer):
+    counts = AnnotationCountsSerializer(required=False)
     entries = HighlightSummarySerializer(many=True)
     next_cursor = serializers.CharField(allow_null=True)
     has_more = serializers.BooleanField()

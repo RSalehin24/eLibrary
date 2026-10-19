@@ -52,6 +52,12 @@ const bengaliErrors: Record<string, string> = {
   "This password link is invalid or expired.": "পাসওয়ার্ডের লিংকটি সঠিক নয় অথবা মেয়াদ শেষ হয়েছে।",
   "Select at least one account permission.": "অন্তত একটি অনুমতি বেছে নিন।",
   "Read Once and Durable Read permissions are mutually exclusive.": "একবার পড়া ও স্থায়ীভাবে পড়ার অনুমতি একসঙ্গে দেওয়া যাবে না।",
+  "Read Once and Durable Read permissions are mutually exclusive for the same target.": "একই বই, বিভাগ বা লেখকের জন্য একবার পড়া ও স্থায়ীভাবে পড়ার অনুমতি একসঙ্গে দেওয়া যাবে না।",
+  "Choose only one target type per permission grant.": "প্রতিটি অনুমতির জন্য বই, বিভাগ বা লেখকের মধ্যে এক ধরনের লক্ষ্য বেছে নিন।",
+  "This permission can only be granted at the account level.": "এই অনুমতি দিতে সব বই বেছে নিন।",
+  "Only writers can be used for writer-specific access.": "লেখকভিত্তিক অনুমতি দিতে একজন লেখক বেছে নিন।",
+  "Each permission requires a distinct request identifier.": "প্রতিটি অনুমতির জন্য আলাদা অনুরোধের পরিচয় প্রয়োজন।",
+  "Choose an end date on or after the start date.": "শেষ তারিখ শুরুর তারিখের আগে হতে পারবে না।",
   "This permission is managed through maintenance.": "এই অনুমতি রক্ষণাবেক্ষণ ব্যবস্থা থেকে বদলাতে হবে।",
   "Set a password or send an invite email.": "পাসওয়ার্ড দিন অথবা আমন্ত্রণের ইমেইল পাঠান।",
   "Activate the account before sending an invite email.": "আমন্ত্রণ পাঠানোর আগে অ্যাকাউন্টটি সক্রিয় করুন।",
@@ -66,6 +72,7 @@ const bengaliErrors: Record<string, string> = {
 export function translateFieldError(language: AdminLanguage, message: string): string {
   if (language === "en") return translateSite(language, message);
   if (Object.hasOwn(bengaliErrors, message)) return bengaliErrors[message];
+  if (/^Invalid pk ".*" - object does not exist\.$/.test(message)) return "নির্বাচিত বই, বিভাগ বা লেখক এখন পাওয়া যাচ্ছে না। তালিকা হালনাগাদ করুন।";
   const maximum = message.match(/^Ensure this field has no more than (\d+) characters\.$/);
   if (maximum) return `সর্বোচ্চ ${bengaliNumber(Number(maximum[1]))} অক্ষর লিখুন।`;
   const minimum = message.match(/^This password is too short\. It must contain at least (\d+) characters\.$/);

@@ -11,6 +11,7 @@ import "./product.css";
 import { libraryFont } from "@/lib/fonts";
 import { SiteLanguageProvider, SiteText, SiteNav } from "@/components/site-language";
 import { getAdminLanguage } from "@/lib/admin-language-server";
+import { NotificationProvider } from "@/components/notification-provider";
 
 export async function generateMetadata() { return localizeMetadata({
   metadataBase: new URL(siteOrigin()), title: { default: siteName, template: `%s | ${siteName}` },
@@ -22,11 +23,11 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, them
 
 export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const language = await getAdminLanguage();
-  return <html lang={language} data-scroll-behavior="smooth"><body className={libraryFont.variable}><QueryProvider><SiteLanguageProvider initial={language}>
+  return <html lang={language}><body className={libraryFont.variable}><QueryProvider><SiteLanguageProvider initial={language}><NotificationProvider>
     <a className="skip-link" href="#main"><SiteText>{"মূল বিষয়ে যান"}</SiteText></a><SiteHeader />
     <main id="main" className="page-container">{children}</main>
     <footer className="site-footer"><div className="footer-brand"><BrandMark size={36} /><span><strong><SiteText>{siteName}</SiteText></strong><small><SiteText>{"বাংলা বই, সবার কাছে"}</SiteText></small></span></div>
       <SiteNav aria-label="অতিরিক্ত তথ্য"><Link href="/about/"><SiteText>{"আমাদের সম্পর্কে"}</SiteText></Link><Link href="/contact/"><SiteText>{"যোগাযোগ"}</SiteText></Link></SiteNav><PWAControls />
     </footer>
-  </SiteLanguageProvider></QueryProvider></body></html>;
+  </NotificationProvider></SiteLanguageProvider></QueryProvider></body></html>;
 }

@@ -133,8 +133,17 @@ test("English preference covers the main admin pages, forms and status filters",
   ]) {
     await page.goto(path);
     await expect(page.getByRole("heading", { name: heading, exact: typeof heading === "string", level: 1 })).toBeVisible();
-    const controls = await page.locator('.management-workspace label, .management-workspace button:not([lang="bn"]), .management-workspace select option').allTextContents();
+    const controls = await page.locator('.management-workspace label, .management-workspace button:not([lang="bn"]), .management-workspace select option').evaluateAll(elements => elements.map(element => {
+      const copy = element.cloneNode(true);
+      copy.querySelectorAll('[translate="no"]').forEach(content => content.remove());
+      return copy.textContent;
+    }));
     expect(controls.filter((text) => /[\u0980-\u09ff]/u.test(text))).toEqual([]);
+    const jobSelections = page.locator('.job-card .selection-toggle');
+    for (const label of await jobSelections.all()) {
+      await expect(label.locator('[translate="no"]')).not.toBeEmpty();
+      expect((await label.textContent()).trim()).toMatch(/^Select:/);
+    }
     await expect(page.getByRole("alert").filter({ hasText: /failed|পাওয়া যায়নি/i })).toHaveCount(0);
   }
 });

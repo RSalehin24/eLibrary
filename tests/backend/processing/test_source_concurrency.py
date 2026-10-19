@@ -9,7 +9,12 @@ from apps.ingestion.source_processing.resolution import resolve_source_job
 from apps.ingestion.source_processing.storage import write_artifact
 from apps.processing.job_models import BackgroundJob
 from apps.processing.jobs.requests import JobStateConflict
-from source_processing_fixtures import TITLE, curated_source, execute_source_job
+from source_processing_fixtures import (
+    TITLE,
+    curated_source,
+    execute_source_job,
+    historical_duplicate,
+)
 from test_background_job_concurrency import concurrent_calls
 
 pytestmark = pytest.mark.django_db(transaction=True)
@@ -54,7 +59,7 @@ def execute_at_barrier(job):
     return job.state
 
 
-def test_different_sources_with_one_title_cannot_silently_create_duplicate_books(
+def test_different_canonical_sources_with_one_title_create_distinct_books_safely(
     curated_job, tmp_path
 ):
     actor = User.objects.create_user(
@@ -71,8 +76,8 @@ def test_different_sources_with_one_title_cannot_silently_create_duplicate_books
     }
     other.save()
     states = concurrent_calls(execute_at_barrier, [curated_job, other])
-    assert sorted(states) == ["needs_attention", "succeeded"]
-    assert Book.objects.count() == 1 and not UserBook.objects.exists()
+    assert sorted(states) == ["succeeded", "succeeded"]
+    assert Book.objects.count() == 2 and not UserBook.objects.exists()
 
 
 def resolve_at_barrier(arguments):
@@ -83,8 +88,8 @@ def resolve_at_barrier(arguments):
 
 
 def test_simultaneous_source_decisions_use_one_revision(curated_job):
-    Book.objects.create(title=TITLE)
-    execute_source_job(curated_job)
+    candidate = Book.objects.create(title=TITLE)
+    historical_duplicate(curated_job, candidate)
     arguments = (
         curated_job.requested_by,
         curated_job.pk,

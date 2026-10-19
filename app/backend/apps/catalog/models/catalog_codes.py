@@ -190,7 +190,11 @@ def primary_writer_sequence_for_book(book):
 
 
 def decode_book_catalog_code(value):
+    from .catalog_code_overflow import UNASSIGNED_BOOK_TAG, unassigned_payload
+
     payload = unscramble_payload(int_from_catalog_code(value), inverse_multiplier=BOOK_SCRAMBLE_INVERSE, offset=BOOK_SCRAMBLE_OFFSET)
+    if payload >> (CATALOG_CODE_TOTAL_BITS - BOOK_TAG_BITS) == UNASSIGNED_BOOK_TAG:
+        return unassigned_payload(payload)
     check = payload & BOOK_CHECK_MASK
     book_sequence = (payload >> BOOK_CHECK_BITS) & BOOK_SEQUENCE_MASK
     writer_sequence = (payload >> (BOOK_CHECK_BITS + BOOK_SEQUENCE_BITS)) & ENTITY_SEQUENCE_MASK
@@ -262,7 +266,14 @@ def build_book_catalog_code(book):
         if decoded["category_sequence"] == category_sequence and decoded["writer_sequence"] == writer_sequence:
             used_sequences.add(decoded["book_sequence"])
 
-    next_sequence = available_book_sequence(used_sequences)
+    try:
+        next_sequence = available_book_sequence(used_sequences)
+    except ValueError:
+        if category_sequence or writer_sequence:
+            raise
+        from .catalog_code_overflow import allocate_unassigned_code
+
+        return allocate_unassigned_code(used_sequences)
 
     payload = (
         (BOOK_PAYLOAD_TAG << (BOOK_CHECK_BITS + BOOK_SEQUENCE_BITS + (ENTITY_SEQUENCE_BITS * 2)))

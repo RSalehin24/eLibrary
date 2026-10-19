@@ -1,4 +1,5 @@
 import logging
+import warnings
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -22,13 +23,9 @@ def validated_cover(folder, name):
     if not name:
         return ""
     try:
-        with Image.open(Path(folder) / name) as image:
-            if (
-                image.format not in {"JPEG", "PNG", "WEBP"}
-                or image.width * image.height > 20000000
-            ):
-                return ""
-            image.verify()
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", Image.DecompressionBombWarning)
+            return checked_cover_image(Path(folder) / name)
     except (
         OSError,
         ValueError,
@@ -38,7 +35,17 @@ def validated_cover(folder, name):
     ):
         logger.warning("The source cover is not a valid raster image.")
         return ""
-    return name
+
+
+def checked_cover_image(path):
+    with Image.open(path) as image:
+        if (
+            image.format not in {"JPEG", "PNG", "WEBP"}
+            or image.width * image.height > 20000000
+        ):
+            return ""
+        image.verify()
+    return path.name
 
 
 def download_source_cover(url, folder, session):

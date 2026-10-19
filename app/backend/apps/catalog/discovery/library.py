@@ -7,6 +7,8 @@ from apps.catalog.discovery.queries import (
 )
 from apps.catalog.models import Book
 
+from .sorting import filter_owned_books, with_requested_at
+
 
 def library_books(user):
     return annotate_personal_books(
@@ -25,4 +27,7 @@ def library_queryset(user, parameters):
         personal_feed(user, parameters.get("view", "all")), user
     ).only(*PUBLIC_BOOK_FIELDS, "state", "review_state", "record_type")
     queryset = filter_public_books(queryset, parameters)
+    queryset = filter_owned_books(queryset, parameters, user)
+    if parameters.get("sort", "").lstrip("-") == "requested_at":
+        queryset = with_requested_at(queryset, user)
     return with_public_relations(search_public_books(queryset, parameters["q"]))

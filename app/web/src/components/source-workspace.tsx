@@ -9,6 +9,7 @@ import { ProcessingAssets } from "./processing-assets";
 import { SourceProcessing } from "./source-processing";
 import { SourceSummary } from "./source-summary";
 import { SourceVerification } from "./source-verification";
+import { SourceUpdateStatus } from "./source-update-status";
 
 export function SourceWorkspace({ initial }: { initial: SourceEntry }) {
   const { t, number } = useAdminLanguage();
@@ -17,6 +18,7 @@ export function SourceWorkspace({ initial }: { initial: SourceEntry }) {
   const operation = entry.active_operation_id ?? entry.latest_operation_id;
   return <div className="source-workspace"><Link className="text-link" href="/manage/sources/">{t("← উৎসের তালিকায় ফিরুন")}</Link>
     <SourceSummary entry={entry} />
+    <SourceUpdateStatus entry={entry} />
     <div className="source-result-actions">{book && entry.can_edit_book && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(book.slug)}/`}>{t("সম্পাদনা, পর্যালোচনা ও প্রকাশ")}</Link>}
       {book && operation && <Link className="button button-quiet" href={`/manage/jobs/${operation}/`}>{t(entry.active_operation_id ? "চলমান কাজ ও করণীয় দেখুন →" : "কাজের বিস্তারিত")}</Link>}</div>
     {source.isError && <p className="field-error" role="alert">{t("হালনাগাদ অবস্থা পাওয়া যায়নি।")} <button className="button button-quiet" onClick={() => void source.refetch()}>{t("আবার দেখুন")}</button></p>}

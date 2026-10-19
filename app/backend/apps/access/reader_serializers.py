@@ -45,6 +45,7 @@ class ReaderSessionSerializer(serializers.Serializer):
     )
     resource_base = serializers.CharField()
     reading_progress = ReaderProgressSerializer()
+    progress_matches_edition = serializers.BooleanField()
 
 
 class ReaderAccessSerializer(serializers.Serializer):
@@ -55,5 +56,6 @@ class ReaderAccessSerializer(serializers.Serializer):
     can_send_kindle = serializers.BooleanField()
     prepared = serializers.BooleanField()
     active_session_id = serializers.UUIDField(allow_null=True)
+    progress_session_id = serializers.UUIDField(allow_null=True)
     reading_progress = ReaderProgressSerializer(allow_null=True)
     last_opened_at = serializers.DateTimeField(allow_null=True)

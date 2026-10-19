@@ -17,8 +17,9 @@ from .choices import (
     SubmissionOrigin,
     SubmissionStatus,
 )
+from .editions import SourceEdition, SourceEditionPage
 from .processing import DuplicateReview, ProcessingJob, ProcessingLog
-from .source_rate import SourceRequestWindow
+from .source_rate import SourceHostHealth, SourceRequestWindow
 from .submissions import BookSubmission, MatchCandidate, TitleResolutionAttempt
 
 __all__ = [
@@ -39,6 +40,9 @@ __all__ = [
     "SourceCatalogEntry",
     "SourceCatalogRefreshState",
     "SourceCatalogRefreshStatus",
+    "SourceEdition",
+    "SourceEditionPage",
+    "SourceHostHealth",
     "SourceRequestWindow",
     "SubmissionInputType",
     "SubmissionOrigin",

@@ -31,6 +31,27 @@ available after book permissions change. Other accounts receive 404. Responses
 are private/no-store/noindex, with no storage paths or raw job input. CSRF applies
 to commands. Administrative job access remains a separate global permission.
 
+## History filters and sending again
+
+The private history toolbar combines book title/code, writer, category, series,
+book type, operation state and Dhaka date ranges. Request time, book creation
+time and title each support ascending and descending ordering with a stable ID
+tie breaker. Signed filtered cursors bind the account, filters and ordering.
+The default unfiltered feed retains its existing cursor format. History remains
+available after reading/sending permissions change; filtering does not make
+another account's operations visible.
+
+Completed, failed, cancelled and uncertain requests offer **Send again**. This
+opens the existing composer with the previous operation UUID, rather than placing
+addresses in the URL or submitting another job. The server checks the previous
+operation's owner, matching book and current Kindle options. Only previous
+addresses still present in the current profile are preselected. Removed addresses
+never fall back to selecting newly added profile addresses. The prior state and
+per-recipient outcomes remain visible; uncertain outcomes explicitly warn about
+duplicate delivery. Active prior requests do not expose a resend form. Creating
+another request still requires an explicit submit and uses the existing asset
+revision, recipient checks and operation UUID guards.
+
 ## Worker and delivery meaning
 
 The dedicated `delivery` queue uses the persisted job/attempt/dispatch mechanism

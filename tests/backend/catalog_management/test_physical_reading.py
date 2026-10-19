@@ -81,6 +81,7 @@ def test_digital_books_do_not_receive_physical_logs_and_paper_books_have_no_epub
         "html_url": None,
         "cover_url": None,
         "active_session_id": None,
+        "progress_session_id": None,
         "reading_progress": None,
         "last_opened_at": None,
     }

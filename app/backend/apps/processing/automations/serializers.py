@@ -10,6 +10,7 @@ from apps.processing.automation_models import AutomationRun, SourceAutomation
 
 
 class AutomationSerializer(serializers.ModelSerializer):
+    catalog_scope = serializers.ChoiceField(choices=["all", "unfinished"], read_only=True)
     first_run_local = serializers.SerializerMethodField()
     run_as_name = serializers.CharField(source="run_as.display_name", read_only=True)
 
@@ -30,6 +31,8 @@ class AutomationSerializer(serializers.ModelSerializer):
             "next_run_at",
             "source_max_pages",
             "processing_limit",
+            "catalog_scope",
+            "rebuild_updated",
             "fetch_all",
             "process_all",
             "run_as_name",
@@ -67,6 +70,10 @@ class AutomationCommandSerializer(serializers.Serializer):
     time_zone = serializers.CharField(max_length=64)
     source_max_pages = serializers.IntegerField(min_value=1, max_value=200, default=20)
     processing_limit = serializers.IntegerField(min_value=0, max_value=100, default=0)
+    catalog_scope = serializers.ChoiceField(
+        choices=["all", "unfinished"], default="all"
+    )
+    rebuild_updated = serializers.BooleanField(default=False)
     fetch_all = serializers.BooleanField(default=False)
     process_all = serializers.BooleanField(default=False)
 
@@ -125,6 +132,7 @@ class AutomationRunSerializer(serializers.ModelSerializer):
             "processing_attention",
             "processing_succeeded",
             "processing_rejected",
+            "rebuild_updated",
             "missed_occurrences",
             "process_all",
             "bulk_operation_id",

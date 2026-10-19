@@ -42,9 +42,15 @@ def test_preparation_recovery_does_not_repeat_content_or_asset_replacement(
     )
     job = request_regeneration(regeneration)
     execute_source_job(job)
-    assert job.state == "failed" and job.checkpoint["content_committed"]
+    assert job.state == "failed" and not job.checkpoint.get("content_committed")
+    assert not job.checkpoint.get("assets_published")
+    book.refresh_from_db()
+    assert (
+        book.main_content_html == "<p>Previous text</p>" and book.state == "published"
+    )
     assert available_source_choices(job) == ["resume_preparation", "cancel"]
-    path, revision = job.asset.file.name, job.asset.updated_at
+    staged = job.checkpoint["staged_assets"]["epub"]
+    path, checksum = staged["file"], staged["checksum"]
     resolve_source_job(
         actor,
         job.pk,
@@ -57,7 +63,7 @@ def test_preparation_recovery_does_not_repeat_content_or_asset_replacement(
     job.refresh_from_db()
     execute_source_job(job)
     assert job.state == "succeeded" and job.asset.file.name == path
-    assert job.asset.updated_at == revision
+    assert job.asset.checksum == checksum
     publication.refresh_from_db()
     assert publication.state == "ready"
     assert MetadataVersion.objects.filter(book=book, source="regeneration").count() == 1

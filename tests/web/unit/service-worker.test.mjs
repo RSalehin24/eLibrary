@@ -63,6 +63,18 @@ test("real HTTP errors are preserved without offline substitution", async () => 
   assert.equal(await response.text(), "real server failure");
 });
 
+test("only the public local-file reader shell is available offline while private readers keep the generic fallback", async () => {
+  const scope = new WorkerScope();
+  const local = { ...configuration, localReader: "/local-reader-shell.public.html", assets: [...configuration.assets, "/local-reader-shell.public.html"] };
+  configureWorker(scope, local); await scope.dispatch("install");
+  scope.fetch = async () => { throw new TypeError("offline"); };
+  const response = await scope.dispatch("fetch", { request: request("/local-reader/", { mode: "navigate", destination: "document" }) });
+  assert.equal(await response.text(), "code");
+  const privateResponse = await scope.dispatch("fetch", { request: request("/reader/private/", { mode: "navigate", destination: "document" }) });
+  assert.equal(await privateResponse.text(), "সংযোগ প্রয়োজন");
+  assert.ok(scope.requested.every(entry => entry.credentials === "omit"));
+});
+
 test("updates activate only on acceptance and retain two previous application caches", async () => {
   const scope = worker();
   for (const name of ["other-app", "library-static-first", "library-static-second", "library-static-third", configuration.cache]) await scope.caches.open(name);

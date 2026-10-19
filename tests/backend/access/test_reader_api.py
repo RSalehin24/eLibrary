@@ -150,10 +150,12 @@ def test_book_reading_summary_uses_only_the_current_accounts_saved_progress(read
     )
     summary = client.get(path).json()
     assert summary["reading_progress"] == values and summary["last_opened_at"]
+    assert summary["progress_session_id"] == session["id"]
     stranger = User.objects.create_user(email="progress-stranger@library.test")
     client.force_authenticate(stranger)
     other = client.get(path).json()
     assert other["reading_progress"] is None and other["last_opened_at"] is None
+    assert other["progress_session_id"] is None
 
 
 def test_missing_epub_hides_delivery_and_download_but_preserves_prepared_reading(

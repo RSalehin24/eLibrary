@@ -9,6 +9,7 @@ import { jobPollingInterval } from "@/lib/job-status";
 import { useUpdateParticipant } from "@/lib/update-safety";
 import { AccountFeedback } from "./account-feedback";
 import { KindleSummary } from "./kindle-summary";
+import { KindleResendLink } from "./kindle-resend-link";
 
 export function KindleOperation({ initial }: { initial: Operation }) {
   const client = useQueryClient();
@@ -22,5 +23,5 @@ export function KindleOperation({ initial }: { initial: Operation }) {
     <AccountFeedback error={cancellation.error} conflictMessage="পাঠানোর অবস্থা বদলেছে। বর্তমান ফল দেখে সিদ্ধান্ত নিন।" />
     {status.isError && <p className="field-error" role="alert"><SiteText>{"হালনাগাদ অবস্থা পাওয়া যায়নি।"}</SiteText></p>}
     <div className="account-actions">{status.data.can_cancel && <button className="button button-quiet" disabled={cancellation.isPending || !!cancellation.error || status.isError} onClick={() => cancellation.mutate()}><SiteText>{"পাঠানো বাতিল করুন"}</SiteText></button>}
-      <button className="button button-quiet" disabled={cancellation.isPending || status.isFetching} onClick={() => void refresh()}><SiteText>{"বর্তমান অবস্থা দেখুন"}</SiteText></button></div></section>;
+      <button className="button button-quiet" disabled={cancellation.isPending || status.isFetching} onClick={() => void refresh()}><SiteText>{"বর্তমান অবস্থা দেখুন"}</SiteText></button><KindleResendLink operation={status.data} /></div></section>;
 }

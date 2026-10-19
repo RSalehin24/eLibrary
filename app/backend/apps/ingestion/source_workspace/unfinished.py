@@ -10,7 +10,10 @@ def unfinished_source_query():
     legacy = BookRecord.objects.filter(resolved_from_incomplete=False).filter(
         Q(was_incomplete=True) | incomplete_category_query()
     )
-    stored = Q(raw_data__source_unfinished=True)
+    stored = Q(raw_data__source_unfinished=True) | Q(
+        raw_data__source_was_unfinished=True,
+        raw_data__source_update__status="available",
+    )
     unclassified = Q(raw_data__source_unfinished__isnull=True)
     metadata = (
         Q(raw_data__incompleteCategoryUrl__isnull=False)

@@ -141,10 +141,14 @@ def test_one_hundred_source_records_keep_queries_and_payloads_bounded(
         response = client.get(SOURCES, {"limit": 100})
     assert len(response.json()["entries"]) == 100
     assert "private-book-body" not in response.content.decode()
-    assert not any(
-        '"main_content_html"' in query["sql"] or '"raw_data"' in query["sql"]
-        for query in queries.captured_queries
+    update_projection = (
+        f'("{SourceCatalogEntry._meta.db_table}"."raw_data" -> '
+        "'source_update') AS \"source_update\""
     )
+    for query in queries.captured_queries:
+        selected = query["sql"].replace(update_projection, "")
+        assert '"main_content_html"' not in selected
+        assert '"raw_data"' not in selected
 
 
 @pytest.mark.parametrize(

@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from django.db.models import BooleanField, Case, Exists, OuterRef, Q, Subquery, When
+from django.db.models import BooleanField, Case, Exists, F, OuterRef, Q, Subquery, When
 
 from apps.catalog.discovery.management import metadata_managed_books
 from apps.catalog.models import Book, BookSource
@@ -20,6 +20,7 @@ def source_entries(parameters):
     operations = BackgroundJob.objects.filter(source_record_id=OuterRef("pk"))
     queryset = (
         SourceCatalogEntry.objects.annotate(
+            source_update=F("raw_data__source_update"),
             active_operation_id=Subquery(
                 operations.filter(state__in=SOURCE_ACTIVE_STATES).values("pk")[:1]
             ),
@@ -47,6 +48,10 @@ def source_entries(parameters):
         "removed": {"removed": True},
     }
     queryset = queryset.filter(**filters.get(parameters["status"], {}))
+    if parameters["status"] == "updated":
+        queryset = queryset.filter(
+            source_update__status="available", linked=True, removed=False
+        )
     if parameters.get("catalog_scope") == "unfinished":
         from .unfinished import unfinished_source_query
 

@@ -1,4 +1,203 @@
-# Implementation handoff — 17 October 2026
+# Implementation handoff — 19 October 2026
+
+## Current implementation — 19 October 2026
+
+The accepted specification is [implementation-repair-plan.md](implementation-repair-plan.md).
+The baseline capability register is [operations/feature-parity.md](operations/feature-parity.md),
+pinned to `main@08fc99f9d59221072404b1af4ab501dfc3fd269e`. This section supersedes
+older runtime and unfinished-work statements below. No zero-bug, subjective design
+acceptance or external production-acceptance claim is made.
+
+Implemented in the current working tree:
+
+- Positive reading classification, versioned source/page evidence, quarantine,
+  paced availability retries, Retry-After, persisted host circuit breaking,
+  code-version defect recovery, safe metadata rebasing and retained checkpoints.
+  Ten-page/30-second collection slices and bounded fair dispatch prevent a large
+  book or a backlog of old messages from monopolizing the processing worker.
+- Source HTML/EPUB and prepared reader resources switch atomically after all
+  checks. Ordinary verified editions remain readable during replacement. Manual
+  EPUB replacements also stage/prepare before switching; website uploads must
+  match the retained reading evidence. Personal data and old bytes are retained.
+- Nightly unfinished-source checks run at 02:00 Asia/Dhaka and automatically
+  rebuild changed editions. Availability waits remain automatic; internal defects
+  retry only after relevant code changes. No manual editorial approval is required.
+- Combined catalog/managed/personal filters and stable sorting, owner-private saved
+  catalog/queue views, cards/tables, linked author/category/series directories and
+  visible counts. Dedicated physical inventory has grouped XLSX/CSV/PDF/print
+  exports. All-page exports preserve the actual filtered scope and permissions.
+- Metadata history/edit notes, four annotation views with search/colors/grouping,
+  multi-target/multi-scope permission grants and per-item results, revision-pinned
+  bulk source retry/recreate/archive plus ordinary pause/resume/cancel controls.
+- Kindle history filtering/sorting and explicit recipient-checked resend,
+  validated legacy routes, optional notification sounds (off by default),
+  bilingual feedback and explicit twelve-hour Dhaka dates/inputs.
+- Saved-edition provenance, actual last chapter/location summaries, element/image
+  CFI restoration and explicit unresolved-position notices. Exact passage anchors
+  for newly created bookmarks preserve the passage after reopening with different
+  font sizes and viewport widths; changed quotations produce a visible warning.
+- Unassigned book catalog numbers can continue beyond the former 4,095-record
+  limit without changing existing ten-character codes or URLs. Mobile search
+  buttons stay on one line; native anchors/form focus no longer animate globally.
+
+Runtime and preservation:
+
+- Preview: `http://127.0.0.1:3000/`; browser reference proxy: port 3001.
+  PostgreSQL/Redis/RabbitMQ retained volumes remain intact. Processing worker,
+  dispatcher and scheduler are running; **delivery workers remain off**. Never
+  start duplicate processing services or seed test accounts into preview.
+- Private backups preceded additive catalog 0027, ingestion 0013/0014 and
+  processing 0014 migrations. No earlier migration was edited or data deleted.
+- The initial 344-publication audit quarantined six description-only records;
+  six legitimate short/line-break works were retained. Automatic source rechecks
+  are scheduled. The final audit checked 814 published operations, all verified;
+  an apply pass marked 332 older unchecked publications verified. The runtime
+  snapshot contains 838 verified published books, six quarantined records, 3,286
+  queued source jobs, one running, 42 automatic waits and zero failed/attention jobs.
+  Counts are a moving checkpoint, not a catalog-completion claim.
+- Recoveries retain attempts, ownership, notes and good source pages. The large
+  collection resumed beyond its former aggregate-cache limit; the cache now has
+  a separate bounded 2 GiB disk budget, without raising per-response limits.
+- Daily unfinished maintenance remains enabled in preview, schedule
+  `8d129fce-d557-51c5-bf0c-d26701ae2d21`. Completed source books publish automatically.
+  Thousands of queued books are still being processed; implementation completion
+  does not mean the entire source catalog has already finished.
+
+Latest verification:
+
+- Full backend/tools: **1,675 passed**, 13 live checks deselected, warnings treated
+  as errors (`parity-final-backend.log`). The subsequent bookmark repair passed
+  **45 focused access tests**, including 18 new input/chapter cases; these overlap
+  the full gate and are not added to its total (`final-bookmark-text-backend.log`).
+- **105 web units**, ESLint, production build, strict generated API/TypeScript,
+  mypy (**259 source files**), affected Python lint, architecture/file-size policies
+  and whitespace checks pass, including the final bookmark changes. Strict schema
+  generation has zero warnings; migration consistency reports no changes.
+- Reader: **24 journeys each** in Chromium/WebKit/Android/iOS; four newest reader
+  cases additionally pass Linux Firefox. Catalog/admin: **15 journeys each** pass
+  Chromium/WebKit/Linux Firefox/Android/iOS. Source controls pass seven journeys
+  each in Chromium/Android/iOS; the final mobile search screenshot was inspected.
+  Three new bookmark journeys pass in all five profiles (15 combinations).
+  Evidence stays under ignored `test-artifacts/foundation/`; exact artifact names
+  and the earlier intermittent upload observation are in the capability register.
+
+Implementation and planned simulator gates are complete for the inventoried
+repair scope. Remaining external verification and supported boundaries are maintained in the capability
+register. Only simulators are available. Actual Kindle receipt, physical devices,
+production deployment and independent-machine capacity remain unverified. Direct
+Bengali PDF generation requires Pillow shaping support (verified in Linux); hosts
+without it offer full filtered print/Save as PDF. Five development-only upstream
+lint-chain audit highs remain; production dependencies have no reported findings.
+Spatial/media CFI coordinates are preserved but unsupported; the pinned baseline
+also did not restore their coordinates precisely. Do not describe those records
+as corrupt or silently invent an exact passage.
+
+## Previous correction — source failures, unfinished updates and job clarity (18 October 2026)
+
+Latest user requirements: source books must not remain drafts or need per-book
+manual review; repair failed creation; identify updated/finished source books;
+make job pages readable and explain queued work; display Asia/Dhaka in a 12-hour
+clock throughout the site. This correction is implemented and verified below.
+Catalog processing is running again. Do not claim zero bugs, subjective design
+acceptance or completion of the remaining catalog queue.
+
+Implemented so far:
+
+- Permit the source's public contents-pager nonce only on its exact read-only
+  action/context; keep unrelated hosts, credentials, tokens and nonce requests
+  blocked. This repairs books with more than one contents page.
+- Partition large book checkpoints into separately bounded document/snapshot/
+  projection artifacts without raising storage limits. Legacy artifacts remain
+  readable. The actual large anthology that hit the old limit has now succeeded.
+- Repair malformed numeric entities/control bytes before HTML/EPUB creation.
+  Preserve a single-flow book when an introductory heading otherwise consumes
+  its complete body. Strict source/file/reader verification remains enabled.
+- Source creation/regeneration uses processing rather than editorial-review
+  state. An audited recovery service continues old successful preparations through
+  normal worker checks; no direct publication bypass was added.
+- Canonical source URLs determine identity. Distinct source books with the same
+  title now publish without a manual duplicate decision, preserving existing
+  metadata and ownership. Canonical URL uniqueness and historical resolution
+  controls remain enforced. Manual forms and lifecycle labels no longer request
+  draft review.
+- Empty source chapter pages enter a six-hour automatic recheck workflow, with
+  fresh source collection and no manual approval step. Availability polls do not
+  exhaust the ordinary processing-failure allowance.
+- Persist source contents signatures and last-checked evidence; catalog refresh
+  checks published unfinished books. Expose an Updates Available filter and
+  direct update links. When the source removes a book from its unfinished category,
+  retain a completion notice until its updated edition is published. Provenance/
+  update checks do not rotate catalog revisions or invalidate queued work.
+- Job pages show actual workflow steps, queued-earlier count and next-action
+  guidance. Technical IDs/checkpoints and attempt history are expandable. Dashboard
+  labels no longer present source processing as drafts. Shared timestamps now use
+  Asia/Dhaka, Bengali localized day periods and English AM/PM.
+
+Actual preview repairs already completed:
+
+- **91** previously unpublished books finished normal validation and publication;
+  `source-repair-pending-results.json` records 91 successes.
+- The failed-job repair pass finished **12 successful publications** and **one
+  automatic source-availability wait**, recorded in `source-repair-failed-results.json`.
+  The waiting book is `হুমায়ূন আহমেদ রচনাবলী ১০`: all four fetched source chapters
+  have no body text, and the source REST endpoint returns HTTP 401. Do not invent
+  text or claim that external access has been repaired. Its scheduled recheck is
+  an ordinary waiting state, not a manual book-review request.
+- Other observed failures (pager links, anthology checkpoint size, foreword
+  classification and export control characters) now pass on actual books.
+
+Final verification:
+
+- **1,454 backend/tools tests passed**, 13 live tests deselected, warnings treated
+  as errors: `source-repair-backend-final.log`. The 816 focused processing/catalog
+  tests also pass; these overlap the full suite. An earlier interrupted run's
+  bounded-query assertion was updated to permit only the small JSON update
+  projection while still rejecting full source payload/book-body selection.
+- **58 web units**, production build, ESLint, strict TypeScript, mypy on **225
+  files**, versioned OpenAPI validation/generated types, migration consistency,
+  architecture/file-size policies and whitespace checks pass. Evidence uses
+  `source-repair-*-release.log`, `source-repair-mypy-final.log` and
+  `source-repair-openapi-versioned-final.log`.
+- **117 distinct browser project/journey combinations** have passing latest
+  results: Chromium 43, WebKit 21, Android 16, iPhone 16 and Linux Firefox 21.
+  `source-repair-browser-summary.json` records the evidence logs. Initial new-test
+  failures were corrected by matching the rendered label punctuation and explicitly
+  refreshing an intercepted idle job; all 12 final clarity checks pass. No browser
+  case or lint rule was disabled. Firefox uses the approved pinned Docker image;
+  the in-app browser still fails to connect.
+- Real-data audit confirms all **103 repaired publications** have available HTML
+  and EPUB files plus normal automatic-publication evidence:
+  `source-repair-publication-audit-final.log` and `source-repair-published-audit.json`.
+  The pre-restoration catalog contained 197 published books and no unpublished
+  records. Counts continue increasing as the normal queue runs.
+- Actual queued-job, dashboard, unfinished-list, source-wait and phone screenshots
+  were inspected after restarting the served production build. Reference-only
+  update-notice QA confirms the direct update action and Dhaka timestamp. Evidence:
+  `source-repair-final-qa.json` and `source-repair-*.png`.
+
+Scoped Python lint/format passes for all 28 corrected modules. The retained large
+`book_manifest.py` collector has seven existing Ruff diagnostics, identical before
+and after the two-line hook change; see `source-repair-retained-lint-baseline.json`.
+No diagnostics were suppressed and no unrelated collector refactor was made.
+
+Runtime: retained PostgreSQL/Redis/RabbitMQ containers, preview API 8000/web 3000,
+reference API 8002/web 3002 and proxy 3001 are running. No volumes were reset.
+Processing-only Celery, dispatcher and scheduler were restored after regression
+and subsequent queued books are publishing. **Delivery workers remain off.**
+The normal unfinished-source update scan succeeded and checked the one published
+unfinished book (`source-repair-real-updates.log`); uncreated category entries stay
+in their normal creation queue. The old interrupted operation
+`5c0b8f6a-6c1d-5463-ad51-8cd22424f061` was recovered through stale-attempt services
+and resumed through the normal worker. Its new attempt hit a source connection
+timeout and scheduled a normal automatic retry; it has not published yet. Evidence:
+`source-repair-resume-interrupted.log` and `source-repair-worker-final.log`. The
+last work audit had no failed/attention source jobs, two retry waits (this timeout
+and the missing-text title), one running job and the remaining queued catalog.
+Do not rely on old PIDs or restart duplicate workers.
+
+Preview: http://localhost:3000. Source availability, physical devices, external
+Kindle delivery and independent-host acceptance retain their documented limits.
+No dependencies, migrations, commit or push were added in this correction.
 
 ## Current correction — obsolete dashboard review counter (17 October 2026)
 

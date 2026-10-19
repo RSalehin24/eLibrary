@@ -28,7 +28,7 @@ export default async function BookDetailPage({ params }: BookParameters) {
   const authors = book.contributors.filter((person) => person.role === "author");
   return <>
     <Breadcrumbs entries={[{ name: "পাঠাগার", path: "/catalog/" }, { name: book.title, path: `/books/${encodeURIComponent(book.slug)}/` }]} />
-    <BookInformation book={book} entityPath={catalogEntityPath}>
+    <BookInformation book={book}>
         <BookActions slug={book.slug} recordType={book.record_type} />
     </BookInformation>
     {book.record_type !== "manual" && <BookReadingSummary slug={book.slug} />}

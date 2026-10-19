@@ -21,7 +21,7 @@ export function BookLifecycleControls({ editor }: { editor: BookEditor }) {
   const operation = regenerate.data?.operation_id ?? controls.data?.active_operation_id;
   return <section className="book-lifecycle-controls"><h2><AdminText>বইয়ের কাজ</AdminText></h2><div className="account-actions">
     {book.record_type !== "manual" && <AdminDialog title="বই আবার তৈরি করবেন?" trigger="বই আবার তৈরি করুন" icon="refresh" dialogRef={regenerateDialog} disabled={blocked || !controls.data?.can_regenerate}>
-      <p>{book.title}</p><p><AdminText>ওয়েবসাইট থেকে নতুন করে লেখা এনে HTML ও EPUB তৈরি হবে। আগের ফাইল ও পাঠকের নোট সংরক্ষিত থাকবে। প্রকাশের আগে আবার পর্যালোচনা করতে হবে।</AdminText></p>
+      <p>{book.title}</p><p><AdminText>ওয়েবসাইট থেকে নতুন করে লেখা এনে HTML ও EPUB তৈরি হবে। আগের ফাইল ও পাঠকের নোট সংরক্ষিত থাকবে। স্বয়ংক্রিয় যাচাই সফল হলে বই প্রকাশিত হবে।</AdminText></p>
       <button className="button" disabled={blocked || !controls.data?.can_regenerate} onClick={() => { regenerateDialog.current?.close(); regenerate.mutate(crypto.randomUUID()); }}><AdminText>আবার তৈরি শুরু করুন</AdminText></button>
     </AdminDialog>}
     <AdminDialog title="বইটি সরাবেন?" trigger="বই সরান" icon="trash" dialogRef={removeDialog} className="button button-danger" disabled={blocked || !controls.data?.can_remove}>

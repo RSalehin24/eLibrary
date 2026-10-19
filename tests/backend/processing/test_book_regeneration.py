@@ -74,7 +74,7 @@ def test_regeneration_api_is_revision_checked_idempotent_and_private(regeneratio
     }
     first = client.post(path, values, format="json")
     assert first.status_code == 202 and first["Cache-Control"] == "private, no-store"
-    assert first.json()["book"]["state"] == "needs_review"
+    assert first.json()["book"]["state"] == "published"
     assert (
         client.post(path, values, format="json").json()["operation_id"]
         == first.json()["operation_id"]

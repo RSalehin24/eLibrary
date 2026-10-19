@@ -1,5 +1,6 @@
 from typing import ClassVar
 
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import extend_schema
 from rest_framework.permissions import IsAuthenticated
@@ -20,6 +21,7 @@ from apps.access.reading.annotations import (
     annotation_page,
     annotation_summaries,
     personal_annotations,
+    search_annotations,
     update_annotation,
 )
 from apps.common.api import VersionedAPIView
@@ -30,16 +32,50 @@ from .reader_annotations import collection_response
 def personal_annotation_page(request, model):
     parameters = PersonalAnnotationParametersSerializer(data=request.query_params)
     parameters.is_valid(raise_exception=True)
-    book = parameters.validated_data.get("book", "")
-    scope = f"personal:{model._meta.label}:{request.user.pk}:{book}"
+    values = parameters.validated_data
+    book = values.get("book", "")
+    scope = f"personal:{model._meta.label}:{request.user.pk}:{book}:{values['view']}:{values['color']}"
     queryset = personal_annotations(request.user, model)
     if book:
         queryset = queryset.filter(book__slug=book)
-    return annotation_page(
-        annotation_summaries(queryset),
-        parameters.validated_data,
-        scope,
+    if model is Highlight:
+        if values["view"] in {"highlights", "notes"}:
+            queryset = queryset.filter(kind="highlight")
+            queryset = (
+                queryset.filter(note="")
+                if values["view"] == "highlights"
+                else queryset.exclude(note="")
+            )
+        elif values["view"] == "quotes":
+            queryset = queryset.filter(kind="quote")
+        if values["color"]:
+            queryset = queryset.filter(color=values["color"])
+    entries, cursor = annotation_page(annotation_summaries(queryset), values, scope)
+    return entries, cursor, values
+
+
+def annotation_counts(user, values):
+    highlights = search_annotations(personal_annotations(user, Highlight), values["q"])
+    bookmarks = search_annotations(personal_annotations(user, Bookmark), values["q"])
+    if values.get("book"):
+        highlights = highlights.filter(book__slug=values["book"])
+        bookmarks = bookmarks.filter(book__slug=values["book"])
+    if values.get("color"):
+        highlights = highlights.filter(color=values["color"])
+    counts = highlights.aggregate(
+        highlights=Count("pk", filter=Q(kind="highlight", note="")),
+        notes=Count("pk", filter=Q(kind="highlight") & ~Q(note="")),
+        quotes=Count("pk", filter=Q(kind="quote")),
     )
+    return {**counts, "bookmarks": bookmarks.count()}
+
+
+def personal_annotation_response(request, model, serializer):
+    entries, cursor, values = personal_annotation_page(request, model)
+    response = collection_response(entries, cursor, serializer)
+    if values["include_counts"]:
+        response.data["counts"] = annotation_counts(request.user, values)
+    return response
 
 
 class PersonalBookmarksView(VersionedAPIView):
@@ -51,8 +87,9 @@ class PersonalBookmarksView(VersionedAPIView):
         responses={200: PersonalBookmarksSerializer},
     )
     def get(self, request):
-        entries, cursor = personal_annotation_page(request, Bookmark)
-        return collection_response(entries, cursor, BookmarkSummarySerializer)
+        return personal_annotation_response(
+            request, Bookmark, BookmarkSummarySerializer
+        )
 
 
 class PersonalHighlightsView(VersionedAPIView):
@@ -64,8 +101,9 @@ class PersonalHighlightsView(VersionedAPIView):
         responses={200: PersonalHighlightsSerializer},
     )
     def get(self, request):
-        entries, cursor = personal_annotation_page(request, Highlight)
-        return collection_response(entries, cursor, HighlightSummarySerializer)
+        return personal_annotation_response(
+            request, Highlight, HighlightSummarySerializer
+        )
 
 
 class PersonalAnnotationDetailView(VersionedAPIView):

@@ -13,6 +13,8 @@ from apps.processing.job_models import (
     JobDispatch,
 )
 
+from .source_dispatch import source_dispatch_candidates
+
 DISPATCH_LEASE_SECONDS = 30
 MAX_DISPATCH_BATCH = 100
 MAX_DISPATCH_BACKOFF_SECONDS = 60
@@ -33,6 +35,7 @@ def claim_dispatches(limit=50):
     eligible = Q(state=DispatchState.PENDING) | Q(
         state=DispatchState.LEASED, lease_expires_at__lte=now
     )
+    source_identifiers = source_dispatch_candidates(eligible)
     records = (
         JobDispatch.objects.select_for_update(skip_locked=True, of=("self",))
         .filter(
@@ -40,6 +43,11 @@ def claim_dispatches(limit=50):
             available_at__lte=now,
             generation=F("job__generation"),
             job__state__in=[BackgroundJobState.QUEUED, BackgroundJobState.RETRY_WAIT],
+            job__available_at__lte=now,
+        )
+        .filter(
+            ~Q(job__kind=BackgroundJobKind.PROCESS_SOURCE)
+            | Q(pk__in=source_identifiers)
         )
         .select_related("job")
         .order_by("available_at", "id")[:limit]

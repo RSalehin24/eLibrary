@@ -3,8 +3,9 @@ import { localizeMetadata } from "@/lib/metadata-language";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { publicRequest } from "@/api/server";
+import { publicRequest, sessionRequest } from "@/api/server";
 import type { BookCollection } from "@/api/types";
+import { catalogFilterKeys, catalogNeedsAccount } from "@/lib/catalog-filters";
 import { CatalogSearch } from "@/components/catalog-search";
 import { CatalogBrowseNav } from "@/components/catalog-browse-nav";
 import { ManagedBooksShortcut } from "@/components/managed-books-shortcut";
@@ -27,13 +28,16 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   const q = queryValue(queryParameters, "q");
   const pageNumber = catalogPageNumber(queryParameters);
   if (q.length > 120) notFound();
-  const parameters = new URLSearchParams({ q, page: String(pageNumber) });
+  const filters = Object.fromEntries(catalogFilterKeys.map((name) => [name, queryValue(queryParameters, name)]));
+  if (Object.values(filters).some((value) => value.length > 255)) notFound();
+  if (!filters.record_type) filters.record_type = "all";
+  const parameters = new URLSearchParams({ ...filters, q, page: String(pageNumber) });
   let books: BookCollection;
-  try { books = await publicRequest<BookCollection>(`catalog/books/?${parameters}`); }
+  try { books = await (catalogNeedsAccount(filters) ? sessionRequest<BookCollection> : publicRequest<BookCollection>)(`catalog/books/?${parameters}`); }
   catch (error) { if (error instanceof APIError && error.status === 400) notFound(); throw error; }
   if (pageNumber > 1 && !books.entries.length) notFound();
   return <><CatalogBrowseNav current="/catalog/" /><header className="page-title"><p className="eyebrow"><SiteText>{"বাংলা বইয়ের সন্ধানে"}</SiteText></p><h1><SiteText>{"বইয়ের পাঠাগার"}</SiteText></h1>
     <p className="muted"><SiteText>{"বইয়ের নাম বা লেখকের নাম দিয়ে খুঁজুন।"}</SiteText></p><Link className="text-link" href="/collections/"><SiteText>{"সম্পাদকের নির্বাচন দেখুন →"}</SiteText></Link></header>
-    <ManagedBooksShortcut /><CatalogSearch key={`${q}:${pageNumber}`} initialQuery={q} initialBooks={books} page={pageNumber} />
+    <ManagedBooksShortcut /><CatalogSearch key={`${parameters}`} initialFilters={filters} initialQuery={q} initialBooks={books} page={pageNumber} />
     </>;
 }

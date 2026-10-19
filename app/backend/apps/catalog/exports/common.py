@@ -1,6 +1,4 @@
-import csv
 from html import escape
-from io import BytesIO, StringIO
 from pathlib import Path
 
 from django.conf import settings
@@ -8,7 +6,6 @@ from django.http import HttpResponse
 
 from apps.catalog.models import BookRecordType, ContributorRole
 from apps.catalog.services import normalize_book_contributors
-
 
 COMMON_PDF_FONT_PATHS = [
     "/usr/share/fonts/truetype/noto/NotoSansBengali-Regular.ttf",
@@ -28,11 +25,20 @@ def html_lines(values):
 
 
 def normalized_book_contributors_for_export(book):
-    return normalize_book_contributors([{"name": relation.contributor.name, "role": relation.role} for relation in book.book_contributors.all()])
+    return normalize_book_contributors(
+        [
+            {"name": relation.contributor.name, "role": relation.role}
+            for relation in book.book_contributors.all()
+        ]
+    )
 
 
 def contributor_names_by_role(book, role):
-    return [entry["name"] for entry in normalized_book_contributors_for_export(book) if entry["role"] == role]
+    return [
+        entry["name"]
+        for entry in normalized_book_contributors_for_export(book)
+        if entry["role"] == role
+    ]
 
 
 def contributor_names_for_roles(book, *roles):
@@ -47,7 +53,9 @@ def contributor_names_for_roles(book, *roles):
 def table_contributor_lines(book):
     authors = contributor_names_by_role(book, ContributorRole.AUTHOR)
     translators = contributor_names_by_role(book, ContributorRole.TRANSLATOR)
-    editors = contributor_names_for_roles(book, ContributorRole.COMPILER, ContributorRole.EDITOR)
+    editors = contributor_names_for_roles(
+        book, ContributorRole.COMPILER, ContributorRole.EDITOR
+    )
     publishers = contributor_names_by_role(book, ContributorRole.PUBLISHER)
     lines = []
     if authors:
@@ -65,7 +73,9 @@ def identity_ticket_contributor_line(book):
     parts = []
     authors = contributor_names_by_role(book, ContributorRole.AUTHOR)
     translators = contributor_names_by_role(book, ContributorRole.TRANSLATOR)
-    editors = contributor_names_for_roles(book, ContributorRole.COMPILER, ContributorRole.EDITOR)
+    editors = contributor_names_for_roles(
+        book, ContributorRole.COMPILER, ContributorRole.EDITOR
+    )
     publishers = contributor_names_by_role(book, ContributorRole.PUBLISHER)
     if authors:
         parts.append(", ".join(authors))
@@ -79,7 +89,9 @@ def identity_ticket_contributor_line(book):
 
 
 def csv_value(value):
-    return "" if value is None else str(value)
+    text = "" if value is None else str(value)
+    # Spreadsheet applications interpret these prefixes even after whitespace.
+    return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
 def book_export_filename(prefix, extension, *, record_type):
@@ -94,7 +106,9 @@ def resolve_pdf_font():
     except ImportError as exc:
         raise RuntimeError("PDF export requires reportlab to be installed.") from exc
 
-    for index, candidate in enumerate([settings.CATALOG_EXPORT_FONT_PATH, *COMMON_PDF_FONT_PATHS]):
+    for index, candidate in enumerate(
+        [settings.CATALOG_EXPORT_FONT_PATH, *COMMON_PDF_FONT_PATHS]
+    ):
         if not candidate:
             continue
         path = Path(candidate)

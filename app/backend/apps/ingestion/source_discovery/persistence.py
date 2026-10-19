@@ -42,8 +42,13 @@ def update_discovered_records(entries):
             and entry.raw_data.get("unfinished_scan")
             != values["raw_data"]["unfinished_scan"]
         ):
+            metadata_changed = any(
+                getattr(entry, field) != values[field] for field in CATALOG_FIELDS
+            )
             apply_discovered_values(entry, values)
-            entry.updated_at = entry.last_seen_at = now
+            entry.last_seen_at = now
+            if metadata_changed:
+                entry.updated_at = now
             changed.append(entry)
         else:
             unchanged.append(entry.pk)
@@ -80,6 +85,10 @@ def resolve_finished_source_entries(identifier):
         .only("raw_data", "updated_at")
     )
     for entry in entries:
-        entry.raw_data = {**entry.raw_data, "source_unfinished": False}
-        entry.updated_at = timezone.now()
-    SourceCatalogEntry.objects.bulk_update(entries, ["raw_data", "updated_at"])
+        entry.raw_data = {
+            **entry.raw_data,
+            "source_unfinished": False,
+            "source_was_unfinished": True,
+            "source_finished_at": timezone.now().isoformat(),
+        }
+    SourceCatalogEntry.objects.bulk_update(entries, ["raw_data"])

@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.db.models import IntegerField, Value
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema
@@ -7,10 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.accounts.mail_configuration import kindle_sender_email
-from apps.catalog.serializers.public import ReaderPageParametersSerializer
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
-from apps.common.ranked_pagination import ranked_page
+from apps.delivery.history import KindleHistoryParametersSerializer, history_page
 from apps.delivery.requests import (
     KindleRequest,
     cancel_kindle_delivery,
@@ -133,7 +131,7 @@ class KindleOperationsView(VersionedAPIView):
 
     @extend_schema(
         operation_id="kindle_operations_list",
-        parameters=[ReaderPageParametersSerializer],
+        parameters=[KindleHistoryParametersSerializer],
         responses={
             200: KindleCollectionSerializer,
             400: APIErrorSerializer,
@@ -141,13 +139,10 @@ class KindleOperationsView(VersionedAPIView):
         },
     )
     def get(self, request):
-        parameters = ReaderPageParametersSerializer(data=request.query_params)
+        parameters = KindleHistoryParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
-        queryset = own_deliveries(request.user).annotate(
-            search_rank=Value(0, output_field=IntegerField())
-        )
-        entries, cursor = ranked_page(
-            queryset, parameters.validated_data, f"kindle:{request.user.pk}"
+        entries, cursor = history_page(
+            own_deliveries(request.user), parameters.validated_data, request.user
         )
         return Response(
             {

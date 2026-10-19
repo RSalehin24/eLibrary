@@ -15,6 +15,24 @@ signed cursors bind the account, annotation kind and book filter. Notes remain
 available to their author after reading access expires. Reading summaries never
 create a reading session or consume read-once access.
 
+Saved-position summaries show the prepared edition's chapter title, chapter
+number and, for current chapter-relative positions, progress within that chapter.
+They use the existing authorized session endpoint rather than fetching chapter
+bodies. The access response's nullable `progress_session_id` identifies the
+session that last saved the position; progress writes update this pointer.
+Chapter labels and the direct resume action appear only when that pointer
+matches the active session. Revoked or quarantined access withholds the pointer.
+Launching another session retains the saved position's original pointer until
+that reader saves a new position. Session responses include
+`progress_matches_edition`, comparing prepared publication identities; a known
+edition mismatch opens only an approximate overall percentage and reports that
+the previous exact place could not be restored. Existing imported positions
+without edition provenance still undergo the reader's structural validation.
+Unknown legacy locations, absent provenance and positions outside the edition
+retain the stored progress and show an honest fallback without displaying raw
+CFI strings or inventing a chapter. The four book-specific note views retain
+separate counts for notes, highlights, quotes and bookmarks.
+
 **Open HTML** opens `/api/v1/reading/books/<slug>/html/` in a new tab with
 `noopener noreferrer`. The access response includes `html_url` only when a
 ready HTML file exists and the account has its existing preview entitlement.
@@ -113,6 +131,9 @@ are validated and persisted locally; unavailable storage has a visible notice.
 Contents and full-book text search open accessible dialogs. Search parses inert
 chapter text, supports Bengali, returns up to 100 exact matches and reports
 unavailable chapters with an explicit retry.
+Nested contents has separate keyboard-accessible expand/collapse controls.
+Changing chapters expands the current chapter's ancestors; collapsing a branch
+does not navigate. The same contents component serves account and local readers.
 
 Fullscreen uses the document root. Browsers without native fullscreen offer a
 viewport-filling focus mode. Immersive reading shows only the book: the header,
@@ -135,26 +156,38 @@ replace obsolete pending positions. Failures remain visible and offer a retry.
 The launch command is not automatically replayed. Unload saving is best effort.
 The persisted locator stores chapter index and measured scroll fraction. During
 resizing and appearance changes, the active document also keeps its visible text
-block in view. Exact persisted text anchors remain later reader work.
+block in view. Ordinary progress remains a chapter/fraction locator; explicit
+bookmarks additionally capture a persistent text anchor as described below.
 
 ## Annotations
 
-Bookmarks store normalized chapter/scroll positions and use an edition-specific
-database uniqueness constraint. Repeating a save returns the same record without
+New text bookmarks store the chapter, UTF-16 offset and a short exact quotation
+in the existing bounded location field. They reuse the reader's text-range
+machinery, which counts text through highlight wrappers. Restoration verifies
+the stored quotation before navigating and reports a mismatch without changing
+the original bookmark. These anchors survive reopening with different font
+sizes, reading views and viewport widths. Image-only positions or places where
+no text anchor can be captured retain a chapter/fraction bookmark and show an
+explicit approximate-position notice. Existing chapter/fraction and imported
+CFI bookmarks continue to work. All bookmarks use an edition-specific database
+uniqueness constraint. Repeating a save returns the same record without
 overwriting an existing note. Highlights and quotes use validated text offsets,
 plain text, colors, tags, and notes. Both are tied to the prepared publication,
 so a replacement EPUB does not display marks from another edition. The reader
 can create and revisit bookmarks, select text, save a highlight/quote, and restore
 its marks after reloading. Legacy CFI values remain stored and readable as notes;
-the reader now resolves supported legacy text points/ranges into the current
-document. The bounded parser follows [EPUB CFI's structural and UTF-16 offset rules](https://w3c.github.io/epub-specs/epub33/epubcfi/),
+the reader now resolves supported legacy text points/ranges and element points
+into the current document. Image and other element points use the resolved
+element's geometry when a collapsed range has no text rectangle. Hidden or
+missing targets report a restoration failure. The bounded parser follows [EPUB CFI's structural and UTF-16 offset rules](https://w3c.github.io/epub-specs/epub33/epubcfi/),
 checks spine/item identity and element/text assertions, and rejects unsupported
 media locations, malformed syntax and out-of-range targets. A legacy highlight
 is painted only when the resolved text matches the original quotation. Its
 original CFI and note are retained. A missing/stale target shows an explicit
 bilingual notice rather than marking different text. Existing chapter/fraction
 bookmarks continue to work, and original package-relative reading paths and
-fragments open their actual chapter. Annotations from a different prepared
+fragments open their actual chapter; an absent fragment identifier shows the
+restoration notice. Annotations from a different prepared
 publication remain excluded by the existing edition filter.
 
 Personal notes use account-filtered, signed cursor collections with short
@@ -162,6 +195,21 @@ previews and separate full details. They remain available to their author after
 reader access expires or is revoked. Updating notes locks the record and checks
 its revision; simultaneous editors receive one success and one `409` conflict.
 Deletion requires an explicit user action. All mutations enforce session CSRF.
+
+Every personal bookmark, highlight, note and quote has an Open in Reader action.
+The launch endpoint checks the annotation's owner and current book access, then
+opens its retained prepared edition instead of interpreting the saved location
+against a replacement EPUB. Legacy annotations without an edition use the current
+edition with structural/text checks. Missing or obsolete prepared resources return
+`reader_not_ready`; the annotation is kept. Session-scoped detail GET endpoints
+verify that requested annotations belong to that account, book and edition before
+the server renders the exact target. Highlights verify their original quotation
+before selecting text. Launching does not overwrite saved reading progress.
+An active session for that edition is reused, including a currently valid
+Read Once session; this never grants another opening after that session expires.
+The note editor disables navigation while edits are unsaved or a mutation is pending.
+Ctrl/Command + Enter saves notes in both the personal editor and reader selection
+form; pending saves cannot be resubmitted with the shortcut.
 
 ## Verification and remaining scope
 

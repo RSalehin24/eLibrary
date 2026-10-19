@@ -2,9 +2,15 @@ from apps.ingestion.catalog_processing.api import CatalogProcessingView
 from apps.ingestion.source_discovery.api import SourceDiscoveryView
 from apps.ingestion.source_processing.api import ProcessSourceView, SourceIssueView
 from apps.ingestion.source_processing.bulk import ProcessSourceSelectionView
+from apps.processing.bulk_control_api import BulkJobControlView
 from django.urls import path
 
 urlpatterns = [
+    path(
+        "manage/jobs/bulk-control/",
+        BulkJobControlView.as_view(),
+        name="managed-jobs-bulk-control",
+    ),
     path(
         "manage/sources/process-all/",
         CatalogProcessingView.as_view(),

@@ -8,10 +8,12 @@ import { Icon, type IconName } from "./icon";
 const entries = [
   { href: "/catalog/", label: "বই খুঁজুন" },
   { href: "/my-books/", label: "আমার বই" },
+  { href: "/physical-books/", label: "কাগজের বই" },
+  { href: "/local-reader/", label: "নিজের EPUB পড়ুন" },
   { href: "/help/", label: "সহায়তা" },
 ];
 
-const icons: Record<string, IconName> = { "/catalog/": "search", "/my-books/": "read", "/help/": "help", "/manage/books/": "books" };
+const icons: Record<string, IconName> = { "/catalog/": "search", "/my-books/": "read", "/physical-books/": "books", "/local-reader/": "read", "/help/": "help", "/manage/books/": "books" };
 
 export function SitePrimaryNav({ canManageBooks = false }: { canManageBooks?: boolean }) {
   const pathname = usePathname();

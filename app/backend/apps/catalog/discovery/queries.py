@@ -16,9 +16,16 @@ from apps.catalog.models import (
     BookCategory,
     BookContributor,
     BookSeries,
+    Category,
     CollectionBook,
+    Contributor,
+    CuratedCollection,
+    Series,
 )
 from apps.common.text import normalize_catalog_text
+
+from .facets import matching_entity_ids
+from .sorting import filter_owned_books, with_requested_at
 
 PUBLIC_BOOK_FIELDS = (
     "id",
@@ -77,7 +84,9 @@ def with_public_relations(queryset):
 def filter_contributor_books(queryset, parameters):
     filters = {}
     if parameters["contributor"]:
-        filters["book_contributors__contributor__slug"] = parameters["contributor"]
+        filters["book_contributors__contributor_id__in"] = matching_entity_ids(
+            Contributor, parameters["contributor"]
+        )
     if role := parameters.get("contributor_role"):
         filters["book_contributors__role"] = role
     return queryset.filter(**filters)
@@ -85,19 +94,29 @@ def filter_contributor_books(queryset, parameters):
 
 def filter_public_books(queryset, parameters):
     queryset = filter_contributor_books(queryset, parameters)
-    for parameter, relation in (
-        ("category", "book_categories__category__slug"),
-        ("series", "book_series__series__slug"),
+    if parameters.get("record_type", "all") != "all":
+        queryset = queryset.filter(record_type=parameters["record_type"])
+    for parameter, relation, model in (
+        ("category", "book_categories__category_id__in", Category),
+        ("series", "book_series__series_id__in", Series),
     ):
         if parameters[parameter]:
-            queryset = queryset.filter(**{relation: parameters[parameter]})
+            queryset = queryset.filter(
+                **{relation: matching_entity_ids(model, parameters[parameter])}
+            )
     if collection := parameters.get("collection"):
         queryset = queryset.filter(
-            collection_books__collection_id__in=public_entities("collections")
-            .filter(slug=collection)
-            .values("pk")
+            collection_books__collection_id__in=matching_public_collections(collection)
         )
     return queryset.distinct()
+
+
+def matching_public_collections(value):
+    return (
+        public_entities("collections")
+        .filter(pk__in=matching_entity_ids(CuratedCollection, value))
+        .values("pk")
+    )
 
 
 def matching_search_term(normalized):
@@ -136,12 +155,16 @@ def search_public_books(queryset, query):
     )
 
 
-def discovery_queryset(parameters):
+def discovery_queryset(parameters, actor=None):
     queryset = filter_public_books(published_books(), parameters)
+    queryset = filter_owned_books(queryset, parameters, actor)
+    if parameters.get("sort", "").lstrip("-") == "requested_at":
+        queryset = with_requested_at(queryset, actor)
     queryset = search_public_books(queryset, parameters["q"])
     if parameters.get("collection") and not parameters["q"]:
         positions = CollectionBook.objects.filter(
-            book_id=OuterRef("pk"), collection__slug=parameters["collection"]
+            book_id=OuterRef("pk"),
+            collection_id__in=matching_public_collections(parameters["collection"]),
         ).values("position")[:1]
         queryset = queryset.annotate(
             search_rank=Subquery(positions, output_field=IntegerField())

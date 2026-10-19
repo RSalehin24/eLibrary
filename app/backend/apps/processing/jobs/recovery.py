@@ -15,6 +15,8 @@ from apps.processing.job_models import (
 from apps.processing.jobs.attempts import AttemptOwnership
 from apps.processing.jobs.failures import AttemptFailure, FailureKind, fail_attempt
 
+from .source_admission import fence_source_dispatch
+
 RECOVERY_BATCH_SIZE = 50
 
 
@@ -88,7 +90,15 @@ def republish_unstarted_jobs(cutoff: datetime):
         )
         .order_by("id")[:RECOVERY_BATCH_SIZE]
     )
-    identifiers = [dispatch.pk for dispatch in records]
-    return JobDispatch.objects.filter(pk__in=identifiers).update(
+    dispatches = list(records.select_related("job"))
+    fenced = sum(
+        fence_source_dispatch(dispatch.job_id)
+        for dispatch in dispatches
+        if dispatch.job.kind == "process_source"
+    )
+    identifiers = [
+        dispatch.pk for dispatch in dispatches if dispatch.job.kind != "process_source"
+    ]
+    return fenced + JobDispatch.objects.filter(pk__in=identifiers).update(
         state=DispatchState.PENDING, available_at=timezone.now(), published_at=None
     )

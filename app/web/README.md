@@ -40,8 +40,9 @@ application and dependency types with `skipLibCheck: false`.
 
 The build's `postbuild` step packages fingerprinted static assets and any public
 assets alongside Next.js's standalone server. `start` uses that server. No CDN
-or cloud provider is required. A complete production Compose deployment,
-protected file serving, and operating procedures remain scheduled work.
+or cloud provider is required. The production Compose deployment, protected file
+serving and operating procedures are documented in [deploy/README.md](../../deploy/README.md).
+Simulator acceptance and external verification limits are recorded in the handoff.
 
 Generate the API contract from the repository root, then regenerate TypeScript:
 

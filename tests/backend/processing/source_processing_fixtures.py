@@ -54,3 +54,17 @@ def execute_source_job(job):
         job.dispatches.get(generation=job.generation).pk, lambda _: nullcontext()
     )
     job.refresh_from_db()
+
+
+def historical_duplicate(job, candidate):
+    from apps.processing.jobs.attempts import checkpoint_attempt, claim_attempt
+    from apps.processing.jobs.failures import AttemptFailure, FailureKind, fail_attempt
+
+    ownership = claim_attempt(job.dispatches.get(generation=job.generation).pk)
+    checkpoint_attempt(
+        ownership,
+        {**job.checkpoint, "duplicate_book_ids": [str(candidate.pk)]},
+        "source_duplicate",
+    )
+    fail_attempt(ownership, AttemptFailure(FailureKind.UNCERTAIN, "source_duplicate"))
+    job.refresh_from_db()

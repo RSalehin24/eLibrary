@@ -80,3 +80,42 @@ def test_daylight_saving_gap_moves_forward_without_shifting_later_runs(automatio
 def test_calendar_frequencies(automation, frequency, days):
     automation.frequency = frequency
     assert occurrence_at(automation, 1) == NOW + timedelta(days=days)
+
+
+def test_unfinished_maintenance_keeps_scope_and_rebuild_policy_on_occurrence(
+    automation,
+):
+    automation.catalog_scope = "unfinished"
+    automation.rebuild_updated = True
+    automation.save()
+    run = run_automation_tick(NOW)[0]
+    assert run.rebuild_updated
+    assert run.job.input["command"]["catalog_scope"] == "unfinished"
+    assert "/genres/" in run.job.input["command"]["catalog_url"]
+
+
+def test_default_unfinished_maintenance_is_daily_dhaka_and_does_not_override_user_edits(
+    automation,
+):
+    from apps.processing.automation_models import SourceAutomation
+    from apps.processing.management.commands.ensure_source_maintenance import (
+        MAINTENANCE_ID,
+    )
+    from django.core.management import call_command
+
+    call_command("ensure_source_maintenance", actor=automation.run_as_id)
+    maintenance = SourceAutomation.objects.get(pk=MAINTENANCE_ID)
+    assert (
+        maintenance.enabled
+        and maintenance.rebuild_updated
+        and maintenance.catalog_scope == "unfinished"
+    )
+    assert maintenance.frequency == "daily" and maintenance.time_zone == "Asia/Dhaka"
+    assert maintenance.first_run_at.astimezone(ZoneInfo("Asia/Dhaka")).hour == 2
+    assert maintenance.fetch_all and not maintenance.process_all
+    maintenance.enabled = False
+    maintenance.save()
+    call_command("ensure_source_maintenance", actor=automation.run_as_id)
+    maintenance.refresh_from_db()
+    assert not maintenance.enabled
+    assert SourceAutomation.objects.filter(pk=MAINTENANCE_ID).count() == 1

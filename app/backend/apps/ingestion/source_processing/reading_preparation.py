@@ -1,4 +1,4 @@
-from apps.catalog.models import GeneratedAssetStatus
+from apps.catalog.models import GeneratedAsset, GeneratedAssetStatus
 from apps.processing.jobs.attempts import checkpoint_attempt
 from apps.processing.jobs.execution_errors import ExecutionFailure
 from apps.processing.jobs.failures import FailureKind
@@ -9,6 +9,9 @@ from .queries import current_source_job
 
 
 def checked_source_asset(job):
+    staged = job.checkpoint.get("staged_assets", {}).get("epub")
+    if staged and not job.checkpoint.get("assets_published"):
+        return GeneratedAsset(book_id=job.book_id, asset_type="epub", **staged)
     asset = job.asset
     if asset is None or asset.status != GeneratedAssetStatus.READY:
         raise ExecutionFailure(FailureKind.PERMANENT, "asset_unavailable")
@@ -29,7 +32,7 @@ def prepare_source_reading(ownership):
     require_export_authority(ownership)
     current = current_source_job(job.pk)
     checked_source_asset(current)
-    if publication.checksum != job.checkpoint["asset_checksum"]:
+    if publication.checksum != asset.checksum:
         raise ExecutionFailure(FailureKind.UNCERTAIN, "source_asset_changed")
     checkpoint = {
         **current.checkpoint,

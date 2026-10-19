@@ -63,10 +63,16 @@ def user_has_read_once_limit(user, book):
 
 
 def user_can_download_book_assets(user, book):
+    from apps.catalog.content_quality import book_is_quarantined
+    if book_is_quarantined(book):
+        return False
     return user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=book) or user_owns_book(user, book)
 
 
 def user_can_view_preview_html(user, book):
+    from apps.catalog.content_quality import book_is_quarantined
+    if book_is_quarantined(book):
+        return False
     if user_owns_book(user, book):
         return True
     if user_has_read_once_limit(user, book):
@@ -75,6 +81,9 @@ def user_can_view_preview_html(user, book):
 
 
 def user_can_send_to_kindle(user, book):
+    from apps.catalog.content_quality import book_is_quarantined
+    if book_is_quarantined(book):
+        return False
     return user_has_scope(user, [PermissionScope.SEND_KINDLE], book=book) or user_owns_book(user, book)
 
 
@@ -102,6 +111,9 @@ def user_can_launch_reader(user, book):
 
 
 def user_has_reader_access(user, book):
+    from apps.catalog.content_quality import book_is_quarantined
+    if book_is_quarantined(book):
+        return False
     if user_owns_book(user, book):
         return True
     return user_has_scope(

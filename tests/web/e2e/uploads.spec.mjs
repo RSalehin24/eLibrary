@@ -1,26 +1,27 @@
 import { test, expect } from "./fixtures.mjs";
 import { newDigitalBook, readingEPUB } from "./book-fixture.mjs";
 
-test("manual EPUB upload validates files and exposes the preparation controls", async ({ page }) => {
+test("manual EPUB upload validates files and automatically prepares the reader", async ({ page }) => {
   const book = await newDigitalBook(page);
   const buffer = await readingEPUB(page);
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/#book-upload`);
   const file = page.getByLabel("বইয়ের EPUB ফাইল", { exact: true });
   const submit = page.getByRole("button", { name: "EPUB আপলোড করুন", exact: true });
   await file.setInputFiles({ name: "invalid.epub", mimeType: "application/epub+zip", buffer: Buffer.from("invalid archive") });
+  const rejected = page.waitForResponse(response => response.request().method() === "POST" && new URL(response.url()).pathname.endsWith("/epub/"));
   await submit.click();
+  expect((await rejected).status()).toBe(400);
   await expect(page.locator("#book-upload").getByRole("alert").filter({ hasText: "সঠিক EPUB ফাইল" })).toBeVisible();
   await expect(submit).toBeEnabled();
   await file.setInputFiles({ name: "book.epub", mimeType: "application/epub+zip", buffer });
   await submit.click();
-  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB আপলোড হয়েছে" })).toBeVisible();
+  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB পরীক্ষা করে পড়ার জন্য প্রস্তুত করা হয়েছে" })).toBeVisible();
   await expect(file).toHaveValue("");
-  await page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true }).click();
-  const operation = page.getByRole("link", { name: "প্রস্তুতির কাজ দেখুন", exact: true });
-  await expect(operation).toBeVisible(); await operation.click();
-  await expect(page.getByRole("heading", { name: "কাজের অবস্থা", exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: book.title, exact: true })).toBeVisible();
-  await expect(page.locator(".job-detail")).toContainText("পড়ার জন্য EPUB প্রস্তুত");
+  await expect(page.locator("#book-files")).toContainText("অনলাইনে পড়ার জন্য প্রস্তুত");
+  await expect(page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "বই পড়ুন", exact: true }).click();
+  await expect(page).toHaveURL(/\/reader\/[^/]+\/$/);
+  await expect(page.frameLocator(".reader-frame").locator("body")).toContainText(/বাংলা/);
 });
 
 test("uncertain uploads retain the selected file and are never replayed", async ({ page }) => {

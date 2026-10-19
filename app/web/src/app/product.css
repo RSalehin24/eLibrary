@@ -155,3 +155,10 @@
 .source-verification h2 { display:flex; align-items:center; gap:10px; font-size:1.125rem; }
 .verification-passed { padding:16px 20px; border:1px solid var(--line); border-radius:8px; background:var(--soft); }
 @media(max-width:480px) { .catalog-browse-navigation a { flex:1 1 40%; } .entity-directory>li>a { flex-wrap:wrap; } .entity-directory>li>a>span { margin-left:auto; } }
+.notification-viewport { position: fixed; inset: auto 1rem 1rem auto; z-index: 120; max-width: min(28rem, calc(100vw - 2rem)); pointer-events: none; }
+.notification-card { display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem; border: 1px solid var(--line); border-radius: .85rem; box-shadow: 0 8px 24px #172c2926; background: var(--surface); color: var(--ink); pointer-events: auto; }
+.notification-card p { margin: 0; }
+.notification-card .button { min-width: 2.75rem; min-height: 2.75rem; padding: .25rem; font-size: 1.4rem; }
+.notification-error { border-color: #b23b35; }
+.notification-sound-toggle { display: flex; align-items: center; gap: .65rem; min-height: 2.75rem; cursor: pointer; }
+.notification-sound-toggle input { width: 1.2rem; height: 1.2rem; accent-color: var(--accent); }

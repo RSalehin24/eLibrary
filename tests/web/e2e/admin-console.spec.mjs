@@ -78,9 +78,13 @@ test("automation can schedule full fetching and all eligible books directly from
   const dialog = page.getByRole("dialog", { name: "Automation Schedule", exact: true });
   await dialog.getByLabel("Schedule Name", { exact: true }).fill("Daily catalog and book creation");
   await dialog.getByLabel("First Run Date", { exact: true }).fill("2027-01-02");
-  await dialog.getByLabel("Time", { exact: true }).fill("02:00");
+  const time = dialog.getByRole("group", { name: "Time", exact: true });
+  await time.getByLabel("hours", { exact: true }).selectOption("2");
+  await time.getByLabel("minutes", { exact: true }).selectOption("0");
+  await time.getByLabel("AM or PM", { exact: true }).selectOption("AM");
   await dialog.getByLabel("Schedule Enabled", { exact: true }).check();
   await dialog.getByRole("button", { name: "Save Schedule", exact: true }).click();
   await expect.poll(() => command?.process_all).toBe(true); expect(command.fetch_all).toBe(true); expect(command.time_zone).toBe("Asia/Dhaka");
+  expect(command.first_run_local).toBe("2027-01-02T02:00");
   await expect(dialog).not.toBeVisible(); await expect(page.locator(".source-scheduling").getByRole("status")).toContainText("Schedule saved");
 });

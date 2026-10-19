@@ -103,6 +103,11 @@ class ReaderBookmarkDetailView(VersionedAPIView):
             account_reader_session(request.user, identifier), Bookmark
         )
 
+    @extend_schema(operation_id="reader_bookmark_detail", responses={200: BookmarkDetailSerializer})
+    def get(self, request, identifier, annotation_id):
+        annotation = get_object_or_404(self.get_queryset(request, identifier), pk=annotation_id)
+        return Response(BookmarkDetailSerializer(annotation).data)
+
     @extend_schema(
         operation_id="reader_bookmark_update",
         request=AnnotationUpdateSerializer,
@@ -134,6 +139,11 @@ class ReaderHighlightDetailView(VersionedAPIView):
         return session_annotations(
             account_reader_session(request.user, identifier), Highlight
         )
+
+    @extend_schema(operation_id="reader_highlight_detail", responses={200: HighlightDetailSerializer})
+    def get(self, request, identifier, annotation_id):
+        annotation = get_object_or_404(self.get_queryset(request, identifier), pk=annotation_id)
+        return Response(HighlightDetailSerializer(annotation).data)
 
     @extend_schema(
         operation_id="reader_highlight_update",

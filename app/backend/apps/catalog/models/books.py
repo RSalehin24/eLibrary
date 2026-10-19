@@ -80,6 +80,7 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMeta
     summary = models.TextField(blank=True)
     state = models.CharField(max_length=32, choices=LifecycleState.choices, default=LifecycleState.DRAFT, db_index=True)
     review_state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING, db_index=True)
+    source_quality_state = models.CharField(max_length=16, default="unchecked", db_index=True)
     source_site = models.CharField(max_length=100, default="")
     raw_scraped_metadata = models.JSONField(default=dict, blank=True)
     raw_scrape_payload = models.JSONField(default=dict, blank=True)

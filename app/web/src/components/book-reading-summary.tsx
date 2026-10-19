@@ -4,7 +4,9 @@ import { useQuery } from "@tanstack/react-query";
 import { readSession } from "@/api/catalog";
 import { readerAccess } from "@/api/reading";
 import { PersonalNotes } from "./personal-notes";
-import { SiteDate, SiteNumber, SiteText } from "./site-language";
+import { BookLastLocation } from "./book-last-location";
+import { BookDetailPreview } from "./book-detail-preview";
+import { SiteDate, SiteNumber, SiteSection, SiteText } from "./site-language";
 
 export function BookReadingSummary({ slug }: { slug: string }) {
   const account = useQuery({ queryKey: ["private", "session"], queryFn: ({ signal }) => readSession(signal) });
@@ -12,9 +14,10 @@ export function BookReadingSummary({ slug }: { slug: string }) {
   const access = useQuery({ queryKey: ["private", "reader-access", slug], queryFn: ({ signal }) => readerAccess(slug, signal), enabled: authenticated, refetchOnWindowFocus: "always" });
   if (!authenticated) return null;
   const reading = access.data?.reading_progress;
-  return <section className="book-reading-summary">
+  return <>{access.data?.can_read && <BookDetailPreview slug={slug} />}<SiteSection className="book-reading-summary" aria-label="আপনার পড়া ও নোট">
     <h2><SiteText>আপনার পড়া ও নোট</SiteText></h2>
     {reading && <dl className="book-facts"><div><dt><SiteText>পড়ার অগ্রগতি</SiteText></dt><dd><SiteNumber value={Math.round(reading.progress_percent)} />%</dd></div><div><dt><SiteText>শেষবার পড়েছেন</SiteText></dt><dd><SiteDate value={access.data?.last_opened_at ?? null} /></dd></div></dl>}
+    {access.data && <BookLastLocation access={access.data} />}
     <PersonalNotes book={slug} />
-  </section>;
+  </SiteSection></>;
 }

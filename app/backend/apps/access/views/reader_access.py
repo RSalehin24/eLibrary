@@ -48,6 +48,7 @@ class ReaderAccessView(VersionedAPIView):
                     "prepared": False,
                     "can_send_kindle": False,
                     "active_session_id": None,
+                    "progress_session_id": None,
                     "html_url": None,
                     "cover_url": None,
                     "reading_progress": None,
@@ -89,6 +90,9 @@ class ReaderAccessView(VersionedAPIView):
                 else None,
                 "reading_progress": ReaderProgressSerializer(reading).data
                 if reading
+                else None,
+                "progress_session_id": reading.preview_session_id
+                if reading and can_access
                 else None,
                 "last_opened_at": reading.last_opened_at if reading else None,
             }

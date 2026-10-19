@@ -1,8 +1,9 @@
 import { applyAppearance, restoreAnchor, scrollFraction, visibleAnchor, type ReaderAppearance, type ReadingAnchor } from "./reader-document";
 import { documentLink } from "./reader-links";
 import type { ReadingPosition } from "./reading-position";
-import { jumpToSelection, jumpToRange } from "./reader-annotations";
+import { selectionRange, jumpToRange } from "./reader-annotations";
 import { cfiRange } from "./reader-cfi";
+import { bookmarkTextRange } from "./bookmark-text-anchor";
 import { observeReaderDocument } from "./reader-observation";
 import { bindReaderInteraction } from "./reader-interaction";
 import type { ReaderGesture } from "./reader-gestures";
@@ -22,12 +23,22 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
   }
   if (!location.anchor && (document.scrollingElement?.scrollTop ?? 0) > 0) location.anchor = visibleAnchor(document);
   applyAppearance(document, bindings.appearance);
-  if (location.anchor || !jumpToFragment(document, bindings.position.fragment)) restoreAnchor(document, location.anchor, location.fraction);
-  if (bindings.position.selection && !location.anchor) jumpToSelection(document, bindings.position.selection);
+  const fragmentRestored = !location.anchor && jumpToFragment(document, bindings.position.fragment);
+  if (location.anchor || !fragmentRestored) restoreAnchor(document, location.anchor, location.fraction);
+  if (bindings.position.fragment && !location.anchor && !fragmentRestored) bindings.onRestoreFailure();
+  if (bindings.position.selection && !location.anchor) {
+    const range = selectionRange(document, bindings.position.selection);
+    const matchingText = !bindings.position.selectionText || range?.toString().trim() === bindings.position.selectionText.trim();
+    if (!range || !matchingText || !jumpToRange(document, range)) bindings.onRestoreFailure();
+  }
+  if (bindings.position.textAnchor && !location.anchor) {
+    const range = bookmarkTextRange(document, bindings.position.textAnchor);
+    if (!range || !jumpToRange(document, range)) bindings.onRestoreFailure();
+  }
   if (bindings.position.legacyCfi && !location.anchor) {
     const range = cfiRange(document, bindings.position.legacyCfi);
-    if (range && (!bindings.position.legacyText || range.toString().trim() === bindings.position.legacyText.trim())) jumpToRange(document, range);
-    else bindings.onRestoreFailure();
+    const matchingText = !bindings.position.legacyText || range?.toString().trim() === bindings.position.legacyText.trim();
+    if (!range || !matchingText || !jumpToRange(document, range)) bindings.onRestoreFailure();
   }
   let width = frame.clientWidth;
   let height = frame.clientHeight;

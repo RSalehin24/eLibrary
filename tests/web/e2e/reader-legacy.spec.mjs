@@ -22,10 +22,20 @@ test("original relative reading locations and nested contents open the actual se
   await expect(frame.getByRole("heading", { name: "দ্বিতীয় অধ্যায়", exact: true })).toBeVisible();
   await expect.poll(() => frame.locator("#paragraph-40").evaluate(element => Math.abs(element.getBoundingClientRect().top))).toBeLessThan(100);
   await page.getByRole("button", { name: "Contents", exact: true }).click();
-  await expect(page.getByRole("dialog").locator("ol ol").getByRole("button", { name: "প্রথম পর্বের অংশ", exact: true })).toBeVisible();
+  const dialog = page.getByRole("dialog"), child = dialog.getByRole("button", { name: "প্রথম পর্বের অংশ", exact: true });
+  const toggle = dialog.getByRole("button", { name: "Collapse contents: প্রথম অধ্যায়", exact: true });
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await toggle.focus(); await page.keyboard.press("Enter");
+  await expect(child).not.toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await page.keyboard.press("Space");
+  await expect(child).toBeVisible();
   await page.getByRole("dialog").getByRole("button", { name: "প্রথম পর্বের অংশ", exact: true }).click();
   await expect(frame.getByRole("heading", { name: "প্রথম অধ্যায়", exact: true })).toBeVisible();
   await expect.poll(() => frame.locator("#paragraph-40").evaluate(element => Math.abs(element.getBoundingClientRect().top))).toBeLessThan(100);
+  await page.getByRole("button", { name: "Contents", exact: true }).click();
+  await expect(dialog.getByRole("button", { name: "Collapse contents: প্রথম অধ্যায়", exact: true })).toHaveAttribute("aria-expanded", "true");
+  await page.keyboard.press("Escape");
   await page.screenshot({ path: `test-artifacts/foundation/reader-legacy-section-${test.info().project.name}.png` });
 });
 
@@ -97,4 +107,48 @@ test("an older prepared book remains readable while its administrator queues upd
   expect((await page.request.get(`/api/v1/reading/sessions/${session.id}/`)).status()).toBe(200);
   await page.getByRole("link", { name: "Continue Reading", exact: true }).click();
   await expect(page.locator('.reader-frame[aria-busy="false"]')).toBeVisible();
+});
+
+test("an original element CFI scrolls to its exact image without rewriting the saved legacy record", async ({ page }) => {
+  await useAccount(page, "legacy_reader");
+  const account = await (await page.request.get("/api/v1/auth/session/")).json();
+  const headers = { "X-CSRFToken": account.csrf_token };
+  const launched = await page.request.post(`/api/v1/reading/books/${encodeURIComponent(fixture.legacy_reading.book.slug)}/launch/`, { headers });
+  const session = await launched.json();
+  const chapter = session.chapters[0];
+  const resourceURL = session.resource_base + chapter.path;
+  const response = await page.request.get(resourceURL);
+  const source = (await response.text()).replace(/<\/body\s*>/i, '<img id="legacy-cfi-image" width="200" height="200" alt="Legacy image" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l1sAAAAASUVORK5CYII=" /></body>');
+  const localPath = await page.evaluate(source => {
+    const doc = new DOMParser().parseFromString(source, "application/xhtml+xml");
+    const target = doc.getElementById("legacy-cfi-image");
+    const steps = [];
+    for (let element = target; element && element !== doc.documentElement; element = element.parentElement) steps.unshift((Array.from(element.parentElement.children).indexOf(element) + 1) * 2);
+    return steps.map(step => `/${step}`).join("") + "[legacy-cfi-image]";
+  }, source);
+  const last_location = `epubcfi(/${chapter.spine_step ?? 6}/${((chapter.spine_index ?? 0) + 1) * 2}!${localPath})`;
+  const progressURL = `/api/v1/reading/sessions/${session.id}/progress/`;
+  expect((await page.request.put(progressURL, { headers, data: { last_location, progress_percent: 0 } })).status()).toBe(200);
+  try {
+    await page.route(`**${resourceURL}`, route => route.fulfill({ body: source, contentType: "application/xhtml+xml" }));
+    await page.route("**/api/v1/reading/sessions/*/progress/", route => route.fulfill({ json: route.request().postDataJSON() }));
+    await page.goto(`/reader/${session.id}/`);
+    await expect(page.locator('.reader-frame[aria-busy="false"]')).toBeVisible();
+    await expect.poll(() => page.frameLocator(".reader-frame").locator("#legacy-cfi-image").evaluate(element => element.getBoundingClientRect().top < innerHeight && element.getBoundingClientRect().bottom > 0)).toBe(true);
+    const persisted = await (await page.request.get(`/api/v1/reading/sessions/${session.id}/`)).json();
+    expect(persisted.reading_progress.last_location).toBe(last_location);
+  } finally {
+    expect((await page.request.put(progressURL, { headers, data: session.reading_progress })).status()).toBe(200);
+  }
+});
+
+test("missing original section fragments report that the stored place could not be restored", async ({ page }) => {
+  const session = await openReader(page);
+  const frame = page.frameLocator(".reader-frame");
+  await frame.locator("body").evaluate((body, target) => {
+    const link = body.ownerDocument.createElement("a");
+    link.href = target; link.textContent = "Missing legacy section"; body.prepend(link);
+  }, session.resource_base + session.chapters[0].path + "#missing-legacy-section");
+  await frame.getByRole("link", { name: "Missing legacy section", exact: true }).click();
+  await expect(page.locator(".reader-workspace").getByRole("alert")).toContainText("Your notes are preserved");
 });

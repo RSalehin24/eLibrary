@@ -13,13 +13,6 @@ from django.utils import timezone
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def annotation_session(reader):
-    client, _, book, _, _ = reader
-    session = client.post(f"/api/v1/reading/books/{book.slug}/launch/").json()
-    return f"/api/v1/reading/sessions/{session['id']}"
-
-
 def bookmark_values(**overrides):
     return {
         "location": "chapter:0:0.5",

@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from apps.catalog.cover_urls import book_cover_url
+from apps.catalog.discovery.sorting import CATALOG_SORTS
 from apps.catalog.models import (
     Book,
     BookCategory,
@@ -28,6 +29,13 @@ class CatalogQueryParametersSerializer(serializers.Serializer):
 
 
 class CatalogFilterParametersSerializer(CatalogQueryParametersSerializer):
+    record_type = serializers.ChoiceField(
+        choices=["all", "digital", "manual"], default="all"
+    )
+    ownership = serializers.ChoiceField(
+        choices=["", "mine"], default="", allow_blank=True
+    )
+    sort = serializers.ChoiceField(choices=CATALOG_SORTS, default="", allow_blank=True)
     contributor_role = serializers.ChoiceField(
         choices=ContributorRole.choices, allow_blank=True, default=""
     )

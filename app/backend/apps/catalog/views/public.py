@@ -22,7 +22,6 @@ from apps.common.api_serializers import APIErrorSerializer
 
 
 class PublicBookListView(VersionedAPIView):
-    authentication_classes = ()
     permission_classes = (AllowAny,)
 
     @extend_schema(
@@ -33,8 +32,13 @@ class PublicBookListView(VersionedAPIView):
     def get(self, request):
         parameters = DiscoveryParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
+        if (
+            parameters.validated_data["ownership"]
+            or parameters.validated_data["sort"].lstrip("-") == "requested_at"
+        ):
+            parameters.validated_data["scope"] = f"public:{request.user.pk}"
         entries, next_cursor = discovery_page(
-            discovery_queryset(parameters.validated_data),
+            discovery_queryset(parameters.validated_data, request.user),
             parameters.validated_data,
         )
         return Response(

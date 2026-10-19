@@ -39,7 +39,7 @@ export function ProcessingAssets({ slug }: { slug: string }) {
     {assets.isPending && <p role="status"><AdminText>ফাইলের তথ্য আসছে…</AdminText></p>}
     {assets.isError && <p className="field-error" role="alert"><AdminText>উপকরণ পাওয়া যায়নি। </AdminText><button className="button button-quiet" onClick={() => void assets.refetch()}><AdminText>আবার দেখুন</AdminText></button></p>}
     <div className="asset-files">{readingFiles?.map((asset) => <AssetFile key={asset.id + asset.updated_at} asset={asset} />)}</div>
-    <p className="muted"><AdminText>ফাইল খুলে বইয়ের সম্পূর্ণ লেখা আছে কি না যাচাই করুন। তারপর পর্যালোচনা করে প্রকাশ করুন।</AdminText></p>
+    <p className="muted"><AdminText>ওয়েবসাইটের বইয়ের লেখা ও পড়ার ফাইল স্বয়ংক্রিয়ভাবে যাচাই হয়। নতুন EPUB আপলোড করলেও পড়ার ফাইল নিজে থেকেই প্রস্তুত হয়।</AdminText></p>
     {readingFiles?.length === 0 && <p className="notice"><AdminText>এই বইয়ের জন্য এখনও কোনো উপকরণ নেই।</AdminText></p>}
   </section>;
 }

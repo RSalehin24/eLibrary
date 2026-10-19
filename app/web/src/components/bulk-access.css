@@ -1,0 +1,18 @@
+.bulk-access { display: grid; gap: 1rem; }
+.bulk-access fieldset, .access-expiry { border: 1px solid var(--line); border-radius: .7rem; padding: 1rem; min-width: 0; }
+.bulk-access legend, .access-expiry legend { font-weight: 650; padding: 0 .3rem; }
+.bulk-access-scopes, .bulk-access-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: .5rem; }
+.bulk-access-options { max-height: 22rem; overflow: auto; margin-top: .75rem; }
+.bulk-access .check-field { display: flex; gap: .6rem; align-items: center; padding: .6rem; border: 1px solid var(--line); border-radius: .5rem; min-height: 44px; cursor: pointer; }
+.bulk-access .check-field input { width: 24px; height: 24px; flex: 0 0 auto; }
+.bulk-access select, .bulk-access input[type="search"], .access-expiry input[type="date"] { min-width: 0; max-width: 100%; min-height: 46px; padding: .6rem .75rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.bulk-access-selected, .bulk-access-outcomes { list-style: none; padding: 0; display: grid; gap: .5rem; }
+.bulk-access-selected li { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .5rem; background: var(--soft); border-radius: .5rem; }
+.bulk-access-selected span, .bulk-access-outcomes strong { overflow-wrap: anywhere; }
+.bulk-access-outcomes li { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; border-bottom: 1px solid var(--line); padding: .65rem 0; }
+.bulk-access-outcomes p { flex-basis: 100%; }
+.bulk-access-summary { padding: 1rem; background: var(--soft); border-radius: .7rem; font-weight: 650; }
+.access-expiry { display: grid; gap: .5rem; }
+.access-expiry input[type="date"] { max-width: 20rem; }
+.access-expiry .time-input { justify-content: flex-start; flex-wrap: wrap; }
+.access-expiry .time-input select { width: auto; flex: 0 1 auto; }

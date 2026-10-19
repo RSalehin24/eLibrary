@@ -164,6 +164,8 @@ SPECTACULAR_SETTINGS = {
         "BackgroundJobStateEnum": "apps.processing.job_models.BackgroundJobState.choices",
         "BackgroundJobKindEnum": "apps.processing.job_models.BackgroundJobKind.choices",
         "LifecycleStateEnum": "apps.common.models.LifecycleState.choices",
+        "JobControlActionEnum": "apps.processing.job_serializers.JOB_CONTROL_ACTIONS",
+        "BulkJobControlActionEnum": "apps.processing.bulk_control_serializers.BULK_JOB_CONTROL_ACTIONS",
     },
 }
 CSRF_FAILURE_VIEW = "apps.common.csrf.csrf_failure"
@@ -212,7 +214,7 @@ CELERY_EVENT_QUEUE_EXCLUSIVE = True
 BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS, KINDLE_MAX_ATTACHMENT_BYTES = background_limits(env_int)
 PROCESSING_USE_LIVE_SYNC = env_bool("PROCESSING_USE_LIVE_SYNC", True)
 PROCESSING_INLINE_PIPELINE_ADVANCE = env_bool("PROCESSING_INLINE_PIPELINE_ADVANCE", False)
-CELERY_PROCESSING_CONCURRENCY = int(env("CELERY_PROCESSING_CONCURRENCY", "5"))
+CELERY_PROCESSING_CONCURRENCY = int(env("CELERY_PROCESSING_CONCURRENCY", "1"))
 
 BREVO_API_KEY = env("BREVO_API_KEY", "")
 EMAIL_BACKEND = env(

@@ -1,0 +1,37 @@
+.job-detail { max-width:1040px; padding:28px; border:1px solid var(--line); border-radius:var(--radius); background:var(--surface); }
+.job-detail>.job-heading h2 { font-size:1.65rem; line-height:1.35; }
+.job-detail>.job-heading h2 .text-link { font:inherit; }
+.job-progress { margin-block:28px; }
+.job-steps { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); list-style:none; margin:0 0 28px; padding:0; gap:12px; }
+.job-steps li { display:flex; flex-direction:column; gap:10px; align-items:flex-start; color:var(--muted); font-size:.85rem; }
+.job-step-number { display:grid; place-items:center; width:36px; height:36px; border:1px solid var(--line); border-radius:50%; background:var(--paper); font-weight:600; }
+.job-steps .complete { color:var(--green); }
+.job-steps .complete .job-step-number { background:var(--soft); border-color:var(--green); }
+.job-steps .current { color:var(--ink); font-weight:600; }
+.job-steps .current .job-step-number { background:var(--green); color:white; border-color:var(--green); }
+.job-next-step { display:flex; gap:16px; padding:20px; border-radius:10px; background:var(--soft); color:var(--green); }
+.job-next-step>.icon { flex-shrink:0; margin-top:4px; }
+.job-next-step h3 { margin:0 0 6px; font-size:1.125rem; }
+.job-next-step p { margin:6px 0; }
+.job-controls { padding-block:20px; border-block:1px solid var(--line); }
+.job-technical { border-bottom:1px solid var(--line); padding-block:16px; }
+.job-technical>summary { display:flex; align-items:center; gap:10px; cursor:pointer; font-weight:600; }
+.job-technical>summary::after { content:"+"; margin-left:auto; font-size:1.25rem; }
+.job-technical[open]>summary::after { content:"−"; }
+.job-technical .book-facts { border:0; padding-block:8px; margin-block:16px 0; }
+.source-layout-summary { margin-block:16px; padding:14px 16px; border:1px solid var(--line); border-radius:8px; background:var(--paper); }
+.source-layout-summary p { margin:4px 0; }
+.source-layout-summary p:first-child { display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-weight:600; }
+.source-update { display:flex; flex-direction:column; align-items:flex-start; gap:6px; margin-top:10px; font-size:.8125rem; color:var(--muted); }
+.source-update-label { display:inline-flex; align-items:center; gap:6px; }
+.source-update-available .source-update-label { padding:4px 8px; border-radius:6px; color:var(--green); background:var(--soft); font-weight:600; }
+.source-update small { font-size:.75rem; }
+@media(max-width:600px) {
+  .job-detail { padding:20px 16px; }
+  .job-detail>.job-heading h2 { font-size:1.4rem; }
+  .job-steps { grid-template-columns:1fr; gap:10px; }
+  .job-steps li { flex-direction:row; align-items:center; gap:12px; }
+  .job-step-number { width:28px; height:28px; font-size:.8125rem; }
+  .job-next-step { padding:16px; gap:12px; }
+  .job-controls { flex-wrap:wrap; }
+}

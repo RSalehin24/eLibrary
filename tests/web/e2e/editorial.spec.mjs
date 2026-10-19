@@ -24,11 +24,23 @@ test("saved editorial changes publish directly with canonical redirects", async 
   await page.getByLabel("বিস্তারিত বিবরণ", { exact: true }).fill("পর্যালোচিত মৌলিক সম্পাদকীয় বর্ণনা।");
   await page.getByLabel("সার্চের শিরোনাম (ঐচ্ছিক)").fill("সম্পাদিত বইয়ের বিশেষ শিরোনাম");
   await page.getByLabel("সার্চের বর্ণনা (ঐচ্ছিক)").fill("যাচাইকৃত প্রকাশনা ও বইয়ের পরিচিতি।");
+  await page.getByLabel("পরিবর্তনের কারণ (ঐচ্ছিক)", { exact: true }).fill("বইয়ের নাম ও বিবরণ সংশোধন করা হয়েছে।");
+  await expect(page.locator("form.editorial-form")).toHaveCount(1);
+  await expect(page.locator("#metadata-history")).toHaveCount(1);
   await page.getByLabel("সার্চ ইঞ্জিনে দেখানোর অনুমতি", { exact: true }).check();
   await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeDisabled();
   await expect(page.getByRole("button", { name: "পর্যালোচনা অনুমোদন করুন" })).toHaveCount(0);
   await page.getByRole("button", { name: "পরিবর্তন সংরক্ষণ করুন" }).click();
   await expect(page).toHaveURL(/%E0%A6%B8%E0%A6%82%E0%A6%B6%E0%A7%8B%E0%A6%A7%E0%A6%BF%E0%A6%A4\/$/);
+  await expect(page.locator("form.editorial-form")).toHaveCount(1);
+  await page.getByRole("link", { name: "তথ্যের ইতিহাস", exact: true }).click();
+  const history = page.locator("#metadata-history");
+  await expect(history.getByText("বইয়ের নাম ও বিবরণ সংশোধন করা হয়েছে।", { exact: true })).toBeVisible();
+  await expect(history.getByText("বইয়ের তথ্য সম্পাদনা", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "English", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Metadata History", exact: true })).toBeVisible();
+  await expect(history.getByText("Book details edited", { exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
 
   await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "প্রকাশ করুন", exact: true }).click();

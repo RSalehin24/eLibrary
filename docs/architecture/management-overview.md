@@ -7,9 +7,10 @@ snapshots through `/api/v1/manage/overview/` and `/api/v1/manage/overview/work/`
 ## What administrators can see
 
 - Metadata administrators see counts for their manageable books only: total,
-  drafts, processing, ready, published and archived records. Legacy `needs_review`
-  records count as drafts, matching their current catalog label; they do not
-  require manual approval. Published books remain published regardless of the
+  processing, published and archived records. An Awaiting Publication count appears
+  only when unpublished manual or historical records remain; it combines the API's
+  legacy draft and ready counts. These records do not require manual review.
+  Source books publish automatically after validation. Published books remain published regardless of the
   old editorial-review timestamp. Scoped grants, deletion and revocation use the
   existing catalog authorization query. The deprecated `editorial_pending` API
   field remains zero for compatibility and is not displayed.

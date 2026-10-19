@@ -7,6 +7,7 @@ from apps.catalog.discovery.library import library_queryset
 from apps.catalog.discovery.personal import visible_personal_books
 from apps.catalog.discovery.queries import PUBLIC_BOOK_FIELDS, with_public_relations
 from apps.catalog.discovery.slugs import catalog_object_by_slug
+from apps.catalog.discovery.sorting import CatalogSortPagination
 from apps.catalog.serializers.editorial import EDITORIAL_DETAIL_FIELDS
 from apps.catalog.serializers.library import (
     LibraryBookSerializer,
@@ -39,7 +40,12 @@ class MyBooksView(VersionedAPIView):
         view = parameters.validated_data["view"]
         parameters.validated_data["scope"] = f"library:{request.user.pk}:{view}"
         timestamp = "activity_at" if view == "recent" else "created_at"
-        entries, next_cursor = RankedFeedPagination(timestamp).page(
+        pagination = (
+            CatalogSortPagination(parameters.validated_data["sort"])
+            if parameters.validated_data["sort"]
+            else RankedFeedPagination(timestamp)
+        )
+        entries, next_cursor = pagination.page(
             library_queryset(request.user, parameters.validated_data),
             parameters.validated_data,
             cursor_context(parameters.validated_data),

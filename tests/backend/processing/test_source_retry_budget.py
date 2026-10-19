@@ -16,7 +16,7 @@ def test_explicit_source_retry_renews_a_bounded_budget_without_discarding_histor
     source_job.save(update_fields=["max_attempts"])
     fail_attempt(
         ownership,
-        AttemptFailure(FailureKind.TRANSIENT, "source_connection_unavailable"),
+        AttemptFailure(FailureKind.TRANSIENT, "source_storage_unavailable"),
     )
     JobAttempt.objects.bulk_create(
         [
@@ -26,7 +26,7 @@ def test_explicit_source_retry_renews_a_bounded_budget_without_discarding_histor
                 generation=1,
                 heartbeat_at=timezone.now(),
                 finished_at=timezone.now(),
-                error_code="source_connection_unavailable",
+                error_code="source_storage_unavailable",
             )
             for number in range(2, 11)
         ]
@@ -49,7 +49,7 @@ def test_explicit_source_retry_renews_a_bounded_budget_without_discarding_histor
         assert ownership is not None
         failed = fail_attempt(
             ownership,
-            AttemptFailure(FailureKind.TRANSIENT, "source_connection_unavailable"),
+            AttemptFailure(FailureKind.TRANSIENT, "source_storage_unavailable"),
         )
         assert failed.state == expected_state
     assert JobAttempt.objects.count() == 13

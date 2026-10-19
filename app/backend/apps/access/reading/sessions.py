@@ -21,7 +21,10 @@ class ReaderNotReady(APIException):
 
 def authorized_reader_book(user, slug):
     book = catalog_object_by_slug(
-        Book.objects.filter(deleted_at__isnull=True).only("id", "title", "slug"), slug
+        Book.objects.filter(deleted_at__isnull=True).only(
+            "id", "title", "slug", "source_quality_state"
+        ),
+        slug,
     )
     if not user_has_reader_access(user, book):
         raise PermissionDenied("You do not have reader access for this book.")
@@ -53,6 +56,11 @@ def prepared_book_publication(book):
 def launch_prepared_reader(user, slug):
     book = authorized_reader_book(user, slug)
     publication = prepared_book_publication(book)
+    return launch_publication_reader(user, book, publication)
+
+
+@transaction.atomic
+def launch_publication_reader(user, book, publication):
     session = launch_reader_session(user, book)
     if (
         session.prepared_publication_id
@@ -64,7 +72,8 @@ def launch_prepared_reader(user, slug):
     session.prepared_publication = publication
     session.save(update_fields=["prepared_publication", "updated_at"])
     state = reading_state(session)
-    state.preview_session = session
+    if not state.last_location:
+        state.preview_session = session
     state.save(update_fields=["preview_session", "last_opened_at", "updated_at"])
     return session
 
@@ -82,6 +91,7 @@ def account_reader_session(user, identifier):
             "book__id",
             "book__title",
             "book__slug",
+            "book__source_quality_state",
             "prepared_publication__id",
             "prepared_publication__manifest",
             "prepared_publication__storage_reference",
@@ -104,9 +114,18 @@ def account_reader_session(user, identifier):
 
 
 def reading_state(session):
-    state, _ = ReadingSession.objects.get_or_create(
+    state, _ = ReadingSession.objects.select_related("preview_session").get_or_create(
         user_id=session.user_id,
         book_id=session.book_id,
         defaults={"preview_session": session},
     )
     return state
+
+
+def progress_matches_edition(state, session):
+    if not state.preview_session_id:
+        # Imported locations predate prepared editions and retain structural validation.
+        return True
+    return (
+        state.preview_session.prepared_publication_id == session.prepared_publication_id
+    )

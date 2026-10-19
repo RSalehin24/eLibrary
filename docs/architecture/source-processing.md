@@ -25,7 +25,11 @@ Its transport requires HTTPS, verified TLS, an explicitly configured host,
 bounded timeouts, and at most five redirects. Redirect destinations are checked
 before another connection. It does not use the legacy direct-IP/TLS fallback.
 Responses are limited to 8 MiB; source HTML checkpoints and documents are limited
-to 64 MiB and collection to 2,000 pages. Optional source authentication cookies
+to 64 MiB per artifact and collection to 2,000 pages. Large source results store
+the document, snapshot and projection separately under the same bounds; older
+combined checkpoints remain readable. The read-only contents pager permits its
+public `pager_nonce` only for the exact configured-host action and context. Other
+credential-bearing queries remain blocked. Optional source authentication cookies
 are read from the existing protected configuration file, bounded and limited to
 configured domains. Credentials are never returned by the workspace.
 
@@ -44,24 +48,26 @@ uses stored pages rather than fetching them again. A stale attempt can create an
 unreferenced artifact but cannot replace a committed checkpoint.
 
 The worker validates the curated title and content before creating a catalog
-draft. Conservative exact normalized-title candidates require an administrator's
-decision. A PostgreSQL advisory transaction lock prevents concurrent source jobs
-from silently creating the same title. An existing primary source relationship
-is never reassigned by the worker.
+record. The canonical source URL determines identity: distinct source URLs can
+have identical titles without requiring a manual decision. A PostgreSQL advisory
+transaction lock serializes slug allocation for matching titles. The unique source
+relationship prevents duplicate ingestion and is never reassigned by the worker.
 
-## Drafts, exports, and decisions
+## Preparation, exports, and recovery
 
-New books start in `needs_review` internally while processing, displayed as Draft.
+New source books start in `processing` while their files are being prepared.
 Manual editorial approval is not required. Successful automatic verification and
 reader preparation publish the book; indexing eligibility remains explicit. The source's direct catalog relationship supports alternate URLs from
 the configured website without replacing an existing `BookSource` or changing
 the linked book.
 
-The admin job detail supports fetching again, linking an inspected duplicate,
-creating a separate draft, resuming an unfinished draft, and cancellation. The
+The admin job detail supports fetching again, resolving historical duplicate
+decisions, continuing an existing preparation, and cancellation. The
 backend derives valid choices from current state. Linking checks both job and
 candidate revisions; it preserves the candidate's metadata, assets, and owners.
-Incomplete source content requires attention before a book is created.
+Empty source chapter pages schedule a fresh automatic check after six hours.
+Availability checks do not exhaust the processing-failure allowance. Other
+incomplete or inconsistent content blocks publication rather than losing text.
 
 Exports use the canonical curated document, including short Bengali body
 sections. A completed export manifest records relative paths, sizes, and checksums
@@ -69,7 +75,7 @@ so pause/resume reuses completed HTML and EPUB files. Completed files are copied
 to immutable names in protected asset storage before one transaction updates
 asset references. Previous valid files remain available. Publication rechecks
 the actor, source, catalog revision, and current attempt and honors a late stop
-request. Source drafts cannot be published with unresolved work or missing HTML
+request. Source books cannot be published with unresolved work or missing HTML
 and EPUB assets. Source processing prepares checksum-addressed reader resources
 before success, and publication requires those resources to be ready.
 
@@ -91,11 +97,29 @@ a source retain direct publication. If that step fails, recovery reuses complete
 exports and checks their pinned asset
 revision instead of replacing them.
 
-Failed exports can resume the existing unchanged draft. A manual recovery decision
+Failed exports can resume the existing unchanged book. A recovery decision
 starts a fresh allowance of three automatic failures while retaining every
 attempt. This prevents an exhausted historical retry count from permanently
-stranding a linked draft. Changed catalog content requires inspection and repair;
+stranding a linked book. Changed catalog content requires inspection and repair;
 the worker does not silently replace it.
+
+An audited recovery service can continue historical successful preparations
+through the normal worker's verification and publication steps. It rejects stale,
+archived or already published targets. Repaired unlinked jobs can reuse their
+saved chapters while refreshing the landing page and regenerating exports.
+
+Job pages show collection, export, reader and publication stages, the number of
+eligible books queued earlier, and automatic-processing guidance. Technical
+identifiers and attempt history are expandable. Displayed timestamps use
+Asia/Dhaka and a 12-hour clock in Bengali and English.
+
+The processing list also combines persisted contents-layout and verification
+filters, active/history/recovery views and owner-private saved filters. Source
+recovery controls use explicit retry/recreate/archive commands with job and book
+revision checks. Repeatable internal defects retain a safe fingerprint and wait
+for relevant code changes before automatic recovery. Exact contracts, diagnostic
+backfill and operational limits are documented in
+[source job diagnostics](../operations/source-job-diagnostics.md).
 
 ## Explicit bulk requests
 
@@ -129,8 +153,9 @@ links to child jobs filtered by `parent_job`. Pause Queueing and Stop Queueing
 control dispatch of remaining entries; already queued book jobs continue. Parent
 success means queueing finished, not that every child book has completed or been
 published. Existing book jobs have their own progress and recovery controls.
-Generated drafts still require editorial review; an available introduction alone
-does not prove that the source supplied the complete published book.
+Each child publishes after its automatic checks succeed. An available introduction
+alone does not prove that the source supplied the complete original book;
+verification compares all content available from the collected source.
 
 ## Inspecting generated files
 
@@ -139,7 +164,7 @@ download URL, online-reader readiness and active preparation identifier, without
 storage paths. Existence is checked independently of the saved `ready` status.
 The source-result page and book editor show EPUB/HTML downloads, missing-file
 states and preparation controls near the beginning of the workflow. Editorial
-save/review/publish actions stay visible above the long form.
+save/publish actions stay visible above the long form.
 
 `GET /api/v1/manage/assets/<uuid>/download/` requires global processing authority
 and the existing book download entitlement, rechecked on every request. A
@@ -150,7 +175,7 @@ Nginx redirect. Both return an attachment with the correct EPUB/HTML MIME type,
 private/no-store, noindex and nosniff headers. HTML attachments also use a sandbox
 policy; raw generated HTML is not rendered inside the application.
 
-## Verification and remaining work
+## Verification
 
 The source increment adds 51 PostgreSQL tests, including the real
 collection/curation/catalog/export workflow with a controlled HTTP adapter,
@@ -159,6 +184,6 @@ page/export recovery, cancellation, and preservation of previous assets. The
 combined backend verification set passed 515 tests. The source requests made by
 these tests never connect to an external website.
 
-Discovery/refresh and automations, shared source request pacing, live RabbitMQ
-execution/recovery, production Nginx delivery, physical devices, and measured
-capacity remain required. These local results do not complete a delivery phase.
+Those counts describe the original source increment. Current regression results,
+actual source repairs, broker/runtime checks and remaining external acceptance
+limits are recorded in [the implementation handoff](../implementation-handoff.md).

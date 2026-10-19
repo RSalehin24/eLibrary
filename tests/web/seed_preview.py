@@ -29,7 +29,8 @@ def create_account(identity, role):
         email=f"foundation-{role}-{identity}@example.test",
         password=password,
         full_name=f"Foundation {role}",
-        is_staff=role == "administrator",
+        is_staff=role in {"administrator", "superadministrator"},
+        is_superuser=role == "superadministrator",
         totp_required=False,
     )
     return user, {
@@ -111,9 +112,13 @@ def seed_fixture():
     identity = uuid4().hex[:8]
     with transaction.atomic():
         books = create_books(identity)
+        from seed_detail_preview import create_detail_preview_fixture
+
+        create_detail_preview_fixture(books[0], identity)
         collection = create_collection(identity, books)
         owner, reader = create_account(identity, "reader")
         administrator_user, administrator = create_account(identity, "administrator")
+        _, superadministrator = create_account(identity, "superadministrator")
         from seed_lifecycle import (
             create_lifecycle_fixture,
             create_reader_update_fixture,
@@ -193,6 +198,7 @@ def seed_fixture():
     return {
         "reader": reader,
         "administrator": administrator,
+        "superadministrator": superadministrator,
         "maintenance_administrator": maintenance_administrator,
         "catalog_administrator": catalog_administrator,
         "editor": scoped_editor,

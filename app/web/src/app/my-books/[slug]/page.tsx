@@ -22,7 +22,7 @@ export default async function PrivateBookPage({ params }: { params: Promise<{ sl
   try { book = await sessionRequest<PublicBookDetail>(`me/books/${encodeURIComponent(slug)}/`); }
   catch (error) { if (error instanceof APIError && error.status === 404) notFound(); throw error; }
   return <><Link className="text-link" href="/my-books/"><SiteText>{"← আমার বইয়ে ফিরুন"}</SiteText></Link>
-    <BookInformation book={book}><BookActions slug={book.slug} recordType={book.record_type} /></BookInformation>
+    <BookInformation book={book} personal><BookActions slug={book.slug} recordType={book.record_type} /></BookInformation>
     {book.record_type !== "manual" && <BookReadingSummary slug={book.slug} />}
     {book.record_type === "manual" && <PhysicalReadingForm slug={book.slug} initialLog={await sessionRequest<PhysicalReadingLog>(`me/books/${encodeURIComponent(book.slug)}/physical-log/`)} />}</>;
 }

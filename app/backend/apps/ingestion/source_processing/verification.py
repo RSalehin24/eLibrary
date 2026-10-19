@@ -2,6 +2,7 @@ from apps.ingestion.pipeline.curated_extractors import extract_sections
 from apps.ingestion.pipeline.curated_validation import validate_document
 from apps.ingestion.services.normalization import plain_text_from_html
 
+from .classification import classification_evidence
 from .content_text import canonical_text
 
 
@@ -41,7 +42,11 @@ def source_verification(result):
         warning for warning in validation["warnings"] if "not assigned" in warning
     )
     errors.extend(source_text_issues(document, snapshot))
+    evidence = classification_evidence(snapshot)
+    if not evidence["reading_content"]:
+        errors.append("The source does not provide verified reading content.")
     return {
+        **evidence,
         "verified": not errors,
         "source_pages": len(pages),
         "fetched_pages": fetched,

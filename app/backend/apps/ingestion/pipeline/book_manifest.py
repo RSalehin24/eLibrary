@@ -1,10 +1,10 @@
-from typing import Any
 import json
 import logging
 import os
 import re
 import time
 import unicodedata
+from typing import Any
 from urllib.parse import parse_qs, quote, urlencode, urljoin, urlparse, urlunparse
 
 import requests
@@ -19,6 +19,9 @@ from apps.ingestion.pipeline.curated_extractors import (
     extract_sections,
 )
 from apps.ingestion.pipeline.curated_validation import generated_toc_from_content_items
+from apps.ingestion.pipeline.epub_properties.labels import (
+    detect_book_language,
+)
 from apps.ingestion.pipeline.scraper_support.network import (
     HEADERS,
     clean_buttons,
@@ -27,6 +30,7 @@ from apps.ingestion.pipeline.scraper_support.network import (
     login_source_session,
     normalize_source_url,
 )
+from apps.ingestion.pipeline.source_html import repair_source_html
 from apps.ingestion.services.normalization import (
     classify_residual_main_content,
     dedupe_html_fragment_blocks,
@@ -44,7 +48,6 @@ from apps.ingestion.services.normalization import (
 )
 from apps.ingestion.services.resolution_support_metadata import split_display_title
 from apps.ingestion.services.resolution_support_network import get_with_host_fallback
-from apps.ingestion.pipeline.epub_properties.labels import detect_book_language, labels_for
 
 
 def _get_source_site_host():
@@ -389,7 +392,7 @@ def extract_entry_content_html(soup, title=""):
     # "Bookmark" panel instead of the real content.
     container = max(candidates, key=lambda el: len(el.get_text()))
     container = clean_buttons(container)
-    html = container.decode_contents()
+    html = repair_source_html(container.decode_contents())
     return scraper.remove_redundant_headers(html, title)
 
 
@@ -437,7 +440,7 @@ def topic_page_numbers(lesson_item, page_url, max_topic_pages=None):
     # the numeric lesson_id (e.g. "216992-2", not "ld-expand-216992-2").
     # Accept both formats so link-based detection works correctly.
     str_expand_id = str(expand_id)
-    numeric_expand_id = str_expand_id[len("ld-expand-"):] if str_expand_id.startswith("ld-expand-") else str_expand_id
+    numeric_expand_id = str_expand_id.removeprefix("ld-expand-")
     valid_prefixes = {str_expand_id, numeric_expand_id}
 
     page_numbers = {1}
@@ -564,7 +567,7 @@ def scrape_nested_topic_nodes(lesson_item, page_url, ctx, limits, *, _meta=None)
                 _meta["has_topic_pagination"] = True
             # LearnDash's ld-topic-page URL parameter uses the numeric lesson ID,
             # not the full expand_id string (e.g. "216992-2", not "ld-expand-216992-2").
-            lesson_id = expand_id[len("ld-expand-"):] if expand_id.startswith("ld-expand-") else expand_id
+            lesson_id = expand_id.removeprefix("ld-expand-")
             topic_page_url = build_query_url(page_url, {"ld-topic-page": f"{lesson_id}-{page_number}"})
             topic_soup = ctx.fetch_soup(topic_page_url, kind="topic_toc_page", cache=False)
             paged_lesson_item = find_lesson_item_by_expand_id(topic_soup, expand_id)
@@ -1364,13 +1367,15 @@ def _fetch_via_wp_rest_api(session, post_id, post_type="lesson"):
         resp = session.get(api_url, headers=HEADERS, timeout=30)
         if resp.status_code == 200:
             data = resp.json()
+            if not isinstance(data, dict) or not isinstance(data.get("content", {}), dict):
+                raise ValueError("The source content response is not an object.")
             rendered = (data.get("content") or {}).get("rendered") or ""
             if rendered:
                 wrapped_html = f'<div class="entry-content">{rendered}</div>'
                 return BeautifulSoup(wrapped_html, "html.parser")
         else:
             logger.warning("WP REST API returned HTTP %s for post %s", resp.status_code, post_id)
-    except Exception as exc:
+    except (requests.exceptions.RequestException, ValueError, UnicodeError) as exc:
         logger.warning("WP REST API query failed for post %s: %s", post_id, exc)
     return None
 
@@ -1796,10 +1801,7 @@ def _is_pure_title_duplicate_section(section, book_title, author):
     # book-type/genre keyword, an edition/volume marker, or pure
     # digits/parenthesised content. In that case the section adds no new
     # information beyond what book_info already carries.
-    if _is_bibliographic_metadata_line(text_n, book_title=bt_n, author=au):
-        return True
-
-    return False
+    return bool(_is_bibliographic_metadata_line(text_n, book_title=bt_n, author=au))
 
 
 # Tokens that, on their own, are not new information when book_info is already
@@ -1863,16 +1865,14 @@ def _is_bibliographic_metadata_line(text_n, *, book_title, author):
             return True
         # All words of fragment recognised as bibliographic / edition / digit.
         words = [w for w in re.split(r"\s+", f) if w]
-        if words and all(
+        return bool(words and all(
             w in _BIBLIOGRAPHIC_TOKEN_WORDS
             or w in _EDITION_MARKER_WORDS
             or w in bt_tokens
             or w in au_tokens
             or re.fullmatch(r"[0-9০-৯.\-]+", w)
             for w in words
-        ):
-            return True
-        return False
+        ))
 
     # Require at least one fragment to match the title (so we don't drop an
     # unrelated short line like "ভূমিকা") AND at least one fragment to match

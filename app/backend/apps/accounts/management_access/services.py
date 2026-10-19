@@ -89,19 +89,23 @@ def existing_grant(values):
     return existing
 
 
-@transaction.atomic
 def create_managed_grant(actor, identifier, values):
+    return create_managed_grant_outcome(actor, identifier, values)[0]
+
+
+@transaction.atomic
+def create_managed_grant_outcome(actor, identifier, values):
     target = locked_accounts(actor, identifier)
     serializer = ManagedGrantCreateSerializer(data=values, context={"target": target})
     serializer.is_valid(raise_exception=True)
     cleaned = serializer.validated_data
     existing = existing_grant(cleaned)
     if existing is not None:
-        return existing
+        return existing, False
     if matching_grants(cleaned).exists():
         raise AccessConflict("An active permission already exists for this target.")
     grant = persist_grant(actor, cleaned)
-    return account_grants(target).get(pk=grant.pk)
+    return account_grants(target).get(pk=grant.pk), True
 
 
 def persist_grant(actor, values):

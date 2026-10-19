@@ -57,8 +57,13 @@ def test_failed_resource_preparation_resumes_without_replacing_completed_exports
         unavailable,
     )
     execute_source_job(curated_job)
-    assert curated_job.state == "failed" and curated_job.checkpoint["assets_published"]
-    path, revision = curated_job.asset.file.name, curated_job.asset.updated_at
+    assert curated_job.state == "failed" and not curated_job.checkpoint.get(
+        "assets_published"
+    )
+    assert curated_job.asset is None
+    assert not curated_job.book.generated_assets.exists()
+    staged = curated_job.checkpoint["staged_assets"]["epub"]
+    path, checksum = staged["file"], staged["checksum"]
     resolve_source_job(
         curated_job.requested_by,
         curated_job.pk,
@@ -71,7 +76,7 @@ def test_failed_resource_preparation_resumes_without_replacing_completed_exports
     curated_job.refresh_from_db()
     execute_source_job(curated_job)
     assert curated_job.state == "succeeded" and curated_job.asset.file.name == path
-    assert curated_job.asset.updated_at == revision
+    assert curated_job.asset.checksum == checksum
     assert (
         PreparedPublication.objects.get(checksum=curated_job.asset.checksum).state
         == "ready"

@@ -11,7 +11,7 @@ import { SourceVerification } from "./source-verification";
 
 const decisions: Record<SourceResolution["choice"], string> = {
   retry: "মূল উৎস আবার সংগ্রহ করুন", link: "আগের বইয়ের সঙ্গে এই উৎস সংযুক্ত করুন",
-  separate: "আলাদা বই হিসেবে খসড়া তৈরি করুন", resume_preparation: "আগের খসড়ার প্রস্তুতি চালিয়ে যান", cancel: "এই কাজ বাতিল করুন",
+  separate: "আলাদা বই তৈরি করুন", resume_preparation: "সংরক্ষিত লেখা থেকে আবার প্রস্তুত করুন", cancel: "এই কাজ বাতিল করুন",
 };
 
 function availableDecisions(issue: SourceIssue): SourceResolution["choice"][] {
@@ -38,9 +38,9 @@ function SourceDecision({ job, issue }: { job: BackgroundJobDetail; issue: Sourc
     <div className="form-field"><label htmlFor="source-resolution"><AdminText>{"করণীয় নির্বাচন করুন"}</AdminText></label><select id="source-resolution" value={choice} disabled={form.blocked} onChange={(event) => setChoice(event.target.value as SourceResolution["choice"])}>
       {choices.map((decision) => <option value={decision} key={decision}><AdminText>{decisions[decision]}</AdminText></option>)}</select></div>
     {choice === "link" && <div className="form-field"><label htmlFor="source-candidate"><AdminText>{"সংযুক্ত করার বই"}</AdminText></label><select id="source-candidate" name="book_id" required disabled={form.blocked} defaultValue=""><option value=""><AdminText>{"বই নির্বাচন করুন"}</AdminText></option>{issue.candidates.map((book) => <option key={book.id} value={book.id}>{book.title} · {book.catalog_code}</option>)}</select></div>}
-    {choice === "separate" && <p className="notice"><AdminText>{"আগের বই অক্ষত থাকবে। এই উৎসের আলাদা খসড়া সম্পাদকের যাচাইয়ে যাবে।"}</AdminText></p>}
+    {choice === "separate" && <p className="notice"><AdminText>{"আগের বই অক্ষত থাকবে। এই উৎস থেকে আলাদা বই তৈরি হবে এবং স্বয়ংক্রিয় যাচাই সফল হলে প্রকাশিত হবে।"}</AdminText></p>}
     {choice === "retry" && <p className="muted"><AdminText>{"আগের সংগ্রহের বদলে উৎসের বর্তমান লেখা আবার আনা হবে।"}</AdminText></p>}
-    {choice === "resume_preparation" && <p className="muted"><AdminText>{"সংরক্ষিত লেখা থেকে আগের খসড়ার প্রস্তুতি আবার চলবে। সম্পন্ন অংশগুলো পুনর্ব্যবহার করা হবে।"}</AdminText></p>}
+    {choice === "resume_preparation" && <p className="muted"><AdminText>{"সংরক্ষিত লেখা থেকে বই তৈরির কাজ আবার চলবে। সম্পন্ন অংশগুলো পুনর্ব্যবহার করা হবে।"}</AdminText></p>}
     <AccountFeedback error={form.saving.error} /><button className="button" disabled={form.blocked}><AdminText>{"সিদ্ধান্ত সংরক্ষণ করুন"}</AdminText></button>
     {form.saving.error && <><p className="muted"><AdminText>{"আবার পাঠানোর আগে কাজের বর্তমান অবস্থা খুলুন। আপনার নির্বাচন স্বয়ংক্রিয়ভাবে আবার জমা হবে না।"}</AdminText></p><button className="button button-quiet" type="button" onClick={reloadManagedForm}><AdminText>{"বর্তমান যাচাই খুলুন"}</AdminText></button></>}</form>;
 }

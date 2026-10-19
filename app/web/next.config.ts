@@ -8,6 +8,7 @@ const configuration: NextConfig = {
   agentRules: false,
   trailingSlash: true,
   experimental: { proxyClientMaxBodySize: "32mb" },
+  async redirects() { return [{ source: "/epub-reader/index.html", destination: "/local-reader/", permanent: false }, { source: "/epub-reader", destination: "/local-reader/", permanent: false }]; },
   async headers() { return [{ source: "/sw.js", headers: [{ key: "Content-Type", value: "text/javascript; charset=utf-8" }, { key: "Cache-Control", value: "no-store" }, { key: "Service-Worker-Allowed", value: "/" }, { key: "X-Content-Type-Options", value: "nosniff" }] }]; },
   async rewrites() {
     return [

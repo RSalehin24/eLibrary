@@ -5,6 +5,31 @@ account activation/name/TOTP policy changes, and account/book/category/writer
 grants. Django owns every authorization and write; the frontend uses the
 generated `/api/v1/` contract. Existing `/api/` contracts remain unchanged.
 
+Account lists restore case-insensitive name/email ascending and descending sorts,
+active-first ordering and permission/status keyword search. All orders use a stable
+ID tie-breaker and preserve query/status filters across bounded pages. Permission
+search matches effective global grants, excluding expired or scoped grants.
+
+The Add Reader form defaults to emailed setup. Super administrators can instead
+set an initial password, preserving the previous account-creation workflow without
+requiring mail. Passwords require 12–4,096 characters and matching confirmation;
+literal spaces are preserved. The optional generator uses 24 bytes from the
+browser's cryptographic random source, plus a nonnumeric prefix, and copying
+requires an explicit click. The server applies the same configured Django
+strength validators as password reset, including common/numeric/identity checks.
+`POST /api/v1/manage/users/` rechecks active superuser authority under a row lock,
+creates an ordinary account (active by default, optionally initially disabled)
+using the existing user manager and password
+hasher, and creates no grants, mail jobs or delivery requests. The existing TOTP
+setup gate still applies when requested. Access managers retain mailed setup.
+
+A client-generated UUID identifies a direct creation. Its audit receipt stores
+only actor/target identifiers, never names, emails, passwords or password hashes.
+Identical retries reuse the account while its original fields and password still
+match; changed requests or changed credentials return a conflict and never reset
+the account. Unknown identity/privilege fields are rejected. Creation uses real
+CSRF protection and private, no-store responses.
+
 ## Authorization
 
 A global, active `access:manage` grant, global full control, or the retained
@@ -18,8 +43,10 @@ Accounts are locked in ID order to avoid opposite-order write deadlocks.
 - Own-account changes use Profile. This workspace cannot edit its actor.
 - Superuser accounts remain protected. Only a superuser can manage another
   staff/full-control account's ordinary fields and manageable grants.
-- Email, passwords, staff flags, superuser flags, and full-control grants are
-  excluded from these forms. Unknown write fields are rejected.
+- Existing-account email/password changes, staff flags, superuser flags, and
+  full-control grants are excluded from these forms. Unknown write fields are
+  rejected. The separate superadministrator initial-password creation is the
+  explicit exception described above.
 - Grant creation does not create `UserBook` ownership or consume read-once access.
 - Permission updates preserve their account, scope, and target identity. Managers
   can revoke/reactivate grants or edit comments/expiry; changing identity requires
@@ -42,7 +69,27 @@ the operator explicitly reloads the current state.
 Audit records contain actor and target IDs and the action, without names,
 email addresses, notes, credentials, or tokens. Grant expiry uses the server's
 current time; the interface distinguishes effective, expired, and revoked grants.
-Dates are displayed in UTC and edited with explicitly labelled local-time inputs.
+Dates use Asia/Dhaka. Expiry inputs show a date and explicit 12-hour AM/PM time,
+independently of the browser's time zone. Leaving the date blank removes expiry.
+
+## Multiple permissions
+
+The account workspace exposes multi-select books, categories or writers and
+multiple permission checkboxes alongside the retained single-grant form. Search
+keeps selected targets, with at most 20 targets and 100 resulting grants per
+submission. Read-once and durable-read selections are mutually exclusive. The
+account identity and resulting scope/target count are visible before submission.
+
+`POST /api/v1/manage/users/<id>/grants/bulk/` accepts up to 100 entries with
+distinct client-generated grant UUIDs. It reuses single-grant validation, account
+locks, permission checks and privacy-preserving audits. Each entry commits
+independently; an invalid or conflicting item does not undo successful items.
+The response preserves input order and reports created, previously saved or
+rejected results individually. Protected-account and envelope errors write
+nothing. Identical UUID retries return the original record, including a revoked
+record, without reactivating it. Changing an existing UUID's identity or data
+returns a conflict. An uncertain response retains the selection and stops
+automatic resubmission.
 
 ## Reads and presentation
 
@@ -80,7 +127,9 @@ broader legacy-suite failures remain recorded in the foundation document.
 
 Queued invitation creation/resend, private outcomes, and anonymous reset requests
 are implemented in [account mail](account-mail.md). Live broker verification
-and bulk outcomes remain part of the accepted administration work. This increment
+remains part of external acceptance. The bulk-grant increment passed 41 focused
+PostgreSQL access regressions and four deterministic web helper tests; its
+integrated browser evidence belongs in the implementation handoff. This increment
 does not mark the Users & Access section or administration phase complete. It
 does not authorize external mail delivery, production deployment, or account deletion.
 The [password-link confirmation/setup](password-links.md) increment supplies the

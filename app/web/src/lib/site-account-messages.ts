@@ -1,4 +1,5 @@
 export const siteAccountMessages: Readonly<Record<string, string>> = {
+  "নোটিফিকেশনের শব্দ": "Notification sounds",
   "আমার সব বই": "All My Books",
   "বইয়ের পাতা খুলে আমার বইয়ে যোগ করুন বাটনে চাপুন। যোগ করা বই এখানে পাবেন।": "Open a book and choose Add to My Books. Your added books will appear here.",
   "সব বই": "All Books",

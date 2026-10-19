@@ -1,3 +1,4 @@
+from .layout import source_layout
 from .storage import artifact_path
 from .verification import source_verification
 
@@ -12,6 +13,7 @@ def source_summary(result):
         "error_count": len(validation.get("errors", [])),
         "warning_count": len(validation.get("warnings", [])),
         "verification": source_verification(result),
+        "layout": source_layout(result.get("source_snapshot", {})),
     }
 
 

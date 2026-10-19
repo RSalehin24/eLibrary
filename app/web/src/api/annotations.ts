@@ -1,6 +1,6 @@
 import { apiRequest } from "./http";
 import { apiMutation, deleteMutation } from "./mutation";
-import type { Bookmark, BookmarkCollection, BookmarkInput, Highlight, HighlightCollection, HighlightInput, PersonalBookmarks, PersonalHighlights } from "./types";
+import type { Bookmark, BookmarkCollection, BookmarkInput, Highlight, HighlightCollection, HighlightInput, PersonalBookmarks, PersonalHighlights, ReaderSession } from "./types";
 
 export type AnnotationKind = "bookmarks" | "highlights";
 
@@ -20,15 +20,19 @@ export function createHighlight(identifier: string, values: HighlightInput) {
   return apiMutation<Highlight>(`reading/sessions/${identifier}/highlights/`, { method: "POST", body: JSON.stringify(values) });
 }
 
-export function personalAnnotations(kind: AnnotationKind, parameters: { cursor?: string; book?: string; signal: AbortSignal }) {
-  return apiRequest<PersonalBookmarks | PersonalHighlights>(`me/${kind}/?${new URLSearchParams({ cursor: parameters.cursor ?? "", ...(parameters.book ? { book: parameters.book } : {}) })}`, { signal: parameters.signal });
+export function personalAnnotations(kind: AnnotationKind, parameters: { cursor?: string; book?: string; q?: string; view?: string; color?: string; includeCounts?: boolean; signal: AbortSignal }) {
+  return apiRequest<PersonalBookmarks | PersonalHighlights>(`me/${kind}/?${new URLSearchParams({ cursor: parameters.cursor ?? "", include_counts: String(parameters.includeCounts ?? false), q: parameters.q ?? "", view: parameters.view ?? "all", color: parameters.color ?? "", ...(parameters.book ? { book: parameters.book } : {}) })}`, { signal: parameters.signal });
 }
 
 export function personalAnnotation(kind: AnnotationKind, identifier: string, signal: AbortSignal) {
   return apiRequest<Bookmark | Highlight>(`me/${kind}/${identifier}/`, { signal });
 }
 
-export function updateNote(kind: AnnotationKind, values: { id: string; note: string; expected_updated_at: string }) {
+export function launchAnnotation(kind: AnnotationKind, identifier: string) {
+  return apiMutation<ReaderSession>(`me/${kind}/${identifier}/launch/`, { method: "POST" });
+}
+
+export function updateNote(kind: AnnotationKind, values: { id: string; note: string; color?: Highlight["color"]; kind?: Highlight["kind"]; expected_updated_at: string }) {
   return apiMutation<Bookmark | Highlight>(`me/${kind}/${values.id}/`, { method: "PATCH", body: JSON.stringify(values) });
 }
 

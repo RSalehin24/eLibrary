@@ -19,6 +19,7 @@ from apps.processing.job_serializers import (
     PreparationCommandSerializer,
     ProcessingAssetSerializer,
 )
+from apps.processing.jobs.filters import filtered_jobs
 from apps.processing.jobs.queries import job_detail_queryset, job_queryset
 from apps.processing.jobs.requests import (
     JobControlRequest,
@@ -57,14 +58,11 @@ class BackgroundJobListView(VersionedAPIView):
     def get(self, request):
         parameters = JobParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
-        filters = {
-            key: value
-            for key, value in parameters.validated_data.items()
-            if key in {"state", "kind", "book", "automation_run", "parent_job"}
-        }
         pagination = BoundedAdminPagination()
         entries: list[BackgroundJob] | None = pagination.paginate_queryset(
-            job_queryset(request.user).filter(**filters), request, view=self
+            filtered_jobs(job_queryset(request.user), parameters.validated_data),
+            request,
+            view=self,
         )
         return pagination.get_paginated_response(
             BackgroundJobSerializer(entries, many=True).data

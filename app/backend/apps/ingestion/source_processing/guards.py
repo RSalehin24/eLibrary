@@ -25,7 +25,10 @@ def checked_source_book(job):
     book = Book.objects.select_for_update().get(pk=job.book_id)
     if (
         book.deleted_at is not None
-        or book.state == LifecycleState.PUBLISHED
+        or (
+            book.state == LifecycleState.PUBLISHED
+            and not job.input.get("preserve_publication")
+        )
         or book.updated_at.isoformat() != job.checkpoint.get("catalog_revision")
     ):
         raise ExecutionFailure(FailureKind.UNCERTAIN, "source_catalog_changed")

@@ -12,7 +12,7 @@ from apps.ingestion.source_processing.issues import source_issue
 from apps.ingestion.source_processing.resolution import resolve_source_job
 from apps.processing.jobs.controls import request_stop, resume_job
 from apps.processing.jobs.requests import JobStateConflict
-from source_processing_fixtures import TITLE
+from source_processing_fixtures import TITLE, historical_duplicate
 from source_processing_fixtures import execute_source_job as execute
 
 pytestmark = pytest.mark.django_db
@@ -165,7 +165,7 @@ def test_reviewed_source_draft_cannot_be_published_with_unfinished_exports(
 
 def test_duplicate_link_checks_the_selected_book_revision(curated_job):
     candidate = Book.objects.create(title=TITLE)
-    execute(curated_job)
+    historical_duplicate(curated_job, candidate)
     previous = candidate.updated_at
     candidate.summary = "সম্পাদকের সর্বশেষ লেখা"
     candidate.save()

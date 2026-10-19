@@ -15,6 +15,7 @@ from apps.access.reading.preparation import publication_directory
 from apps.access.reading.sessions import (
     account_reader_session,
     launch_prepared_reader,
+    progress_matches_edition,
     reading_state,
 )
 from apps.common.api import VersionedAPIView
@@ -32,6 +33,7 @@ def reader_session_data(session):
         "navigation": session.prepared_publication.manifest.get("navigation", []),
         "resource_base": reader_resource_base(session.pk),
         "reading_progress": ReaderProgressSerializer(state).data,
+        "progress_matches_edition": progress_matches_edition(state, session),
     }
 
 
@@ -86,7 +88,15 @@ class ReaderProgressView(VersionedAPIView):
         state = reading_state(session)
         state.last_location = serializer.validated_data["last_location"]
         state.progress_percent = serializer.validated_data["progress_percent"]
-        state.save(update_fields=["last_location", "progress_percent", "updated_at"])
+        state.preview_session = session
+        state.save(
+            update_fields=[
+                "last_location",
+                "progress_percent",
+                "preview_session",
+                "updated_at",
+            ]
+        )
         return Response(ReaderProgressSerializer(state).data)
 
 

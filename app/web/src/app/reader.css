@@ -9,6 +9,10 @@ button:disabled { cursor:default; opacity:.55; }
 .reader-contents ol { list-style:none; padding:0; margin:0; }
 .reader-contents ol ol { padding-inline-start:18px; border-inline-start:1px solid var(--line); }
 .reader-contents-heading { display:block; padding:12px 0; font-weight:650; }
+.reader-contents-row { display:flex; align-items:center; gap:8px; }
+.reader-contents-row .reader-chapter { min-width:0; }
+.reader-contents-toggle { flex:0 0 48px; padding:8px; }
+.reader-contents [hidden] { display:none; }
 .reader-chapter { display:block; width:100%; min-height:48px; padding:12px; margin:8px 0; border:1px solid var(--line); border-radius:6px; background:white; color:var(--ink); text-align:start; font:inherit; }
 .reader-chapter[aria-current] { border-color:var(--green); background:#e7eee6; }
 .reader-settings { display:grid; gap:16px; }

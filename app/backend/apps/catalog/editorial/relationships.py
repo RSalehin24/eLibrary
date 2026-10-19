@@ -65,12 +65,13 @@ def related_references(links, field):
     ]
 
 
-def record_relationship_version(actor, book):
+def record_relationship_version(actor, book, edit_note=""):
     details = relationship_selection(book)
     MetadataVersion.objects.create(
         book=book,
         created_by=actor,
         source="editorial-relationships",
+        notes=edit_note,
         snapshot={
             "contributors": [
                 {"id": str(entry["id"]), "role": entry["role"]}
@@ -162,7 +163,7 @@ def update_relationships(actor, book_id, attributes):
     )
     if book.updated_at != attributes["expected_updated_at"]:
         raise EditorialConflict()
-    record_relationship_version(actor, book)
+    record_relationship_version(actor, book, attributes.get("edit_note", ""))
     apply_relationships(actor, book, attributes)
     save_relationship_revision(book)
     return book

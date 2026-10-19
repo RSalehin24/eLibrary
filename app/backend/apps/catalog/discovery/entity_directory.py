@@ -5,9 +5,13 @@ from apps.catalog.discovery.entities import public_entities
 from apps.catalog.discovery.publication import public_books
 from apps.common.text import normalize_catalog_text
 
+from .directory_counts import with_directory_counts
+
 
 def directory_queryset(kind, parameters):
-    queryset = public_entities(kind).only("id", "name", "slug", "created_at")
+    queryset = with_directory_counts(
+        public_entities(kind).only("id", "name", "slug", "created_at"), kind, parameters
+    )
     if role := parameters.get("role"):
         if kind != "contributors":
             raise ValidationError({"role": "Roles apply to contributors."})

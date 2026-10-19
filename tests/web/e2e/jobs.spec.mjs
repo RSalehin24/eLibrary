@@ -32,15 +32,25 @@ test("phone job details support pause resume and cancellation with confirmed sta
   await expect(page.getByRole("heading", { name: fixture.reading_book.title, exact: true })).toBeVisible();
 });
 
-test("asset preparation returns a trackable command and conflicts are not replayed", async ({ page }) => {
+test("uploads prepare the reader automatically and explicit preparation conflicts are not replayed", async ({ page }) => {
   const book = await newDigitalBook(page), bytes = await readingEPUB(page);
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/`);
   await page.getByLabel("বইয়ের EPUB ফাইল", { exact: true }).setInputFiles({ name: "book.epub", mimeType: "application/epub+zip", buffer: bytes });
   await page.getByRole("button", { name: "EPUB আপলোড করুন", exact: true }).click();
-  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB আপলোড হয়েছে" })).toBeVisible();
-  await page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true }).click();
-  const link = page.getByRole("link", { name: "প্রস্তুতির কাজ দেখুন", exact: true });
-  await expect(link).toBeVisible(); await link.click();
+  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB পরীক্ষা করে পড়ার জন্য প্রস্তুত করা হয়েছে" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true })).toHaveCount(0);
+  const assets = await (await page.request.get(`/api/v1/manage/books/${encodeURIComponent(book.slug)}/assets/`)).json();
+  const asset = assets.find(entry => entry.asset_type === "epub");
+  expect(asset.file_available).toBe(true); expect(asset.reader_ready).toBe(true);
+  const session = await (await page.request.get("/api/v1/auth/session/")).json();
+  const operation = crypto.randomUUID();
+  const prepared = await page.request.post(`/api/v1/manage/assets/${asset.id}/prepare/`, {
+    headers: { "X-CSRFToken": session.csrf_token },
+    data: { operation_id: operation, expected_updated_at: asset.updated_at },
+  });
+  expect(prepared.status()).toBe(202);
+  expect((await prepared.json()).operation_id).toBe(operation);
+  await page.goto(`/manage/jobs/${operation}/`);
   await expect(page.locator(".status-label")).toHaveText("অপেক্ষমাণ");
   const controls = [];
   await page.route("**/api/v1/manage/jobs/*/", async (route) => {

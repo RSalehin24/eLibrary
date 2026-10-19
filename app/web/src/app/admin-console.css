@@ -113,6 +113,7 @@ body:has(.management-workspace)>.page-container { max-width:none; padding:0; }
   .admin-topbar-actions { gap:8px; }
   .admin-topbar .account-menu { gap:8px; }
   .admin-topbar .account-menu .text-link { padding:0 4px; }
+  .admin-topbar .account-menu .button { padding-inline:10px; font-size:.8125rem; }
   .management-workspace .workspace { grid-template-columns:minmax(0,1fr); }
   .admin-sidebar { padding:6px; border:0; border-bottom:1px solid var(--line); }
   .management-workspace .workspace-nav { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,12ch),1fr)); gap:3px; position:static; font-size:.75rem; }

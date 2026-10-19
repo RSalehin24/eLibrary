@@ -8,6 +8,10 @@ from apps.accounts.link_mail.worker import run_account_mail
 from apps.delivery.worker import run_kindle_delivery
 from apps.ingestion.catalog_processing.worker import run_catalog_processing
 from apps.ingestion.source_discovery.worker import run_source_discovery
+from apps.ingestion.source_processing.continuations import (
+    CollectionYield,
+    continue_collection,
+)
 from apps.ingestion.source_processing.worker import run_source_processing
 from apps.processing.job_models import (
     BackgroundJob,
@@ -91,6 +95,8 @@ def run_background_job(dispatch_id: UUID, heartbeat=maintain_heartbeat):
         return
     try:
         execute_with_heartbeat(ownership, heartbeat)
+    except CollectionYield:
+        continue_collection(ownership)
     except AttemptLost:
         logger.info(
             "Background job attempt ownership lost.",

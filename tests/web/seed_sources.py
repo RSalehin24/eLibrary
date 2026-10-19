@@ -1,6 +1,7 @@
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.catalog.models import BookSource
 from apps.ingestion.models import SourceCatalogEntry
+from django.utils import timezone
 from seed_source_media import create_source_media
 
 
@@ -25,6 +26,18 @@ def create_source_fixture(identity, reading_book):
         source_url=entries[0].source_url,
         normalized_source_url=entries[0].source_url,
     )
+    entries[0].raw_data = {
+        **entries[0].raw_data,
+        "source_unfinished": True,
+        "source_update": {
+            "status": "available",
+            "checked_at": timezone.now().isoformat(),
+            "chapter_count": 2,
+            "published_chapter_count": 1,
+            "source_modified_at": None,
+        },
+    }
+    entries[0].save(update_fields=["raw_data"])
     return {
         "query": identity,
         "linked": {"id": str(entries[0].pk), "title": entries[0].title},

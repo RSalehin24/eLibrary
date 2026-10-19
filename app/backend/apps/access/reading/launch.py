@@ -45,6 +45,9 @@ def ensure_read_once_available(user, book):
 
 @transaction.atomic
 def launch_reader_session(user, book):
+    from apps.catalog.content_quality import book_is_quarantined
+    if book_is_quarantined(book):
+        raise PermissionDenied("This book is temporarily unavailable while its content is repaired.")
     user = lock_reader_account(user)
     ensure_read_once_available(user, book)
     session = active_reader_session(user, book)

@@ -18,6 +18,9 @@ class ContributorSelectionSerializer(serializers.Serializer):
 
 class BookRelationshipsUpdateSerializer(serializers.Serializer):
     expected_updated_at = serializers.DateTimeField()
+    edit_note = serializers.CharField(
+        max_length=2000, allow_blank=True, required=False, write_only=True
+    )
     contributors: serializers.ListSerializer[dict[str, object]] = (
         serializers.ListSerializer(
             child=ContributorSelectionSerializer(), max_length=100, required=False
@@ -33,7 +36,7 @@ class BookRelationshipsUpdateSerializer(serializers.Serializer):
 
     def validate(self, attributes):
         reject_unknown_fields(self)
-        if len(attributes) == 1:
+        if not set(attributes).difference({"expected_updated_at", "edit_note"}):
             raise serializers.ValidationError(
                 {"non_field_errors": "Supply relationships to update."}
             )

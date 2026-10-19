@@ -8,15 +8,16 @@ import { createManagedGrant } from "@/api/managed-access";
 import type { ManagedAccount, ManagedGrant, ManagedGrantCreate } from "@/api/types";
 import { accessScopes, scopedAccess, targetKinds } from "@/lib/access-status";
 import { reloadManagedForm, useManagedForm } from "@/lib/managed-form";
+import { dhakaDateTimeValue } from "@/lib/bulk-access";
 import { AccountField } from "./account-field";
 import { AccountFeedback } from "./account-feedback";
 import { AccessTargetSelector } from "./access-target-selector";
+import { AccessExpiryInput } from "./access-expiry-input";
 
 function grantValues(fields: FormData, id: string): ManagedGrantCreate {
   const kind = String(fields.get("kind")), target = String(fields.get("target") ?? "");
-  const expiry = String(fields.get("expires_at") ?? "");
   return { id, scope: String(fields.get("scope")) as ManagedGrantCreate["scope"], notes: String(fields.get("notes") ?? ""),
-    expires_at: expiry ? new Date(expiry).toISOString() : null,
+    expires_at: dhakaDateTimeValue(String(fields.get("grant-expiry-date") ?? ""), String(fields.get("grant-expiry-time") ?? "02:00")),
     ...(kind === "book" ? { book: target } : kind === "category" ? { category: target } : kind === "author" ? { contributor: target } : {}) };
 }
 
@@ -35,8 +36,8 @@ export function ManagedGrantForm({ account, onSaved }: { account: ManagedAccount
     {kind !== "account" && <AccessTargetSelector key={kind} kind={kind} disabled={form.blocked} errors={form.errors[kind === "author" ? "contributor" : kind]} />}
     <div className="form-field"><label htmlFor="grant-scope"><AdminText>{"যে কাজের অনুমতি"}</AdminText></label><select id="grant-scope" name="scope" value={scope} aria-invalid={!!form.errors.scope?.length} aria-describedby={form.errors.scope?.length ? "grant-scope-error" : undefined} disabled={form.blocked} onChange={(event) => setScope(event.target.value as ManagedGrantCreate["scope"])}>{shownScopes.map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select>
       {form.errors.scope?.length ? <p id="grant-scope-error" className="field-error" role="alert"><SiteFieldErrors errors={form.errors.scope} /></p> : null}</div>
-    <div className="form-field"><label htmlFor="grant-expiry"><AdminText>{"মেয়াদ শেষ (আপনার স্থানীয় সময়, ঐচ্ছিক)"}</AdminText></label><input id="grant-expiry" name="expires_at" type="datetime-local" max="9999-12-31T23:59" aria-invalid={!!form.errors.expires_at?.length} aria-describedby={form.errors.expires_at?.length ? "grant-expiry-error" : undefined} disabled={form.blocked} />
-      {form.errors.expires_at?.length ? <p id="grant-expiry-error" className="field-error" role="alert"><SiteFieldErrors errors={form.errors.expires_at} /></p> : null}</div>
+    <AccessExpiryInput name="grant-expiry" disabled={form.blocked} />
+    {form.errors.expires_at?.length ? <p id="grant-expiry-error" className="field-error" role="alert"><SiteFieldErrors errors={form.errors.expires_at} /></p> : null}
     <AccountField name="notes" label="অনুমতির মন্তব্য" multiline maxLength={2000} errors={form.errors.notes} disabled={form.blocked} />
     {form.errors.non_field_errors?.length ? <p className="field-error" role="alert"><SiteFieldErrors errors={form.errors.non_field_errors} /></p> : null}
     <AccountFeedback error={form.saving.error} conflictMessage="অনুমতি বা অনুরোধের অবস্থা বদলেছে। তালিকার বর্তমান তথ্য দেখে সিদ্ধান্ত নিন।" />

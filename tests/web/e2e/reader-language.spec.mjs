@@ -15,6 +15,11 @@ async function openPreparedReader(page) {
   const launched = await page.request.post(`${apiOrigin}/api/v1/reading/books/${encodeURIComponent(fixture.reading_book.slug)}/launch/`, { headers: { "X-CSRFToken": account.csrf_token } });
   expect(launched.status()).toBe(200);
   const session = await launched.json();
+  const reset = await page.request.put(`${apiOrigin}/api/v1/reading/sessions/${session.id}/progress/`, {
+    headers: { "X-CSRFToken": account.csrf_token },
+    data: { last_location: "chapter:0:0", progress_percent: 0 },
+  });
+  expect(reset.status()).toBe(200);
   await page.route("**/api/v1/reading/sessions/*/progress/", route => route.fulfill({ json: route.request().postDataJSON() }));
   await page.goto(`/reader/${session.id}/`);
   return session;
@@ -66,6 +71,12 @@ test("reader has real pagination, text resizing, two page views and persistent a
   await increaseTextSize(page);
   await expect(content.locator("body")).toHaveCSS("font-size", "22px");
   await expect(content.locator("p").first()).toHaveCSS("font-size", "22px");
+  await page.getByRole("button", { name: "Reading Settings", exact: true }).click();
+  for (let step = 0; step < 4; step++) await page.getByRole("button", { name: "Decrease Text Size", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Decrease Text Size", exact: true })).toBeDisabled();
+  await expect(content.locator("body")).toHaveCSS("font-size", "14px");
+  for (let step = 0; step < 4; step++) await page.getByRole("button", { name: "Increase Text Size", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
   await setReadingView(page, "spread");
   await expect(content.locator("html")).toHaveAttribute("data-reader-view", "spread");
   const metrics = await content.locator("body").evaluate(body => ({ column: parseFloat(getComputedStyle(body).columnWidth), width: document.documentElement.clientWidth }));
@@ -225,10 +236,10 @@ test("book details show saved reading progress and only that book's personal not
   await page.goto(`/books/${encodeURIComponent(fixture.update_book.slug)}/`);
   await page.getByRole("button", { name: "English", exact: true }).click();
   const summary = page.locator(".book-reading-summary");
-  await expect(summary.getByRole("heading", { name: "Your Reading & Notes", exact: true })).toBeVisible();
+  await expect(summary.getByRole("heading", { name: "Your reading and notes", exact: true })).toBeVisible();
   await expect(summary.locator(".book-facts")).toContainText("25%");
   await expect(summary.getByText(note, { exact: true })).toBeVisible();
-  await summary.getByRole("button", { name: fixture.update_book.title, exact: false }).filter({ hasText: note }).click();
+  await summary.locator(".annotation-card").filter({ hasText: note }).click();
   await expect(summary.getByRole("dialog").getByLabel("Your Note", { exact: true })).toHaveValue(note);
   await page.context().clearCookies(); await page.reload();
   await expect(page.locator(".book-reading-summary")).toHaveCount(0);

@@ -84,3 +84,35 @@ test("translated count suffixes retain their spacing and manual review is not re
   assert.equal(translateAdmin("en", "এই সম্পর্কগুলো বইয়ের অনুমতি নির্ধারণেও ব্যবহৃত হয়। পরিবর্তনের পরে বইটি আবার পর্যালোচনা করুন।"), "Authors and categories also determine book permissions.");
   assert.equal(translateAdmin("bn", "এই সম্পর্কগুলো বইয়ের অনুমতি নির্ধারণেও ব্যবহৃত হয়। পরিবর্তনের পরে বইটি আবার পর্যালোচনা করুন।"), "লেখক ও বিভাগের তথ্য বইয়ের অনুমতি নির্ধারণেও ব্যবহৃত হয়।");
 });
+
+test("unpublished records and manual uploads do not request draft review", () => {
+  for (const state of ["draft", "needs_review"]) {
+    assert.equal(translateAdmin("en", catalogStateLabel(state)), "Unpublished");
+    assert.equal(translateAdmin("bn", catalogStateLabel(state)), "প্রকাশিত নয়");
+  }
+  const help = "ডিজিটাল বইয়ের নথি তৈরির পরে EPUB আপলোড করতে পারবেন। নতুন নথি পর্যালোচনার জন্য সংরক্ষিত হবে। পাঠকের মালিকানা ও পড়ার অনুমতি আলাদাভাবে পরিচালনা করা হয়।";
+  assert.equal(translateAdmin("en", help), "Enter the book details, then upload an EPUB or add a paper book record. Publish when ready.");
+  assert.equal(translateAdmin("bn", help), "বইয়ের তথ্য দিয়ে EPUB আপলোড করুন, অথবা কাগজের বই যোগ করুন। প্রস্তুত হলে প্রকাশ করুন।");
+});
+
+test("EPUB upload guidance explains automatic preparation and source matching in both languages", () => {
+  const guidance = "সর্বোচ্চ ২৪ MiB। বই পড়ার ফাইল স্বয়ংক্রিয়ভাবে পরীক্ষা ও প্রস্তুত হবে। সব পরীক্ষা সফল হলে নতুন ফাইল চালু হবে; ততক্ষণ প্রকাশিত বইয়ের আগের ফাইল চালু থাকবে।";
+  assert.match(translateAdmin("en", guidance), /checked and prepared automatically/);
+  assert.match(translateAdmin("en", guidance), /published books stay available/);
+  assert.equal(translateAdmin("bn", guidance), guidance);
+  const mismatch = "EPUB-এ ওয়েবসাইটের সব অধ্যায়ের লেখা মেলেনি। বইটি আবার তৈরি করুন অথবা একই লেখার সম্পূর্ণ EPUB দিন। আগের ফাইল বদলায়নি।";
+  assert.match(translateAdmin("en", mismatch), /does not match every website chapter/);
+  assert.match(translateAdmin("en", mismatch), /previous file is unchanged/);
+  assert.equal(translateAdmin("bn", mismatch), mismatch);
+});
+
+test("source recovery labels describe saved work and automatic publication", () => {
+  const separate = "আগের বই অক্ষত থাকবে। এই উৎস থেকে আলাদা বই তৈরি হবে এবং স্বয়ংক্রিয় যাচাই সফল হলে প্রকাশিত হবে।";
+  assert.equal(translateAdmin("bn", separate), separate);
+  assert.match(translateAdmin("en", separate), /publishes after successful automatic verification/);
+  assert.equal(translateAdmin("en", "আলাদা বই তৈরি করুন"), "Create a Separate Book");
+  assert.equal(translateAdmin("en", "সংরক্ষিত লেখা থেকে আবার প্রস্তুত করুন"), "Resume from Saved Content");
+  const resume = "সংরক্ষিত লেখা থেকে বই তৈরির কাজ আবার চলবে। সম্পন্ন অংশগুলো পুনর্ব্যবহার করা হবে।";
+  assert.equal(translateAdmin("bn", resume), resume);
+  assert.equal(translateAdmin("en", resume), "Continue preparing the book from saved content and reuse completed work.");
+});

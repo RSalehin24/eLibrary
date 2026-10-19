@@ -18,7 +18,7 @@ SCHEDULER_BATCH_SIZE = 20
 
 def occurrence_job(automation, due_at):
     require_processing_manager(automation.run_as)
-    configured = discovery_configuration()
+    configured = discovery_configuration(automation.catalog_scope)
     return request_source_discovery(
         automation.run_as,
         {
@@ -26,6 +26,7 @@ def occurrence_job(automation, due_at):
             "configuration_revision": configured["configuration_revision"],
             "max_pages": automation.source_max_pages,
             "fetch_all": automation.fetch_all,
+            "catalog_scope": automation.catalog_scope,
         },
     )
 
@@ -36,6 +37,7 @@ def enqueue_occurrence(automation, due_at, missed):
         "due_at": due_at,
         "processing_limit": automation.processing_limit,
         "process_all": automation.process_all,
+        "rebuild_updated": automation.rebuild_updated,
         "missed_occurrences": missed,
     }
     try:

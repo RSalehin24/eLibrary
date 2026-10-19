@@ -50,7 +50,7 @@ test("offline launch shows a notice and service-worker caches exclude private re
   await page.request.get("/api/v1/auth/session/");
   const cached = await page.evaluate(async () => (await Promise.all((await caches.keys()).filter((name) => name.startsWith("library-static-")).map(async (name) => (await (await caches.open(name)).keys()).map((request) => new URL(request.url).pathname)))).flat());
   expect(cached.length).toBeGreaterThan(0);
-  expect(cached.every((path) => path.startsWith("/_next/static/") || /^\/offline\.[a-f0-9]+\.html$/.test(path))).toBe(true);
+  expect(cached.every((path) => path.startsWith("/_next/static/") || /^\/(offline|local-reader-shell)\.[a-f0-9]+\.html$/.test(path))).toBe(true);
   proxy.offline = true;
   try {
     await context.setOffline(true); await page.goto(`${proxy.origin}/my-books/`);

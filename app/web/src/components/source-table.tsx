@@ -7,6 +7,7 @@ import type { SourceEntry } from "@/api/types";
 import { sourceStatus } from "@/lib/source-status";
 import { catalogStateLabel } from "@/lib/catalog-state";
 import { useAdminLanguage } from "./admin-language";
+import { SourceUpdateStatus } from "./source-update-status";
 
 type Props = {
   entries: SourceEntry[];
@@ -31,7 +32,7 @@ export function SourceTable(props: Props) {
       <th scope="col">{t("বইয়ের নাম")}</th><th scope="col">{t("লেখক")}</th><th scope="col">{t("অবস্থা")}</th><th scope="col">{t("করণীয়")}</th></tr></thead>
     <tbody>{props.entries.map((entry) => <tr className="source-row" key={entry.id}>
       <td className="source-check"><label className="source-select-control"><input type="checkbox" checked={props.selected.has(entry.id)} disabled={props.blocked || (!props.selected.has(entry.id) && (!entry.can_process || props.limitReached))} onChange={() => props.onToggle(entry)} aria-label={`${entry.title} — ${t("নির্বাচন করুন")}`} /></label></td>
-      <td className="source-title"><h2><Link href={`/manage/sources/${entry.id}/`}>{entry.title}</Link></h2></td>
+      <td className="source-title"><h2><Link href={`/manage/sources/${entry.id}/`}>{entry.title}</Link></h2><SourceUpdateStatus entry={entry} /></td>
       <td data-label={t("লেখক")}>{entry.author_line || t("লেখকের তথ্য নেই")}</td>
       <td data-label={t("অবস্থা")}><span className="status-label">{t(entry.active_operation_id ? "কাজ চলছে" : entry.book && !entry.book.deleted_at ? catalogStateLabel(entry.book.state) : sourceStatus(entry))}</span></td>
       <td className="source-row-actions"><SourceRowAction entry={entry} blocked={props.blocked || (props.limitReached && !props.selected.has(entry.id))} onCreate={props.onCreate} /><Link className="text-link" href={`/manage/sources/${entry.id}/`}>{t(entry.book && !entry.book.deleted_at ? "বইয়ের ফাইল" : "বিস্তারিত")}</Link></td>

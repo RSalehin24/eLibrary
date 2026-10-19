@@ -27,7 +27,7 @@ class SourceParametersSerializer(serializers.Serializer):
         min_value=1, max_value=100, required=False, default=50
     )
     status = serializers.ChoiceField(
-        choices=("all", "unlinked", "linked", "removed"), default="all"
+        choices=("all", "unlinked", "linked", "removed", "updated"), default="all"
     )
 
 
@@ -65,7 +65,19 @@ class SourceContentSummarySerializer(serializers.Serializer):
     check_completeness = serializers.BooleanField()
 
 
+class SourceUpdateSerializer(serializers.Serializer):
+    source_complete = serializers.BooleanField(default=False)
+    status = serializers.ChoiceField(choices=("unknown", "current", "available"))
+    checked_at = serializers.DateTimeField()
+    chapter_count = serializers.IntegerField()
+    published_chapter_count = serializers.IntegerField(allow_null=True)
+    source_modified_at = serializers.DateTimeField(allow_null=True)
+
+
 class SourceEntrySerializer(serializers.Serializer):
+    source_update = SourceUpdateSerializer(
+        source="entry.source_update", allow_null=True, default=None
+    )
     content_summary = serializers.SerializerMethodField()
     id = serializers.UUIDField(source="entry.id")
     title = serializers.CharField(source="entry.title")

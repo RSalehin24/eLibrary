@@ -7,7 +7,7 @@ import pytest
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.access.reading.preparation import prepare_epub_asset
 from apps.accounts.models import User
-from apps.catalog.models import Book, GeneratedAsset, UserBook
+from apps.catalog.models import GeneratedAsset, UserBook
 from apps.common.models import AuditLog
 from apps.ingestion.models import SourceCatalogEntry
 from apps.processing.job_models import SOURCE_ACTIVE_STATES, BackgroundJob
@@ -18,44 +18,20 @@ from django.utils import timezone
 from rest_framework.test import APIClient
 
 from ..access.reader_fixtures import write_epub
+from .epub_upload_fixtures import send_upload, upload_url
 
 pytestmark = pytest.mark.django_db
 
 
-@pytest.fixture
-def upload_book(settings, tmp_path):
-    settings.MEDIA_ROOT = tmp_path / "media"
-    actor = User.objects.create_user(email="upload-admin@library.test", is_staff=True)
-    book = Book.objects.create(
-        title="আপলোডের বই", state="published", review_state="approved"
-    )
-    client = APIClient()
-    client.force_authenticate(actor)
-    return actor, book, client, write_epub(tmp_path / "book.epub")
-
-
-def upload_url(book):
-    return f"/api/v1/manage/books/{book.slug}/epub/"
-
-
-def send_upload(fixture, **changes):
-    _, book, client, path = fixture
-    values = {
-        "expected_updated_at": book.updated_at.isoformat(),
-        "file": SimpleUploadedFile(
-            "book.epub", path.read_bytes(), "application/epub+zip"
-        ),
-        **changes,
-    }
-    return client.post(upload_url(book), values, format="multipart")
-
-
-def test_uploaded_epub_is_private_reviewable_and_prepares_for_reading(upload_book):
+def test_uploaded_epub_is_private_and_automatically_prepared_without_unpublishing(
+    upload_book,
+):
     actor, book, _, path = upload_book
     response = send_upload(upload_book)
     assert response.status_code == 200
     assert response["Cache-Control"] == "private, no-store"
-    assert response.json()["state"] == "needs_review"
+    assert response.json()["state"] == "published"
+    assert response.json()["review_state"] == "approved"
     assert response.json()["editorial_reviewed_at"] is None
     asset = GeneratedAsset.objects.get(book=book, asset_type="epub")
     assert asset.checksum == hashlib.sha256(path.read_bytes()).hexdigest()

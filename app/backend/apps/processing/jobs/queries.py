@@ -2,6 +2,7 @@ from django.db.models import Exists, OuterRef, Prefetch, Subquery
 
 from apps.catalog.discovery.management import metadata_managed_books
 from apps.processing.job_models import (
+    SOURCE_ACTIVE_STATES,
     BackgroundJob,
     BackgroundJobKind,
     BackgroundJobState,
@@ -25,6 +26,7 @@ def job_queryset(user):
             "source_record_id",
             "parent_job_id",
             "checkpoint",
+            "input",
             "attempt_count",
             "max_attempts",
             "error_code",
@@ -35,12 +37,22 @@ def job_queryset(user):
             "book__id",
             "book__title",
             "book__slug",
+            "book__updated_at",
+            "book__record_type",
+            "book__state",
+            "book__deleted_at",
             "source_record__id",
             "source_record__title",
+            "source_record__updated_at",
         )
         .annotate(
             can_edit_book=Exists(
                 metadata_managed_books(user).filter(pk=OuterRef("book_id"))
+            ),
+            other_book_work=Exists(
+                BackgroundJob.objects.filter(
+                    book_id=OuterRef("book_id"), state__in=SOURCE_ACTIVE_STATES
+                ).exclude(pk=OuterRef("pk"))
             ),
             latest_stage=Subquery(attempts.values("stage")[:1]),
             latest_heartbeat_at=Subquery(attempts.values("heartbeat_at")[:1]),

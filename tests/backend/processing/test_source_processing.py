@@ -21,6 +21,7 @@ from source_processing_fixtures import (
     SOURCE_URL,
     TITLE,
     curated_source,
+    historical_duplicate,
 )
 from source_processing_fixtures import (
     execute_source_job as execute,
@@ -76,21 +77,19 @@ def test_source_processing_automatically_publishes_verified_protected_exports(
     assert Book.objects.count() == 1
 
 
-def test_duplicate_sources_require_a_decision_and_preserve_existing_metadata(
+def test_same_titles_from_distinct_sources_publish_without_overwriting_existing_metadata(
     curated_job,
 ):
     existing = Book.objects.create(
         title=TITLE, summary="সম্পাদকীয় লেখা", state="published"
     )
     execute(curated_job)
-    assert (
-        curated_job.state == "needs_attention"
-        and curated_job.error_code == "source_duplicate"
-    )
+    assert curated_job.state == "succeeded" and curated_job.checkpoint["auto_published"]
+    assert curated_job.book_id != existing.pk
     existing.refresh_from_db()
     assert existing.summary == "সম্পাদকীয় লেখা" and existing.state == "published"
-    assert Book.objects.count() == 1 and not UserBook.objects.exists()
-    assert str(existing.pk) in curated_job.checkpoint["duplicate_book_ids"]
+    assert Book.objects.count() == 2 and not UserBook.objects.exists()
+    assert BookSource.objects.get().book_id == curated_job.book_id
 
 
 def test_link_resolution_reuses_a_candidate_without_mutating_it_or_ownership(
@@ -99,7 +98,7 @@ def test_link_resolution_reuses_a_candidate_without_mutating_it_or_ownership(
     existing = Book.objects.create(
         title=TITLE, state="published", summary="অক্ষত পরিচিতি"
     )
-    execute(curated_job)
+    historical_duplicate(curated_job, existing)
     resolved = resolve_source_job(
         curated_job.requested_by,
         curated_job.pk,
@@ -120,9 +119,9 @@ def test_link_resolution_reuses_a_candidate_without_mutating_it_or_ownership(
     )
 
 
-def test_explicit_separate_resolution_creates_a_distinct_review_record(curated_job):
+def test_historical_separate_resolution_publishes_a_distinct_book(curated_job):
     existing = Book.objects.create(title=TITLE, summary="অক্ষত পরিচিতি")
-    execute(curated_job)
+    historical_duplicate(curated_job, existing)
     resolve_source_job(
         curated_job.requested_by,
         curated_job.pk,
@@ -160,8 +159,8 @@ def test_incomplete_sources_require_attention_before_a_book_is_created(
 def test_revision_conflicts_and_unreviewed_targets_do_not_resolve_a_duplicate(
     curated_job,
 ):
-    Book.objects.create(title=TITLE)
-    execute(curated_job)
+    candidate = Book.objects.create(title=TITLE)
+    historical_duplicate(curated_job, candidate)
     unrelated = Book.objects.create(title="অন্য বই")
     with pytest.raises(JobStateConflict):
         resolve_source_job(

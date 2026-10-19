@@ -26,9 +26,8 @@ export function ManagementOverviewWorkspace({ initial }: { initial: ManagementOv
       {books && <section className="account-section"><h2>{t("আপনার পরিচালনাযোগ্য বই")}</h2>
         <dl className="book-facts">
           <div><dt>{t("মোট")}</dt><dd>{number(books.total)}</dd></div>
-          <div><dt>{t("খসড়া")}</dt><dd>{number(books.draft)}</dd></div>
+          {(books.draft + books.ready) > 0 && <div><dt>{t("প্রকাশের অপেক্ষায়")}</dt><dd>{number(books.draft + books.ready)}</dd></div>}
           <div><dt>{t("প্রক্রিয়াধীন")}</dt><dd>{number(books.processing)}</dd></div>
-          <div><dt>{t("প্রস্তুত")}</dt><dd>{number(books.ready)}</dd></div>
           <div><dt>{t("প্রকাশিত")}</dt><dd>{number(books.published)}</dd></div>
           <div><dt>{t("আর্কাইভে")}</dt><dd>{number(books.archived)}</dd></div>
         </dl><Link className="text-link" href="/manage/books/">{t("বই দেখুন →")}</Link></section>}

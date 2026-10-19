@@ -26,7 +26,8 @@ async function activate(scope, currentCache) {
 async function navigate(scope, request, configuration) {
   try { return await scope.fetch(request); }
   catch {
-    const fallback = await (await scope.caches.open(configuration.cache)).match(configuration.offline);
+    const path = new URL(request.url).pathname === "/local-reader/" && configuration.localReader ? configuration.localReader : configuration.offline;
+    const fallback = await (await scope.caches.open(configuration.cache)).match(path);
     return fallback ?? new Response("ইন্টারনেট সংযোগ প্রয়োজন।", { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8" } });
   }
 }

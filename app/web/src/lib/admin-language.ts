@@ -5,6 +5,8 @@ import { adminAutomationMessages } from "./admin-automation-messages";
 import { siteEnglishMessages } from "./site-messages";
 import { adminConsoleMessages } from "./admin-console-messages";
 import { adminFeatureMessages } from "./admin-feature-messages";
+import { adminHistoryMessages } from "./admin-history-messages";
+import { adminQueueMessages } from "./admin-queue-messages";
 
 export type AdminLanguage = "bn" | "en";
 export const adminLanguageCookie = "library-admin-language";
@@ -22,12 +24,17 @@ export function translateAdmin(language: AdminLanguage, text: string): string {
 
 type Translation = Readonly<Record<AdminLanguage, string>>;
 export const adminMessages: Readonly<Record<string, Translation>> = {
+  "কোন বই পরীক্ষা হবে": { bn: "কোন বই পরীক্ষা হবে", en: "Books to check" },
+  "নতুন অংশ পাওয়া গেলে বইয়ের নতুন সংস্করণ তৈরি করুন": { bn: "নতুন অংশ পাওয়া গেলে বইয়ের নতুন সংস্করণ তৈরি করুন", en: "Build a new edition when new content is found" },
+  "দিনের সময়": { bn: "দিনের সময়", en: "AM or PM" },
   ...adminFormMessages,
   ...adminJobMessages,
   ...adminAccessMessages,
   ...adminAutomationMessages,
   ...adminConsoleMessages,
   ...adminFeatureMessages,
+  ...adminHistoryMessages,
+  ...adminQueueMessages,
   "বাছা সংস্করণ:": { bn: "বাছা সংস্করণ:", en: "Selected Edition:" },
   "অ্যাডমিন মেনু": { bn: "অ্যাডমিন মেনু", en: "Admin Menu" },
   "আর্কাইভে": { bn: "আর্কাইভে", en: "Archived" },
@@ -105,7 +112,8 @@ export const adminMessages: Readonly<Record<string, Translation>> = {
   "আপনার পরিচালনাযোগ্য বই": { bn: "বইয়ের তালিকা", en: "Books" },
   "পাঠকের হিসাব": { bn: "ব্যবহারকারী", en: "Users" },
   "মোট": { bn: "মোট", en: "Total" },
-  "খসড়া": { bn: "খসড়া", en: "Drafts" },
+  "খসড়া": { bn: "প্রকাশিত নয়", en: "Unpublished" },
+  "প্রকাশিত নয়": { bn: "প্রকাশিত নয়", en: "Unpublished" },
   "প্রকাশিত": { bn: "প্রকাশিত", en: "Published" },
   "অসংযুক্ত": { bn: "বই তৈরি হয়নি", en: "Not Created" },
   "বই সংযুক্ত": { bn: "বই যুক্ত আছে", en: "Book Linked" },

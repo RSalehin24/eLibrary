@@ -24,6 +24,12 @@ class SourceAutomation(UUIDPrimaryKeyModel, TimeStampedModel):
     occurrence_number = models.PositiveIntegerField(default=0)
     source_max_pages = models.PositiveSmallIntegerField(default=20)
     processing_limit = models.PositiveSmallIntegerField(default=0)
+    catalog_scope = models.CharField(
+        max_length=16,
+        choices=[("all", "All books"), ("unfinished", "Unfinished books")],
+        default="all",
+    )
+    rebuild_updated = models.BooleanField(default=False)
     fetch_all = models.BooleanField(default=False)
     process_all = models.BooleanField(default=False)
     run_as = models.ForeignKey(
@@ -68,6 +74,7 @@ class AutomationRun(UUIDPrimaryKeyModel, TimeStampedModel):
     )
     processing_limit = models.PositiveSmallIntegerField(default=0)
     process_all = models.BooleanField(default=False)
+    rebuild_updated = models.BooleanField(default=False)
     missed_occurrences = models.PositiveIntegerField(default=0)
 
     class Meta:

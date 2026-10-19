@@ -6,7 +6,6 @@ from apps.catalog.models import CuratedDocumentStatus, CuratedSectionType
 from apps.common.text import clean_display_text, normalize_catalog_text
 from apps.ingestion.services.normalization import plain_text_from_html
 
-
 SOURCE_CHROME_PATTERNS = (
     "leave a reply",
     "logged in",
@@ -18,19 +17,36 @@ SOURCE_CHROME_PATTERNS = (
     "লগইন",
 )
 SOURCE_CHROME_CONTAINS_PATTERNS = {"logged in", "login", "লগইন"}
+SOURCE_AUTH_PROMPT = re.compile(
+    r"^(?:please\s+)?log ?in(?:$|\s+(?:to|with|or|for|required)\b)"
+    r"|^(?:you\s+)?(?:must|need to|have to)\s+be logged in\b"
+    r"|^(?:you are|currently)\s+logged in\b"
+    r"|^(?:(?:অনুগ্রহ করে|দয়া করে)\s+)?লগইন\s+(?:করুন|প্রয়োজন)"
+    r"|^(?:পড়তে|বইটি পড়তে|মন্তব্য করতে|পড়ার জন্য|এই বই পড়তে).{0,60}লগইন(?:\s|$)",
+    re.IGNORECASE,
+)
+SOURCE_READING_LOGIN_PREFIXES = tuple(
+    normalize_catalog_text(value)
+    for value in ("পড়তে", "বইটি পড়তে", "মন্তব্য করতে", "পড়ার জন্য", "এই বই পড়তে")
+)
 SOURCE_CHROME_MAX_BLOCK_LENGTH = 160
 SOURCE_CHROME_BLOCK_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6", "p", "li", "blockquote")
 
 
 def path_tuple(value):
     if isinstance(value, (list, tuple)):
-        return tuple(clean_display_text(part) for part in value if clean_display_text(part))
+        return tuple(
+            clean_display_text(part) for part in value if clean_display_text(part)
+        )
     return ()
 
 
 def iter_toc_entries(entries, parent_path=()):
     for entry in entries or []:
-        current_path = path_tuple(entry.get("path")) or (*parent_path, clean_display_text(entry.get("title", "")))
+        current_path = path_tuple(entry.get("path")) or (
+            *parent_path,
+            clean_display_text(entry.get("title", "")),
+        )
         yield entry, current_path
         yield from iter_toc_entries(entry.get("children", []), current_path)
 
@@ -40,7 +56,9 @@ def generated_toc_from_content_items(content_items):
         {
             "title": item.get("title", ""),
             "type": item.get("type", "lesson"),
-            "has_content": None if item.get("has_content") is None else bool(plain_text_from_html(item.get("content", ""))),
+            "has_content": None
+            if item.get("has_content") is None
+            else bool(plain_text_from_html(item.get("content", ""))),
             "path": list(path_tuple(item.get("path")) or (item.get("title", ""),)),
         }
         for item in content_items or []
@@ -52,7 +70,9 @@ def duplicate_paths(content_items):
     seen = set()
     duplicates = []
     for item in content_items or []:
-        path = path_tuple(item.get("path")) or (clean_display_text(item.get("title", "")),)
+        path = path_tuple(item.get("path")) or (
+            clean_display_text(item.get("title", "")),
+        )
         if not path:
             continue
         if path in seen:
@@ -65,7 +85,8 @@ def dead_toc_leaves(toc, content_items):
     content_paths = {
         path_tuple(item.get("path")) or (clean_display_text(item.get("title", "")),)
         for item in content_items or []
-        if plain_text_from_html(item.get("content", "")) or item.get("has_content") is None
+        if plain_text_from_html(item.get("content", ""))
+        or item.get("has_content") is None
     }
     dead = []
     for entry, path in iter_toc_entries(toc):
@@ -96,9 +117,12 @@ def is_source_chrome_block(normalized, normalized_pattern, pattern):
     if len(normalized) > SOURCE_CHROME_MAX_BLOCK_LENGTH:
         return False
 
-    bounded_pattern = rf"(^|\s){re.escape(normalized_pattern)}($|\s)"
     if pattern in SOURCE_CHROME_CONTAINS_PATTERNS:
-        return bool(re.search(bounded_pattern, normalized))
+        return bool(SOURCE_AUTH_PROMPT.search(normalized)) or (
+            pattern == "লগইন"
+            and normalized.startswith(SOURCE_READING_LOGIN_PREFIXES)
+            and normalized_pattern in normalized
+        )
     return normalized.startswith(f"{normalized_pattern} ")
 
 
@@ -120,7 +144,12 @@ def source_chrome_hits(sections):
             for block_text in block_texts:
                 normalized = normalize_catalog_text(block_text)
                 if is_source_chrome_block(normalized, normalized_pattern, pattern):
-                    hits.append({"section_id": section.get("section_id", ""), "pattern": pattern})
+                    hits.append(
+                        {
+                            "section_id": section.get("section_id", ""),
+                            "pattern": pattern,
+                        }
+                    )
                     break
     return hits
 
@@ -129,9 +158,14 @@ def fetched_content_assignment_warnings(snapshot, sections):
     raw = snapshot.get("raw_scrape_payload") or {}
     warnings = []
     has_raw_main = bool(plain_text_from_html(raw.get("main_content", "")))
-    has_section_main = any(section.get("source_location") == "raw_scrape_payload.main_content" for section in sections)
+    has_section_main = any(
+        section.get("source_location") == "raw_scrape_payload.main_content"
+        for section in sections
+    )
     if has_raw_main and not has_section_main:
-        warnings.append("Main content was fetched but not assigned to a curated section.")
+        warnings.append(
+            "Main content was fetched but not assigned to a curated section."
+        )
     return warnings
 
 
@@ -154,7 +188,9 @@ def source_page_fetch_errors(snapshot):
         except (TypeError, ValueError):
             parsed_status_code = 0
         if parsed_status_code and parsed_status_code != 200:
-            errors.append(f"Source page returned non-200 status: {url} ({status_code}).")
+            errors.append(
+                f"Source page returned non-200 status: {url} ({status_code})."
+            )
     return errors
 
 
@@ -190,11 +226,16 @@ def validate_document(document, snapshot):
         if not isinstance(item, dict):
             errors.append(f"Content item {index + 1} is not structured.")
             continue
-        path = path_tuple(item.get("path")) or (clean_display_text(item.get("title", "")),)
+        path = path_tuple(item.get("path")) or (
+            clean_display_text(item.get("title", "")),
+        )
         label = " / ".join(path) if path else str(index + 1)
         if not path:
             errors.append(f"Content item {index + 1} is missing a title/path.")
-        if not plain_text_from_html(item.get("content", "")) and item.get("has_content") is not None:
+        if (
+            not plain_text_from_html(item.get("content", ""))
+            and item.get("has_content") is not None
+        ):
             errors.append(f"Content item has no body: {label}.")
     for duplicate_path in duplicate_paths(content_items):
         errors.append(f"Duplicate content path: {duplicate_path}.")
@@ -203,7 +244,9 @@ def validate_document(document, snapshot):
     for dead_path in dead_toc_leaves(toc, content_items):
         errors.append(f"Dead TOC leaf without content: {dead_path}.")
     for hit in source_chrome_hits(sections):
-        errors.append(f"Source chrome found in body section {hit['section_id']}: {hit['pattern']}.")
+        errors.append(
+            f"Source chrome found in body section {hit['section_id']}: {hit['pattern']}."
+        )
     errors.extend(source_page_fetch_errors(snapshot))
 
     warnings.extend(fetched_content_assignment_warnings(snapshot, sections))
@@ -215,10 +258,22 @@ def validate_document(document, snapshot):
     if low_confidence:
         warnings.append(f"Low-confidence sections: {', '.join(low_confidence)}.")
 
-    hard_missing = any(error in {"Missing required title.", "Missing canonical URL.", "Missing body content."} for error in errors)
+    hard_missing = any(
+        error
+        in {
+            "Missing required title.",
+            "Missing canonical URL.",
+            "Missing body content.",
+        }
+        for error in errors
+    )
     status = CuratedDocumentStatus.VALIDATED
     if errors:
-        status = CuratedDocumentStatus.INVALID if hard_missing else CuratedDocumentStatus.REVIEW_REQUIRED
+        status = (
+            CuratedDocumentStatus.INVALID
+            if hard_missing
+            else CuratedDocumentStatus.REVIEW_REQUIRED
+        )
 
     return {
         "is_valid": not errors,

@@ -6,6 +6,7 @@ from apps.processing.job_models import (
     BackgroundJobKind,
     BackgroundJobState,
 )
+from apps.processing.jobs.source_defects import source_defect_waits_for_code
 
 from .summary import source_document_available
 
@@ -14,6 +15,8 @@ def available_source_choices(job):
     if job.state not in {BackgroundJobState.NEEDS_ATTENTION, BackgroundJobState.FAILED}:
         return []
     choices = ["cancel"]
+    if source_defect_waits_for_code(job):
+        return choices
     entry = job.source_record
     expected = job.checkpoint.get(
         "source_revision", job.input["command"].get("source_revision")
@@ -27,12 +30,12 @@ def available_source_choices(job):
             and source_document_available(job)
             else ["retry", *choices]
         )
-    book = Book.objects.only("updated_at", "state", "deleted_at").get(pk=job.book_id)
+    book = job.book
     if (
         unchanged
         and (source_document_available(job) or job.input.get("regenerate_book"))
         and book.deleted_at is None
-        and book.state != "published"
+        and (book.state != "published" or job.input.get("preserve_publication"))
         and book.updated_at.isoformat() == job.checkpoint.get("catalog_revision")
     ):
         if job.input.get("regenerate_book"):

@@ -12,6 +12,7 @@ from apps.processing.jobs.failures import FailureKind
 from .parser import discovery_page
 from .persistence import commit_discovery_page
 from .queries import current_discovery_job
+from .updates import check_unfinished_updates
 
 
 def discovery_checkpoint(job, cache, page):
@@ -105,4 +106,8 @@ def run_source_discovery(ownership):
             raise ExecutionFailure(
                 FailureKind.TRANSIENT, "source_storage_unavailable"
             ) from None
-    return completed and dispatch_automation_sources(ownership)
+    return (
+        completed
+        and check_unfinished_updates(ownership)
+        and dispatch_automation_sources(ownership)
+    )

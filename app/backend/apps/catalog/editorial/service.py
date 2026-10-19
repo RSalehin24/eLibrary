@@ -31,7 +31,7 @@ def revision_checked_book(user, book_id, expected_updated_at):
     return book
 
 
-def record_metadata_version(book, user):
+def record_metadata_version(book, user, edit_note=""):
     snapshot = {
         field: getattr(book, field)
         for field in ("title", "summary", *EDITORIAL_FIELDS, *BOOK_FORMAT_FIELDS)
@@ -39,7 +39,11 @@ def record_metadata_version(book, user):
     if snapshot["manual_price"] is not None:
         snapshot["manual_price"] = str(snapshot["manual_price"])
     MetadataVersion.objects.create(
-        book=book, snapshot=snapshot, source="editorial", created_by=user
+        book=book,
+        snapshot=snapshot,
+        source="editorial",
+        created_by=user,
+        notes=edit_note,
     )
 
 
@@ -47,7 +51,7 @@ def record_metadata_version(book, user):
 def update_book_editorial(user, book_id, attributes):
     values = dict(attributes)
     book = revision_checked_book(user, book_id, values.pop("expected_updated_at"))
-    record_metadata_version(book, user)
+    record_metadata_version(book, user, values.pop("edit_note", ""))
     for field, value in values.items():
         setattr(book, field, value)
     book.editorial_reviewed_at = None

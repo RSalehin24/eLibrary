@@ -41,6 +41,9 @@ class ExpectedRevisionSerializer(serializers.Serializer):
 
 class BookEditorialUpdateSerializer(BookFormatSerializer, serializers.ModelSerializer):
     expected_updated_at = serializers.DateTimeField()
+    edit_note = serializers.CharField(
+        max_length=2000, allow_blank=True, required=False, write_only=True
+    )
     alternative_names = VerifiedAlternativeNamesField(required=False)
     editorial_description = serializers.CharField(
         max_length=20000, allow_blank=True, required=False
@@ -51,6 +54,7 @@ class BookEditorialUpdateSerializer(BookFormatSerializer, serializers.ModelSeria
         model = Book
         fields = (
             "expected_updated_at",
+            "edit_note",
             "title",
             "summary",
             *EDITORIAL_FIELDS,
@@ -71,7 +75,7 @@ class BookEditorialUpdateSerializer(BookFormatSerializer, serializers.ModelSeria
 
     def validate(self, attributes):
         reject_unknown_fields(self)
-        if len(attributes) == 1:
+        if not set(attributes).difference({"expected_updated_at", "edit_note"}):
             raise serializers.ValidationError(
                 {"non_field_errors": "Supply metadata to update."}
             )

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
 import type { ReaderSession } from "@/api/types";
 import { useReadingProgress } from "@/lib/reading-progress";
-import { initialPosition, positionProgress, type ReadingPosition } from "@/lib/reading-position";
+import { sessionInitialPosition, positionProgress, type ReadingPosition } from "@/lib/reading-position";
 import { scrollFraction } from "@/lib/reader-document";
 import { readerPageState, turnReaderPage, readerKeyboardDirection } from "@/lib/reader-pagination";
 import { useReaderPreferences } from "@/lib/reader-preference-state";
@@ -21,8 +21,8 @@ import { checkedReaderAppearance } from "@/lib/reader-preferences";
 import type { ReaderGesture } from "@/lib/reader-gestures";
 import { Icon } from "./icon";
 
-export function BookReader({ session }: { session: ReaderSession }) {
-  const [view, setView] = useState(() => ({ position: initialPosition(session.reading_progress, session.chapters), sequence: 0 }));
+export function BookReader({ session, initialPosition }: { session: ReaderSession; initialPosition?: ReadingPosition }) {
+  const [view, setView] = useState(() => ({ position: initialPosition ?? sessionInitialPosition(session), sequence: 0 }));
   const { position } = view;
   const [document, setDocument] = useState<Document | null>(null);
   const measuredPosition = useRef(position), workspace = useRef<HTMLElement>(null);

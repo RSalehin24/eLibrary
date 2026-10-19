@@ -10,7 +10,7 @@ test("reader preferences validate persisted values and keep supported reading vi
   assert.equal(checkedReaderAppearance(null).fontSize, 20);
   assert.equal(checkedReaderAppearance({ fontSize: Infinity, theme: "invalid", view: "script", font: "url(x)" }).fontSize, 20);
   assert.deepEqual(checkedReaderAppearance({ fontSize: 90, theme: "dark", view: "spread", font: "sans", lineHeight: 10, width: 1040 }), { fontSize: 40, theme: "dark", view: "spread", font: "sans", lineHeight: 2.4, width: 1040 });
-  assert.equal(checkedReaderAppearance({ fontSize: -10 }).fontSize, 16);
+  assert.equal(checkedReaderAppearance({ fontSize: -10 }).fontSize, 14);
 });
 
 test("original reader theme and text shortcuts validate bounds and preserve editing", () => {
@@ -18,7 +18,7 @@ test("original reader theme and text shortcuts validate bounds and preserve edit
   assert.equal(readerAppearanceShortcut({ key: "2", ctrlKey: true }, appearance).theme, "sepia");
   assert.equal(readerAppearanceShortcut({ key: "3", metaKey: true }, appearance).theme, "dark");
   assert.equal(readerAppearanceShortcut({ key: "+", ctrlKey: true }, appearance).fontSize, 22);
-  assert.equal(readerAppearanceShortcut({ key: "-", ctrlKey: true }, { ...appearance, fontSize: 16 }).fontSize, 16);
+  assert.equal(readerAppearanceShortcut({ key: "-", ctrlKey: true }, { ...appearance, fontSize: 14 }).fontSize, 14);
   assert.equal(readerAppearanceShortcut({ key: "=", metaKey: true }, { ...appearance, fontSize: 40 }).fontSize, 40);
   for (const event of [{ key: "2" }, { key: "2", ctrlKey: true, altKey: true }, { key: "2", ctrlKey: true, defaultPrevented: true }, { key: "2", ctrlKey: true, target: { closest: () => ({}) } }, { key: "c", ctrlKey: true }]) assert.equal(readerAppearanceShortcut(event, appearance), null);
 });

@@ -76,14 +76,24 @@ def request_book_regeneration(actor, book_id, values):
             "Finish or cancel the book's current work before regeneration."
         )
     record_metadata_version(book, actor)
-    book.state, book.review_state, book.editorial_reviewed_at = (
-        LifecycleState.PROCESSING,
-        ReviewState.PENDING,
-        None,
+    preserve_publication = (
+        book.state == LifecycleState.PUBLISHED
+        and book.source_quality_state != "quarantined"
     )
-    book.save(
-        update_fields=["state", "review_state", "editorial_reviewed_at", "updated_at"]
-    )
+    if not preserve_publication:
+        book.state, book.review_state, book.editorial_reviewed_at = (
+            LifecycleState.PROCESSING,
+            ReviewState.PENDING,
+            None,
+        )
+        book.save(
+            update_fields=[
+                "state",
+                "review_state",
+                "editorial_reviewed_at",
+                "updated_at",
+            ]
+        )
     try:
         with transaction.atomic():
             job = BackgroundJob.objects.create(
@@ -92,7 +102,11 @@ def request_book_regeneration(actor, book_id, values):
                 book=book,
                 source_record=entry,
                 kind=BackgroundJobKind.PROCESS_SOURCE,
-                input={"command": command, "regenerate_book": True},
+                input={
+                    "command": command,
+                    "regenerate_book": True,
+                    "preserve_publication": preserve_publication,
+                },
                 available_at=timezone.now(),
                 checkpoint={
                     "source_revision": entry.updated_at.isoformat(),

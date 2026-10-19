@@ -8,9 +8,11 @@ from apps.catalog.serializers.editorial import (
 
 
 class PublicEntityListSerializer(serializers.ModelSerializer):
+    book_count = serializers.IntegerField(read_only=True, required=False)
+
     class Meta:
         model = Contributor
-        fields = ("id", "name", "slug")
+        fields = ("id", "name", "slug", "book_count")
         read_only_fields = fields
 
 

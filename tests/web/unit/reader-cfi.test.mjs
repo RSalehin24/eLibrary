@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { typescriptModule } from "./typescript-module.mjs";
 const { parseCfi, cfiChapter, matchesCfiText } = await typescriptModule(new URL("../../../app/web/src/lib/reader-cfi-parser.ts", import.meta.url));
-const { initialPosition } = await typescriptModule(new URL("../../../app/web/src/lib/reading-position.ts", import.meta.url));
+const { initialPosition, sessionInitialPosition } = await typescriptModule(new URL("../../../app/web/src/lib/reading-position.ts", import.meta.url));
 
 test("legacy CFI points and ranges preserve structural steps, assertions and UTF-16 offsets", () => {
   const point = parseCfi("epubcfi(/6/4[chapter^,two]!/4[body]/2/1:7)");
@@ -36,4 +36,15 @@ test("the original reader's relative paths, fragments and CFI positions open the
   const last_location = "epubcfi(/6/4[b]!/4/2/1:12)";
   assert.deepEqual(initialPosition({ last_location, progress_percent: 0 }, chapters), { chapter: 1, offset: 0, legacyCfi: last_location });
   assert.equal(initialPosition({ last_location: "chapter:1:0.4", progress_percent: 0 }, chapters).offset, .4);
+});
+
+test("reader sessions from another proven edition use approximate overall progress and report the missing place", () => {
+  const session = { chapters: [{ label: "A", path: "a.xhtml" }, { label: "B", path: "b.xhtml" }], reading_progress: { last_location: "chapter:0:0.4", progress_percent: 70 } };
+  const fallback = sessionInitialPosition({ ...session, progress_matches_edition: false });
+  assert.equal(fallback.chapter, 1);
+  assert.ok(Math.abs(fallback.offset - .4) < .0001);
+  assert.equal(fallback.restoration, "missing");
+  for (const progress_matches_edition of [true, undefined]) {
+    assert.deepEqual(sessionInitialPosition({ ...session, progress_matches_edition }), { chapter: 0, offset: .4 });
+  }
 });

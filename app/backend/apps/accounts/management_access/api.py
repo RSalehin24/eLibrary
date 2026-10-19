@@ -7,6 +7,7 @@ from apps.common.api_serializers import APIErrorSerializer
 from apps.common.pagination import BoundedAdminPagination
 from apps.common.permissions import CanManageAccess
 
+from .creation import ManagedAccountCreateSerializer, create_managed_account
 from .queries import (
     access_references,
     account_grants,
@@ -60,6 +61,23 @@ class ManagedAccountListView(VersionedAPIView):
         parameters = validated_parameters(ManagedAccountParametersSerializer, request)
         return paginated_response(
             managed_accounts(parameters), ManagedAccountSerializer, request
+        )
+
+    @extend_schema(
+        operation_id="managed_account_create",
+        request=ManagedAccountCreateSerializer,
+        responses={
+            201: ManagedAccountSerializer,
+            400: APIErrorSerializer,
+            403: APIErrorSerializer,
+            409: APIErrorSerializer,
+        },
+    )
+    def post(self, request):
+        account = create_managed_account(request.user, request.data)
+        return Response(
+            ManagedAccountSerializer(account, context={"actor": request.user}).data,
+            status=201,
         )
 
 

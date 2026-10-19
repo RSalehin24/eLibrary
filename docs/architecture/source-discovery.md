@@ -26,6 +26,17 @@ A complete unbounded scan resolves records absent from the category. Partial or
 failed scans retain earlier unfinished flags. An empty first page is accepted
 only for a recognized unfinished archive, where it means no unfinished books.
 
+Catalog refresh also checks published unfinished books against their published
+source signature. The signature includes body text, chapter links, pager counts
+and the source modification timestamp, excluding rotating pager nonces. Private
+list responses select only the small `source_update` JSON field rather than the
+complete source payload. The Unfinished Books screen exposes Updates Available,
+last-check time and an Update Book link. A complete scan retains a completion
+notice for books removed from the source's unfinished category until their new
+edition is published. Successful publication resets the comparison baseline.
+These provenance checks preserve the catalog revision used by queued work.
+Failed checks retain their previous evidence and are retried on the next refresh.
+
 Archive pages use the controlled, bounded source transport and page checkpoints.
 The parser reads ordinary archive links and next-page links, rejects login pages,
 unsafe destinations, invalid metadata, and pagination loops. Each page contains at
@@ -66,5 +77,6 @@ The `www` alias shares the same window. Waiting holds no database transaction
 and rechecks authority and cooperative stops at least once a second. Requests,
 including redirects, must acquire a window before transport. Cache reads do not
 consume source bandwidth. Invalid pacing configuration fails the operation.
-Live broker recovery, production deployment, and capacity verification remain
-required work.
+The test counts above describe the original discovery increment. Current results
+and remaining deployment/capacity acceptance limits are recorded in
+[the implementation handoff](../implementation-handoff.md).

@@ -3,6 +3,10 @@ from django.shortcuts import get_object_or_404
 from django_otp.plugins.otp_totp.models import TOTPDevice
 
 from apps.access.models import PermissionGrant
+from apps.accounts.managed_user_queries import (
+    apply_managed_user_search,
+    ordered_managed_users_queryset,
+)
 from apps.accounts.models import User
 from apps.catalog.models import Book, Category, Contributor, ContributorRole
 
@@ -18,18 +22,18 @@ def managed_accounts(parameters):
         has_full_control_value=Exists(
             full_control_grants().filter(user_id=OuterRef("pk"))
         ),
-    ).order_by("full_name", "id")
-    query = parameters.get("q", "")
-    queryset = queryset.filter(
-        Q(email__icontains=query) | Q(full_name__icontains=query)
     )
+    queryset = apply_managed_user_search(queryset, parameters.get("q", ""))
     filters = {
         "active": {"is_active": True},
         "disabled": {"is_active": False},
         "setup_pending": {"email_setup_pending": True},
         "totp_required": {"totp_required": True},
     }
-    return queryset.filter(**filters.get(parameters.get("status"), {}))
+    return ordered_managed_users_queryset(
+        queryset.filter(**filters.get(parameters.get("status"), {})),
+        parameters.get("sort", "name_asc"),
+    )
 
 
 def managed_account(identifier):

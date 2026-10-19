@@ -8,7 +8,7 @@ from apps.processing.jobs.execution_errors import ExecutionFailure
 from apps.processing.jobs.failures import FailureKind
 
 MAX_RESPONSE_BYTES = 8 * 1024 * 1024
-MAX_CHECKPOINT_BYTES = 64 * 1024 * 1024
+MAX_SOURCE_CACHE_BYTES = 2 * 1024 * 1024 * 1024
 MAX_DOCUMENT_BYTES = 64 * 1024 * 1024
 MAX_SOURCE_PAGES = 2000
 SENSITIVE_QUERY_PARTS = ("token", "secret", "password", "auth", "nonce", "key")

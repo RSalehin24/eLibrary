@@ -3,7 +3,6 @@ from django.db import transaction
 from apps.catalog.locking import lock_title
 from apps.catalog.models import Book, BookSource
 from apps.common.models import LifecycleState, ReviewState
-from apps.common.text import normalize_catalog_text
 from apps.ingestion.pipeline.curated_persistence import persist_curated_book
 from apps.processing.jobs.execution_errors import ExecutionFailure
 from apps.processing.jobs.failures import FailureKind
@@ -11,27 +10,11 @@ from apps.processing.jobs.failures import FailureKind
 from .guards import locked_source_job
 
 
-def duplicate_books(title):
-    return Book.objects.filter(
-        normalized_title=normalize_catalog_text(title), deleted_at__isnull=True
-    ).order_by("id")
-
-
-def source_duplicates(result):
-    return list(
-        duplicate_books(result["projection"]["book_title"]).values_list(
-            "pk", flat=True
-        )[:20]
-    )
-
-
 @transaction.atomic
 def persist_source_book(ownership, result):
     job = locked_source_job(ownership)
     title = result["projection"]["book_title"]
     lock_title(title)
-    if job.input.get("resolution") != "separate" and duplicate_books(title).exists():
-        return None
     book = Book.objects.create(title=title)
     _source, created = BookSource.objects.select_for_update().get_or_create(
         normalized_source_url=job.source_record.source_url,

@@ -10,9 +10,10 @@ from apps.ingestion.services.submissions_support.assets import (
 )
 from apps.processing.jobs.attempts import AttemptLost, checkpoint_attempt
 
-from .guards import checked_source_book, locked_source_job, require_export_authority
-from .regeneration import commit_regenerated_content
 from .documents import read_source_result
+from .guards import checked_source_book, locked_source_job, require_export_authority
+from .queries import current_source_job
+from .regeneration import commit_regenerated_content
 
 
 def stored_source_assets(ownership, paths):
@@ -65,5 +66,11 @@ def commit_source_assets(ownership, stored):
 
 def publish_source_assets(ownership, paths):
     stored = stored_source_assets(ownership, paths)
-    if not commit_source_assets(ownership, stored):
+    require_export_authority(ownership)
+    current = current_source_job(ownership.job_id)
+    if not checkpoint_attempt(
+        ownership,
+        {**current.checkpoint, "staged_assets": stored},
+        "source_assets_staged",
+    ):
         raise AttemptLost("The source operation was stopped before publication.")

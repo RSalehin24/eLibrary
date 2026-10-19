@@ -67,6 +67,10 @@ class ManagedAccountParametersSerializer(AccessListParametersSerializer):
         choices=("all", "active", "disabled", "setup_pending", "totp_required"),
         default="all",
     )
+    sort = serializers.ChoiceField(
+        choices=("name_asc", "name_desc", "email_asc", "email_desc", "status"),
+        default="name_asc",
+    )
 
 
 class ManagedAccountCollectionSerializer(serializers.Serializer):

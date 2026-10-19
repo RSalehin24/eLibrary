@@ -13,7 +13,7 @@ export function readerAppearanceShortcut(event: KeyboardEvent, appearance: Reade
 export function checkedReaderAppearance(value: unknown): ReaderAppearance {
   const data = typeof value === "object" && value !== null ? value as Record<string, unknown> : {};
   return {
-    fontSize: typeof data.fontSize === "number" && Number.isFinite(data.fontSize) ? Math.max(16, Math.min(40, data.fontSize)) : 20,
+    fontSize: typeof data.fontSize === "number" && Number.isFinite(data.fontSize) ? Math.max(14, Math.min(40, data.fontSize)) : 20,
     theme: data.theme === "sepia" || data.theme === "dark" ? data.theme : "paper",
     view: data.view === "single" || data.view === "spread" ? data.view : "scroll",
     font: data.font === "sans" || data.font === "publisher" ? data.font : "serif",

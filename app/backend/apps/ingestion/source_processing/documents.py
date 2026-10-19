@@ -9,9 +9,7 @@ PARTITIONED_FORMAT = "source-result-parts-v1"
 
 def write_source_result(identifier, result):
     # Each independently bounded part avoids multiplying a large book into one JSON file.
-    parts = {
-        key: write_artifact(identifier, result[key]) for key in DOCUMENT_PARTS
-    }
+    parts = {key: write_artifact(identifier, result[key]) for key in DOCUMENT_PARTS}
     return write_artifact(
         identifier,
         {

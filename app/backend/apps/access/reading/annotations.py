@@ -10,6 +10,8 @@ from rest_framework.exceptions import APIException, ValidationError
 from apps.access.models import Bookmark, Highlight
 from apps.common.ranked_pagination import ranked_page
 
+from .bookmark_positions import bookmark_chapter_index
+
 
 class AnnotationConflict(APIException):
     status_code = 409
@@ -35,16 +37,7 @@ def session_annotations(session, model):
 
 
 def annotation_page(queryset, parameters, scope):
-    if parameters.get("q"):
-        query = parameters["q"]
-        matching = (
-            Q(note__icontains=query)
-            | Q(chapter_label__icontains=query)
-            | Q(book__title__icontains=query)
-        )
-        if queryset.model is Highlight:
-            matching |= Q(text__icontains=query)
-        queryset = queryset.filter(matching)
+    queryset = search_annotations(queryset, parameters.get("q", ""))
     context = hashlib.sha256(
         json.dumps(
             {"scope": scope, "q": parameters.get("q", ""), "ordering": "created_at,id"},
@@ -58,6 +51,21 @@ def annotation_page(queryset, parameters, scope):
     )
 
 
+def search_annotations(queryset, query):
+    if query:
+        matching = (
+            Q(note__icontains=query)
+            | Q(chapter_label__icontains=query)
+            | Q(book__title__icontains=query)
+        )
+        if queryset.model is Highlight:
+            matching |= Q(text__icontains=query)
+        else:
+            matching |= Q(label__icontains=query) | Q(preview_text__icontains=query)
+        queryset = queryset.filter(matching)
+    return queryset
+
+
 def validate_annotation_chapter(session, values):
     if values["chapter_href"] not in {
         chapter["path"] for chapter in session.prepared_publication.manifest["chapters"]
@@ -67,7 +75,7 @@ def validate_annotation_chapter(session, values):
 
 def validate_bookmark_chapter(session, values):
     validate_annotation_chapter(session, values)
-    chapter_index = int(values["location"].split(":")[1])
+    chapter_index = bookmark_chapter_index(values["location"])
     chapters = session.prepared_publication.manifest["chapters"]
     if (
         chapter_index >= len(chapters)
@@ -116,8 +124,14 @@ def update_annotation(queryset, identifier, values):
     )
     if annotation.updated_at != values["expected_updated_at"]:
         raise AnnotationConflict()
-    annotation.note = values["note"]
-    annotation.save(update_fields=["note", "updated_at"])
+    properties = {
+        key: values[key] for key in ("note", "color", "kind") if key in values
+    }
+    if not isinstance(annotation, Highlight) and set(properties) - {"note"}:
+        raise ValidationError("Only highlights and quotes have a color or kind.")
+    for key, value in properties.items():
+        setattr(annotation, key, value)
+    annotation.save(update_fields=[*properties, "updated_at"])
     return annotation
 
 

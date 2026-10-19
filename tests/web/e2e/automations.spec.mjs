@@ -8,7 +8,11 @@ test("a processor creates and edits a schedule on a phone without granting reade
   const name = `নিয়মিত সংগ্রহ ${fixture.query}`;
   await page.getByLabel("সময়সূচির নাম", { exact: true }).fill(name);
   await page.getByLabel("প্রথম তারিখ", { exact: true }).fill("2035-01-31");
-  await page.getByLabel("সময়", { exact: true }).fill("08:30");
+  await page.getByLabel("ঘণ্টা", { exact: true }).selectOption("8");
+  await page.getByLabel("মিনিট", { exact: true }).selectOption("30");
+  await page.getByLabel("দিনের সময়", { exact: true }).selectOption("PM");
+  await page.getByLabel("কোন বই পরীক্ষা হবে", { exact: true }).selectOption("unfinished");
+  await page.getByLabel("নতুন অংশ পাওয়া গেলে বইয়ের নতুন সংস্করণ তৈরি করুন", { exact: true }).check();
   await page.getByLabel("কত দিন পরপর চলবে", { exact: true }).selectOption("monthly");
   await page.getByLabel("সংগ্রহের পরিমাণ", { exact: true }).selectOption("limited");
   await page.getByLabel("একবারে তালিকার সর্বোচ্চ পাতা", { exact: true }).fill("2");
@@ -30,6 +34,10 @@ test("a processor creates and edits a schedule on a phone without granting reade
   await page.getByRole("button", { name: "সময়সূচি সংরক্ষণ করুন", exact: true }).click();
   expect((await update).status()).toBe(200);
   await page.reload();
+  await expect(page.getByLabel("ঘণ্টা", { exact: true })).toHaveValue("8");
+  await expect(page.getByLabel("দিনের সময়", { exact: true })).toHaveValue("PM");
+  await expect(page.getByLabel("কোন বই পরীক্ষা হবে", { exact: true })).toHaveValue("unfinished");
+  await expect(page.getByLabel("নতুন অংশ পাওয়া গেলে বইয়ের নতুন সংস্করণ তৈরি করুন", { exact: true })).toBeChecked();
   await expect(page.getByLabel("সময়সূচি সক্রিয়", { exact: true })).not.toBeChecked();
   await page.getByRole("link", { name: "সময়সূচিতে ফিরুন", exact: true }).click();
   await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();

@@ -14,7 +14,7 @@ import { EditorialField } from "./editorial-field";
 
 const emptyFormat = { edition: "", manual_language: "bn", manual_publisher: "", manual_price: null, manual_binding: "" as const, manual_is_compilation: false };
 
-export function BookCreateForm() {
+export function BookCreateForm({ initialRecordType = "digital" }: { initialRecordType?: BookCreate["record_type"] }) {
   const [operation, setOperation] = useState<string | null>(null);
   const client = useQueryClient();
   const form = useManagedForm(createCatalogBook, async () => { await client.invalidateQueries({ queryKey: ["managed-books"] }); });
@@ -27,7 +27,7 @@ export function BookCreateForm() {
     form.saving.mutate({ ...readBookFormat(fields), operation_id: identifier, title: String(fields.get("title")), summary: String(fields.get("summary")), record_type: String(fields.get("record_type")) as BookCreate["record_type"] });
   }}><fieldset disabled={form.blocked}><legend><AdminText>{"বইয়ের পরিচিতি"}</AdminText></legend>
     <EditorialField name="title" label="বইয়ের নাম" value="" maxLength={255} errors={form.errors.title} />
-    <div className="form-field"><label htmlFor="record_type"><AdminText>{"বইয়ের ধরন"}</AdminText></label><select id="record_type" name="record_type" defaultValue="digital"><option value="digital"><AdminText>{"ডিজিটাল বই"}</AdminText></option><option value="manual"><AdminText>{"কাগজের বই"}</AdminText></option></select></div>
+    <div className="form-field"><label htmlFor="record_type"><AdminText>{"বইয়ের ধরন"}</AdminText></label><select id="record_type" name="record_type" defaultValue={initialRecordType}><option value="digital"><AdminText>{"ডিজিটাল বই"}</AdminText></option><option value="manual"><AdminText>{"কাগজের বই"}</AdminText></option></select></div>
     <EditorialField name="summary" label="সংক্ষিপ্ত পরিচিতি" value="" maxLength={20000} errors={form.errors.summary} multiline />
   </fieldset><BookFormatFields book={emptyFormat} pending={form.blocked} errors={form.errors} />
     <AccountFeedback error={form.saving.error} /><button className="button" disabled={form.blocked}><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></button>
