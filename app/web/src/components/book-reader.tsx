@@ -20,6 +20,8 @@ import { ReaderContents } from "./reader-contents";
 import { checkedReaderAppearance } from "@/lib/reader-preferences";
 import type { ReaderGesture } from "@/lib/reader-gestures";
 import { Icon } from "./icon";
+import { ReaderFontControls } from "./reader-font-controls";
+import { activateReaderTool } from "@/lib/reader-shortcuts";
 
 export function BookReader({ session, initialPosition }: { session: ReaderSession; initialPosition?: ReadingPosition }) {
   const [view, setView] = useState(() => ({ position: initialPosition ?? sessionInitialPosition(session), sequence: 0 }));
@@ -31,6 +33,7 @@ export function BookReader({ session, initialPosition }: { session: ReaderSessio
   const fullscreenKeyboard = fullscreen.keyboard;
   const shortcut = useCallback((event: KeyboardEvent) => {
     if (workspace.current?.querySelector("dialog[open]")) return;
+    activateReaderTool(event, workspace.current);
     const updated = readerAppearanceShortcut(event, appearance);
     if (updated) { event.preventDefault(); changeAppearance(updated); }
     else fullscreenKeyboard(event);
@@ -63,8 +66,8 @@ export function BookReader({ session, initialPosition }: { session: ReaderSessio
   }, [document, position.chapter, session.chapters.length]);
   const followChapter = useCallback((target: URL) => { const index = chapterFromURL(target, session.resource_base, session.chapters); if (index < 0) return false; navigate(index, target.hash); return true; }, [navigate, session.resource_base, session.chapters]);
   return <section ref={workspace} className={`reader-workspace${fullscreen.focus ? " reader-focus-mode" : ""}${immersive ? " reader-immersive" : ""}`} data-reader-theme={appearance.theme} onKeyDown={event => { if (event.currentTarget.querySelector("dialog[open]")) return; shortcut(event.nativeEvent); const direction = readerKeyboardDirection(event.nativeEvent); if (direction) { event.preventDefault(); turn(direction); } }}>
-    <header className="reader-header"><Link className="text-link" href="/my-books/"><SiteText>← আমার বই</SiteText></Link><h1>{session.book_title}</h1><SiteLanguageSwitch /><button className="button button-quiet" onClick={() => { void fullscreen.toggle(); }}><SiteText>{fullscreen.supported ? fullscreen.active ? "পূর্ণ পর্দা থেকে ফিরুন" : "পূর্ণ পর্দা" : fullscreen.focus ? "সাধারণ দৃশ্যে ফিরুন" : "শুধু বই দেখুন"}</SiteText></button></header>
-    <div className="reader-toolbar"><button className="button button-quiet" onClick={event => openPanel("contents", event.currentTarget)}><Icon name="books" /><span className="reader-action-label"><SiteText>সূচিপত্র</SiteText></span></button><button className="button button-quiet" onClick={event => openPanel("settings", event.currentTarget)}><Icon name="settings" /><span className="reader-action-label"><SiteText>পড়ার সেটিংস</SiteText></span></button><ReaderSearch session={session} onNavigate={target => setView(previous => ({ position: target, sequence: previous.sequence + 1 }))} />    <ReaderAnnotations context={{ session, chapter: position.chapter, document, getPosition: () => measuredPosition.current }} onNavigate={target => setView(previous => ({ position: target, sequence: previous.sequence + 1 }))} /></div>
+    <header className="reader-header"><Link className="text-link reader-back" href="/my-books/"><Icon name="arrow" /><span><SiteText>← আমার বই</SiteText></span></Link><h1 title={session.book_title}>{session.book_title}</h1><SiteLanguageSwitch /><button className="button button-quiet reader-fullscreen" aria-keyshortcuts="f" onClick={() => { void fullscreen.toggle(); }}><Icon name="fullscreen" /><span><SiteText>{fullscreen.supported ? fullscreen.active ? "পূর্ণ পর্দা থেকে ফিরুন" : "পূর্ণ পর্দা" : fullscreen.focus ? "সাধারণ দৃশ্যে ফিরুন" : "শুধু বই দেখুন"}</SiteText></span></button></header>
+    <div className="reader-toolbar"><button className="button button-quiet reader-panel-action" data-reader-tool="contents" aria-keyshortcuts="t" onClick={event => openPanel("contents", event.currentTarget)}><Icon name="books" /><span className="reader-action-label"><SiteText>সূচিপত্র</SiteText></span></button><ReaderFontControls appearance={appearance} onChange={changeAppearance} /><button className="button button-quiet reader-panel-action" data-reader-tool="settings" aria-keyshortcuts="s" onClick={event => openPanel("settings", event.currentTarget)}><Icon name="settings" /><span className="reader-action-label"><SiteText>পড়ার সেটিংস</SiteText></span></button><ReaderSearch session={session} onNavigate={target => setView(previous => ({ position: target, sequence: previous.sequence + 1 }))} /><ReaderAnnotations context={{ session, chapter: position.chapter, document, getPosition: () => measuredPosition.current }} onNavigate={target => setView(previous => ({ position: target, sequence: previous.sequence + 1 }))} /></div>
     {(storageError || fullscreen.failed) && <p className="notice" role="alert"><SiteText>{fullscreen.failed ? "পূর্ণ পর্দা চালু করা যায়নি। আবার চেষ্টা করুন।" : "এই ব্রাউজারে পড়ার সেটিংস সংরক্ষণ করা যায়নি।"}</SiteText></p>}
 
     <ReaderFrame key={view.sequence} src={session.resource_base + chapter.path.split("/").map(encodeURIComponent).join("/")} title={chapter.label} appearance={appearance} position={position} onPosition={recordPosition} onNavigate={followChapter} onDocument={setDocument} onPage={turn} onShortcut={shortcut} onGesture={gesture} />

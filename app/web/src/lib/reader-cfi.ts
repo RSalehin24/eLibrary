@@ -39,13 +39,25 @@ function terminalText(element: Element, point: CfiPoint) {
 
 export function cfiRange(document: Document, value: string) {
   const parsed = parseCfi(value);
-  if (!parsed) return null;
+  if (!parsed || parsed.start.spatial || parsed.start.temporal !== undefined || parsed.end?.spatial || parsed.end?.temporal !== undefined) return null;
   const start = pointBoundary(document, parsed.start), end = parsed.end ? pointBoundary(document, parsed.end) : start;
   if (!start || !end || !document.body.contains(start.node) || !document.body.contains(end.node)) return null;
   if ([start, end].some(boundary => (boundary.node.nodeType === 1 ? boundary.node as Element : boundary.node.parentElement)?.closest("script,style,noscript,template"))) return null;
   const range = document.createRange(); range.setStart(start.node, start.offset); range.setEnd(end.node, end.offset);
   if (parsed.end && range.collapsed) return null;
   return range;
+}
+
+export function cfiMediaTarget(document: Document, value: string) {
+  const parsed = parseCfi(value), point = parsed?.start;
+  if (!point || !point.spatial && point.temporal === undefined) return null;
+  const start = pointBoundary(document, point), end = parsed?.end && pointBoundary(document, parsed.end);
+  if (!start || start.node.nodeType !== 1 || !document.body.contains(start.node) || parsed?.end && (!end || end.node !== start.node)) return null;
+  const element = start.node as HTMLImageElement | HTMLMediaElement;
+  if (point.spatial && !["img", "video"].includes(element.localName)) return null;
+  if (point.temporal !== undefined && !["audio", "video"].includes(element.localName)) return null;
+  if (parsed?.end && (Boolean(point.spatial) !== Boolean(parsed.end.spatial) || (point.temporal === undefined) !== (parsed.end.temporal === undefined) || (parsed.end.temporal ?? 0) < (point.temporal ?? 0))) return null;
+  return { element, spatial: point.spatial, temporal: point.temporal };
 }
 
 export function cfiSelection(document: Document, value: string) {

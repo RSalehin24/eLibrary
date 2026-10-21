@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 test.afterEach(async ({ page }) => { await page.unrouteAll({ behavior: "wait" }); });
 
@@ -10,7 +10,7 @@ async function openReader(page) {
   const session = await response.json();
   await page.route("**/api/v1/reading/sessions/*/progress/", route => route.fulfill({ json: route.request().postDataJSON() }));
   await page.goto(`/reader/${session.id}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.locator('.reader-frame[aria-busy="false"]')).toBeVisible();
   return session;
 }
@@ -23,7 +23,7 @@ test("original relative reading locations and nested contents open the actual se
   await expect.poll(() => frame.locator("#paragraph-40").evaluate(element => Math.abs(element.getBoundingClientRect().top))).toBeLessThan(100);
   await page.getByRole("button", { name: "Contents", exact: true }).click();
   const dialog = page.getByRole("dialog"), child = dialog.getByRole("button", { name: "প্রথম পর্বের অংশ", exact: true });
-  const toggle = dialog.getByRole("button", { name: "Collapse contents: প্রথম অধ্যায়", exact: true });
+  const toggle = dialog.getByRole("button", { name: /^(?:Collapse|Expand) contents: প্রথম অধ্যায়$/ });
   await expect(toggle).toHaveAttribute("aria-expanded", "true");
   await toggle.focus(); await page.keyboard.press("Enter");
   await expect(child).not.toBeVisible();
@@ -53,7 +53,7 @@ test("original CFI bookmarks and highlights retain UTF-16 positions and reject m
   await page.getByRole("dialog").getByRole("button").filter({ hasText: "Text from a different edition" }).click();
   await expect(page.locator(".reader-workspace").getByRole("alert")).toContainText("Your notes are preserved");
   await expect(frame.locator("mark[data-library-highlight]")).toHaveText(fixture.legacy_reading.quote);
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.locator(".reader-workspace").getByRole("alert")).toContainText("আপনার নোট সংরক্ষিত আছে");
 });
 
@@ -98,7 +98,7 @@ test("an older prepared book remains readable while its administrator queues upd
   expect(launched.status()).toBe(200);
   const session = await launched.json();
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.getByRole("link", { name: "Continue Reading", exact: true })).toHaveAttribute("href", `/reader/${session.id}/`);
   const accepted = page.waitForResponse(response => response.url().endsWith("/prepare/") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Update Reader Files", exact: true }).click();

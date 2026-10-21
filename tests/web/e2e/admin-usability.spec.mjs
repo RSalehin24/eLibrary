@@ -1,4 +1,5 @@
-import { test, expect, useAccount } from "./fixtures.mjs";
+import { test, expect, useAccount, setLanguage } from "./fixtures.mjs";
+import { useIdleDiscoveryOptions } from "./source-console-fixture.mjs";
 
 const revision = "2026-10-17T00:00:00Z";
 const entries = [
@@ -11,11 +12,13 @@ const entries = [
 async function openCatalog(page) {
   await useAccount(page, "administrator");
   await page.route("**/api/v1/**", (route) => route.request().method() === "GET" ? route.continue() : route.abort());
+  await useIdleDiscoveryOptions(page);
   await page.route("**/api/v1/manage/sources/?*", (route) => route.fulfill({ json: { entries, pagination: { page: 1, limit: 50, total_count: 3 } } }));
   await page.goto("/manage/sources/?q=admin-usability-review");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.getByRole("button", { name: "Refresh", exact: true }).click();
   await expect(page.locator(".source-row")).toHaveCount(3);
+  await page.locator(".source-advanced > summary").click();
 }
 
 function results(command) {
@@ -29,17 +32,17 @@ test("language switching preserves entered fields and persists across navigation
   await expect(page.getByRole("heading", { name: entries[0].title, exact: true })).toBeVisible();
   await page.getByLabel("Maximum Pages", { exact: true }).fill("3");
   await page.getByRole("checkbox", { name: `${entries[0].title} — Select`, exact: true }).check();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByRole("heading", { name: "বই তৈরি", exact: true, level: 1 })).toBeVisible();
   await expect(page.getByLabel("সর্বোচ্চ পাতা", { exact: true })).toHaveValue("3");
   await expect(page.getByRole("checkbox", { name: `${entries[0].title} — নির্বাচন করুন`, exact: true })).toBeChecked();
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.getByRole("button", { name: "Clear Selection", exact: true }).click();
   await page.goto("/manage/books/new/");
   await page.getByLabel("Book Title", { exact: true }).fill("A draft that must survive switching");
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByLabel("বইয়ের নাম", { exact: true })).toHaveValue("A draft that must survive switching");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.reload();
   await expect(page.getByRole("heading", { name: "Add Book", exact: true })).toBeVisible();
   await expect(page.locator(".management-workspace")).toHaveAttribute("lang", "en");
@@ -106,7 +109,7 @@ test("a lost response prevents replay and exposes the original operation link", 
   await expect(page.getByRole("alert").filter({ hasText: "The result is uncertain" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Create Selected Books", exact: true })).toBeDisabled();
   await expect(page.locator(`a[href="/manage/jobs/${command.entries[0].operation_id}/"]`)).toBeVisible();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByRole("button", { name: "নির্বাচিত বই তৈরি করুন", exact: true })).toBeDisabled(); expect(writes).toBe(1);
 });
 
@@ -115,7 +118,7 @@ test("phone catalog keeps selection controls usable at 200 percent text in both 
   await page.addStyleTag({ content: "html { font-size: 200%; }" });
   await page.getByRole("checkbox", { name: "Select all available books on this page", exact: true }).check();
   for (const language of ["English", "বাংলা"]) {
-    await page.getByRole("button", { name: language, exact: true }).click();
+    await setLanguage(page, language === "English" ? "en" : "bn");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     await expect(page.locator(".source-row input:checked")).toHaveCount(2);
   }
@@ -125,10 +128,10 @@ test("phone catalog keeps selection controls usable at 200 percent text in both 
 test("English preference covers the main admin pages, forms and status filters", async ({ page }) => {
   await openCatalog(page);
   for (const [path, heading] of [
-    ["/manage/", "Admin"], ["/manage/books/", "All Books"], ["/manage/books/new/", "Add Book"],
+    ["/manage/", "Book Creation"], ["/manage/books/", "All Books"], ["/manage/books/new/", "Add Book"],
     ["/manage/entities/", "Authors & Contributors"],
-    ["/manage/entities/contributors/new/", /Add Entry/], ["/manage/automations/", "Automation"],
-    ["/manage/automations/new/", "New Schedule"], ["/manage/users-access/", "Users & Access"],
+    ["/manage/entities/contributors/new/", /Add Entry/], ["/manage/automations/", "Schedules"],
+    ["/manage/automations/new/", "New Schedule"], ["/manage/users-access/", "Users"],
     ["/manage/users-access/invite/", "Invite Reader"], ["/manage/jobs/", "Processing"],
   ]) {
     await page.goto(path);
@@ -150,7 +153,9 @@ test("English preference covers the main admin pages, forms and status filters",
 
 test("phone navigation stays visible and all primary workflow actions remain above the fold", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 }); await openCatalog(page);
-  await expect(page.locator(".admin-sidebar .workspace-nav a")).toHaveCount(9);
+  await page.getByRole("button", { name: "Open menu", exact:true }).click();
+  await expect(page.locator(".admin-navigation-drawer .workspace-nav a")).toHaveCount(6);
+  await page.keyboard.press("Escape");
   const row = page.locator(".source-row").first(), selection = row.locator("label");
   const target = await selection.boundingBox();
   expect(target.width).toBeGreaterThanOrEqual(44); expect(target.height).toBeGreaterThanOrEqual(44);
@@ -160,6 +165,7 @@ test("phone navigation stays visible and all primary workflow actions remain abo
     const action = await page.getByRole("button", { name, exact: true }).boundingBox();
     expect(action.y + action.height).toBeLessThan(844);
   }
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
-  await expect(page.locator('.workspace-nav a[aria-current="page"]')).toBeVisible();
+  await setLanguage(page, "bn");
+  await page.getByRole("button", { name: "মেনু খুলুন", exact:true }).click();
+  await expect(page.locator('.admin-navigation-drawer .workspace-nav a[aria-current="page"]')).toBeVisible();
 });

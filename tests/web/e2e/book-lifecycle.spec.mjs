@@ -1,10 +1,10 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 import { newDigitalBook } from "./book-fixture.mjs";
 
 async function openBook(page, book) {
   await useAccount(page, "administrator");
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.locator(".book-lifecycle-controls").getByRole("button", { name: "Remove Book", exact: true })).toBeEnabled();
 }
 
@@ -27,7 +27,7 @@ test("book actions are visible in both languages, confirmations restore focus an
   await regenerate.click();
   await expect(page.getByRole("dialog", { name: "Regenerate This Book?", exact: true })).toContainText("Previous files and reader notes");
   await page.keyboard.press("Escape"); await expect(regenerate).toBeFocused();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(controls.getByRole("button", { name: "বই আবার তৈরি করুন", exact: true })).toBeEnabled();
   await expect(controls.getByRole("button", { name: "বই সরান", exact: true })).toBeEnabled();
   await page.getByLabel("বইয়ের নাম", { exact: true }).fill("একটি অসম্পূর্ণ নাম");
@@ -74,7 +74,7 @@ test("a stale regeneration decision preserves the metadata form and is not repla
   await page.getByRole("button", { name: "Start Regeneration", exact: true }).click();
   await expect(page.locator(".book-lifecycle-controls").getByRole("alert")).toBeVisible();
   await page.getByLabel("Book Title", { exact: true }).fill("A draft after a conflict");
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByLabel("বইয়ের নাম", { exact: true })).toHaveValue("A draft after a conflict");
   expect(command().writes).toBe(1);
 });

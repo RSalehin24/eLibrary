@@ -1,4 +1,5 @@
 export const localReaderMessages: Readonly<Record<string, string>> = {
+  "ইনস্টল করা অ্যাপ আইকন থেকে আলাদা জানালায় খুলতে পারে। কিছু ডিভাইসে কেবল হোম স্ক্রিনের শর্টকাট পাওয়া যায়। ব্রাউজারেও সব কাজ করতে পারবেন। পাঠাগারের বই পড়তে ইন্টারনেট লাগবে; নিজের EPUB ফাইল অফলাইনেও খুলতে পারবেন।": "An installed app may open in its own window; some devices add a home-screen shortcut. All features also work in the browser. Library books need an internet connection; your own EPUB files can open offline.",
   "নিজের EPUB পড়ুন": "Open your EPUB",
   "বই বন্ধ করুন": "Close Book",
   "আপনার ডিভাইসের EPUB ফাইল খুলুন। ফাইলটি এই ব্রাউজারেই পড়া হবে; সার্ভারে পাঠানো বা অ্যাকাউন্টে সংরক্ষণ করা হবে না।": "Open an EPUB from your device. The file stays in this browser; it is never uploaded or saved to your account.",

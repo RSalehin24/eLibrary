@@ -59,7 +59,7 @@ def test_published_edition_records_validator_and_files(curated_job):
     execute_source_job(curated_job)
     edition = SourceEdition.objects.get(operation=curated_job)
     assert edition.state == "published" and edition.book_id == curated_job.book_id
-    assert edition.validator_version == 2 and edition.validation_report["verified"]
+    assert edition.validator_version == 3 and edition.validation_report["verified"]
     assert {"html", "epub"} <= edition.asset_manifest.keys()
     assert edition.document_reference
 

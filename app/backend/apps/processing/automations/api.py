@@ -10,8 +10,14 @@ from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import AdminPaginationSerializer, APIErrorSerializer
 from apps.common.pagination import BoundedAdminPagination
 from apps.common.permissions import CanManageProcessing
+from apps.ingestion.models import CatalogAutomationFrequency
 from apps.processing.automation_models import AutomationRun, SourceAutomation
 
+from .manual_runs import (
+    AutomationRunAcceptedSerializer,
+    AutomationRunCommandSerializer,
+    request_automation_run,
+)
 from .serializers import (
     AutomationCreateSerializer,
     AutomationRunSerializer,
@@ -24,6 +30,21 @@ from .services import create_automation, update_automation
 class AutomationParametersSerializer(serializers.Serializer):
     page = serializers.IntegerField(min_value=1, default=1)
     limit = serializers.IntegerField(min_value=1, max_value=100, default=50)
+
+
+class AutomationListParametersSerializer(AutomationParametersSerializer):
+    q = serializers.CharField(max_length=150, allow_blank=True, default="")
+    enabled = serializers.ChoiceField(
+        choices=["all", "enabled", "disabled"], default="all"
+    )
+    frequency = serializers.ChoiceField(
+        choices=CatalogAutomationFrequency.choices,
+        allow_blank=True,
+        default="",
+    )
+    sort = serializers.ChoiceField(
+        choices=["name", "next_run", "-next_run"], default="name"
+    )
 
 
 class AutomationCollectionSerializer(serializers.Serializer):
@@ -57,6 +78,24 @@ def automation_queryset():
         "run_as__full_name",
         "run_as__email",
     )
+
+
+def filtered_automations(parameters):
+    queryset = automation_queryset().filter(name__icontains=parameters["q"])
+    if parameters["enabled"] != "all":
+        queryset = queryset.filter(enabled=parameters["enabled"] == "enabled")
+    if parameters["frequency"]:
+        queryset = queryset.filter(frequency=parameters["frequency"])
+    ordering = (
+        ("name", "id")
+        if parameters["sort"] == "name"
+        else (
+            "-enabled",
+            "-next_run_at" if parameters["sort"].startswith("-") else "next_run_at",
+            "id",
+        )
+    )
+    return queryset.order_by(*ordering)
 
 
 def automation_runs(automation):
@@ -116,16 +155,19 @@ class AutomationListView(VersionedAPIView):
 
     @extend_schema(
         operation_id="automations_list",
-        parameters=[AutomationParametersSerializer],
+        parameters=[AutomationListParametersSerializer],
         responses={200: AutomationCollectionSerializer},
     )
     def get(self, request):
-        parameters = AutomationParametersSerializer(data=request.query_params)
+        parameters = AutomationListParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
         page = BoundedAdminPagination()
         return page.get_paginated_response(
             AutomationSerializer(
-                page.paginate_queryset(automation_queryset(), request), many=True
+                page.paginate_queryset(
+                    filtered_automations(parameters.validated_data), request
+                ),
+                many=True,
             ).data
         )
 
@@ -197,4 +239,27 @@ class AutomationRunsView(VersionedAPIView):
         )
         return page.get_paginated_response(
             AutomationRunSerializer(entries, many=True).data
+        )
+
+    @extend_schema(
+        operation_id="automation_run_now",
+        request=AutomationRunCommandSerializer,
+        responses={
+            202: AutomationRunAcceptedSerializer,
+            400: APIErrorSerializer,
+            403: APIErrorSerializer,
+            404: APIErrorSerializer,
+            409: APIErrorSerializer,
+        },
+    )
+    def post(self, request, identifier):
+        run = request_automation_run(request.user, identifier, request.data)
+        return Response(
+            {
+                "run_id": run.pk,
+                "job_id": run.job_id,
+                "state": run.state,
+                "error_code": run.error_code,
+            },
+            status=202,
         )

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { typescriptModule } from "./typescript-module.mjs";
 
-const { translateSite, updateDocumentLanguage } = await typescriptModule(new URL("../../../app/web/src/lib/site-language.ts", import.meta.url));
+const { announceSiteLanguage, browserLanguage, subscribeSiteLanguage, translateSite, updateDocumentLanguage } = await typescriptModule(new URL("../../../app/web/src/lib/site-language.ts", import.meta.url));
 const { translateFieldError } = await typescriptModule(new URL("../../../app/web/src/lib/field-errors.ts", import.meta.url));
 const { jobTimestamp } = await typescriptModule(new URL("../../../app/web/src/lib/job-status.ts", import.meta.url));
 
@@ -17,6 +17,25 @@ test("public, account and reader interfaces translate without changing unsupport
 test("site translation preserves surrounding whitespace and normalizes authored multiline copy", () => {
   assert.equal(translateSite("en", "  আমার বই "), "  My Books ");
   assert.equal(translateSite("en", "বইয়ের নাম বা\n লেখকের নাম দিয়ে খুঁজুন।"), "Search by book title or author.");
+});
+
+test("static and offline pages read the same preference and retain the legacy cookie fallback", () => {
+  const previous = globalThis.document;
+  try {
+    for (const [cookie, expected] of [["", "bn"], ["library-language=en", "en"], ["library-admin-language=en", "en"], ["library-language=bn; library-admin-language=en", "bn"], ["library-language=invalid", "bn"]]) {
+      globalThis.document = { cookie }; assert.equal(browserLanguage(), expected);
+    }
+  } finally { globalThis.document = previous; }
+});
+
+test("language changes and focus notify mounted views without retaining removed listeners", () => {
+  const previous = globalThis.window;
+  try {
+    globalThis.window = new EventTarget(); let changes = 0;
+    const unsubscribe = subscribeSiteLanguage(() => changes++);
+    announceSiteLanguage(); window.dispatchEvent(new Event("focus")); assert.equal(changes, 2);
+    unsubscribe(); announceSiteLanguage(); assert.equal(changes, 2);
+  } finally { globalThis.window = previous; }
 });
 
 test("My Books actions and author browsing use the selected interface language", () => {

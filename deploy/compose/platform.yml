@@ -13,6 +13,8 @@ x-environment: &environment
   SESSION_COOKIE_SECURE: "true"
   CSRF_COOKIE_SECURE: "true"
   CELERY_TASK_ALWAYS_EAGER: "false"
+  BACKGROUND_PROCESSING_QUEUE: ${BACKGROUND_PROCESSING_QUEUE:-processing}
+  CELERY_PROCESSING_CONCURRENCY: ${PROCESSING_CONCURRENCY:-2}
   DATABASE_URL: ${DATABASE_URL:?Configure application database credentials}
   CELERY_BROKER_URL: ${CELERY_BROKER_URL:?Configure RabbitMQ credentials}
   CELERY_RESULT_BACKEND: ${REDIS_RESULT_URL:?Configure the disposable result cache}
@@ -140,7 +142,7 @@ services:
 
   processing-worker:
     <<: *application
-    command: [sh, -ec, "exec celery -A config worker --loglevel=INFO --queues=processing --concurrency=$${PROCESSING_CONCURRENCY:-2} --prefetch-multiplier=1 --hostname=processing@%h"]
+    command: [sh, -ec, "exec celery -A config worker --loglevel=INFO --queues=$${BACKGROUND_PROCESSING_QUEUE:-processing} --concurrency=$${PROCESSING_CONCURRENCY:-2} --prefetch-multiplier=1 --hostname=processing@%h"]
     environment:
       <<: *environment
       PROCESSING_CONCURRENCY: ${PROCESSING_CONCURRENCY:-2}

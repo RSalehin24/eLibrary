@@ -1,13 +1,11 @@
-import os
 from pathlib import Path
 
 from apps.ingestion.pipeline.curated_export import (
     curated_document_to_legacy_payload,
     is_curated_document,
 )
-from .epub_properties.epub_builder import EpubBuilder, html_is_blank
-from apps.ingestion.services.submissions_support.assets import resolve_generated_cover_path
 from apps.ingestion.services.normalization import (
+    SHORT_RESIDUAL_MAIN_CONTENT_LENGTH,
     build_flat_toc_from_content_items,
     dedupe_structured_sections,
     expand_content_items_with_subchapters,
@@ -15,10 +13,14 @@ from apps.ingestion.services.normalization import (
     infer_structured_content_from_main_content,
     normalize_dedication_heading_and_content,
     plain_text_from_html,
-    SHORT_RESIDUAL_MAIN_CONTENT_LENGTH,
     split_leading_front_sections,
     split_trailing_front_sections,
 )
+from apps.ingestion.services.submissions_support.assets import (
+    resolve_generated_cover_path,
+)
+
+from .epub_properties.epub_builder import EpubBuilder, html_is_blank
 
 
 def _drop_blank_content_items(items):
@@ -30,12 +32,14 @@ def _drop_blank_content_items(items):
     kept so the chapter still appears in the EPUB TOC, rendered as an
     "unavailable" notice by the EPUB builder.
     """
+
     def _keep(item):
         d = item or {}
         if "has_content" in d and d.get("has_content") is None and "source_url" in d:
             # Empty-source placeholder — keep regardless of blank content.
             return True
         return not html_is_blank(d.get("content", ""))
+
     return [item for item in items if _keep(item)]
 
 
@@ -53,10 +57,11 @@ def display_value(value):
         return ", ".join(display_value(item) for item in value if item)
     return str(value)
 
+
 def create_epub(book_data):
     """
     Generate EPUB book from scraped data with hierarchical TOC.
-    
+
     Expected book_data structure:
     {
         "book_title": str,
@@ -72,16 +77,18 @@ def create_epub(book_data):
     """
     if is_curated_document(book_data):
         book_data = curated_document_to_legacy_payload(book_data)
-    canonical_payload = bool(book_data.get("canonical_manifest") or book_data.get("canonical_sections"))
+    canonical_payload = bool(
+        book_data.get("canonical_manifest") or book_data.get("canonical_sections")
+    )
 
     builder = EpubBuilder(
         book_title=book_data["book_title"],
         author=display_value(book_data["author"]),
         series=display_value(book_data["series"]),
         book_type=display_value(book_data["book_type"]),
-        output_folder=book_data["output_folder"]
+        output_folder=book_data["output_folder"],
     )
-    
+
     # Add cover page if available — use resolve_generated_cover_path so that
     # a URL in book_data["cover"] (from cover_source_url) or a plain filename
     # both resolve correctly against the local output folder.
@@ -96,7 +103,7 @@ def create_epub(book_data):
 
     # Add standard pages
     builder.add_title_page()
-    
+
     # Book info page is always added — shows scraped metadata when available,
     # otherwise falls back to the structured fields from book_data.
     book_info = book_data.get("book_info", "")
@@ -104,7 +111,7 @@ def create_epub(book_data):
         scraped_book_info=book_info,
         translator=display_value(book_data.get("translator", "")),
     )
-    
+
     dedication_title, dedication_html = normalize_dedication_heading_and_content(
         book_data.get("dedication", "")
     )
@@ -113,9 +120,12 @@ def create_epub(book_data):
             dedication_title=dedication_title,
             dedication_html=dedication_html,
         )
-    
+
     main_content = book_data.get("main_content", "")
-    reference_fragments = [book_data.get("book_info", ""), book_data.get("dedication", "")]
+    reference_fragments = [
+        book_data.get("book_info", ""),
+        book_data.get("dedication", ""),
+    ]
     front_sections = dedupe_structured_sections(
         book_data.get("front_sections") or [],
         reference_fragments=reference_fragments,
@@ -155,7 +165,9 @@ def create_epub(book_data):
             has_explicit_body=has_explicit_body,
         )
     if not back_sections and not canonical_payload and not has_explicit_body:
-        back_sections, compact_main_content = split_trailing_front_sections(compact_main_content or "")
+        back_sections, compact_main_content = split_trailing_front_sections(
+            compact_main_content or ""
+        )
 
     # Drop empty/whitespace-only chapters before TOC + spine generation so
     # the printed Contents page and EPUB NAV stay in sync with the body.
@@ -167,9 +179,16 @@ def create_epub(book_data):
     # If inference finds ≥2 sections the book gets a real multi-chapter TOC;
     # any content that comes before the first detected heading is kept as a
     # front section so no text is lost.
-    if not content_items and compact_main_content and not html_is_blank(compact_main_content):
-        _inferred_toc, _inferred_items, _residual = infer_structured_content_from_main_content(
-            compact_main_content, book_title=book_data.get("book_title", "")
+    if (
+        not canonical_payload
+        and not content_items
+        and compact_main_content
+        and not html_is_blank(compact_main_content)
+    ):
+        _inferred_toc, _inferred_items, _residual = (
+            infer_structured_content_from_main_content(
+                compact_main_content, book_title=book_data.get("book_title", "")
+            )
         )
         if len(_inferred_items) >= 2:
             toc = _inferred_toc or build_flat_toc_from_content_items(_inferred_items)
@@ -192,7 +211,14 @@ def create_epub(book_data):
                 "path": [_virtual_title],
             }
             _b_toc, _b_items = expand_content_items_with_subchapters(
-                [{"title": _virtual_title, "type": "lesson", "has_content": True, "path": [_virtual_title]}],
+                [
+                    {
+                        "title": _virtual_title,
+                        "type": "lesson",
+                        "has_content": True,
+                        "path": [_virtual_title],
+                    }
+                ],
                 [_virtual_item],
             )
             _promoted = [it for it in _b_items if it.get("parent") == _virtual_title]
@@ -210,9 +236,18 @@ def create_epub(book_data):
                 ]
                 toc = build_flat_toc_from_content_items(content_items)
                 # Preserve any parent intro from the virtual item as ভূমিকা.
-                _parent = next((it for it in _b_items if it.get("title") == _virtual_title), None)
-                if _parent and _parent.get("content") and not html_is_blank(_parent["content"]):
-                    front_sections = [*front_sections, {"title": "ভূমিকা", "html": _parent["content"]}]
+                _parent = next(
+                    (it for it in _b_items if it.get("title") == _virtual_title), None
+                )
+                if (
+                    _parent
+                    and _parent.get("content")
+                    and not html_is_blank(_parent["content"])
+                ):
+                    front_sections = [
+                        *front_sections,
+                        {"title": "ভূমিকা", "html": _parent["content"]},
+                    ]
                 compact_main_content = ""
 
     # Mis-classification rescue: the dynamic scraper occasionally routes
@@ -226,7 +261,8 @@ def create_epub(book_data):
         len(content_items) <= 1
         and not canonical_payload
         and not compact_main_content
-        and sum(1 for s in front_sections if not html_is_blank(s.get("html") or "")) >= 3
+        and sum(1 for s in front_sections if not html_is_blank(s.get("html") or ""))
+        >= 3
     ):
         promoted = [
             {
@@ -253,12 +289,11 @@ def create_epub(book_data):
     # Fall back to a flat list built directly from content_items.
     if toc and content_items:
         builder.add_hierarchical_toc_page(
-            toc_structure=toc,
-            content_items=content_items
+            toc_structure=toc, content_items=content_items
         )
     elif content_items:
         toc_lessons = [
-            (item.get("title", ""), f"lesson_{i+1}.xhtml")
+            (item.get("title", ""), f"lesson_{i + 1}.xhtml")
             for i, item in enumerate(content_items)
         ]
         builder.add_toc_page(lessons=toc_lessons)
@@ -270,22 +305,32 @@ def create_epub(book_data):
     # Suppress trivially short residuals (story-list lines, title-only text)
     # so they don't appear as a meaningless preamble page.
     canonical_body_present = any(
-        section.get("section_type") == "body" and not html_is_blank(section.get("html", ""))
+        section.get("section_type") == "body"
+        and not html_is_blank(section.get("html", ""))
         for section in book_data.get("canonical_sections", [])
     )
-    if compact_main_content and not content_items and (
-        canonical_body_present or len(plain_text_from_html(compact_main_content)) >= SHORT_RESIDUAL_MAIN_CONTENT_LENGTH
+    if (
+        compact_main_content
+        and not content_items
+        and (
+            canonical_body_present
+            or len(plain_text_from_html(compact_main_content))
+            >= SHORT_RESIDUAL_MAIN_CONTENT_LENGTH
+        )
     ):
         main_content_title = book_data.get("book_title") or "মূল লেখা"
-        builder.add_main_content_page(main_content=compact_main_content, title=main_content_title)
-    
+        builder.add_main_content_page(
+            main_content=compact_main_content, title=main_content_title
+        )
+
     # Refuse to build EPUB when too many chapters have no fetchable content.
     # Two thresholds (either triggers a failure):
     #   • > 95% empty — nearly the entire book is missing content
     #   • > 33.33% empty — more than a third of chapters are missing
     _total_ci = len(content_items)
     _empty_ci = sum(
-        1 for item in content_items
+        1
+        for item in content_items
         if isinstance(item, dict)
         and "has_content" in item
         and item.get("has_content") is None

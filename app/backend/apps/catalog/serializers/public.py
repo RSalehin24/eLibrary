@@ -14,6 +14,7 @@ from apps.catalog.serializers.editorial import (
     ReviewedEditorialSerializer,
 )
 from apps.common.api_serializers import AdminPaginationSerializer
+from apps.common.collection_pagination import CollectionPaginationSerializer
 from apps.common.text import normalize_catalog_text
 
 
@@ -174,6 +175,7 @@ class PublicBookCollectionSerializer(serializers.Serializer):
     entries = PublicBookListSerializer(many=True)
     next_cursor = serializers.CharField(allow_null=True)
     has_more = serializers.BooleanField()
+    pagination = CollectionPaginationSerializer()
 
 
 class AdminBookCollectionSerializer(serializers.Serializer):

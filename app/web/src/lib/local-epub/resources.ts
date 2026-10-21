@@ -3,7 +3,7 @@ import { archiveText, localPath, type LocalPackage } from "./package";
 export class LocalBookResources {
   private urls = new Map<string, string>();
   constructor(private files: Map<string, Uint8Array>, readonly book: LocalPackage) {
-    for (const item of book.items.filter(item => /^(?:image|font)\//.test(item.type) || ["application/font-woff", "application/vnd.ms-opentype"].includes(item.type))) {
+    for (const item of book.items.filter(item => /^(?:image|font|audio|video)\//.test(item.type) || ["application/font-woff", "application/vnd.ms-opentype", "text/vtt"].includes(item.type))) {
       this.urls.set(item.path, URL.createObjectURL(new Blob([new Uint8Array(files.get(item.path)!).buffer], { type: item.type })));
     }
     for (const item of book.items.filter(item => item.type === "text/css")) {
@@ -27,14 +27,23 @@ export class LocalBookResources {
     const source = archiveText(this.files, item.path);
     if (/<!ENTITY/i.test(source)) throw new Error("invalid_epub");
     const document = new DOMParser().parseFromString(source, "text/html");
-    document.querySelectorAll("script,iframe,object,embed,form,input,button,textarea,select,base,meta,foreignObject,audio,video,source").forEach(element => element.remove());
+    document.querySelectorAll("script,iframe,object,embed,form,input,button,textarea,select,base,meta,foreignObject").forEach(element => element.remove());
+    for (const media of document.querySelectorAll<HTMLMediaElement>("audio,video")) {
+      media.removeAttribute("autoplay"); media.controls = true; media.preload = "metadata";
+      if (media.localName === "video") media.setAttribute("playsinline", "");
+    }
     for (const element of document.querySelectorAll("*")) {
       for (const attribute of Array.from(element.attributes)) {
         if (/^on/i.test(attribute.name) || ["srcset", "ping", "action", "formaction", "target", "download", "srcdoc"].includes(attribute.name)) element.removeAttribute(attribute.name);
       }
       if (element.hasAttribute("style")) element.setAttribute("style", this.styles(element.getAttribute("style")!, item.path));
       if (element.hasAttribute("src")) element.setAttribute("src", this.resource(element.getAttribute("src")!, item.path));
+      if (element.hasAttribute("poster")) element.setAttribute("poster", this.resource(element.getAttribute("poster")!, item.path));
       if (element.hasAttribute("xlink:href")) element.removeAttribute("xlink:href");
+    }
+    for (const media of document.querySelectorAll("audio,video")) {
+      const sources = [media.getAttribute("src"), ...Array.from(media.querySelectorAll("source"), source => source.getAttribute("src"))];
+      if (!sources.some(source => source?.startsWith("blob:"))) media.replaceWith(...Array.from(media.childNodes).filter(node => node.nodeType !== 1 || !["source", "track"].includes((node as Element).localName)));
     }
     for (const element of document.querySelectorAll("style")) element.textContent = this.styles(element.textContent ?? "", item.path);
     for (const link of document.querySelectorAll("link")) {
@@ -49,7 +58,7 @@ export class LocalBookResources {
     }
     const policy = document.createElement("meta");
     policy.httpEquiv = "Content-Security-Policy";
-    policy.content = "default-src 'none'; img-src blob: data:; style-src 'unsafe-inline' blob:; font-src blob: data:; base-uri 'none'; form-action 'none'";
+    policy.content = "default-src 'none'; script-src 'none'; img-src blob: data:; style-src 'unsafe-inline' blob:; font-src blob: data:; media-src blob:; base-uri 'none'; form-action 'none'";
     document.head.prepend(policy);
     return "<!doctype html>" + document.documentElement.outerHTML;
   }

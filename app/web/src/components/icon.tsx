@@ -1,4 +1,8 @@
 const paths = {
+  menu: "M3 6h18 M3 12h18 M3 18h18",
+  close: "M6 6l12 12 M6 18L18 6",
+  chevron: "M6 9l6 6 6-6",
+  play: "M6 3l15 9-15 9z",
   check: "M20 6L9 17l-5-5",
   settings: "M4 7h16 M4 17h16 M8 4v6 M16 14v6",
   fullscreen: "M3 9V3h6 M15 3h6v6 M21 15v6h-6 M9 21H3v-6",

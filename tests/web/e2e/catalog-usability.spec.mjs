@@ -1,24 +1,25 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 async function english(page) {
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
 }
 
 test("administrators can open all books from the public catalog and search visible book cards", async ({ page }) => {
   await useAccount(page, "administrator");
   await page.goto("/catalog/"); await english(page);
-  const navigation = page.getByRole("navigation", { name: "Main Navigation", exact: true });
+  await expect(page.locator(".site-header")).toHaveAttribute("data-workspace", "admin");
+  const navigation = page.locator(".site-header").getByRole("navigation", { name: "Admin navigation", exact: true });
   await navigation.getByRole("link", { name: "All Books", exact: true }).click();
   await expect(page).toHaveURL(/\/manage\/books\/$/);
-  expect((await page.getByRole("search").getByRole("textbox").boundingBox()).height).toBeGreaterThanOrEqual(44);
+  expect((await page.getByRole("search").getByRole("searchbox").boundingBox()).height).toBeGreaterThanOrEqual(44);
   const book = await (await page.request.get(`/api/v1/catalog/books/${encodeURIComponent(fixture.book.slug)}/`)).json();
-  await page.getByRole("search").getByRole("textbox").fill(book.catalog_code);
+  await page.getByRole("search").getByRole("searchbox").fill(book.catalog_code);
   await page.getByRole("search").getByRole("button", { name: "Search", exact: true }).click();
-  await expect(page.locator(".managed-book-grid .book-card")).toHaveCount(1);
-  const card = page.locator(".managed-book-grid .book-card");
-  await expect(card.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
+  await expect(page.locator(".managed-books-table tbody tr")).toHaveCount(1);
+  const card = page.locator(".managed-books-table tbody tr");
+  await expect(card.getByRole("link", { name: fixture.book.title, exact: true })).toBeVisible();
   await expect(card.locator('.book-cover')).toBeVisible();
-  await expect(card.getByRole("link", { name: "Open Book", exact: true })).toBeVisible();
+  await expect(card.getByRole("link", { name: "Edit", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
 
@@ -26,7 +27,7 @@ test("the author landing page lists records immediately and opens their related 
   await useAccount(page, "catalog_administrator");
   await page.goto("/manage/entities/"); await english(page);
   await expect(page.locator(".entity-results li").first()).toBeVisible();
-  await page.getByRole("search").getByRole("textbox").fill(fixture.entities.contributor.name);
+  await page.getByRole("search").getByRole("searchbox").fill(fixture.entities.contributor.name);
   await page.getByRole("search").getByRole("button", { name: "Search", exact: true }).click();
   const row = page.locator(".entity-results li");
   await expect(row).toHaveCount(1);
@@ -76,8 +77,9 @@ test("adding a book puts it in the default My Books list and removal persists", 
 test("Kindle and Notes navigation have icons and unfinished books have their own source scope", async ({ page }) => {
   await useAccount(page, "administrator");
   await page.goto("/my-books/"); await english(page);
-  for (const name of ["Kindle", "My Notes"]) {
-    await expect(page.locator(".workspace-nav").getByRole("link", { name, exact: true }).locator("svg")).toBeVisible();
+  await page.locator(".site-header").getByRole("link", { name:"Reader View",exact:true }).click();
+  for (const name of ["Kindle", "Notes"]) {
+    await expect(page.locator(".primary-navigation").getByRole("link", { name, exact: true }).locator("svg")).toBeVisible();
   }
   await page.goto("/manage/unfinished/");
   await expect(page.getByRole("heading", { level: 1, name: "Unfinished Books", exact: true })).toBeVisible();

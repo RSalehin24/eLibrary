@@ -3,11 +3,12 @@ import type { Viewport } from "next";
 import Link from "next/link";
 import { QueryProvider } from "@/components/query-provider";
 import { SiteHeader } from "@/components/site-header";
-import { BrandMark } from "@/components/brand-mark";
+import { BrandLogo } from "@/components/brand-logo";
 import { PWAControls } from "@/components/pwa-controls";
 import { siteName, siteOrigin } from "@/lib/site";
 import "./globals.css";
 import "./product.css";
+import "./workspace-design.css";
 import { libraryFont } from "@/lib/fonts";
 import { SiteLanguageProvider, SiteText, SiteNav } from "@/components/site-language";
 import { getAdminLanguage } from "@/lib/admin-language-server";
@@ -26,7 +27,7 @@ export default async function RootLayout({ children }: Readonly<{ children: Reac
   return <html lang={language}><body className={libraryFont.variable}><QueryProvider><SiteLanguageProvider initial={language}><NotificationProvider>
     <a className="skip-link" href="#main"><SiteText>{"মূল বিষয়ে যান"}</SiteText></a><SiteHeader />
     <main id="main" className="page-container">{children}</main>
-    <footer className="site-footer"><div className="footer-brand"><BrandMark size={36} /><span><strong><SiteText>{siteName}</SiteText></strong><small><SiteText>{"বাংলা বই, সবার কাছে"}</SiteText></small></span></div>
+    <footer className="site-footer"><div className="footer-brand"><BrandLogo /><small><SiteText>{"বাংলা বই, সবার কাছে"}</SiteText></small></div>
       <SiteNav aria-label="অতিরিক্ত তথ্য"><Link href="/about/"><SiteText>{"আমাদের সম্পর্কে"}</SiteText></Link><Link href="/contact/"><SiteText>{"যোগাযোগ"}</SiteText></Link></SiteNav><PWAControls />
     </footer>
   </NotificationProvider></SiteLanguageProvider></QueryProvider></body></html>;

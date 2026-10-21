@@ -16,7 +16,22 @@ def test_public_numbered_pages_match_cursor_feed(client):
     ).json()
     assert len(first["entries"]) == 2
     assert len(second["entries"]) == 1
-    assert second == cursor_page
+    assert {key: value for key, value in second.items() if key != "pagination"} == {
+        key: value for key, value in cursor_page.items() if key != "pagination"
+    }
+    assert first["pagination"] == {
+        "page": 1,
+        "limit": 2,
+        "total_count": 3,
+        "page_count": 2,
+    }
+    assert second["pagination"]["page"] == 2
+    assert cursor_page["pagination"] == {
+        "page": None,
+        "limit": 2,
+        "total_count": 3,
+        "page_count": 2,
+    }
     response = client.get(
         "/api/v1/catalog/books/", {"page": 2, "cursor": first["next_cursor"]}
     )

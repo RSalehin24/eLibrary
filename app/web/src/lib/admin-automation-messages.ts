@@ -1,4 +1,9 @@
 const messages: readonly (readonly [string, string, string?])[] = [
+  ["সময়সূচি এখনই চালান", "Run saved schedule now"],
+  ["এখনই চালান", "Run Now"],
+  ["সংরক্ষিত সেটিংস দিয়ে একবার কাজ চলবে। পরের নির্ধারিত সময় বদলাবে না।", "Run once with the saved settings. The next scheduled run will not change."],
+  ["কাজ যোগ হয়েছে। অগ্রগতি ও নিয়ন্ত্রণ দেখুন।", "Run queued. View its progress and controls."],
+  ["কাজের অগ্রগতি দেখুন", "View Run Progress"],
   ["সময়সূচি ও চলার ইতিহাস", "Schedule & Run History"],
   ["← সময়সূচিতে ফিরুন", "← Back to Schedules"],
   ["· পরের নির্ধারিত সময়:", "· Next Run:"],

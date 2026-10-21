@@ -95,7 +95,7 @@ def test_initial_password_requires_superadministrator(client, role):
 
 
 @pytest.mark.parametrize(
-    "changes,field",
+    "invalid_case",
     [
         ({"password": "short", "confirm_password": "short"}, "password"),
         ({"confirm_password": "different-password"}, "confirm_password"),
@@ -105,7 +105,8 @@ def test_initial_password_requires_superadministrator(client, role):
         ({"email": "invalid"}, "email"),
     ],
 )
-def test_invalid_creation_is_atomic(client, superadministrator, changes, field):
+def test_invalid_creation_is_atomic(client, superadministrator, invalid_case):
+    changes, field = invalid_case
     response = create(client, {**creation_values(), **changes})
     assert response.status_code == 400 and field in response.json()["field_errors"]
     assert User.objects.count() == 1 and not AuditLog.objects.exists()

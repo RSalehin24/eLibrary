@@ -19,6 +19,7 @@ from apps.catalog.serializers.public import (
 )
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
+from apps.common.collection_pagination import collection_pagination, counted_collection
 
 
 class PublicBookListView(VersionedAPIView):
@@ -37,15 +38,18 @@ class PublicBookListView(VersionedAPIView):
             or parameters.validated_data["sort"].lstrip("-") == "requested_at"
         ):
             parameters.validated_data["scope"] = f"public:{request.user.pk}"
-        entries, next_cursor = discovery_page(
-            discovery_queryset(parameters.validated_data, request.user),
-            parameters.validated_data,
+        queryset = counted_collection(
+            discovery_queryset(parameters.validated_data, request.user)
         )
+        entries, next_cursor = discovery_page(queryset, parameters.validated_data)
         return Response(
             {
                 "entries": PublicBookListSerializer(entries, many=True).data,
                 "next_cursor": next_cursor,
                 "has_more": next_cursor is not None,
+                "pagination": collection_pagination(
+                    queryset, parameters.validated_data, entries
+                ),
             }
         )
 

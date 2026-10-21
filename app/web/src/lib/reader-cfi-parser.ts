@@ -1,5 +1,5 @@
 type Step = { number: number; assertion?: string };
-export type CfiPoint = { steps: Step[]; offset: number; assertion?: string };
+export type CfiPoint = { steps: Step[]; offset: number; assertion?: string; temporal?: number; spatial?: { x: number; y: number } };
 export type ParsedCfi = { spineStep: number; spineIndex: number; idref?: string; start: CfiPoint; end?: CfiPoint };
 
 export function splitCfi(value: string, separator: string) {
@@ -32,9 +32,24 @@ function cfiPoint(value: string): CfiPoint | null {
     if (!matched || steps.length >= 128 || !Number.isSafeInteger(Number(matched[1]))) return null;
     steps.push({ number: Number(matched[1]), assertion: matched[2] }); remaining = remaining.slice(matched[0].length);
   }
+  if (/^[~@]/.test(remaining)) {
+    const coordinates = cfiCoordinates(remaining);
+    return steps.length && steps.at(-1)!.number % 2 === 0 && coordinates ? { steps, offset: 0, ...coordinates } : null;
+  }
   const offset = remaining ? /^:(0|[1-9]\d*)(?:\[((?:\^.|[^\]^])*)\])?$/.exec(remaining) : null;
   if (!steps.length || (remaining && !offset) || !Number.isSafeInteger(Number(offset?.[1] ?? 0))) return null;
   return { steps, offset: Number(offset?.[1] ?? 0), assertion: offset?.[2] };
+}
+
+function cfiCoordinates(value: string) {
+  const number = "(?:0|[1-9]\\d*)(?:\\.\\d+)?";
+  const matched = new RegExp(`^(?:~(${number}))?(?:@(${number}):(${number}))?$`).exec(value);
+  if (!matched || !matched[1] && !matched[2]) return null;
+  const temporal = matched[1] === undefined ? undefined : Number(matched[1]);
+  const spatial = matched[2] === undefined ? undefined : { x: Number(matched[2]), y: Number(matched[3]) };
+  if (temporal !== undefined && (!Number.isFinite(temporal) || temporal > Number.MAX_SAFE_INTEGER)) return null;
+  if (spatial && (spatial.x > 100 || spatial.y > 100)) return null;
+  return { ...(temporal === undefined ? {} : { temporal }), ...(spatial ? { spatial } : {}) };
 }
 
 export function parseCfi(value: string): ParsedCfi | null {
@@ -42,7 +57,7 @@ export function parseCfi(value: string): ParsedCfi | null {
   const parts = splitCfi(value.slice(8, -1), "!");
   if (parts?.length !== 2) return null;
   const packagePoint = cfiPoint(parts[0]), local = splitCfi(parts[1], ",");
-  if (!packagePoint || packagePoint.offset !== 0 || packagePoint.steps.length !== 2 || packagePoint.steps.some(step => step.number % 2) || !local || ![1, 3].includes(local.length)) return null;
+  if (!packagePoint || packagePoint.offset !== 0 || packagePoint.temporal !== undefined || packagePoint.spatial || packagePoint.steps.length !== 2 || packagePoint.steps.some(step => step.number % 2) || !local || ![1, 3].includes(local.length)) return null;
   const start = cfiPoint(local[0] + (local[1] ?? "")), end = local.length === 3 ? cfiPoint(local[0] + local[2]) : undefined;
   if (!start || end === null) return null;
   const identifier = packagePoint.steps[1].assertion;

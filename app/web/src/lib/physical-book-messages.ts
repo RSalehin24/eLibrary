@@ -1,4 +1,7 @@
 export const physicalBookMessages: Readonly<Record<string, string>> = {
+  "পড়ার হিসাব খালি করুন": "Reset reading log",
+  "এই বইয়ের পড়ার হিসাব খালি করবেন? সংরক্ষণ করুন চাপার আগে আগের হিসাব বদলাবে না।": "Reset this book's reading log? Your saved log stays unchanged until you choose Save.",
+  "পড়ার হিসাবের ফর্ম খালি হয়েছে। পরিবর্তন রাখতে সংরক্ষণ করুন।": "The reading log draft is cleared. Save to apply the change.",
   "কাগজের বই": "Physical books",
   "কাগজের বই যোগ করুন": "Add physical book",
   "আপনার অনুমতি পাওয়া কাগজের বইয়ের তালিকা।": "Physical books you have permission to view.",

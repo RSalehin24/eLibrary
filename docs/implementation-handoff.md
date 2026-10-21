@@ -1,6 +1,267 @@
-# Implementation handoff — 19 October 2026
+# Implementation handoff — 21 October 2026
 
-## Current implementation — 19 October 2026
+## Approved interface redesign — current checkpoint
+
+The separate admin/reader plan is implemented and under final browser verification.
+Admin opens Book Creation, readers open My Books, and the new shells, compact
+filters, Notes repair, schedule summary/reset and audited source-credit corrections
+are described in [the redesign report](operations/interface-redesign.md).
+Build, lint, strict web types, 149 web units and the 827-test catalog/auth/ingestion
+and 911-test processing/access gates pass. Previous UI screenshots and acceptance
+counts below describe the superseded design; they are not proof of this revision.
+
+
+## Current checkpoint — 21 October 2026
+
+The sitewide UI follow-up is implemented. Admin and general navigation are
+separate; administrators default to Admin and use Reader View/Return to Admin
+with the same personal account. The view cookie is account-bound and never
+changes authorization. Header, footer and sign-in share one SVG containing
+**বাংলা পাঠাগার**, without a repeated name beside it.
+
+Lists now have real numbered pagination with boundaries, neighboring pages,
+ellipses and preserved filters. Additive count metadata respects the original
+permission/query budgets. Automation and Users & Access have labelled filters,
+grouped status/security information and direct actions. Run Now retains the
+existing revision, idempotency and uncertain-response safeguards. Paused schedules
+do not imply that their saved occurrence is active.
+
+The review also fixes pagination overflow, stretched mobile admin rows, oversized
+browse controls, exports placed ahead of results, moving book-table links,
+static/offline EPUB language resets and long active navigation labels at 200%
+text in Safari. The local EPUB entry and book-creation result have clear next
+actions. The explicit inventory represents **all 53 page route templates**, including
+legacy redirects, with **66 route/state variants** in both languages. The page
+inventory, screenshots, defects and accepted browser records are maintained in
+[the sitewide UI review](operations/sitewide-ui-review.md). The complete capability
+register remains [the completeness report](operations/feature-parity.md).
+
+**713 backend/tooling tests**, **144 web units**, the production build, ESLint,
+strict TypeScript, zero-warning generated API/schema, mypy on **277 configured
+files**, migration consistency, affected Python lint/format and repository
+policies pass. Focused runs overlap earlier gates; do not sum them into a unique
+total. No dependencies or test/lint/type exceptions were added for the UI work.
+
+Accepted browser records cover **243 Chromium journeys across all 57
+specifications** after focused corrections; the first broad run was not green.
+Seven shared specifications pass **30 journeys in each of five profiles**,
+**150 combinations**, including **528 page-layout states per profile**
+(**2,640 total**). These counts overlap. Final Chromium PWA checks pass all **14
+journeys** against the unchanged build; sitemap enumeration passes without
+concurrent seeding. Linux Firefox uses fresh pinned containers for all eight
+page families after two long screenshot captures lost their renderer; its full
+assertions and 528 scenario records remain. `ui-review-accepted-evidence.json`
+records accepted paths and validates the totals. The sitewide report explains
+these boundaries and retains the earlier failure evidence.
+
+The host simulator was stopped when this continuation resumed. Colima and the
+existing PostgreSQL/Redis/RabbitMQ containers were restored with their volumes;
+preview HTTP and API readiness return 200. Current preview/reference API processes
+are **12939/12940**, web processes **12941/12942**, reference proxy **11022**.
+Processing worker **11108**, dispatcher **11109** and scheduler **11110** use
+**processing-preview-20261020**. Confirm processes before launching replacements.
+Preview remains **http://127.0.0.1:3000/**; reference proxy **3001** uses the separate
+`bangla_library` database. Never seed fixtures into `bangla_library_preview`.
+
+Moving preview snapshot at **2:16 pm Asia/Dhaka, 21 October**: **1,876 verified
+published books**, six earlier quarantined records, **2,229 queued source jobs**,
+one running, **61 automatic retry waits**, and **zero failed/attention-required
+source jobs** (`ui-review-runtime-final-counts.log`). Processing continues; this
+supersedes earlier runtime totals, not the source publication audit, and does not
+claim that the backlog is complete.
+
+The old processing queue still retains **236,572 envelopes with zero consumers**;
+delivery retains **4,700 with zero consumers**. Nothing was purged. **Delivery
+workers stay off.** Dedicated test Redis **56380** is currently stopped; restart
+an isolated Redis server before engine tests and set both full Redis URL overrides.
+Preview Redis **56379** is running.
+
+Serve an immutable copied standalone release while browser checks run. Do not
+rebuild `.next` during PWA/update tests: their update proxy reads its service-worker
+artifact directly. Sitemap enumeration tests must run without concurrent fixture
+seeding, which changes the global public catalog between numbered sitemap batches.
+Keep global discovery/Run Now specifications sequential. The repository runners
+and isolated guard remain unchanged in these respects.
+
+Only simulators are available. Earlier source/reader capability and external
+acceptance boundaries remain recorded below and in the reports.
+
+## Source and reader checkpoint — 21 October 2026
+
+The remaining source and reader follow-up is implemented. The prior capability
+restorations remain recorded below; the current complete register is
+[the completeness report](operations/feature-parity.md).
+
+Source validator 3 now collects linked-book compilations, recursively verifies
+component evidence and preserves every collected section in source order. Normal
+later references to publication history no longer misclassify readable prose as
+a synopsis. Eligible older validation waits recover once per validator version,
+with authority/revision checks and a preserved recovery lane. Missing chapters
+or contents pages use six-hour automatic rechecks; inconsistent extraction of
+already collected text remains an integrity failure. No publication check was
+removed or manual editorial approval introduced.
+
+A full read-only source audit checked **1,585 publications: 1,584 verified and one
+older partial compilation required repair** (`implement-all-publications-dry.*`).
+The audited repair retained the book identity, old bytes and all eight backed-up
+related records. Its normal-worker canary collected **three component books**,
+published the replacement and independently verified the actual HTML/EPUB files.
+Two previously misclassified prose books and the stale-contents-page case also
+completed normal worker checks and publication. All **four canaries succeeded**.
+Evidence: `implement-all-source-canaries.{json,log}` and
+`implement-all-compilation-preservation.json`. Source backups are private ignored
+files; never print or publish them.
+
+Spatial and temporal CFI restoration now handles verified image/video points
+and audio/video timestamps. Media seeks settle before progress can be recorded;
+invalid or unavailable locations retain their original value and show a bilingual
+notice. Protected media supports byte ranges under account-bound reader sessions.
+Local EPUBs support embedded media offline with native controls and no autoplay.
+The reader toolbar now uses 48 px touch targets, fixing a real Firefox subpixel
+sizing failure without relaxing the browser assertion.
+
+Verification:
+
+- Broad backend/tools gate: **1,840 passed**, 13 live cases excluded, warnings as
+  errors (`implement-all-backend-accepted.log`). Later overlapping gates passed
+  **890 access/processing tests**, final **705 processing tests**, **53 configuration
+  tests** and **33 tooling tests**. Do not add these into a unique test count.
+- **135 web units**, production build, ESLint, strict generated API/TypeScript,
+  zero-warning schema, mypy on **276 configured files**, migration consistency,
+  Ruff lint/format on **63 affected Python files**, architecture/file-size and
+  whitespace checks pass. No dependencies, lint/type/test exceptions or existing
+  migrations were added or weakened. API schema and client types were regenerated.
+- Reader/media/local EPUB: **12 journeys per profile** in Chromium, WebKit,
+  Android, iPhone and pinned Linux Firefox, **60 combinations**, recorded under
+  `implement-all-touch-*`. Six legacy-reader journeys per profile also pass under
+  `implement-all-final-*`. The last Firefox rerun uses exact specification names;
+  it fixes a real touch-target failure and keeps its original minimum assertion.
+- All three Compose configurations resolve the processing queue consistently;
+  the current platform supplies matching dispatcher/worker queues and admission
+  capacity (`implement-all-compose-config.json`). Preview HTTP is checked after
+  runtime restart; no external production deployment is claimed.
+
+The broker had more than 236,000 obsolete envelopes delaying current repairs.
+`BACKGROUND_PROCESSING_QUEUE` now selects a validated processing-only queue,
+defaulting to `processing`. Preview uses **processing-preview-20261020**. The old
+queue retains **236,572 messages**, with zero consumers; no queue was purged.
+Delivery retains **4,700 messages and zero consumers**. The queue-rotation procedure
+is in [source diagnostics](operations/source-job-diagnostics.md#processing-queue-rotation).
+The ignored launcher reads `test-artifacts/foundation/processing-queue.txt` and
+sets the same value for its dispatcher and worker. Keep that selection on restart.
+
+Moving snapshot at **12:10 am Asia/Dhaka, 21 October 2026**: **1,704 verified
+published books**, six earlier description-only records still quarantined,
+**2,393 queued source jobs**, **70 automatic availability waits**, one historical
+cancellation and **zero failed/attention-required source jobs**
+(`implement-all-final-runtime-counts.log`). This startup snapshot is not completion
+of the source backlog. Continuous processing has resumed after the isolated canaries.
+
+Runtime: preview **http://127.0.0.1:3000/**; reference proxy **3001**. Processing
+worker **82380**, dispatcher **82381** and scheduler **82382** are running; confirm
+processes before launching replacements. Preview/reference API **82395/82396** and
+web **82397/82398** serve the current release. PostgreSQL, Redis and RabbitMQ retain
+their volumes. Dedicated test Redis **56380** remains running, separate from preview
+Redis **56379**; engine tests need full Redis URLs for both Redis overrides.
+**Delivery workers stay off.**
+
+Only simulators are available. External Kindle receipt, physical-device installation,
+production-host deployment and independent-machine load remain unverified. Five
+upstream development-only lint-chain audit highs remain; production findings were
+zero when rechecked on 20 October. The report keeps supported format boundaries
+explicit. No zero-bug guarantee or subjective design-acceptance claim is made.
+
+## Earlier checkpoint — 20 October 2026
+
+The second baseline audit is implemented. It restores supporting contributor
+credits, protected publication/dedication/contents previews, local EPUB/offline
+reading, collapsible contents, exact annotation-to-reader links, note shortcuts,
+direct-password and initially disabled account creation, account search/sorts,
+authenticator URL copying, Run Now for saved schedules, directory date/code
+controls, physical-log reset, and card/table save/Kindle actions.
+
+Private metadata navigation now retains the current library view; direct details
+choose an actually visible fallback and Back returns to that view. Stretched
+card links no longer cover controls or metadata. My Books uses compact wrapping
+tabs. WebKit local-reader events, asynchronous selection preservation, explicit
+directory labels and narrow publication facts were fixed through browser checks.
+
+The final My Books follow-up keeps search and sorting compact and places exports
+after results and pagination. Clearing an unsubmitted search now resets its input;
+submitted saved-search forms retain their cached values when reopened. Both
+languages, narrow layouts and actual full-filter exports are covered in the
+[personal-library layout notes](operations/personal-library-layout.md).
+
+Verification:
+
+- **1,802 backend/tools tests passed**, 13 live cases excluded, warnings as errors
+  (`reaudit-accepted-backend.log`). The later private-detail field and canonical
+  export fix passed **64 focused tests** across
+  `reaudit-private-navigation-backend.log` and `reaudit-canonical-existing-backend.log`.
+  A further **24 recovery/admission checks passed** (`reaudit-source-recovery-lane.log`),
+  preserving the two-slot cap and new/continuation turns after code repair.
+  Focused counts overlap the broad run and are not added as unique tests.
+- **125 web units**, **154 retained frontend units**, **14 capacity-helper units**;
+  production build, ESLint, strict generated API/TypeScript, zero-warning schema,
+  mypy on **270 configured files** plus the retained exporter, Python lint,
+  migration consistency, architecture/file-size and whitespace checks pass.
+- The prior full specification inventory has passing records for **216 distinct
+  Chromium journeys across 51 specifications**, after three focused corrections.
+  Two newest private-navigation journeys
+  pass Chromium, WebKit, Android, iPhone and pinned Linux Firefox. Account/automation
+  six-per-profile and notes/legacy/list nine-per-profile pass the four host profiles.
+  Local EPUB three-per-profile also passes Linux Firefox. Other focused groups and
+  overlap are recorded in the feature register.
+- The final personal-library/filter/list follow-up passes **11 journeys each** in
+  Chromium, WebKit, Android and iPhone, plus **13 in Linux Firefox** including
+  exports. Two Chromium export journeys also pass: **59 project/journey cases**
+  for this follow-up, overlapping earlier specifications. Evidence is in
+  `continuation-final-{chromium,webkit,android,ios}`, `continuation-exports-final`,
+  `continuation-personal-firefox-final`, and the catalog/list/export
+  subdirectories of `continuation-library-firefox`. Its earlier personal-library
+  failure was a synthetic account-switch navigation race; the fresh seven-case
+  Firefox record is the accepted result. No application assertion was removed.
+- The newest read-only source audit checked **880 publications: all 880 verified**
+  (`reaudit-publications-final.jsonl` and its `.log`). It does not mutate data or
+  assert that the live backlog is finished.
+
+A real source EPUB failure was held before publication. Its inferred chapter
+headings broke continuous canonical text. The exporter now preserves authoritative
+single-flow text and explicit canonical contents, while legacy inference remains.
+The unchanged proof verifies both regenerated files with all **106,193 source
+characters**. Normal code-version recovery requeued the job. An isolated canary
+then executed its existing dispatch through the standard worker, with ordinary
+permission, generation, source and publication checks intact. Attempt **2 succeeded**;
+the book is published/verified and both actual persisted HTML and EPUB files are
+ready, available and independently export-verified. Earlier attempt history remains.
+Evidence: `reaudit-recovered-canary.log` and `reaudit-published-canary.json`.
+
+The moving snapshot at **9:52 pm Asia/Dhaka, 20 October 2026** has **1,476 verified
+published books**, six quarantined source records, **2,616 queued source jobs**,
+one running and 74 automatic waits; there are **zero failed or attention-required
+source jobs** (`continuation-runtime-counts.log`). This is a checkpoint, not
+completion of the source backlog. Repaired jobs retain their recovery lane
+after their error code clears, so a new-book backlog cannot hide code repairs.
+
+Runtime: preview **http://127.0.0.1:3000/**; isolated browser proxy **3001**.
+Retained PostgreSQL/Redis/RabbitMQ volumes remain intact. Colima and these services
+were restarted after the host runtime stopped. Processing worker, dispatcher and
+scheduler run; **delivery workers stay off**. Dedicated test Redis on 56380 is
+currently stopped; restart it for engine tests to isolate their Pub/Sub from
+preview Redis 56379. Do not start duplicate processing services or seed synthetic
+data into preview. Current process IDs are worker **42416**, dispatcher **42417**
+and scheduler **42418**; confirm processes before reusing a launcher.
+Preview/reference API and web use the latest served release, and preview HTTP
+returns 200.
+
+The user's simulator-only scope remains in effect. External Kindle receipt,
+physical-device installation, production-host deployment and independent-machine
+load remain unverified. Five upstream development-only lint-chain findings remain;
+production audit findings were zero when rechecked on 20 October. Source backlog
+processing continues, and unsupported format boundaries remain explicit in the
+[completeness report](operations/feature-parity.md). No zero-bug guarantee is made.
+
+## Earlier implementation checkpoint — 19 October 2026
 
 The accepted specification is [implementation-repair-plan.md](implementation-repair-plan.md).
 The baseline capability register is [operations/feature-parity.md](operations/feature-parity.md),
@@ -88,9 +349,9 @@ production deployment and independent-machine capacity remain unverified. Direct
 Bengali PDF generation requires Pillow shaping support (verified in Linux); hosts
 without it offer full filtered print/Save as PDF. Five development-only upstream
 lint-chain audit highs remain; production dependencies have no reported findings.
-Spatial/media CFI coordinates are preserved but unsupported; the pinned baseline
-also did not restore their coordinates precisely. Do not describe those records
-as corrupt or silently invent an exact passage.
+At that checkpoint spatial/media CFI coordinates were preserved but unsupported;
+the 21 October follow-up above now restores supported points and timestamps.
+Do not describe unresolved records as corrupt or invent an exact passage.
 
 ## Previous correction — source failures, unfinished updates and job clarity (18 October 2026)
 

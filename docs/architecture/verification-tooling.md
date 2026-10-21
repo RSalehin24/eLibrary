@@ -59,6 +59,12 @@ lockfile, peer rule, lint rule, or audit result was bypassed. Registry metadata:
 [braces](https://registry.npmjs.org/braces/latest),
 [Next lint plugin 16.4.2](https://registry.npmjs.org/@next/eslint-plugin-next/16.4.2).
 
+Rechecked on 20 October 2026: both audits retain the same five development highs
+and zero production findings. Registry checks still return `braces` 3.0.3, the
+React lint plugin's ESLint support through version 9, and `fast-glob` 3.3.1 in the
+newer Next lint plugin. The maintainer disputes the advisory in the linked issue;
+the npm findings remain recorded. No dependency or lockfile was changed.
+
 ## Browser harness
 
 The matching macOS bundles are installed. Firefox cannot launch on this macOS 27

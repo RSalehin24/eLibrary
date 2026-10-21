@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 async function preparedReader(page) {
   await useAccount(page, "reading_reader");
@@ -7,7 +7,7 @@ async function preparedReader(page) {
   expect(response.status()).toBe(200);
   const session = await response.json();
   await page.goto(`/reader/${session.id}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.locator('.reader-frame[aria-busy="false"]')).toBeVisible();
   return session;
 }

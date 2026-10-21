@@ -1,13 +1,8 @@
-import { SiteNav, SiteText, SiteNumber } from "@/components/site-language";
-import Link from "next/link";
+import { NumberedPagination } from "./numbered-pagination";
+import { currentBrowseFilters } from "@/lib/browse-filters";
 
-type PaginationProps = { pathname: string; page: number; hasMore: boolean; query?: string; filters?: Readonly<Record<string, string>> };
+type PaginationProps = { pathname: string; page: number; hasMore: boolean; totalPages?: number; query?: string; filters?: Readonly<Record<string, string>>; label?: string };
 
-export function CatalogPagination({ pathname, page, hasMore, query, filters }: PaginationProps) {
-  const pageLink = (number: number) => `${pathname}?${new URLSearchParams({ ...filters, ...(query ? { q: query } : {}), page: String(number) })}`;
-  return <SiteNav className="pagination" aria-label="বইয়ের তালিকার পাতা">
-    {page > 1 && <Link className="button button-quiet" href={pageLink(page - 1)}><SiteText>{"আগের পাতা"}</SiteText></Link>}
-    <span><SiteText>{"পাতা "}</SiteText><SiteNumber value={page} /></span>
-    {hasMore && <Link className="button button-quiet" href={pageLink(page + 1)}><SiteText>{"পরের পাতা"}</SiteText></Link>}
-  </SiteNav>;
+export function CatalogPagination({ pathname, page, hasMore, totalPages, query, filters, label = "বইয়ের তালিকার পাতা" }: PaginationProps) {
+  return <NumberedPagination pathname={pathname} page={page} totalPages={totalPages} hasNext={hasMore} query={new URLSearchParams(currentBrowseFilters({ ...filters, ...(query ? { q: query } : {}) })).toString()} label={label} />;
 }

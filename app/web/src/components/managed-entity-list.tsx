@@ -22,11 +22,11 @@ export async function ManagedEntityList({ kind, parameters }: { kind: EntityKind
   let entities: ManagedEntities;
   try { entities = await sessionRequest<ManagedEntities>(`manage/entities/${kind}/?${filter}&page=${page}`); }
   catch (error) { if (error instanceof APIError && [400, 404].includes(error.status)) notFound(); throw error; }
-  return <><EntityNavigation current={kind} /><header className="catalog-list-heading"><div><h1><AdminText>{entityLabels[kind]}</AdminText></h1>
-    <p className="muted"><AdminText>{kind === "contributors" ? "লেখক, অনুবাদক, সম্পাদক ও প্রকাশকের তথ্য এখানে আছে। নামের পাশে বই দেখুন বাটনে তাঁদের বই পাবেন।" : "তথ্য সম্পাদনা করুন অথবা সংশ্লিষ্ট বইয়ের তালিকা খুলুন।"}</AdminText></p></div>
-    {session.workspaces.can_create_books && <Link className="button" href={`/manage/entities/${kind}/new/`}><Icon name="plus" /><AdminText>{"পরিচিতি তৈরি করুন"}</AdminText></Link>}</header>
+  return <><header className="catalog-list-heading"><div><h1><AdminText>{entityLabels[kind]}</AdminText></h1>
+</div>
+    {session.workspaces.can_create_books && <Link className="button" href={`/manage/entities/${kind}/new/`}><Icon name="plus" /><AdminText>{"পরিচিতি তৈরি করুন"}</AdminText></Link>}</header><EntityNavigation current={kind} />
     <form className="catalog-search" role="search"><label htmlFor="entity-query"><AdminText>{"নাম বা বিকল্প নাম খুঁজুন"}</AdminText></label>
-      <div className="search-row"><input id="entity-query" name="q" defaultValue={query} maxLength={120} />
+      <div className="search-row"><input type="search" id="entity-query" name="q" defaultValue={query} maxLength={120} />
         {kind === "contributors" && <><label className="visually-hidden" htmlFor="entity-role"><AdminText>{"ভূমিকা"}</AdminText></label><select id="entity-role" name="role" defaultValue={role}><option value=""><AdminText>{"সব ভূমিকা"}</AdminText></option>
           {Object.entries(contributorRoles).map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select></>}
         <button className="button"><Icon name="search" /><AdminText>{"খুঁজুন"}</AdminText></button></div></form>

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 async function cancelledDelivery(page) {
   const options = await (await page.request.get(`/api/v1/delivery/books/${encodeURIComponent(fixture.reading_book.slug)}/kindle/`)).json();
@@ -18,12 +18,13 @@ test("Kindle history combines filters and resend only prefills the previous reci
   await page.setViewportSize({ width: 390, height: 844 });
   const identifier = await cancelledDelivery(page);
   await page.goto("/kindle/");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const filters = page.getByRole("form", { name: "Search Kindle requests" });
   await filters.getByLabel("Book title or code", { exact: true }).fill(fixture.reading_book.title);
   await filters.getByLabel("Delivery status", { exact: true }).selectOption("cancelled");
   await filters.getByLabel("Sort Kindle requests", { exact: true }).selectOption("title");
-  await filters.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await expect(filters.locator('select[name="record_type"], input[type="date"]')).toHaveCount(0);
+  await filters.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/state=cancelled/);
   await expect(page.getByLabel("Book title or code", { exact: true })).toHaveValue(fixture.reading_book.title);
   const card = page.locator(".job-card").filter({ has: page.locator(`a[href="/kindle/operations/${identifier}/"]`) });
@@ -47,8 +48,13 @@ test("Kindle history combines filters and resend only prefills the previous reci
 
 test("invalid Kindle filters fail clearly and a cancelled request cannot point at another book", async ({ page }) => {
   await useAccount(page, "kindle_reader");
-  for (const query of ["sort=__proto__", "state=unknown", "from_date=bad", "q=a&q=b", "from_date=2026-10-20&to_date=2026-10-18"]) {
+  for (const query of ["sort=__proto__", "state=unknown", "q=a&q=b"]) {
     expect((await page.request.get(`/kindle/?${query}`)).status()).toBe(404);
+  }
+  for (const query of ["from_date=bad", "from_date=2026-10-20&to_date=2026-10-18"]) {
+    expect((await page.request.get(`/api/v1/me/kindle/?${query}`)).status()).toBe(400);
+    const response = await page.request.get(`/kindle/?${query}`);
+    expect(response.status()).toBe(200); expect(new URL(response.url()).searchParams.has("from_date")).toBe(false);
   }
   const identifier = await cancelledDelivery(page);
   await useAccount(page, "administrator");

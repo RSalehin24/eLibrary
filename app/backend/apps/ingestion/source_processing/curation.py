@@ -1,12 +1,10 @@
 from apps.ingestion.pipeline.book_manifest import normalize_manifest_limits
-from apps.ingestion.pipeline.curated_pipeline import build_curated_document
-from apps.ingestion.pipeline.curated_source import build_source_snapshot
 from apps.ingestion.pipeline.manifest_collection import (
     CollectionOptions,
-    ManifestCollector,
 )
 
 from .covers import download_source_cover
+from .linked_books import SourceDocumentCollector
 from .page_cache import ControlledSourceContext, SourcePageCache
 from .policy import MAX_SOURCE_PAGES
 from .storage import source_job_directory
@@ -22,18 +20,7 @@ def curate_source_job(ownership, job):
     )
     with ControlledSourceSession(cache.boundary) as session:
         context = ControlledSourceContext(session, cache)
-        pages = ManifestCollector(context, options).collect(
+        result = SourceDocumentCollector(context, options).collect(
             job.checkpoint.get("source_url", job.input["command"]["source_url"])
         )
-    snapshot = build_source_snapshot(pages)
-    document = build_curated_document(snapshot)
-    return (
-        {
-            "document": document,
-            "source_snapshot": snapshot,
-            "projection": document["projection"],
-            "status": document["status"],
-            "validation": document["validation"],
-        },
-        cache.checkpoint,
-    )
+    return result, cache.checkpoint

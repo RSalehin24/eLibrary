@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount, artifactPath } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, artifactPath, setLanguage } from "./fixtures.mjs";
 
 test("book details retain every contributor role and personal related-book links", async ({ page }) => {
   await useAccount(page, "reader");
@@ -12,6 +12,7 @@ test("book details retain every contributor role and personal related-book links
   await page.goto(`/my-books/${encodeURIComponent(book.slug)}/`);
   const related = page.locator(".book-facts").getByRole("link", { name: translator.name, exact: true });
   await related.click();
+  await expect(page).toHaveURL(url => url.pathname === "/my-books/" && url.searchParams.get("contributor_role") === "translator");
   const parameters = new URL(page.url()).searchParams;
   expect(new URL(page.url()).pathname).toBe("/my-books/");
   expect(parameters.get("contributor")).toBe(translator.slug);
@@ -31,12 +32,15 @@ test("protected detail previews restore dedication and nested contents in both l
   await expect(preview).toContainText("পাঠকদের জন্য উৎসর্গ।");
   await expect(preview.getByRole("heading", { name: "সূচিপত্র", exact: true })).toBeVisible();
   await expect(preview.locator(".book-detail-contents li")).toHaveCount(9);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(preview.getByRole("heading", { name: "Dedication", exact: true })).toBeVisible();
   await expect(preview.getByRole("heading", { name: "Publication Details", exact: true })).toBeVisible();
   await expect(preview.locator("dt").getByText("First Published", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 320, height: 800 });
   await page.addStyleTag({ content: "html { font-size: 200%; }" });
+  for (const value of await page.locator(".book-detail .book-facts dd").all()) {
+    expect((await value.boundingBox()).width).toBeGreaterThan(160);
+  }
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   await page.screenshot({ path: artifactPath(`book-details-${test.info().project.name}.png`), fullPage: true });
   await page.goto(`/my-books/${encodeURIComponent(fixture.book.slug)}/`);

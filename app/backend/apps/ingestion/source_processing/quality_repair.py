@@ -33,6 +33,13 @@ def queue_quality_repair(previous, evidence):
     except APIException as error:
         return {"repair_error": error.default_code}
     classification = evidence.get("classification", "unknown_layout")
+    if classification == "linked_collection":
+        job.checkpoint = {
+            **job.checkpoint,
+            "source_validation_recovery": {"validator_version": VALIDATOR_VERSION},
+        }
+        job.save(update_fields=["checkpoint", "updated_at"])
+        return {"repair_operation_id": str(job.pk)}
     job.state, job.error_code = (
         "retry_wait",
         "source_description_only"

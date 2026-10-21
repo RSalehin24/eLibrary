@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from uuid import UUID, uuid4
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import F, Q
 from django.utils import timezone
@@ -62,7 +63,7 @@ def claim_dispatches(limit=50):
             "delivery"
             if dispatch.job.kind
             in {BackgroundJobKind.DELIVER_KINDLE, BackgroundJobKind.ACCOUNT_MAIL}
-            else "processing"
+            else settings.BACKGROUND_PROCESSING_QUEUE
         )
         leases.append(DispatchLease(dispatch.pk, dispatch.owner, queue))
     return leases

@@ -1,4 +1,4 @@
-import { test, expect, useAccount } from "./fixtures.mjs";
+import { test, expect, useAccount, setLanguage } from "./fixtures.mjs";
 
 test("notification sounds require opt-in, persist muted settings and preserve a single accessible result", async ({ page }, testInfo) => {
   await page.addInitScript(() => {
@@ -48,7 +48,7 @@ test("notification sounds require opt-in, persist muted settings and preserve a 
   await expect(notification.getByRole("status")).toContainText("পরিবর্তন সংরক্ষিত হয়েছে।");
   expect(await page.evaluate(() => window.notificationAudio.tones)).toEqual([]);
   await page.reload(); await expect(sounds).not.toBeChecked();
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.getByRole("heading", { name: "Notification sounds", exact: true })).toBeVisible();
   await expect(page.getByRole("checkbox", { name: "Enable notification sounds", exact: true })).not.toBeChecked();
   await page.getByRole("heading", { name: "Notification sounds", exact: true }).scrollIntoViewIfNeeded();

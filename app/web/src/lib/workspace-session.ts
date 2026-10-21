@@ -2,8 +2,12 @@ import { cache } from "react";
 import { notFound, redirect } from "next/navigation";
 import { sessionRequest } from "@/api/server";
 import type { WorkspaceSession } from "@/api/types";
+import { cookies } from "next/headers";
+import { workspaceSessionForCookies } from "./public-session";
+import { selectedWorkspace, workspaceViewCookie } from "./workspace-view";
 
-export const getWorkspaceSession = cache(() => sessionRequest<WorkspaceSession>("auth/session/"));
+export const getWorkspaceSession = cache(async () => workspaceSessionForCookies((await cookies()).toString(), () => sessionRequest<WorkspaceSession>("auth/session/")));
+export const getWorkspaceView = cache(async () => selectedWorkspace(await getWorkspaceSession(), (await cookies()).get(workspaceViewCookie)?.value));
 
 export async function requireReader(path: string) {
   const session = await getWorkspaceSession();

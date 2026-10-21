@@ -1,0 +1,6 @@
+.entity-directory-copy { flex:1; min-width:0; overflow-wrap:anywhere; }
+.entity-directory-copy strong { display:block; }
+.entity-directory-copy small { display:block; margin-block-start:6px; color:var(--muted); line-height:1.6; }
+.catalog-directory-options input[type="date"] { min-height:46px; padding:8px; max-width:100%; }
+.directory-date-zone { flex-basis:100%; margin:0; }
+.directory-filter-field { display:grid; gap:8px; max-width:100%; }

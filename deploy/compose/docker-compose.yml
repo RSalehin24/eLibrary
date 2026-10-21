@@ -7,6 +7,7 @@ x-app-environment: &app_environment
   DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bangla_library}
   CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
   CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+  BACKGROUND_PROCESSING_QUEUE: ${BACKGROUND_PROCESSING_QUEUE:-processing}
   PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://example.com}
   PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-https://example.com}
   FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:-https://example.com}
@@ -179,7 +180,7 @@ services:
     environment:
       <<: *app_environment
       CELERY_PROCESSING_CONCURRENCY: ${CELERY_PROCESSING_CONCURRENCY:-1}
-    command: celery -A config worker --loglevel=info --concurrency=${CELERY_PROCESSING_CONCURRENCY:-1} --queues=processing --hostname=processing@%h
+    command: celery -A config worker --loglevel=info --concurrency=${CELERY_PROCESSING_CONCURRENCY:-1} --queues=${BACKGROUND_PROCESSING_QUEUE:-processing} --hostname=processing@%h
     volumes:
       - ../../app/backend/storage:/app/storage
     depends_on:

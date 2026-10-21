@@ -1,3 +1,4 @@
+from hashlib import sha256
 from uuid import uuid4
 
 
@@ -61,6 +62,14 @@ def create_source_processing_fixture(actor):
     fail_attempt(
         ownership, AttemptFailure(FailureKind.PERMANENT, "source_exports_missing")
     )
+    failed.refresh_from_db()
+    # This recovery fixture represents an export failure from before deployment.
+    defect = failed.checkpoint["source_defect"]
+    defect["code_version"] = "0" * 64
+    defect["fingerprint"] = sha256(
+        f"{defect['error_code']}:{defect['stage']}:{defect['code_version']}".encode()
+    ).hexdigest()
+    failed.save(update_fields=["checkpoint"])
     return {
         "duplicate": str(duplicate.pk),
         "candidate": str(candidate.pk),

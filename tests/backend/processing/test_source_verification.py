@@ -11,6 +11,7 @@ from apps.ingestion.source_processing.export_verification import (
 from apps.ingestion.source_processing.storage import write_artifact
 from apps.ingestion.source_processing.verification import source_verification
 from apps.processing.jobs.execution_errors import ExecutionFailure
+from django.utils import timezone
 from rest_framework.test import APIClient
 from source_processing_fixtures import curated_source, execute_source_job
 
@@ -61,8 +62,10 @@ def test_any_missing_available_source_content_blocks_publication(
     source_job.checkpoint = {"document_ref": write_artifact(source_job.pk, result)}
     source_job.save()
     execute_source_job(source_job)
-    assert source_job.state == "needs_attention"
-    assert source_job.error_code == "source_content_incomplete"
+    assert source_job.state == "retry_wait"
+    assert source_job.error_code == "source_content_unavailable"
+    assert source_job.available_at > timezone.now()
+    assert "document_ref" not in source_job.checkpoint
     assert source_job.book_id is None
     assert not AuditLog.objects.filter(verb="catalog.book.auto_publish").exists()
 
@@ -108,6 +111,25 @@ def test_extraction_cannot_silently_drop_a_paragraph_of_collected_source(tmp_pat
     verification = source_verification(result)
     assert not verification["verified"]
     assert "Collected source text is missing" in " ".join(verification["issues"])
+
+
+def test_missing_extracted_text_is_not_treated_as_source_unavailability(
+    source_job, tmp_path
+):
+    result = curated_source(tmp_path)
+    section = next(
+        section
+        for section in result["document"]["sections"]
+        if section["section_type"] == "body"
+    )
+    section["html"] = "<p>Some collected text is missing.</p>"
+    source_job.checkpoint = {"document_ref": write_artifact(source_job.pk, result)}
+    source_job.save()
+    execute_source_job(source_job)
+    assert source_job.state == "needs_attention"
+    assert source_job.error_code == "source_content_incomplete"
+    assert "document_ref" in source_job.checkpoint
+    assert source_job.book_id is None
 
 
 def test_markup_and_unicode_normalization_preserve_source_verification(tmp_path):

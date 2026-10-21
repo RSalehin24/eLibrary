@@ -19,4 +19,9 @@
 .managed-book-grid .status-label { align-self:flex-start; }
 .catalog-filter-summary { display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
 @media(max-width:900px) { .catalog-list-heading { flex-direction:column; } .catalog-list-heading .editorial-actions { flex-shrink:1; } }
-@media(max-width:480px) { .entity-navigation a { flex:1 1 45%; } .entity-result-name { flex-wrap:wrap; } }
+@media(max-width:480px) {
+ .entity-navigation { gap:4px; margin-bottom:20px; padding-bottom:12px; }
+ .entity-navigation a { flex:0 1 auto; min-width:0; padding:8px 10px; font-size:.8125rem; background:transparent; border-color:transparent; }
+ .entity-navigation .icon { width:18px; height:18px; }
+ .entity-result-name { flex-wrap:wrap; }
+}

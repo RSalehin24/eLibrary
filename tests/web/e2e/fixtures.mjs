@@ -13,3 +13,11 @@ export async function useAccount(page, account) {
     url: process.env.FOUNDATION_WEB_URL ?? "http://127.0.0.1:3000", httpOnly: true, sameSite: "Lax",
   }]);
 }
+
+export async function setLanguage(page, language) {
+  const control = page.getByRole("button", { name: language === "en" ? "English" : "বাংলা", exact: true });
+  const openedMenu = !await control.isVisible();
+  if (openedMenu) await page.locator("details.account-menu:visible > summary").click();
+  await control.click();
+  if (openedMenu) await page.keyboard.press("Escape");
+}

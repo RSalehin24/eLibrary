@@ -2,6 +2,7 @@
 .workspace-nav { display:flex; flex-direction:column; gap:4px; border-right:1px solid var(--line); padding-right:20px; }
 .workspace-nav a { display:flex; align-items:center; min-height:48px; padding:8px 12px; border-radius:6px; }
 .workspace-nav a:hover { background:#eceee5; }
+.workspace-nav.personal-library-tabs { flex-direction:row; flex-wrap:wrap; border-right:0; border-bottom:1px solid var(--line); padding:0 0 12px; margin-block:20px; }
 .workspace-content { min-width:0; }
 .workspace-content h1 { font-size:2rem; }
 .account-form { max-width:480px; margin:48px auto; }

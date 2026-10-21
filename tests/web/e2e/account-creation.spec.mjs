@@ -1,10 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, useAccount } from "./fixtures.mjs";
+import { test, expect, useAccount, setLanguage } from "./fixtures.mjs";
+import { startSetup } from "./security-fixture.mjs";
 
 test("superadministrators can create a password account without mail in both languages", async ({ page }) => {
-  await useAccount(page, "superadministrator");
+  await useAccount(page, "creation_administrator");
   await page.goto("/manage/users-access/invite/");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.getByLabel("Account setup method")).toHaveValue("invite");
   await page.getByLabel("Account setup method").selectOption("password");
   await expect(page.getByRole("checkbox", { name: "Account Enabled", exact: true })).toBeChecked();
@@ -20,13 +21,13 @@ test("superadministrators can create a password account without mail in both lan
   await page.getByRole("button", { name: "Create Account", exact: true }).click();
   await expect(page.getByLabel("Confirm initial password", { exact: true })).toHaveAttribute("aria-invalid", "true");
   await page.getByLabel("Confirm initial password", { exact: true }).fill(password);
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByLabel("অ্যাকাউন্ট তৈরির পদ্ধতি")).toHaveValue("password");
   await page.getByRole("button", { name: "অ্যাকাউন্ট তৈরি করুন", exact: true }).click();
   await expect(page.getByRole("heading", { name: "পাঠকের অ্যাকাউন্ট তৈরি হয়েছে", exact: true })).toBeVisible();
   await page.getByRole("link", { name: "অ্যাকাউন্ট ও অনুমতি দেখুন", exact: true }).click();
   await expect(page.getByRole("heading", { name: "Immediate password reader", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
+  await page.locator("details.account-menu:visible > summary").click(); await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
   await expect(page.getByRole("link", { name: "প্রবেশ করুন", exact: true })).toBeVisible();
   await page.goto("/login/");
   await page.getByLabel("ইমেইল", { exact: true }).fill(email);
@@ -65,12 +66,36 @@ test("ordinary access managers keep invitation-only creation and uncertain write
 test("account sorting preserves query and status filters on phones", async ({ page }) => {
   await useAccount(page, "superadministrator");
   await page.goto("/manage/users-access/?q=foundation&status=active&sort=email_desc");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.getByLabel("Sort accounts", { exact: true })).toHaveValue("email_desc");
   await page.getByLabel("Sort accounts", { exact: true }).selectOption("name_desc");
-  await page.getByRole("button", { name: "Search Accounts", exact: true }).click();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page).toHaveURL(/q=foundation&status=active&sort=name_desc/);
   await expect(page.getByLabel("Name, email or permission", { exact: true })).toHaveValue("foundation");
   await expect(page.getByLabel("Account Status", { exact: true })).toHaveValue("active");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+});
+
+test("authenticator setup URL copying has a selectable fallback and bilingual feedback", async ({ page }) => {
+  await useAccount(page, "totp_copy_reader");
+  await page.goto("/profile/");
+  await startSetup(page, "totp_copy_reader");
+  await page.evaluate(() => {
+    window.clipboardShouldFail = true;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText: async value => {
+      if (window.clipboardShouldFail) throw new Error("Clipboard unavailable");
+      const parsed = new URL(value);
+      window.copiedValidSetupURL = parsed.protocol === "otpauth:" && parsed.searchParams.get("secret") === document.querySelector('[data-testid="authenticator-secret"]').textContent;
+    } } });
+  });
+  await page.getByRole("button", { name: "সেটআপের লিংক কপি করুন", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "লিংক কপি করা যায়নি" })).toBeVisible();
+  await expect(page.locator("details[open] .authenticator-secret")).toBeVisible();
+  await page.evaluate(() => { window.clipboardShouldFail = false; });
+  await page.getByRole("button", { name: "সেটআপের লিংক কপি করুন", exact: true }).click();
+  expect(await page.evaluate(() => window.copiedValidSetupURL)).toBe(true);
+  await setLanguage(page, "en");
+  await expect(page.getByRole("status").filter({ hasText: "Setup URL copied." })).toBeVisible();
+  await setLanguage(page, "bn");
+  await page.getByRole("button", { name: "সেটআপ বাতিল করুন", exact: true }).click();
 });

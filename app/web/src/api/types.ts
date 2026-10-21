@@ -1,7 +1,10 @@
 import type { components, operations } from "./vendor/schema";
 
 export type PublicBook = components["schemas"]["PublicBookList"];
+export type BookListControls = components["schemas"]["BookListControls"];
+export type BookListControl = components["schemas"]["BookListControl"];
 export type PublicBookDetail = components["schemas"]["PublicBookDetail"];
+export type PersonalBookDetail = components["schemas"]["PersonalBookDetail"];
 export type BookCollection = components["schemas"]["PublicBookCollection"];
 export type WorkspaceSession = components["schemas"]["WorkspaceSession"];
 export type ManagedBooks = components["schemas"]["AdminBookCollection"];
@@ -91,6 +94,8 @@ export type Automations = components["schemas"]["AutomationCollection"];
 export type AutomationCreate = components["schemas"]["AutomationCreate"];
 export type AutomationUpdate = components["schemas"]["AutomationUpdate"];
 export type AutomationRuns = components["schemas"]["AutomationRunCollection"];
+export type AutomationRunCommand = components["schemas"]["AutomationRunCommand"];
+export type AutomationRunAccepted = components["schemas"]["AutomationRunAccepted"];
 export type SavedFilter = components["schemas"]["SavedFilter"];
 export type SavedFilters = components["schemas"]["SavedFilterCollection"];
 export type SavedFilterCreate = components["schemas"]["SavedFilterCreate"];

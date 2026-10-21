@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, fixture, useAccount, artifactPath } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, artifactPath, setLanguage } from "./fixtures.mjs";
 
 test("notes separate four views, search, group by book and safely recolor", async ({ page }) => {
   await useAccount(page, "reading_reader");
@@ -18,7 +18,7 @@ test("notes separate four views, search, group by book and safely recolor", asyn
     const saved = await page.request.put(`/api/v1/reading/sessions/${session.id}/bookmarks/`, { headers, data: { chapter_href: session.chapters[0].path, location: `chapter:0:${(parseInt(randomUUID().slice(0, 4), 16) / 65536).toFixed(4)}`, note: unique } });
     expect(saved.status()).toBe(200); bookmark = (await saved.json()).id;
     await page.goto("/notes/");
-    await page.getByRole("button", { name: "English", exact: true }).click();
+    await setLanguage(page, "en");
     await page.getByRole("searchbox", { name: "Search notes", exact: true }).fill(unique);
     await expect(page.locator(".annotation-card")).toHaveCount(1);
     for (const name of ["Highlights", "Quotes", "Bookmarks", "Notes"]) {
@@ -34,6 +34,7 @@ test("notes separate four views, search, group by book and safely recolor", asyn
     await dialog.getByRole("textbox", { name: "Your Note", exact: true }).press("Control+Enter");
     await expect(dialog).not.toBeVisible();
     await expect(page.locator(".annotation-card")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "No matching notes", exact: true })).toBeVisible();
     await page.getByRole("combobox", { name: "Color", exact: true }).selectOption("blue");
     await expect(page.locator(".annotation-card")).toHaveCount(1);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -51,7 +52,7 @@ test("all four personal annotation views open the exact saved passage in the rea
   const launched = await page.request.post(`/api/v1/reading/books/${encodeURIComponent(fixture.reading_book.slug)}/launch/`, { headers });
   const session = await launched.json(), unique = `reader-notes-${randomUUID()}`, records = [];
   await page.goto(`/reader/${session.id}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.getByRole("button", { name: "Next Chapter", exact: true }).click();
   const frame = page.frameLocator(".reader-frame");
   const target = await frame.locator("#paragraph-38").evaluate(element => {
@@ -65,7 +66,7 @@ test("all four personal annotation views open the exact saved passage in the rea
   });
   try {
     for (const values of [{ view: "Highlights", kind: "highlight", note: "" }, { view: "Notes", kind: "highlight", note: unique }, { view: "Quotes", kind: "quote", note: unique }]) {
-      const response = await page.request.post(`/api/v1/reading/sessions/${session.id}/highlights/`, { headers, data: { ...values, chapter_href: session.chapters[1].path, chapter_label: unique, selector: { start: target.start, end: target.end }, text: target.text } });
+      const response = await page.request.post(`/api/v1/reading/sessions/${session.id}/highlights/`, { headers, data: { kind: values.kind, note: values.note, chapter_href: session.chapters[1].path, chapter_label: unique, selector: { start: target.start, end: target.end }, text: target.text } });
       expect(response.status()).toBe(201); records.push({ view: values.view, kind: "highlights", id: (await response.json()).id });
     }
     const bookmark = await page.request.put(`/api/v1/reading/sessions/${session.id}/bookmarks/`, { headers, data: { chapter_href: session.chapters[1].path, chapter_label: unique, location: `text:${JSON.stringify({ chapter: 1, offset: target.start, quote: target.text })}` } });

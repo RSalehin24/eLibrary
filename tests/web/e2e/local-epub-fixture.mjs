@@ -1,3 +1,5 @@
+import { silentAudio } from "./media-fixture.mjs";
+
 function crc32(bytes) {
   let crc = 0xffffffff;
   for (const byte of bytes) { crc ^= byte; for (let bit = 0; bit < 8; bit += 1) crc = crc >>> 1 ^ (crc & 1 ? 0xedb88320 : 0); }
@@ -23,9 +25,11 @@ export function localEPUB() {
   return zip([
     ["mimetype", "application/epub+zip"],
     ["META-INF/container.xml", '<container xmlns="urn:oasis:names:tc:opendocument:xmlns:container"><rootfiles><rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/></rootfiles></container>'],
-    ["OEBPS/content.opf", '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>নিজের বাংলা বই</dc:title></metadata><manifest><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/><item id="two" href="two.xhtml" media-type="application/xhtml+xml"/><item id="toc" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine><itemref idref="one"/><itemref idref="two"/></spine></package>'],
+    ["OEBPS/content.opf", '<package xmlns="http://www.idpf.org/2007/opf" version="3.0"><metadata xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>নিজের বাংলা বই</dc:title></metadata><manifest><item id="one" href="one.xhtml" media-type="application/xhtml+xml"/><item id="two" href="two.xhtml" media-type="application/xhtml+xml"/><item id="image" href="images/cover.png" media-type="image/png"/><item id="audio" href="audio/voice.wav" media-type="audio/wav"/><item id="toc" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav"/></manifest><spine><itemref idref="one"/><itemref idref="two"/></spine></package>'],
     ["OEBPS/nav.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops"><body><nav epub:type="toc"><ol><li><a href="one.xhtml">প্রথম অধ্যায়</a><ol><li><a href="one.xhtml#line-10">প্রথম অংশ</a></li></ol></li><li><a href="two.xhtml">দ্বিতীয় অধ্যায়</a></li></ol></nav></body></html>'],
     ["OEBPS/one.xhtml", `<html xmlns="http://www.w3.org/1999/xhtml"><head><title>প্রথম অধ্যায়</title></head><body><h1>প্রথম অধ্যায়</h1>${paragraphs}<a href="two.xhtml#second">পরের অধ্যায়ের লিংক</a><script>parent.localFileScriptRan=true</script><img src="https://should-not-load.invalid/pixel" onerror="parent.localFileScriptRan=true"/><iframe src="https://should-not-load.invalid/"></iframe></body></html>`],
-    ["OEBPS/two.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>দ্বিতীয় অধ্যায়</title></head><body><h1 id="second">দ্বিতীয় অধ্যায়</h1><p>শেষ অধ্যায়ের সম্পূর্ণ বাংলা লেখা।</p></body></html>'],
+    ["OEBPS/two.xhtml", '<html xmlns="http://www.w3.org/1999/xhtml"><head><title>দ্বিতীয় অধ্যায়</title></head><body><h1 id="second">দ্বিতীয় অধ্যায়</h1><p>শেষ অধ্যায়ের সম্পূর্ণ বাংলা লেখা।</p><img src="images/cover.png" alt="বইয়ের ছবি"/><audio id="local-audio" autoplay="autoplay" src="audio/voice.wav"></audio><audio src="https://should-not-load.invalid/voice.wav" autoplay="autoplay"></audio><a href="one.xhtml#line-10">প্রথম অংশে ফিরুন</a></body></html>'],
+    ["OEBPS/audio/voice.wav", silentAudio()],
+    ["OEBPS/images/cover.png", Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aS2cAAAAASUVORK5CYII=", "base64")],
   ]);
 }

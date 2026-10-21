@@ -170,3 +170,73 @@ def test_code_fingerprint_is_deterministic_and_uses_relevant_file_bytes(
     source_code_version.cache_clear()
     assert source_code_version("export") != original
     source_code_version.cache_clear()
+
+
+def test_code_recovered_job_gets_fair_admission_ahead_of_new_backlog(
+    curated_job, code_version, settings
+):
+    from datetime import timedelta
+    from uuid import uuid4
+
+    from apps.ingestion.models import SourceCatalogEntry
+    from apps.processing.job_models import BackgroundJob, JobDispatch
+    from apps.processing.jobs.dispatches import (
+        claim_dispatches,
+        record_dispatch_confirmation,
+    )
+    from apps.processing.jobs.source_dispatch import work_lane
+    from django.utils import timezone
+
+    settings.CELERY_PROCESSING_CONCURRENCY = 1
+    fail_source(curated_job)
+    code_version[0] = "2" * 64
+    recovered = recover_source_defect(curated_job.pk)
+    assert recovered.error_code == "" and work_lane(recovered) == "recovery"
+    previous = timezone.now() - timedelta(days=1)
+    for _ in range(20):
+        entry = SourceCatalogEntry.objects.create(
+            source_url=f"https://source.test/books/{uuid4()}/", title="Older new book"
+        )
+        job = BackgroundJob.objects.create(
+            pk=uuid4(),
+            kind="process_source",
+            source_record=entry,
+            requested_by=curated_job.requested_by,
+            available_at=previous,
+        )
+        JobDispatch.objects.create(
+            job=job, generation=job.generation, available_at=previous
+        )
+    leases = claim_dispatches()
+    selected = [JobDispatch.objects.get(pk=lease.identifier).job for lease in leases]
+    assert len(selected) == 2 and {work_lane(job) for job in selected} == {
+        "new",
+        "recovery",
+    }
+    assert recovered.pk in {job.pk for job in selected}
+    for lease in leases:
+        assert record_dispatch_confirmation(lease)
+    assert claim_dispatches() == []
+    BackgroundJob.objects.filter(pk__in=[job.pk for job in selected]).update(
+        state="succeeded"
+    )
+    continuation = BackgroundJob.objects.create(
+        kind="process_source",
+        source_record=curated_job.source_record,
+        requested_by=curated_job.requested_by,
+        available_at=timezone.now(),
+        checkpoint={"continuation": True},
+    )
+    JobDispatch.objects.create(
+        job=continuation,
+        generation=continuation.generation,
+        available_at=continuation.available_at,
+    )
+    next_leases = claim_dispatches()
+    next_jobs = [
+        JobDispatch.objects.get(pk=lease.identifier).job for lease in next_leases
+    ]
+    assert len(next_jobs) == 2 and {work_lane(job) for job in next_jobs} == {
+        "new",
+        "continuation",
+    }

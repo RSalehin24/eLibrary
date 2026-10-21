@@ -1,4 +1,8 @@
 export const siteAccountMessages: Readonly<Record<string, string>> = {
+  "সেটআপের লিংক কপি করুন": "Copy setup URL",
+  "সেটআপের লিংক কপি হয়েছে।": "Setup URL copied.",
+  "লিংক কপি করা যায়নি। নিচের লিংক নির্বাচন করে কপি করুন।": "Could not copy the setup URL. Select the URL below and copy it.",
+  "সেটআপের লিংক দেখুন": "Show setup URL",
   "নোটিফিকেশনের শব্দ": "Notification sounds",
   "আমার সব বই": "All My Books",
   "বইয়ের পাতা খুলে আমার বইয়ে যোগ করুন বাটনে চাপুন। যোগ করা বই এখানে পাবেন।": "Open a book and choose Add to My Books. Your added books will appear here.",

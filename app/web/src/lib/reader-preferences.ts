@@ -1,5 +1,5 @@
 export type ReaderAppearance = { fontSize: number; theme: "paper" | "sepia" | "dark"; view: "scroll" | "single" | "spread"; font: "serif" | "sans" | "publisher"; lineHeight: number; width: number };
-export const defaultReaderAppearance: ReaderAppearance = { fontSize: 20, theme: "paper", view: "scroll", font: "serif", lineHeight: 1.9, width: 800 };
+export const defaultReaderAppearance: ReaderAppearance = { fontSize: 20, theme: "paper", view: "scroll", font: "serif", lineHeight: 1.9, width: 0 };
 
 export function readerAppearanceShortcut(event: KeyboardEvent, appearance: ReaderAppearance): ReaderAppearance | null {
   if (event.defaultPrevented || event.altKey || !(event.ctrlKey || event.metaKey)) return null;
@@ -18,6 +18,6 @@ export function checkedReaderAppearance(value: unknown): ReaderAppearance {
     view: data.view === "single" || data.view === "spread" ? data.view : "scroll",
     font: data.font === "sans" || data.font === "publisher" ? data.font : "serif",
     lineHeight: typeof data.lineHeight === "number" && Number.isFinite(data.lineHeight) ? Math.max(1.4, Math.min(2.4, data.lineHeight)) : 1.9,
-    width: typeof data.width === "number" && [640, 800, 1040].includes(data.width) ? data.width : 800,
+    width: typeof data.width === "number" && [0, 640, 800, 1040].includes(data.width) ? data.width : 0,
   };
 }

@@ -119,6 +119,9 @@ def seed_fixture():
         owner, reader = create_account(identity, "reader")
         administrator_user, administrator = create_account(identity, "administrator")
         _, superadministrator = create_account(identity, "superadministrator")
+        _, creation_administrator = create_account(
+            uuid4().hex[:8], "superadministrator"
+        )
         from seed_lifecycle import (
             create_lifecycle_fixture,
             create_reader_update_fixture,
@@ -168,6 +171,7 @@ def seed_fixture():
         profile_user, profile_reader = create_account(identity, "profile-reader")
         UserBook.objects.create(user=profile_user, book=books[0])
         security_user, security_reader = create_account(identity, "security-reader")
+        _, totp_copy_reader = create_account(identity, "totp-copy-reader")
         security_reader["previous_session"] = create_session(security_user)
         required_user, required_reader = create_account(identity, "required-reader")
         required_user.totp_required = True
@@ -195,10 +199,15 @@ def seed_fixture():
         from seed_source_processing import create_source_processing_fixture
 
         source_processing = create_source_processing_fixture(source_user)
+        from seed_layout import create_page_fixtures
+
+        pages = create_page_fixtures(identity, books[0])
     return {
         "reader": reader,
+        **pages,
         "administrator": administrator,
         "superadministrator": superadministrator,
+        "creation_administrator": creation_administrator,
         "maintenance_administrator": maintenance_administrator,
         "catalog_administrator": catalog_administrator,
         "editor": scoped_editor,
@@ -220,6 +229,7 @@ def seed_fixture():
         "update_book": update_book,
         "profile_reader": profile_reader,
         "security_reader": security_reader,
+        "totp_copy_reader": totp_copy_reader,
         "required_reader": required_reader,
         "access_manager": access_manager,
         "managed_reader": managed_reader,

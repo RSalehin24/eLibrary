@@ -26,7 +26,7 @@ test("library confirmation enables maintenance and a later password-only login i
   await page.getByRole("button", { name: "কোড নিশ্চিত করুন", exact: true }).click();
   await expect(page.getByText("দুই ধাপের নিরাপত্তা চালু হয়েছে।", { exact: true })).toBeVisible();
   expect((await page.request.get(`${apiOrigin}/admin/`)).status()).toBe(200);
-  await page.getByRole("button", { name: "প্রস্থান", exact: true }).click(); await expect(page).toHaveURL("/");
+  await page.locator("details.account-menu:visible > summary").click(); await page.getByRole("button", { name: "প্রস্থান", exact: true }).click(); await expect(page).toHaveURL("/");
   await page.goto(`${apiOrigin}/admin/login/`);
   await page.getByLabel("Email:", { exact: true }).fill(fixture.maintenance_administrator.email);
   await page.getByLabel("Password:", { exact: true }).fill(fixture.maintenance_administrator.password);

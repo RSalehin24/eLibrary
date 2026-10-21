@@ -20,6 +20,15 @@ SOURCE_AVAILABILITY_ERRORS = frozenset(
         "source_circuit_open",
     }
 )
+SOURCE_RECHECK_CHECKPOINT_KEYS = frozenset(
+    {
+        "source_revision",
+        "source_url",
+        "catalog_revision",
+        "catalog_book_id",
+        "source_validation_recovery",
+    }
+)
 
 
 def source_retry_delay(job):
@@ -53,8 +62,7 @@ def schedule_source_availability(job):
         job.checkpoint = {
             key: value
             for key, value in job.checkpoint.items()
-            if key
-            in {"source_revision", "source_url", "catalog_revision", "catalog_book_id"}
+            if key in SOURCE_RECHECK_CHECKPOINT_KEYS
         }
     JobDispatch.objects.create(
         job=job, generation=job.generation, available_at=job.available_at

@@ -12,7 +12,7 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.mark.parametrize(
-    "sort,expected",
+    "ordering",
     [
         ("name_asc", ["A", "b", "c"]),
         ("name_desc", ["c", "b", "A"]),
@@ -22,8 +22,9 @@ pytestmark = pytest.mark.django_db
     ],
 )
 def test_accounts_restore_all_sorts_with_filters_and_pagination(
-    client, accounts, sort, expected
+    client, accounts, ordering
 ):
+    sort, expected = ordering
     for name, email in [("A", "z"), ("b", "m"), ("c", "a")]:
         User.objects.create_user(
             email=f"sort-{email}@library.test", full_name=name, is_active=name != "b"

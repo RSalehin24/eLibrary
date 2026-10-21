@@ -1,11 +1,12 @@
 from django.conf import settings
 from django.http import Http404
 from django.urls import reverse
-from drf_spectacular.utils import OpenApiTypes, extend_schema
+from drf_spectacular.utils import OpenApiParameter, OpenApiTypes, extend_schema
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.access.protected_files import protected_file_response
+from apps.access.protected_media import protected_media_response
 from apps.access.reader_serializers import (
     ReaderProgressSerializer,
     ReaderSessionSerializer,
@@ -105,17 +106,29 @@ class ReaderResourceView(VersionedAPIView):
 
     @extend_schema(
         operation_id="reader_resource",
-        responses={200: OpenApiTypes.BINARY, 404: APIErrorSerializer},
+        parameters=[
+            OpenApiParameter(
+                "Range",
+                OpenApiTypes.STR,
+                OpenApiParameter.HEADER,
+                description="Single byte range for embedded audio/video resources.",
+            )
+        ],
+        responses={
+            200: OpenApiTypes.BINARY,
+            206: OpenApiTypes.BINARY,
+            404: APIErrorSerializer,
+            416: None,
+        },
     )
     def get(self, request, identifier, asset_path):
         session = account_reader_session(request.user, identifier)
-        resource_source = settings.FRONTEND_BASE_URL + reader_resource_base(session.pk)
-        return protected_resource_response(
-            session.prepared_publication, asset_path, resource_source
-        )
+        return protected_resource_response(session, asset_path, request)
 
 
-def protected_resource_response(publication, asset_path, resource_source):
+def protected_resource_response(session, asset_path, request):
+    publication = session.prepared_publication
+    resource_source = settings.FRONTEND_BASE_URL + reader_resource_base(session.pk)
     try:
         path = resource_path(asset_path)
     except InvalidEpub as exc:
@@ -127,16 +140,22 @@ def protected_resource_response(publication, asset_path, resource_source):
     target = publication_directory(publication) / path
     if resource is None or not target.is_file():
         raise Http404("Reader resource not found.")
-    response = protected_file_response(target, resource["media_type"])
+    response = (
+        protected_media_response(target, request, resource["media_type"])
+        if resource["media_type"].startswith(("audio/", "video/"))
+        else protected_file_response(target, resource["media_type"])
+    )
     # WebKit needs script-capable sandboxing for parent-owned event listeners;
     # CSP still forbids every authored script, handler, and JavaScript URL.
     response["Content-Security-Policy"] = (
         f"default-src 'none'; script-src 'none'; img-src {resource_source} data:; "
         f"style-src {resource_source} 'unsafe-inline'; font-src {resource_source}; "
+        f"media-src {resource_source}; "
         "frame-ancestors 'self'; base-uri 'none'; form-action 'none'; "
         "sandbox allow-same-origin allow-scripts"
     )
     response["X-Content-Type-Options"] = "nosniff"
     response["X-Frame-Options"] = "SAMEORIGIN"
     response["Referrer-Policy"] = "no-referrer"
+    response["Permissions-Policy"] = "autoplay=()"
     return response

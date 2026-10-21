@@ -12,7 +12,7 @@ import { sourceStatuses } from "@/lib/source-status";
 import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
 import Link from "next/link";
-import { AdminText } from "@/components/admin-language";
+import { AdminNavigation, AdminText } from "@/components/admin-language";
 import { Icon } from "@/components/icon";
 
 export async function generateMetadata() { return localizeMetadata({ title: "বইয়ের উৎস" }); }
@@ -25,8 +25,12 @@ export default async function SourcesPage({ searchParams }: { searchParams: Prom
   let initial: SourceEntries;
   try { initial = await sessionRequest<SourceEntries>(`manage/sources/?${parameters}`); }
   catch (error) { if (error instanceof APIError && error.status === 404) notFound(); throw error; }
-  const [options, processing, automations] = await Promise.all([sessionRequest<SourceDiscoveryOptions>("manage/sources/discovery/"), sessionRequest<CatalogProcessingOptions>("manage/sources/process-all/"), sessionRequest<Automations>("manage/automations/?page=1")]);
-  return <><div className="admin-page-heading"><div><h1><AdminText>বই তৈরি</AdminText></h1><p className="muted"><AdminText>তালিকা থেকে বই বেছে নিন, তৈরি করুন, তারপর ফাইল যাচাই করে প্রকাশ করুন।</AdminText></p></div>
-    <Link className="text-link" href="/manage/jobs/"><AdminText>কাজের অগ্রগতি</AdminText></Link></div>
-    <div className="admin-controls"><SourceDiscovery options={options} /><ProcessAllSources initial={processing} /><SourceScheduling initial={automations} />{session.workspaces.can_create_books && <Link className="button button-quiet admin-main-action" href="/manage/books/new/"><Icon name="upload" /><AdminText>নিজে বই যোগ করুন</AdminText></Link>}</div><ManagedSources initial={initial} filter={parameters.toString()} /></>;
+  const [options, processing, automations] = await Promise.all([sessionRequest<SourceDiscoveryOptions>("manage/sources/discovery/"), sessionRequest<CatalogProcessingOptions>("manage/sources/process-all/"), session.workspaces.management_sections.includes("automations") ? sessionRequest<Automations>("manage/automations/?page=1") : null]);
+  return <section className="book-creation-center"><header className="admin-page-heading"><div><h1><AdminText>বই তৈরি</AdminText></h1></div>
+    {session.workspaces.management_sections.includes("jobs") && <Link className="text-link" href="/manage/jobs/"><Icon name="jobs" /><AdminText>কাজের অবস্থা</AdminText></Link>}</header>
+    <div className="admin-controls source-creation-actions"><SourceDiscovery options={options} /><ProcessAllSources initial={processing} />
+      {session.workspaces.can_create_books && <Link className="button button-quiet admin-main-action" href="/manage/books/new/"><Icon name="upload" /><AdminText>EPUB আপলোড</AdminText></Link>}
+      {automations && <SourceScheduling initial={automations} />}</div>
+    <AdminNavigation className="admin-local-tabs" label="বই তৈরির তালিকা"><Link href="/manage/sources/" aria-current="page"><Icon name="source" /><AdminText>ওয়েবসাইটের বই</AdminText></Link><Link href="/manage/unfinished/"><Icon name="read" /><AdminText>অসম্পূর্ণ বই</AdminText></Link></AdminNavigation>
+    <ManagedSources initial={initial} filter={parameters.toString()} /></section>;
 }

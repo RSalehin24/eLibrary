@@ -29,6 +29,8 @@ test("personal detail links keep private books inside their own library", () => 
     assert.equal(href.searchParams.get(filter), "নিজের বই");
   }
   assert.equal(bookDetailEntityPath({ kind: "contributors", slug: "editor-name", role: "editor", personal: true }), "/my-books/?contributor=editor-name&contributor_role=editor");
+  assert.equal(bookDetailEntityPath({ kind: "categories", slug: "private-category", personal: true, view: "granted" }), "/my-books/?category=private-category&view=granted");
+  assert.equal(bookDetailEntityPath({ kind: "categories", slug: "owned-category", personal: true, view: "all" }), "/my-books/?category=owned-category");
 });
 
 test("detail preview labels and automatic publication guidance are bilingual", () => {

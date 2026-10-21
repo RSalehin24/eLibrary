@@ -1,6 +1,7 @@
 import type { ReaderAppearance } from "./reader-preferences";
+import { mediaSpatialPoint } from "./reader-media-geometry";
 export type { ReaderAppearance } from "./reader-preferences";
-export type ReadingAnchor = { node: Node; offset: number; top: number };
+export type ReadingAnchor = { node: Node; offset: number; top: number; spatial?: { x: number; y: number }; viewportFraction?: number };
 const THEMES = { paper: ["#fbfaf6", "#20372e"], sepia: ["#f1e7d1", "#3e3222"], dark: ["#18221e", "#eee9dd"] };
 
 export function applyAppearance(document: Document, appearance: ReaderAppearance) {
@@ -14,7 +15,7 @@ export function applyAppearance(document: Document, appearance: ReaderAppearance
   document.documentElement.dataset.readerView = appearance.view;
   const font = appearance.font === "sans" ? 'font-family:"Noto Sans Bengali",system-ui,sans-serif!important;' : appearance.font === "serif" ? 'font-family:"Noto Serif Bengali","Bangla Sangam MN",serif!important;' : "";
   style.textContent = `* { box-sizing:border-box; } html { color-scheme:${appearance.theme === "dark" ? "dark" : "light"}; scroll-behavior:auto; background:${background}!important; overflow:${paged ? "hidden" : "auto"}!important; overscroll-behavior:none; }
-    body { max-width:${paged ? "none" : appearance.width + "px"}!important; width:100%!important; margin:auto!important; padding:24px!important; color:${color}!important; background:${background}!important; overflow-wrap:anywhere; line-height:${appearance.lineHeight}!important; font-size:${appearance.fontSize}px!important; ${font}
+    body { max-width:${paged || appearance.width === 0 ? "none" : appearance.width + "px"}!important; width:100%!important; margin:auto!important; padding:24px!important; color:${color}!important; background:${background}!important; overflow-wrap:anywhere; line-height:${appearance.lineHeight}!important; font-size:${appearance.fontSize}px!important; ${font}
     ${paged ? `height:${document.documentElement.clientHeight}px!important; column-width:${(document.documentElement.clientWidth - 48 - (columns - 1) * 48) / columns}px!important; column-gap:48px!important; column-fill:auto!important;` : "height:auto!important; column-width:auto!important;"} }
     body p,body li,body blockquote,body td,body div,body span { font-size:inherit!important; line-height:inherit!important; color:inherit!important; background:transparent!important; ${font} }
     body h1 { font-size:1.7em!important; } body h2 { font-size:1.4em!important; } body h3 { font-size:1.2em!important; }
@@ -61,9 +62,21 @@ export function visibleAnchor(document: Document): ReadingAnchor | null {
 
 export function restoreAnchor(document: Document, anchor: ReadingAnchor | null, fraction: number) {
   if (!anchor?.node.isConnected || anchor.node.ownerDocument !== document) { restoreScroll(document, fraction); return; }
-  const range = document.createRange(); range.setStart(anchor.node, anchor.offset); range.collapse(true);
+  const point = readingAnchorPoint(anchor);
+  if (!point) { restoreScroll(document, fraction); return; }
   const root = document.scrollingElement ?? document.documentElement;
+  if (isPaged(document)) root.scrollLeft = Math.floor((point.x + root.scrollLeft) / root.clientWidth) * root.clientWidth;
+  else root.scrollTop += point.y - (anchor.viewportFraction === undefined ? anchor.top : root.clientHeight * anchor.viewportFraction);
+}
+
+export function readingAnchorPoint(anchor: ReadingAnchor) {
+  const document = anchor.node.ownerDocument;
+  if (!document) return null;
+  if (anchor.node.nodeType === 1) {
+    const element = anchor.node as Element, rectangle = element.getBoundingClientRect();
+    return anchor.spatial ? mediaSpatialPoint(element, anchor.spatial) : { x: rectangle.left, y: rectangle.top };
+  }
+  const range = document.createRange(); range.setStart(anchor.node, anchor.offset); range.collapse(true);
   const rectangle = range.getBoundingClientRect();
-  if (isPaged(document)) root.scrollLeft = Math.floor((rectangle.left + root.scrollLeft) / root.clientWidth) * root.clientWidth;
-  else root.scrollTop += rectangle.top - anchor.top;
+  return { x: rectangle.left, y: rectangle.top };
 }

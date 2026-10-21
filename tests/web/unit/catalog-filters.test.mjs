@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { typescriptModule } from "./typescript-module.mjs";
 
 const { savedCatalogFilter } = await typescriptModule(new URL("../../../app/web/src/lib/saved-catalog-filter.ts", import.meta.url));
-const { catalogNeedsAccount, catalogFilterQuery } = await typescriptModule(new URL("../../../app/web/src/lib/catalog-filters.ts", import.meta.url));
+const { catalogNeedsAccount, catalogFilterQuery, catalogHasConditions } = await typescriptModule(new URL("../../../app/web/src/lib/catalog-filters.ts", import.meta.url));
 const { catalogFilterMessages } = await typescriptModule(new URL("../../../app/web/src/lib/catalog-filter-messages.ts", import.meta.url));
 
 test("filter controls include English labels for every main action", () => {
@@ -34,4 +34,16 @@ test("ownership and personal collection dates require account scoped requests an
 test("catalog links encode all selected filters and preserve Bengali names", () => {
   const encoded = catalogFilterQuery({ contributor: "বিভূতিভূষণ", category: "কথা & কাহিনি", q: "", sort: "-title", view: "owned" });
   assert.deepEqual(Object.fromEntries(new URLSearchParams(encoded)), { contributor: "বিভূতিভূষণ", category: "কথা & কাহিনি", sort: "-title", view: "owned" });
+});
+
+test("an empty server filter permits clearing an unsubmitted draft without changing its view", () => {
+  assert.equal(catalogHasConditions({ record_type: "all", q: "", sort: "" }), false);
+  assert.equal(catalogHasConditions({ record_type: "manual" }, "manual"), false);
+  assert.equal(catalogHasConditions({ record_type: "manual" }), true);
+});
+
+test("submitted and physical filters keep their URL navigation and cached form state", () => {
+  for (const condition of [{ q: "বই" }, { sort: "title" }, { contributor: "লেখক" }, { binding: "hard_cover", record_type: "manual" }]) {
+    assert.equal(catalogHasConditions(condition, "manual"), true);
+  }
 });

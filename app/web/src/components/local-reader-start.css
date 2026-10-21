@@ -1,0 +1,9 @@
+.local-reader-start { max-width:840px; margin:40px auto; padding:36px; border:1px solid var(--line); border-radius:16px; background:var(--surface); box-shadow:var(--shadow); }
+.local-reader-heading { display:flex; gap:16px; align-items:center; margin-bottom:24px; color:var(--green); }
+.local-reader-heading h1 { margin:0; font-size:clamp(1.5rem,3vw,2rem); }
+.local-reader-start>p { max-width:65ch; color:var(--muted); }
+.local-reader-upload { margin-top:28px; padding:24px; border:1px solid #d5e1d7; border-radius:12px; background:var(--soft); }
+.local-reader-upload>label { display:flex; align-items:center; gap:10px; font-weight:600; margin-bottom:16px; }
+.local-reader-upload .file-picker { gap:12px; }
+.local-reader-upload .muted { margin:16px 0 0; }
+@media(max-width:767px) { .local-reader-start { margin:24px 0; padding:20px; } .local-reader-upload { padding:16px; } }

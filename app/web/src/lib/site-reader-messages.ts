@@ -2,6 +2,7 @@ export const siteReaderMessages: Readonly<Record<string, string>> = {
   "আগের সংরক্ষিত জায়গাটি এই সংস্করণে পাওয়া যায়নি। আপনার নোট সংরক্ষিত আছে।": "The saved position could not be found in this edition. Your notes are preserved.",
   "দুইবার ট্যাপ করে পূর্ণ পর্দা খুলুন। দুই আঙুল কাছে বা দূরে সরিয়ে লেখা ছোট-বড় করুন; দুই আঙুল দিয়ে একবার ট্যাপ করে পাতার রং বদলান।": "Double tap for fullscreen. Pinch to resize text; tap with two fingers to change the page theme.",
   "অক্ষর ছোট করুন": "Decrease Text Size", "অক্ষর বড় করুন": "Increase Text Size",
+  "পর্দার পুরো প্রস্থ": "Full screen width", "T: সূচিপত্র · S: সেটিংস · /: বইয়ে খুঁজুন": "T: contents · S: settings · /: search book",
   "পড়ার ধরন": "Reading View", "স্ক্রল করে পড়ুন": "Scrolling", "এক পৃষ্ঠা": "Single Page", "পাশাপাশি দুই পৃষ্ঠা": "Two Pages",
   "ছোট পর্দায় এক পৃষ্ঠা দেখা যাবে।": "Small screens show one page at a time.",
   "পূর্ণ পর্দা": "Fullscreen", "পূর্ণ পর্দা থেকে ফিরুন": "Exit Fullscreen", "শুধু বই দেখুন": "Focus Mode", "সাধারণ দৃশ্যে ফিরুন": "Exit Focus Mode",

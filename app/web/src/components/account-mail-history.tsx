@@ -1,6 +1,7 @@
 "use client";
 
-import { AdminDate, AdminNavigation, AdminText } from "@/components/admin-language";
+import { AdminDate, AdminText } from "@/components/admin-language";
+import { NumberedPagination } from "./numbered-pagination";
 import Link from "next/link";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -25,6 +26,5 @@ export function AccountMailHistory({ account }: { account: ManagedAccount }) {
     {query.isPending && <p role="status"><AdminText>{"ইমেইলের অবস্থা খোলা হচ্ছে…"}</AdminText></p>}{query.isError && <p className="field-error" role="alert"><AdminText>{"ইমেইলের অবস্থা পাওয়া যায়নি। "}</AdminText><button className="button button-quiet" onClick={() => void query.refetch()}><AdminText>{"আবার দেখুন"}</AdminText></button></p>}
     <ul className="job-list">{query.data?.entries.map((job) => <li className="job-card" key={job.id}><Link className="text-link" href={`/manage/users-access/mail/${job.id}/`}><AdminText>{jobStates[job.state]}</AdminText> · <AdminDate value={job.created_at} /></Link></li>)}</ul>
     {pagination?.total_count === 0 && <p className="muted"><AdminText>{"কোনো আমন্ত্রণের অনুরোধ নেই।"}</AdminText></p>}
-    {pagination && <AdminNavigation label="আমন্ত্রণের ইমেইলের পাতা" className="account-actions"><button className="button button-quiet" disabled={page === 1 || query.isFetching} onClick={() => setPage(page - 1)}><AdminText>{"আগের পাতা"}</AdminText></button>
-      <button className="button button-quiet" disabled={page * pagination.limit >= pagination.total_count || query.isFetching} onClick={() => setPage(page + 1)}><AdminText>{"পরের পাতা"}</AdminText></button></AdminNavigation>}</section>;
+    {pagination && <NumberedPagination page={page} totalPages={Math.max(1, Math.ceil(pagination.total_count / pagination.limit))} onPageChange={setPage} busy={query.isFetching} label="আমন্ত্রণের ইমেইলের পাতা" />}</section>;
 }

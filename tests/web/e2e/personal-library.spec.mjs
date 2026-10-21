@@ -1,10 +1,49 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { readFile } from "node:fs/promises";
+import { test, expect, fixture, useAccount, artifactPath, setLanguage } from "./fixtures.mjs";
+
+test("My Books prioritizes results while keeping filters and exports usable in both languages", async ({ page }) => {
+  await useAccount(page, "personal_reader");
+  for (const { width, height, language } of [
+    { width: 1365, height: 900, language: "English" }, { width: 1365, height: 900, language: "বাংলা" },
+    { width: 390, height: 844, language: "English" }, { width: 390, height: 844, language: "বাংলা" },
+  ]) {
+    await page.setViewportSize({ width, height }); await page.goto("/my-books/?view=granted");
+    await setLanguage(page, language === "English" ? "en" : "bn");
+    const book = page.locator(".book-card").filter({ hasText: fixture.personal.private.title });
+    await expect(book).toBeVisible();
+    const bounds = await book.boundingBox(), exports = await page.locator(".catalog-export-controls").boundingBox();
+    expect(bounds.y).toBeLessThan(width > 1000 ? height - 100 : height * 1.2);
+    expect(exports.y).toBeGreaterThan(bounds.y + bounds.height);
+    await expect(page.locator(".catalog-filters-form").getByRole("link")).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    await page.screenshot({ path: artifactPath(`library-density-${test.info().project.name}-${width}-${language === "English" ? "en" : "bn"}.png`), fullPage: true });
+  }
+  const form = page.locator(".catalog-filters-form");
+  await form.getByRole("searchbox").fill(fixture.personal.private.title);
+  await form.getByRole("link", { name: "ফিল্টার সরান", exact: true }).click();
+  expect(new URL(page.url()).searchParams.get("view")).toBe("granted");
+  await expect(form.getByRole("searchbox")).toHaveValue("");
+  await page.locator(".catalog-export-controls summary").click();
+  const downloading = page.waitForEvent("download");
+  await page.locator(".catalog-export-controls").getByRole("button", { name: "CSV", exact: true }).click();
+  const download = await downloading;
+  expect(await readFile(await download.path(), "utf8")).toContain(fixture.personal.private.title);
+  await page.setViewportSize({ width: 320, height: 800 });
+  await page.addStyleTag({ content: "html { font-size: 200%; }" });
+  await form.locator("summary").click();
+  await expect(form.getByLabel("লেখক বা সহযোগী", { exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
 
 test("saved and granted library views do not transfer ownership", async ({ page }) => {
   await useAccount(page, "personal_reader"); await page.goto(`/books/${encodeURIComponent(fixture.book.slug)}/`);
   await page.getByRole("button", { name: "আমার বইয়ে যোগ করুন", exact: true }).click();
   await expect(page.getByRole("button", { name: "আমার বই থেকে সরান", exact: true })).toBeVisible();
   await page.goto("/my-books/"); await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
+  const tabs = page.locator(".personal-library-tabs");
+  const bounds = await tabs.boundingBox();
+  expect(bounds.height).toBeLessThan(page.viewportSize().width >= 1024 ? 120 : page.viewportSize().height / 2);
+  for (const link of await tabs.getByRole("link").all()) expect((await link.boundingBox()).height).toBeGreaterThanOrEqual(44);
   await page.goto("/my-books/?view=owned"); await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toHaveCount(0);
   await page.getByRole("link", { name: "অনুমতি পাওয়া বই", exact: true }).click();
   await expect(page.getByRole("heading", { name: fixture.personal.private.title, exact: true })).toBeVisible();
@@ -24,8 +63,8 @@ test("paper reading logs persist privately and appear in recent reading on a pho
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-artifacts/foundation/physical-reading-320.png", fullPage: true });
   await page.reload(); await expect(page.getByLabel("পড়ার ব্যক্তিগত নোট", { exact: true })).toHaveValue("আমার ব্যক্তিগত কাগজের বইয়ের নোট");
-  await page.goto("/my-books/?view=recent"); await expect(page.getByText("পড়া হয়েছে ২৫%", { exact: true })).toBeVisible();
-  await useAccount(page, "reader"); await page.goto(`/my-books/${encodeURIComponent(fixture.personal.paper.slug)}/`);
+  await page.goto("/my-books/?view=recent"); await expect(page.locator(".book-card-progress").filter({ hasText: "পড়া হয়েছে ২৫%" })).toBeVisible();
+  await page.goto("about:blank"); await useAccount(page, "reader"); await page.goto(`/my-books/${encodeURIComponent(fixture.personal.paper.slug)}/`);
   await expect(page.getByLabel("পড়ার ব্যক্তিগত নোট", { exact: true })).toHaveValue("");
 });
 
@@ -53,7 +92,7 @@ test("book details show the actual last chapter and resume the saved position in
   await expect(summary.locator(".book-last-location")).toContainText(session.chapters[1].label);
   await expect(summary.locator(".book-last-location")).toContainText("৪০%");
   await expect(summary.locator(".book-last-location")).not.toContainText("chapter:1:");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const english = page.getByRole("region", { name: "Your reading and notes", exact: true });
   await expect(english.getByRole("heading", { name: "Where you stopped reading", exact: true })).toBeVisible();
   await expect(english.locator(".book-last-location")).toContainText("40%");

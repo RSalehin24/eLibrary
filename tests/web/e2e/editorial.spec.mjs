@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 test("blocked source publication explains regeneration in both languages without replaying the request", async ({ page }) => {
   await useAccount(page, "editor");
@@ -12,7 +12,7 @@ test("blocked source publication explains regeneration in both languages without
   const alert = page.locator(".editorial-workspace").getByRole("alert");
   await expect(alert).toContainText("বইয়ের সম্পূর্ণ লেখা ও ফাইল স্বয়ংক্রিয়ভাবে যাচাই করতে বইটি আবার তৈরি করুন।");
   await expect(alert).not.toContainText("তথ্য বদলেছে");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(alert).toContainText("Regenerate this book to verify its complete text and files automatically.");
   expect(requests).toBe(1);
 });
@@ -37,10 +37,10 @@ test("saved editorial changes publish directly with canonical redirects", async 
   const history = page.locator("#metadata-history");
   await expect(history.getByText("বইয়ের নাম ও বিবরণ সংশোধন করা হয়েছে।", { exact: true })).toBeVisible();
   await expect(history.getByText("বইয়ের তথ্য সম্পাদনা", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.getByRole("heading", { name: "Metadata History", exact: true })).toBeVisible();
   await expect(history.getByText("Book details edited", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
 
   await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeEnabled();
   await page.getByRole("button", { name: "প্রকাশ করুন", exact: true }).click();

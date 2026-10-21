@@ -13,3 +13,10 @@ export function catalogFilterQuery(values: CatalogFilters) {
 export function catalogNeedsAccount(values: CatalogFilters) {
   return values.ownership === "mine" || ["requested_at", "-requested_at"].includes(values.sort ?? "");
 }
+
+export function catalogHasConditions(values: CatalogFilters, lockedRecordType?: string) {
+  return Object.entries(values).some(([name, value]) => {
+    if (!value) return false;
+    return name !== "record_type" || value !== "all" && value !== lockedRecordType;
+  });
+}

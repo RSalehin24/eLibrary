@@ -2,11 +2,22 @@
 
 ## Working implementation
 
-Anonymous book metadata is rendered in Bengali HTML without JavaScript. Public
-book responses require publication, approved metadata, and an undeleted record.
+Anonymous book metadata is rendered as HTML without requiring JavaScript;
+Bengali is the default interface language. Public book responses require a
+published, undeleted record that is neither rejected nor source-quarantined.
 Content HTML, raw source payloads, asset paths, and reader tokens are excluded.
 Lists load only their declared fields and batch their three relationship sets;
 the book feed remains four database queries at both 24 and 100 entries.
+
+Catalog, public entity/collection book lists, editions and private library feeds
+also return additive `pagination` metadata: `page`, `limit`, `total_count` and
+`page_count`. Totals use the exact filtered, permission-scoped queryset. An
+uncorrelated count subquery retains the existing feed query budgets; an empty
+result uses a separate count because no annotated row exists. Existing cursor
+fields remain supported, with `pagination.page` set to null for cursor requests.
+The web UI uses numbered links with first/last pages, nearby pages and ellipses,
+preserves active filters, and uses a shorter window on phones. Invalid personal
+and paper-book page numbers do not masquerade as empty libraries.
 
 Contributor, category, and series pages require a linked public book. Curated
 collections also require publication and a reviewed, nonempty introduction.
@@ -16,13 +27,16 @@ editorial position and exclude unpublished or withdrawn books.
 Book, contributor, category, series, and collection metadata support editorial
 introductions, verified aliases, SEO overrides, social images, indexing
 eligibility, and reviewed timestamps. Unreviewed introductions, aliases, and
-overrides are withheld from public responses. The admin book form saves metadata,
-reviews it, publishes it, and withdraws it. These operations enforce the existing
-metadata scopes in Django and reject stale revisions with HTTP 409. Successful
-edits record the preceding metadata version and require another review.
+overrides are withheld from public responses. Book metadata saves, publication
+and withdrawal enforce the existing Django scopes and reject stale revisions
+with HTTP 409. Edits retain the preceding metadata version and clear the optional
+editorial review timestamp. This does not remove an otherwise valid published
+book from browsing. Website books publish automatically after source/chapter/file
+verification; no per-book manual editorial approval is required.
 
-Entity introductions and ordered collection membership have complete `/manage/`
-editing, review, and publication workflows. See `catalog-entities.md`.
+Entity introductions and ordered collection membership have `/manage/` editing
+and publication workflows, with editorial review metadata retained for indexing.
+See `catalog-entities.md`.
 
 Slug history survives renaming, reserves former slugs from other records, and
 resolves only inside the caller's permitted queryset. Public pages permanently
@@ -31,7 +45,8 @@ within their database length limit even when suffixes are necessary.
 
 ## Crawl and indexing policy
 
-Public HTML uses `lang="bn"`. Canonical page URLs use the configured HTTPS
+Public HTML follows the selected interface language, defaulting to `lang="bn"`.
+Canonical page URLs use the configured HTTPS
 origin, Unicode slugs encoded in links, and trailing slashes. XML and text files
 use extension URLs without a trailing slash. No geographic redirects or
 transliteration copies are created.

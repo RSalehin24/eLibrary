@@ -14,7 +14,7 @@ from .publication import completed_source_publication, publish_verified_source
 from .queries import current_source_job
 from .reading_preparation import prepare_source_reading
 from .summary import source_summary
-from .verification import source_verification
+from .verification import source_collection_issues, source_verification
 
 
 def source_result(ownership, job):
@@ -42,9 +42,9 @@ def require_complete_source(result):
     snapshot = result.get("source_snapshot", {})
     raw = snapshot.get("raw_scrape_payload", {})
     classification = source_verification(result)["classification"]
-    if classification == "unavailable_content":
+    if classification == "unavailable_content" or source_collection_issues(snapshot):
         raise ExecutionFailure(FailureKind.TRANSIENT, "source_content_unavailable")
-    if classification in {"description_only", "unknown_layout"}:
+    if classification in {"description_only", "unknown_layout", "linked_collection"}:
         code = (
             "source_description_only"
             if classification == "description_only"

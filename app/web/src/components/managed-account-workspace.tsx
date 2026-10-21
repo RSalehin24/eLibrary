@@ -2,7 +2,7 @@
 
 import { SiteSection } from "@/components/site-language";
 
-import { AdminNumber, AdminText } from "@/components/admin-language";
+import { AdminNavigation, AdminNumber, AdminText } from "@/components/admin-language";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { readManagedAccount, readManagedGrants } from "@/api/managed-access";
 import type { ManagedAccount, ManagedGrant, ManagedGrants } from "@/api/types";
@@ -28,12 +28,11 @@ export function ManagedAccountWorkspace({ initial, initialGrants, filter }: { in
   }
   return <div className="account-settings"><h1>{account.data.full_name || account.data.email}</h1>
     {(account.isError || grants.isError) && <p className="field-error" role="alert"><AdminText>{"বর্তমান তথ্য পাওয়া যায়নি। ফর্ম জমা দেওয়ার আগে পাতা আবার খুলুন।"}</AdminText></p>}
-    <p className="muted"><AdminText>{"প্রবেশ: "}</AdminText><AdminText>{account.data.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}</AdminText><AdminText>{" · দুই ধাপ: "}</AdminText><AdminText>{account.data.has_totp_enabled ? "চালু" : "প্রস্তুতি বাকি"}</AdminText></p>
-    {account.data.can_edit ? <><ManagedAccountForm account={account.data} onSaved={onAccountSaved} /><ManagedGrantForm account={account.data} onSaved={onGrantSaved} /></> : <p className="notice"><AdminText>{"নিজের হিসাব বা এই সংরক্ষিত প্রশাসনিক হিসাব এখান থেকে বদলানো যাবে না।"}</AdminText></p>}
-    {account.data.can_edit && <BulkManagedGrantForm account={account.data} onSaved={onBulkSaved} />}
-    {account.data.can_edit && <AccountMailHistory account={account.data} />}
-    <SiteSection aria-label="এই হিসাবের অনুমতি"><h2><AdminText>{"অনুমতির তালিকা"}</AdminText></h2><p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={grants.data.pagination.total_count} /><AdminText>{"টি অনুমতি। বইয়ের মালিকানা এই তালিকার থেকে আলাদা।"}</AdminText></p>
+    <p id={!account.data.can_edit ? "account-security" : undefined} className="muted"><AdminText>{"প্রবেশ: "}</AdminText><AdminText>{account.data.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}</AdminText><AdminText>{" · দুই ধাপ: "}</AdminText><AdminText>{account.data.has_totp_enabled ? "চালু" : "প্রস্তুতি বাকি"}</AdminText></p>
+    <AdminNavigation className="admin-local-tabs" label="হিসাব পরিচালনা"><a href="#account-profile"><AdminText>প্রোফাইল</AdminText></a><a href="#account-access"><AdminText>অনুমতি</AdminText></a><a href="#account-security"><AdminText>নিরাপত্তা</AdminText></a>{account.data.can_edit && <a href="#account-mail"><AdminText>ইমেইলের ইতিহাস</AdminText></a>}</AdminNavigation>
+    {account.data.can_edit ? <section id="account-profile"><ManagedAccountForm account={account.data} onSaved={onAccountSaved} /></section> : <p id="account-profile" className="notice"><AdminText>{"নিজের হিসাব বা এই সংরক্ষিত প্রশাসনিক হিসাব এখান থেকে বদলানো যাবে না।"}</AdminText></p>}
+    <SiteSection id="account-access" aria-label="এই হিসাবের অনুমতি">{account.data.can_edit && <><ManagedGrantForm account={account.data} onSaved={onGrantSaved} /><BulkManagedGrantForm account={account.data} onSaved={onBulkSaved} /></>}<h2><AdminText>{"অনুমতির তালিকা"}</AdminText></h2><p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={grants.data.pagination.total_count} /><AdminText>{"টি অনুমতি। বইয়ের মালিকানা এই তালিকার থেকে আলাদা।"}</AdminText></p>
       <ul className="job-list">{grants.data.entries.map((grant) => <ManagedGrantCard key={grant.id} grant={grant} editable={account.data.can_edit} onSaved={onGrantSaved} />)}</ul>
       {!grants.data.entries.length && <p className="empty-state"><AdminText>{"এখনো কোনো অনুমতি দেওয়া হয়নি।"}</AdminText></p>}
-      <AdminPagination pagination={grants.data.pagination} filter={filter} label="অনুমতির তালিকার পাতা" /></SiteSection></div>;
+      <AdminPagination pagination={grants.data.pagination} filter={filter} label="অনুমতির তালিকার পাতা" /></SiteSection>{account.data.can_edit && <section id="account-mail"><AccountMailHistory account={account.data} /></section>}</div>;
 }

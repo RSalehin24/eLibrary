@@ -1,6 +1,6 @@
 # Reader profile and two-factor authentication
 
-`/profile/` provides Bengali name, password, Kindle-address, and authenticator
+`/profile/` provides Bengali/English name, password, Kindle-address, and authenticator
 settings. The page requires a session, uses noindex metadata, and forwards
 cookies only to private, no-store Django endpoints. Accounts requiring TOTP
 setup reach this screen before private workspaces and retain their intended
@@ -41,7 +41,10 @@ The `/api/v1/auth/2fa/` endpoints expose status, setup, confirmation,
 cancellation, and disabling. Setup requires the current password and reuses
 an interrupted pending device. It returns a QR image and manual Base32 key;
 the UI displays the backend-generated SVG as an image rather than executable
-page markup. Cancelling removes only the account's unconfirmed devices.
+page markup. The setup also offers an explicit Copy setup URL control and a
+selectable URL disclosure. Clipboard failure opens the disclosure and explains
+how to copy manually; no secret is stored or logged. Cancelling removes only
+the account's unconfirmed devices.
 
 Confirmation locks the account and device before verifying the code. Invalid
 attempts commit django-otp's throttle counters before returning an error.

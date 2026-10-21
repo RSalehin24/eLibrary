@@ -6,17 +6,22 @@ export { selectionRange } from "./reader-text";
 
 export type TextSelection = { text: string; selector: { start: number; end: number } };
 
-export function selectedText(document: Document): TextSelection | null {
+function currentSelection(document: Document): TextSelection | null {
   const selection = document.defaultView?.getSelection();
   if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null;
   const range = selection.getRangeAt(0);
   if (!document.body.contains(range.commonAncestorContainer)) return null;
   const text = textNodes(range.cloneContents()).map((node) => node.textContent).join("");
-  if (!text.trim() || text.length > 5000) return null;
   return { text, selector: selectorFromRange(document, range) };
 }
 
+export function selectedText(document: Document): TextSelection | null {
+  const selection = currentSelection(document);
+  return selection?.text.trim() && selection.text.length <= 5000 ? selection : null;
+}
+
 export function applyHighlights(document: Document, annotations: readonly Highlight[]) {
+  const selection = currentSelection(document);
   for (const mark of document.querySelectorAll("mark[data-library-highlight]")) mark.replaceWith(...mark.childNodes);
   document.body.normalize();
   const located = annotations.map(annotation => ({ ...annotation, selector: annotation.selector ?? (annotation.legacy_cfi ? cfiSelection(document, annotation.legacy_cfi) : null) }));
@@ -26,7 +31,15 @@ export function applyHighlights(document: Document, annotations: readonly Highli
     const range = selectionRange(document, annotation.selector);
     if (range?.toString().trim() === annotation.text.trim()) { selectors.set(annotation.id, annotation.selector); markRange(document, range, annotation); }
   }
+  if (selection) restoreSelection(document, selection);
   return selectors;
+}
+
+function restoreSelection(document: Document, previous: TextSelection) {
+  const range = selectionRange(document, previous.selector);
+  if (!range || range.toString() !== previous.text) return;
+  const selection = document.getSelection();
+  selection?.removeAllRanges(); selection?.addRange(range);
 }
 
 function markRange(document: Document, range: Range, annotation: Highlight) {

@@ -23,7 +23,7 @@ export function SavedFilterControls({ target, values, href }: { target: SavedFil
   const removing = useMutation({ mutationFn: deleteSavedFilter, retry: false, onSuccess: refresh });
   if (!session.data?.authenticated) return null;
   const entries = saved.data?.pages.flatMap((page) => page.entries) ?? [];
-  return <section className="saved-catalog-filters" aria-label={t("সংরক্ষিত ফিল্টার")}>
+  return <details className="saved-catalog-filters"><summary><Icon name="bookmark" /><SiteText>সংরক্ষিত ফিল্টার</SiteText>{entries.length > 0 && <span className="count-badge">{entries.length}</span>}</summary><div className="saved-filters-panel">
     {saved.isError && <p role="alert"><SiteText>সংরক্ষিত ফিল্টার পাওয়া যায়নি।</SiteText> <button className="button button-quiet" onClick={() => void saved.refetch()}><SiteText>আবার চেষ্টা করুন</SiteText></button></p>}
     {entries.length > 0 && <><strong><SiteText>সংরক্ষিত ফিল্টার</SiteText></strong><ul className="saved-filter-list">{entries.map((entry) => {
       const destination = href(entry.params as Record<string, unknown>);
@@ -31,13 +31,13 @@ export function SavedFilterControls({ target, values, href }: { target: SavedFil
         <button type="button" className="button button-quiet" aria-label={`${entry.name}: ${t("ফিল্টার মুছুন")}`} disabled={removing.isPending} onClick={() => removing.mutate(entry.id)}><Icon name="trash" /></button></li>;
     })}</ul></>}
     {saved.hasNextPage && <button type="button" className="button button-quiet" disabled={saved.isFetchingNextPage} onClick={() => void saved.fetchNextPage()}><SiteText>আরও দেখুন</SiteText></button>}
-    <details className="saved-filter-create"><summary><Icon name="save" /><SiteText>এই ফিল্টার সংরক্ষণ করুন</SiteText></summary><form onSubmit={(event) => {
+    <form className="saved-filter-create" aria-label={t("এই ফিল্টার সংরক্ষণ করুন")} onSubmit={(event) => {
       event.preventDefault(); const signature = JSON.stringify([name.trim(), values]);
       if (command.current.signature !== signature) command.current = { signature, identifier: crypto.randomUUID() };
       saving.mutate({ operation_id: command.current.identifier, target, name: name.trim(), params: { ...values } });
     }}><label htmlFor={id}><SiteText>ফিল্টারের নাম</SiteText></label><div className="search-row"><input id={id} value={name} maxLength={120} required onChange={(event) => setName(event.target.value)} disabled={saving.isPending} aria-invalid={saving.error instanceof APIError && !!saving.error.fieldErrors.name} /><button className="button" disabled={saving.isPending}><SiteText>সংরক্ষণ করুন</SiteText></button></div>
       <AccountFeedback error={saving.error} conflictMessage="এই নামে আগে থেকেই একটি ফিল্টার আছে। অন্য নাম দিন।" />
       {saving.isSuccess && <p role="status"><SiteText>ফিল্টার সংরক্ষিত হয়েছে।</SiteText></p>}
-    </form></details><AccountFeedback error={removing.error} />
-  </section>;
+    </form><AccountFeedback error={removing.error} />
+  </div></details>;
 }

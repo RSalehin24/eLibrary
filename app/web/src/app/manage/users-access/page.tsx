@@ -1,3 +1,4 @@
+import { AdminDirectoryFilters } from "@/components/admin-directory-filters";
 import { localizeMetadata } from "@/lib/metadata-language";
 import { AdminNumber, AdminText } from "@/components/admin-language";
 import Link from "next/link";
@@ -9,6 +10,9 @@ import { AdminPagination } from "@/components/admin-pagination";
 import { accountSorts, accountStatuses } from "@/lib/access-status";
 import { queryValue, routePageNumber, type RouteQuery } from "@/lib/route-query";
 import { requireManagement } from "@/lib/workspace-session";
+import { AdminPageHeader } from "@/components/admin-page-header";
+import { ManagedAccountsTable } from "@/components/managed-accounts-table";
+import { Icon } from "@/components/icon";
 
 export async function generateMetadata() { return localizeMetadata({ title: "ব্যবহারকারী ও অনুমতি" }); }
 
@@ -21,14 +25,15 @@ export default async function ManagedAccountsPage({ searchParams }: { searchPara
   let accounts: ManagedAccounts;
   try { accounts = await sessionRequest<ManagedAccounts>(`manage/users/?${parameters}`); }
   catch (error) { if (error instanceof APIError && error.status === 404) notFound(); throw error; }
-  return <><h1><AdminText>{"ব্যবহারকারী ও অনুমতি"}</AdminText></h1>
-    <p><Link className="button" href="/manage/users-access/invite/"><AdminText>{session.user?.is_superuser ? "পাঠক যোগ করুন" : "পাঠককে আমন্ত্রণ জানান"}</AdminText></Link></p>
-    <form className="job-filters access-filters" method="get" role="search"><label htmlFor="account-query"><AdminText>{"নাম, ইমেইল বা অনুমতি"}</AdminText></label><input id="account-query" name="q" defaultValue={search} maxLength={200} />
-      <label htmlFor="account-status"><AdminText>{"হিসাবের অবস্থা"}</AdminText></label><select id="account-status" name="status" defaultValue={status}>{Object.entries(accountStatuses).map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select>
-      <label htmlFor="account-sort"><AdminText>{"অ্যাকাউন্টের তালিকা সাজান"}</AdminText></label><select id="account-sort" name="sort" defaultValue={sort}>{Object.entries(accountSorts).map(([value, label]) => <option key={value} value={value}><AdminText>{label}</AdminText></option>)}</select><button className="button"><AdminText>{"হিসাব খুঁজুন"}</AdminText></button></form>
-    <p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={accounts.pagination.total_count} /><AdminText>{"টি হিসাব"}</AdminText></p>
-    <ul className="job-list">{accounts.entries.map((account) => <li className="job-card" key={account.id}><h2><Link className="text-link" href={`/manage/users-access/${account.id}/`}>{account.full_name || account.email}</Link></h2>
-      <p lang="en" className="kindle-address">{account.email}</p><span className="status-label"><AdminText>{account.is_active ? "সক্রিয়" : "নিষ্ক্রিয়"}</AdminText></span><p className="muted"><AdminText>{"অনুমতি: "}</AdminText><AdminNumber value={account.grant_count} /> · <AdminText>{account.totp_required ? "দুই ধাপ আবশ্যক" : "দুই ধাপ ঐচ্ছিক"}</AdminText></p></li>)}</ul>
-    {!accounts.entries.length && <p className="empty-state"><AdminText>{"এই নামে বা অবস্থায় কোনো হিসাব পাওয়া যায়নি।"}</AdminText></p>}
+  return <><AdminPageHeader title="ব্যবহারকারী" description="অ্যাকাউন্ট খুঁজুন, প্রবেশাধিকার নিয়ন্ত্রণ করুন এবং বই পড়ার অনুমতি দিন।" icon="people">
+    <Link className="button" href="/manage/users-access/invite/"><Icon name="plus" /><AdminText>{session.user?.is_superuser ? "পাঠক যোগ করুন" : "পাঠককে আমন্ত্রণ জানান"}</AdminText></Link>
+    </AdminPageHeader>
+    <AdminDirectoryFilters pathname="/manage/users-access/" search={{ label: "নাম, ইমেইল বা অনুমতি", value: search, maxLength: 200 }} active={!!search || status !== "all" || sort !== "name_asc"}
+      primary={[{ name: "status", label: "হিসাবের অবস্থা", value: status, options: accountStatuses }, { name: "sort", label: "অ্যাকাউন্টের তালিকা সাজান", value: sort, options: accountSorts }]} />
+
+    <section className="admin-list-results" aria-labelledby="account-results-heading"><header className="admin-results-heading"><h2 id="account-results-heading"><AdminText>{"অ্যাকাউন্টের তালিকা"}</AdminText><span className="count-badge"><AdminNumber value={accounts.pagination.total_count} /></span></h2>
+      <p><AdminText>{"নাম বা পরিচালনা করুন বাটন থেকে অ্যাকাউন্ট খুলুন।"}</AdminText></p></header>
+    {accounts.entries.length ? <ManagedAccountsTable accounts={accounts} /> : <div className="admin-list-empty"><Icon name="people" size={32} /><h2><AdminText>{"এই নামে বা অবস্থায় কোনো হিসাব পাওয়া যায়নি।"}</AdminText></h2><p><AdminText>{"ফিল্টার বদলে বা কম শর্ত দিয়ে আবার খুঁজুন।"}</AdminText></p><Link className="button button-quiet" href="/manage/users-access/"><AdminText>{"সব ফিল্টার মুছুন"}</AdminText></Link></div>}
+    </section>
     <AdminPagination pagination={accounts.pagination} filter={parameters.toString()} label="ব্যবহারকারীর তালিকার পাতা" /></>;
 }

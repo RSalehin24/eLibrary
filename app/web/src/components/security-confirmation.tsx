@@ -9,6 +9,7 @@ import { useSecurityForm } from "@/lib/security-form";
 import { useUpdateParticipant } from "@/lib/update-safety";
 import { AccountFeedback } from "./account-feedback";
 import { SecurityCodeField } from "./security-code-field";
+import { AuthenticatorSetupLink } from "./authenticator-setup-link";
 
 export function SecurityConfirmation({ setup, onConfirmed, onCancelled }: { setup: TOTPSetup; onConfirmed: () => Promise<void>; onCancelled: () => Promise<void> }) {
   const confirming = useMutation({ mutationFn: confirmTOTP, onSuccess: onConfirmed, retry: false, gcTime: 0 });
@@ -19,6 +20,7 @@ export function SecurityConfirmation({ setup, onConfirmed, onCancelled }: { setu
     <SiteNextImage unoptimized className="authenticator-qr" src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(setup.qr_svg)}`} alt="Authenticator সেটআপের QR কোড" width={240} height={240} />
     <p><SiteText>{"সেটআপের চাবি: "}</SiteText><code className="authenticator-secret" data-testid="authenticator-secret">{setup.secret}</code></p>
     <p className="muted"><SiteText>{"এই চাবি ব্যক্তিগতভাবে রাখুন। এটি অন্য কাউকে দেবেন না।"}</SiteText></p>
+    <AuthenticatorSetupLink uri={setup.provisioning_uri} />
     <form onChange={form.markDirty} onSubmit={(event) => { event.preventDefault(); confirming.mutate(String(new FormData(event.currentTarget).get("token"))); }}>
       <SecurityCodeField errors={form.errors.token} /><AccountFeedback error={confirming.error ?? cancelling.error} />
       <div className="account-actions"><button className="button" disabled={confirming.isPending || cancelling.isPending}><SiteText>{"কোড নিশ্চিত করুন"}</SiteText></button>

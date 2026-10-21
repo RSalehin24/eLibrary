@@ -17,6 +17,23 @@ node --experimental-vm-modules --test tests/performance/capacity.test.mjs
 node --check tests/performance/capacity.mjs
 ```
 
+Current My Books browsing regressions live in `tests/web/e2e/personal-library.spec.mjs`,
+`catalog-filters.spec.mjs`, `book-list-actions.spec.mjs` and `book-exports.spec.mjs`.
+They cover bilingual result placement, enlarged phone text, unsaved-query reset,
+saved-search restoration and complete filtered exports. See
+[personal-library layout](../docs/operations/personal-library-layout.md) for scope.
+
+The sitewide review uses `tests/web/e2e/design-layout.spec.mjs` and its explicit
+`layout-routes.mjs` inventory: all 53 page route templates, represented by 66 route/state
+variants. It checks both languages, phone/tablet/desktop widths and enlarged text.
+`workspace-views.spec.mjs`, `numbered-pagination.spec.mjs` and `admin-lists.spec.mjs`
+exercise role navigation, filtered page jumps and direct schedule/account actions.
+The isolated runner passes the selected specification to guarded fixture seeding;
+extra layout and pagination records are created only for their respective specs.
+Keep discovery/Run Now specifications sequential because the configured provider
+admits one discovery operation at a time. See
+[the sitewide review](../docs/operations/sitewide-ui-review.md) for accepted evidence.
+
 The VM-module flag supplies test doubles for the k6 imports. The approved pinned
 k6 image also passed actual local HTTPS simulations; use the guarded runner in
 [capacity verification](../docs/operations/capacity-verification.md). Completed
@@ -31,6 +48,15 @@ keys. Pause the local preview processing worker during those tests, or use a
 separate Redis server. Different logical databases share
 [Pub/Sub channels](https://redis.io/docs/latest/develop/pubsub/#database--scoping),
 so changing the database number does not isolate worker heartbeats.
+The engine fixtures preserve an explicit `REDIS_HOST` override; otherwise they
+reuse the application's Redis configuration resolver, which ignores an AMQP
+broker URL. Set both `REDIS_HOST` and `REDIS_URL` to the full isolated Redis URL,
+for example `redis://127.0.0.1:56380/0`, for an independent engine run. A bare
+`REDIS_HOST` uses the default port and does not select that isolated server.
+Test failures must not print broker credentials.
+Engine fixtures request transactional database access before startup recovery.
+Their polling helpers use elapsed time and retain their original timeout budget;
+wall-clock changes cannot skip the final readiness check.
 
 ## Coverage Map
 

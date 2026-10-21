@@ -22,11 +22,12 @@ local loopback is used for development verification. See
 
 `postbuild` generates the worker from the exact production static-file list,
 build identifier, worker policy, and offline-document checksum. It precaches
-only fingerprinted Next.js scripts/styles/fonts and one fingerprinted generic
-offline document, with credentials omitted. API responses, authenticated HTML,
+only fingerprinted Next.js scripts/styles/fonts, a generic offline document and
+the public local-file reader shell, with credentials omitted. API responses, authenticated HTML,
 book resources, navigation payloads, reader identifiers, and mutations are
 excluded. Top-level document navigation uses the network; network failure shows
-the generic notice. Real HTTP errors retain their status and body. Iframe
+the generic notice; `/local-reader/` instead uses its anonymous public shell.
+Real HTTP errors retain their status and body. Iframe
 navigation bypasses the offline fallback, so an unavailable chapter cannot be
 mistaken for completed reading progress.
 
@@ -51,8 +52,8 @@ also activate on a later launch after its previous clients close. See
 
 ## Verification and limits
 
-`npm test` passes 21 worker/coordinator/account/job/password-link/reader helper
-tests. All 108 Chromium, 108 WebKit, and 108 Linux Firefox journeys passed against the
+Initial PWA acceptance recorded 21 worker/coordinator/account/job/password-link/reader
+helper tests. All 108 Chromium, 108 WebKit, and 108 Linux Firefox journeys passed against the
 standalone build. The selected Android/Pixel 7 and iPhone 13 browser profiles each passed
 30 discovery, library, reading, account, and PWA journeys. Installation-help
 checks are included in all five final browser profiles after the Safari copy update. Browser
@@ -76,4 +77,11 @@ and worker behavior; physical OS installation is outside that scope. See
 [simulator acceptance](../operations/simulator-acceptance.md).
 Firefox runs with the matching Linux Playwright bundle because this host cannot
 launch its macOS bundle; see [verification tooling](verification-tooling.md).
-Reading books offline is outside this release.
+Library books require a network connection. Device-local EPUB files can open
+offline after the public reader shell has been installed; contents remain in
+memory and never enter the worker cache. See
+[local EPUB reader](../operations/local-epub-reader.md) for limits and isolation.
+Its three local-file journeys passed Chromium, WebKit, Android and iPhone browser
+profiles and pinned Linux Firefox. Current combined checks and their revisions
+are recorded in the implementation handoff; the earlier PWA counts above are
+historical evidence for that acceptance scope.

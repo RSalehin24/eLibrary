@@ -1,5 +1,6 @@
 import { localizeMetadata } from "@/lib/metadata-language";
-import { SiteText, SiteNav, SiteNumber } from "@/components/site-language";
+import { SiteText } from "@/components/site-language";
+import { CatalogPagination } from "@/components/catalog-pagination";
 import Link from "next/link";
 import { publicRequest } from "@/api/server";
 import type { BookCollection } from "@/api/types";
@@ -16,5 +17,5 @@ export default async function EditionsPage({ params, searchParams }: { params: P
   return <><Link className="text-link" href={`/books/${encodeURIComponent(book.slug)}/`}><SiteText>{"← বইয়ের পরিচিতিতে ফিরুন"}</SiteText></Link><h1>{book.title}<SiteText>{": অন্য সংস্করণ"}</SiteText></h1>
     <div className="book-grid">{editions.entries.map((entry) => <BookCard book={entry} key={entry.id} />)}</div>
     {!editions.entries.length && <p><SiteText>{"অন্য কোনো প্রকাশিত সংস্করণ নেই।"}</SiteText></p>}
-    <SiteNav className="pagination" aria-label="সংস্করণের পাতা">{page > 1 && <Link className="button button-quiet" href={`?page=${page-1}`}><SiteText>{"আগের পাতা"}</SiteText></Link>}<span><SiteText>{"পাতা "}</SiteText><SiteNumber value={page} /></span>{editions.has_more && <Link className="button" href={`?page=${page+1}`}><SiteText>{"পরের পাতা"}</SiteText></Link>}</SiteNav></>;
+    <CatalogPagination pathname={`/books/${encodeURIComponent(book.slug)}/editions/`} page={page} hasMore={editions.has_more} totalPages={editions.pagination?.page_count} label="সংস্করণের পাতা" /></>;
 }

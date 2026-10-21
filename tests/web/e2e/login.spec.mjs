@@ -53,6 +53,6 @@ test("the login and shared branding fit a 320-pixel screen with enlarged text", 
   await page.setViewportSize({ width: 320, height: 800 }); await page.goto("/login/");
   await page.addStyleTag({ content: "html { font-size: 200%; }" });
   await expect(page.getByRole("heading", { name: "অ্যাকাউন্টে প্রবেশ করুন", exact: true })).toBeVisible();
-  await expect(page.locator(".site-header .brand svg")).toBeVisible();
+  await expect(page.locator(".site-header").getByRole("img", { name: "বাংলা পাঠাগার", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

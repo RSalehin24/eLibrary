@@ -1,11 +1,37 @@
 # Source automations
 
+Saved schedules also expose **Run Now**. `POST
+/api/v1/manage/automations/<id>/runs/` accepts a client UUID and the saved schedule
+revision. It locks and rechecks the caller and existing `run_as` account, then
+reuses the scheduled occurrence admission and post-discovery processing pipeline.
+The saved scope, page/book limits and rebuild policy apply. Disabled schedules
+can run once; their enabled flag, next occurrence, calendar counter and revision
+remain unchanged. The caller cannot override `run_as` or the saved policy.
+
+An identifier-only audit receipt makes retries return the same queued or blocked
+run, including after later schedule edits. Another caller or changed revision
+cannot reuse its identifier. A currently active discovery or revoked saved owner
+produces the ordinary recorded blocked outcome; normal job controls remain on
+the linked progress page. Uncertain browser responses stop resubmission. Manual
+admission does not bypass source availability, verification, permissions or mail
+delivery policies.
+
 `/manage/automations/` provides permission-scoped schedules, local start times,
 IANA time zones, enable/disable controls, and paginated run history. It requires
 global processing management authority. Creation uses an operation UUID;
 updates require the displayed revision. Mutations require the same-origin
 session and CSRF token. An uncertain request remains blocked until its saved
 state is inspected. Reader accounts cannot use the workspace or APIs.
+
+The schedule directory supports name search (`q`), enabled/disabled selection
+(`enabled`), saved frequency (`frequency`) and name/next-occurrence sorting
+(`sort`). Parameters are validated independently from history pagination;
+counts include the same filters as the rows. Due-time ordering places paused
+schedules last and uses the identifier to break ties. Numbered pagination retains
+the active filters. Each row exposes Run Now and Settings & History directly;
+phone records keep the same actions. Paused schedules display their paused state
+instead of implying that their saved occurrence will run. Run Now reuses the same
+revision, idempotency and uncertain-response safeguards as the detail screen.
 
 Daily, weekly, fortnightly, and one/two/three/four/six-month schedules retain
 their original local time. Monthly dates use the original anchor: January 31
@@ -45,7 +71,9 @@ keeps its original revision and a deterministic child operation UUID. A pause,
 retry, or crash between child commit and parent checkpoint cannot duplicate
 accepted work. Changed, missing, or rejected source records produce individual
 outcomes. Configuration and permission checks fence each child dispatch.
-Generated books still require editorial review and publication.
+Generated books publish automatically after successful source, chapter and file
+verification. Missing source content waits for its next recheck; it cannot bypass
+verification through a manual run.
 
 Run history shows discovery state, processing counts, rejected dispatches,
 missed occurrences, and links to job controls. Child job lists retain the run

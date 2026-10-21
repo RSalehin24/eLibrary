@@ -6,6 +6,7 @@ import { APIError } from "@/api/http";
 import { sessionRequest } from "@/api/server";
 import type { ManagedBookDetail } from "@/api/types";
 import { requireManagement } from "@/lib/workspace-session";
+import { Icon } from "@/components/icon";
 
 export async function generateMetadata() { return localizeMetadata({ title: "নতুন বইয়ের নথির অবস্থা" }); }
 
@@ -15,6 +16,8 @@ export default async function BookCreationStatusPage({ params }: { params: Promi
   let book: ManagedBookDetail;
   try { book = await sessionRequest<ManagedBookDetail>(`manage/book-creations/${identifier}/`); }
   catch (error) { if (error instanceof APIError && [403, 404].includes(error.status)) notFound(); throw error; }
-  return <><h1><AdminText>{"বইয়ের নথি তৈরি হয়েছে"}</AdminText></h1><p>{book.title}</p>
-    <Link className="button" href={`/manage/books/${encodeURIComponent(book.slug)}/`}><AdminText>{"বইয়ের তথ্য সম্পাদনা করুন"}</AdminText></Link></>;
+  return <section className="admin-result-panel" aria-labelledby="creation-result-heading"><span className="admin-page-icon"><Icon name="check" size={28} /></span>
+    <h1 id="creation-result-heading"><AdminText>{"বইয়ের নথি তৈরি হয়েছে"}</AdminText></h1><p>{book.title}</p><div className="account-actions">
+    <Link className="button" href={`/manage/books/${encodeURIComponent(book.slug)}/`}><Icon name="edit" /><AdminText>{"বইয়ের তথ্য সম্পাদনা করুন"}</AdminText></Link>
+    <Link className="button button-quiet" href="/manage/books/"><Icon name="books" /><AdminText>{"সব বই দেখুন"}</AdminText></Link></div></section>;
 }

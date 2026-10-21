@@ -3,3 +3,6 @@
 .book-detail-contents { padding-inline-start:1.5em; }
 .book-detail-contents ol { padding-inline-start:clamp(4px,2vw,12px); }
 .book-detail-contents li { padding-block:5px; line-height:1.7; }
+@media(max-width:480px) {
+  .book-detail-preview .book-facts { grid-template-columns:minmax(0,1fr); }
+}

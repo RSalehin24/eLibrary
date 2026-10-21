@@ -11,6 +11,7 @@ from apps.catalog.serializers.entities import (
 from apps.catalog.serializers.public import CollectionParametersSerializer
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
+from apps.common.collection_pagination import collection_pagination, counted_collection
 
 
 def collection_queryset(query):
@@ -30,14 +31,17 @@ class PublicCollectionsView(VersionedAPIView):
         parameters = CollectionParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
         parameters.validated_data["scope"] = "collections"
-        entries, cursor = discovery_page(
-            collection_queryset(parameters.validated_data["q"]),
-            parameters.validated_data,
+        queryset = counted_collection(
+            collection_queryset(parameters.validated_data["q"])
         )
+        entries, cursor = discovery_page(queryset, parameters.validated_data)
         return Response(
             {
                 "entries": PublicEntityListSerializer(entries, many=True).data,
                 "next_cursor": cursor,
                 "has_more": cursor is not None,
+                "pagination": collection_pagination(
+                    queryset, parameters.validated_data, entries
+                ),
             }
         )

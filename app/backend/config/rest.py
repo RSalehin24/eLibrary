@@ -1,6 +1,22 @@
 from collections.abc import Callable
 
 
+def api_schema_settings() -> dict[str, object]:
+    return {
+        "TITLE": "Bengali Library API",
+        "VERSION": "1.0.0",
+        "COMPONENT_SPLIT_PATCH": False,
+        "ENUM_NAME_OVERRIDES": {
+            "HighlightKindEnum": "apps.access.models.HighlightKind.choices",
+            "BackgroundJobStateEnum": "apps.processing.job_models.BackgroundJobState.choices",
+            "BackgroundJobKindEnum": "apps.processing.job_models.BackgroundJobKind.choices",
+            "LifecycleStateEnum": "apps.common.models.LifecycleState.choices",
+            "JobControlActionEnum": "apps.processing.job_serializers.JOB_CONTROL_ACTIONS",
+            "BulkJobControlActionEnum": "apps.processing.bulk_control_serializers.BULK_JOB_CONTROL_ACTIONS",
+        },
+    }
+
+
 def rest_framework_settings(environment: Callable) -> dict[str, object]:
     return {
         "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",

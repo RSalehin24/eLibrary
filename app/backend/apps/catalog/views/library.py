@@ -13,12 +13,11 @@ from apps.catalog.serializers.library import (
     LibraryBookSerializer,
     LibraryCollectionSerializer,
     LibraryParametersSerializer,
-)
-from apps.catalog.serializers.public import (
-    PublicBookDetailSerializer,
+    PersonalBookDetailSerializer,
 )
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
+from apps.common.collection_pagination import collection_pagination, counted_collection
 from apps.common.ranked_pagination import RankedFeedPagination
 
 
@@ -45,8 +44,11 @@ class MyBooksView(VersionedAPIView):
             if parameters.validated_data["sort"]
             else RankedFeedPagination(timestamp)
         )
+        queryset = counted_collection(
+            library_queryset(request.user, parameters.validated_data)
+        )
         entries, next_cursor = pagination.page(
-            library_queryset(request.user, parameters.validated_data),
+            queryset,
             parameters.validated_data,
             cursor_context(parameters.validated_data),
         )
@@ -55,6 +57,9 @@ class MyBooksView(VersionedAPIView):
                 "entries": LibraryBookSerializer(entries, many=True).data,
                 "next_cursor": next_cursor,
                 "has_more": next_cursor is not None,
+                "pagination": collection_pagination(
+                    queryset, parameters.validated_data, entries
+                ),
             }
         )
 
@@ -65,7 +70,7 @@ class MyBookDetailView(VersionedAPIView):
     @extend_schema(
         operation_id="my_book_detail",
         responses={
-            200: PublicBookDetailSerializer,
+            200: PersonalBookDetailSerializer,
             403: APIErrorSerializer,
             404: APIErrorSerializer,
         },
@@ -84,4 +89,6 @@ class MyBookDetailView(VersionedAPIView):
             )
         )
         book = catalog_object_by_slug(queryset, slug)
-        return Response(PublicBookDetailSerializer(book).data)
+        return Response(
+            PersonalBookDetailSerializer(book, context={"request": request}).data
+        )

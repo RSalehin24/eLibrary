@@ -3,11 +3,11 @@
 import { useState } from "react";
 import { useAdminLanguage } from "./admin-language";
 
-export function TimeInput({ name, initial = "02:00", disabled = false, invalid = false }: { name: string; initial?: string; disabled?: boolean; invalid?: boolean }) {
+export function TimeInput({ name, initial = "02:00", disabled = false, invalid = false, onValueChange }: { onValueChange?: (value: string) => void; name: string; initial?: string; disabled?: boolean; invalid?: boolean }) {
   const { t, number, language } = useAdminLanguage();
   const [value, setValue] = useState(initial);
   const [hours, minutes] = value.split(":").map(Number);
-  const update = (hour: number, minute: number, period: string) => setValue(`${String(hour % 12 + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+  const update = (hour: number, minute: number, period: string) => { const next = `${String(hour % 12 + (period === "PM" ? 12 : 0)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`; setValue(next); onValueChange?.(next); };
   const minuteFormat = new Intl.NumberFormat(language, { minimumIntegerDigits: 2, useGrouping: false });
   const hour = hours % 12 || 12, period = hours >= 12 ? "PM" : "AM";
   return <div className="time-input" role="group" aria-label={t("সময়")}>

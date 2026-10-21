@@ -28,6 +28,6 @@ export function ProcessAllSources({ initial }: { initial: CatalogProcessingOptio
     <section className="admin-control-card process-all" aria-label={t("বই তৈরি")}><p className="control-stat"><strong>{number(options.eligible_sources)}</strong> <span>{t("তৈরির জন্য বাকি বই")}</span></p>
     {query.isError && <p className="field-error" role="alert">{t("হালনাগাদ অবস্থা পাওয়া যায়নি।")} <button className="button button-quiet" onClick={() => void query.refetch()}>{t("আবার দেখুন")}</button></p>}
     <AccountFeedback error={form.saving.error} />{form.saving.error && identifier && <Link className="text-link" href={`/manage/jobs/${identifier}/`}>{t("এই অনুরোধের ফল দেখুন")}</Link>}
-    {operation && <SourceOperation id={operation} />}
+    {operation && <details className="source-operation-receipt" open={!!options.active_operation_id || !!accepted}><summary>{t("বই তৈরি চলছে")}</summary><SourceOperation id={operation} /></details>}
   </section></>;
 }

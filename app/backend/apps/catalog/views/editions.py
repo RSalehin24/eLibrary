@@ -13,6 +13,7 @@ from apps.catalog.serializers.public import (
 )
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
+from apps.common.collection_pagination import collection_pagination, counted_collection
 
 
 class PublicBookEditionsView(VersionedAPIView):
@@ -47,11 +48,13 @@ class PublicBookEditionsView(VersionedAPIView):
         books = with_public_relations(
             books.annotate(search_rank=Value(0, output_field=IntegerField()))
         )
+        books = counted_collection(books)
         entries, cursor = discovery_page(books, parameters)
         return Response(
             {
                 "entries": PublicBookListSerializer(entries, many=True).data,
                 "next_cursor": cursor,
                 "has_more": cursor is not None,
+                "pagination": collection_pagination(books, parameters, entries),
             }
         )

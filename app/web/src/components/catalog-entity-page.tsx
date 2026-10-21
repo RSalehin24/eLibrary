@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { publicRequest } from "@/api/server";
 import type { BookCollection } from "@/api/types";
 import { entityFilters, entityLabels, getPublicEntity, type EntityKind, type EntityPageProps } from "@/lib/catalog-entity";
@@ -8,7 +8,8 @@ import { catalogPageNumber, queryValue } from "@/lib/route-query";
 import { contributorRoles } from "@/lib/contributor-roles";
 import { CatalogBrowseNav } from "./catalog-browse-nav";
 import { SiteText } from "./site-language";
-import { BookCard } from "./book-card";
+import { BookResults } from "./book-results";
+import { retiredFilterRedirect } from "@/lib/browse-filters";
 import { CatalogPagination } from "./catalog-pagination";
 import { StructuredData } from "./structured-data";
 import { Breadcrumbs } from "./breadcrumbs";
@@ -16,19 +17,19 @@ import { Breadcrumbs } from "./breadcrumbs";
 export async function CatalogEntityPage({ kind, ...props }: EntityPageProps & { kind: EntityKind }) {
   const entity = await getPublicEntity(kind, routeSlug((await props.params).slug));
   const query = await props.searchParams, page = catalogPageNumber(query), role = kind === "contributors" ? queryValue(query, "role") : "";
-  const recordType = queryValue(query, "record_type") || "all";
-  if (!["all", "digital", "manual"].includes(recordType)) notFound();
+  const pathname = `/${kind}/${encodeURIComponent(entity.slug)}/`;
+  const destination = retiredFilterRedirect(pathname, query);
+  if (destination) redirect(destination);
   if (role && !Object.hasOwn(contributorRoles, role)) notFound();
-  const parameters = new URLSearchParams({ [entityFilters[kind]]: entity.slug, record_type: recordType, page: String(page) });
+  const parameters = new URLSearchParams({ [entityFilters[kind]]: entity.slug, record_type: "all", page: String(page) });
   if (role) parameters.set("contributor_role", role);
   const books = await publicRequest<BookCollection>(`catalog/books/?${parameters}`);
   if (page > 1 && !books.entries.length) notFound();
-  const pathname = `/${kind}/${encodeURIComponent(entity.slug)}/`;
   return <><Breadcrumbs entries={[{ name: "পাঠাগার", path: "/catalog/" }, { name: entity.name, path: pathname }]} />
     <CatalogBrowseNav current={`/${kind}/`} /><header className="page-title"><p className="eyebrow"><SiteText>{entityLabels[kind]}</SiteText></p><h1>{entity.name}</h1>
       {entity.editorial_description && <p className="book-description">{entity.editorial_description}</p>}</header>
-    <div className="book-grid">{books.entries.map((book) => <BookCard key={book.id} book={book} />)}</div>
-    <CatalogPagination pathname={pathname} page={page} hasMore={books.has_more} filters={{ ...(role ? { role } : {}), ...(recordType !== "all" ? { record_type: recordType } : {}) }} />
+    <BookResults books={books.entries} />
+    <CatalogPagination pathname={pathname} page={page} hasMore={books.has_more} totalPages={books.pagination?.page_count} filters={{ ...(role ? { role } : {}) }} />
     {kind === "contributors" && <StructuredData data={{ "@context": "https://schema.org", "@type": "Person", name: entity.name,
       url: canonicalURL(pathname), ...(entity.editorial_description ? { description: entity.editorial_description } : {}),
       ...(entity.alternative_names.length ? { alternateName: entity.alternative_names } : {}) }} />}

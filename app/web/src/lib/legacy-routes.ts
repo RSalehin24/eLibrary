@@ -1,6 +1,7 @@
 import { savedCatalogFilter } from "./saved-catalog-filter";
 import { savedQueueFilter, jobFilterKeys } from "./job-filters";
 import { kindleHistoryKeys, kindleHistoryQuery } from "./kindle-history";
+import { validDirectoryFilters } from "./entity-directory-filters";
 
 type LegacyQuery = Record<string, string | string[] | undefined>;
 const aliases: Readonly<Record<string, string>> = {
@@ -62,7 +63,9 @@ export function legacyRouteTarget(route: string, parameters: LegacyQuery): strin
   }
   if (Object.hasOwn(roles, route)) {
     if (typeof parameters.q === "string" && parameters.q.length > 120 || typeof parameters.record_type === "string" && !["all", "manual", "digital"].includes(parameters.record_type)) return null;
-    const query = new URLSearchParams({ ...selectedValues(parameters, ["q", "record_type"]), ...pageQuery(parameters), role: roles[route] });
+    const values = selectedValues(parameters, ["q", "record_type", "sort", "created_after", "created_before"]);
+    if (!validDirectoryFilters(values)) return null;
+    const query = new URLSearchParams({ ...values, ...pageQuery(parameters), role: roles[route] });
     return `/contributors/?${query}`;
   }
   if (!Object.hasOwn(aliases, route)) return null;

@@ -1,3 +1,7 @@
+import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import { getWorkspaceSession } from "@/lib/workspace-session";
+import { workspaceHome, workspaceViewCookie } from "@/lib/workspace-view";
 import { localizeMetadata } from "@/lib/metadata-language";
 import { SiteText, SiteInput } from "@/components/site-language";
 import Link from "next/link";
@@ -11,6 +15,8 @@ import { Icon } from "@/components/icon";
 export async function generateMetadata() { return localizeMetadata({ alternates: { canonical: "/" } }); }
 
 export default async function HomePage() {
+  const session = await getWorkspaceSession();
+  if (session.authenticated) redirect(workspaceHome(session, (await cookies()).get(workspaceViewCookie)?.value));
   const books = await publicRequest<BookCollection>("catalog/books/?limit=4");
   return <>
     <StructuredData data={{ "@context": "https://schema.org", "@type": "Organization", name: siteName, url: canonicalURL("/") }} />

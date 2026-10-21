@@ -1,22 +1,29 @@
 "use client";
 
-import { createContext, useContext, useState, type ReactNode, type ComponentProps } from "react";
+import { createContext, useContext, useEffect, useSyncExternalStore, type ReactNode, type ComponentProps } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { translateSite, updateDocumentLanguage } from "@/lib/site-language";
+import { announceSiteLanguage, browserLanguage, subscribeSiteLanguage, translateSite, updateDocumentLanguage } from "@/lib/site-language";
 import type { AdminLanguage } from "@/lib/admin-language";
 import { jobTimestamp } from "@/lib/job-status";
 
 const SiteLanguageContext = createContext<{ language: AdminLanguage; changeLanguage: (next: AdminLanguage) => void }>({ language: "bn", changeLanguage: () => {} });
 
 export function SiteLanguageProvider({ initial, children }: { initial: AdminLanguage; children: ReactNode }) {
-  const [language, setLanguage] = useState(initial);
+  const language = useSyncExternalStore(subscribeSiteLanguage, browserLanguage, () => initial);
+  useEffect(() => {
+    const update = () => updateDocumentLanguage(language);
+    update();
+    // Route metadata may arrive after the static shell hydrates.
+    const observer = new MutationObserver(update);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    return () => observer.disconnect();
+  }, [language]);
   function changeLanguage(next: AdminLanguage) {
     const secure = location.protocol === "https:" ? "; Secure" : "";
     document.cookie = `library-language=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
     document.cookie = `library-admin-language=${next}; Path=/; Max-Age=31536000; SameSite=Lax${secure}`;
-    updateDocumentLanguage(next);
-    setLanguage(next);
+    announceSiteLanguage();
   }
   return <SiteLanguageContext.Provider value={{ language, changeLanguage }}>{children}</SiteLanguageContext.Provider>;
 }
@@ -50,6 +57,7 @@ function useSiteAttributes<T extends { "aria-label"?: string; title?: string; pl
 }
 
 export function SiteNav(props: ComponentProps<"nav">) { return <nav {...useSiteAttributes(props)} />; }
+export function SiteSelect(props: ComponentProps<"select">) { return <select {...useSiteAttributes(props)} />; }
 export function SiteInput(props: ComponentProps<"input">) { return <input {...useSiteAttributes(props)} />; }
 export function SiteButton(props: ComponentProps<"button">) { return <button {...useSiteAttributes(props)} />; }
 export function SiteTextarea(props: ComponentProps<"textarea">) { return <textarea {...useSiteAttributes(props)} />; }

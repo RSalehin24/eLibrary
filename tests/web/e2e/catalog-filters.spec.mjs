@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, fixture, useAccount, artifactPath } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, artifactPath, setLanguage } from "./fixtures.mjs";
 
 test("combined filters sort real books and saved views survive navigation", async ({ page }) => {
   await useAccount(page, "personal_reader");
@@ -7,7 +7,7 @@ test("combined filters sort real books and saved views survive navigation", asyn
   const author = book.contributors.find(person => person.role === "author").name;
   const category = book.categories[0].name;
   await page.goto(`/catalog/?q=${fixture.query}`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const form = page.locator(".catalog-filters-form");
   await form.getByRole("button", { name: "Filters", exact: true }).click();
   await form.getByLabel("Author or contributor", { exact: true }).fill(author);
@@ -27,17 +27,22 @@ test("combined filters sort real books and saved views survive navigation", asyn
   const name = `Saved ${randomUUID()}`;
   let identifier;
   try {
-    await page.getByText("Save these filters", { exact: true }).click();
+    await page.locator(".saved-catalog-filters > summary").click();
     await page.getByLabel("Filter name", { exact: true }).fill(name);
     const created = page.waitForResponse((response) => response.url().includes("/me/saved-filters/") && response.request().method() === "POST");
     await page.locator(".saved-filter-create").getByRole("button", { name: "Save", exact: true }).click();
     const response = await created;
     expect(response.status()).toBe(201); identifier = (await response.json()).id;
     await expect(page.locator(".saved-filter-list").getByRole("link", { name, exact: true })).toBeVisible();
-    await page.locator(".catalog-filters-form").getByRole("link", { name: "Clear all filters", exact: true }).click();
+    await page.locator(".catalog-filters-form").getByRole("link", { name: "Clear filters", exact: true }).click();
+    await expect(page).toHaveURL(url => !url.searchParams.get("contributor") && !url.searchParams.get("q"));
+    await page.locator(".saved-catalog-filters > summary").click();
     await page.locator(".saved-filter-list").getByRole("link", { name, exact: true }).click();
+    await expect(page).toHaveURL(url => url.searchParams.get("contributor") === author && url.searchParams.get("sort") === "title");
     await expect(page.locator('input[name="contributor"]')).toHaveValue(author);
     await expect(page.locator('select[name="sort"]')).toHaveValue("title");
+    await page.locator(".catalog-filter-details > summary").click();
+    await page.locator(".saved-catalog-filters > summary").click();
     await page.getByRole("button", { name: `${name}: Delete saved filter`, exact: true }).click();
     await expect(page.locator(".saved-filter-list").getByRole("link", { name, exact: true })).toHaveCount(0);
     identifier = undefined;
@@ -72,11 +77,12 @@ test("combined filter controls and catalog results work without JavaScript", asy
 test("My Books tabs preserve selected filters and filtered empty results are clear", async ({ page }) => {
   await useAccount(page, "personal_reader");
   await page.goto("/my-books/?sort=title&record_type=manual");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.locator("main .workspace-nav").getByRole("link", { name: "Saved", exact: true }).click();
   await expect(page.locator("main .workspace-nav").getByRole("link", { name: "Saved", exact: true })).toHaveAttribute("aria-current", "page");
   expect(new URL(page.url()).searchParams.get("sort")).toBe("title");
-  expect(new URL(page.url()).searchParams.get("record_type")).toBe("manual");
+  expect(new URL(page.url()).searchParams.has("record_type")).toBe(false);
+  await expect(page.locator('select[name="record_type"]')).toHaveCount(0);
   await page.goto("/catalog/?contributor=unknown-nonexistent-author");
   await expect(page.getByRole("heading", { name: "No Books Found", exact: true })).toBeVisible();
   await expect(page.getByText("Change the filters or use fewer conditions and search again.", { exact: true })).toBeVisible();

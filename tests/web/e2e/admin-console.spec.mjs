@@ -1,10 +1,12 @@
-import { test, expect, useAccount } from "./fixtures.mjs";
+import { test, expect, useAccount, setLanguage } from "./fixtures.mjs";
+import { useIdleDiscoveryOptions } from "./source-console-fixture.mjs";
 
 async function openConsole(page) {
   await useAccount(page, "administrator");
   await page.route("**/api/v1/**", route => route.request().method() === "GET" ? route.continue() : route.abort());
+  await useIdleDiscoveryOptions(page);
   await page.goto("/manage/sources/");
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
 }
 
 async function currentJob(page) {
@@ -19,12 +21,16 @@ test("primary admin actions and navigation are visible with no link decoration",
     await expect(action).toBeVisible(); const box = await action.boundingBox();
     expect(box.y + box.height).toBeLessThan(844); expect(box.height).toBeGreaterThanOrEqual(44);
   }
-  await expect(page.locator(".admin-sidebar .workspace-nav a")).toHaveCount(9);
-  const link = page.locator(".admin-sidebar a").first(); await link.hover();
+  await page.getByRole("button", { name: "Open menu", exact: true }).click();
+  await expect(page.locator(".admin-navigation-drawer .workspace-nav a")).toHaveCount(6);
+  const link = page.locator(".admin-navigation-drawer a").first(); await link.hover();
   expect(await link.evaluate(element => getComputedStyle(element).textDecorationLine)).toBe("none");
+  await page.keyboard.press("Escape");
   await expect(page.locator(".admin-topbar").getByRole("link", { name: "Sign In", exact: true })).toHaveCount(0);
+  await page.locator(".admin-topbar .account-menu > summary").click();
   await expect(page.locator(".admin-topbar").getByRole("button", { name: "Sign Out", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await page.keyboard.press("Escape");
+  await setLanguage(page, "bn");
   for (const name of ["সব বইয়ের তথ্য আনুন", "সব বই তৈরি করুন", "সময়সূচি তৈরি করুন"]) await expect(page.getByRole("button", { name, exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

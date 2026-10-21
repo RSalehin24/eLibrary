@@ -12,6 +12,7 @@ from apps.ingestion.source_processing.policy import require_source_url, source_h
 from apps.ingestion.source_processing.verification_serializers import (
     SourceVerificationSerializer,
 )
+from apps.processing.job_models import BackgroundJobState
 from apps.processing.jobs.execution_errors import ExecutionFailure
 
 
@@ -91,6 +92,13 @@ class SourceEntrySerializer(serializers.Serializer):
     can_edit_book = serializers.BooleanField()
     active_operation_id = serializers.UUIDField(
         source="entry.active_operation_id",
+        default=None,
+        allow_null=True,
+        read_only=True,
+    )
+    active_operation_state = serializers.ChoiceField(
+        choices=BackgroundJobState.choices,
+        source="entry.active_operation_state",
         default=None,
         allow_null=True,
         read_only=True,

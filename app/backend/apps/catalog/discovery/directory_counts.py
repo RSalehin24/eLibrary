@@ -13,7 +13,17 @@ from apps.catalog.models import (
 
 from .sorting import CatalogSortPagination
 
-DIRECTORY_SORTS = ("", "name", "-name", "book_count", "-book_count")
+DIRECTORY_SORTS = (
+    "",
+    "name",
+    "-name",
+    "book_count",
+    "-book_count",
+    "catalog_code",
+    "-catalog_code",
+    "created_at",
+    "-created_at",
+)
 ENTITY_RELATIONS: dict[
     str, tuple[type[BookContributor | BookCategory | BookSeries | CollectionBook], str]
 ] = {
@@ -26,7 +36,10 @@ ENTITY_RELATIONS: dict[
 
 class DirectorySortPagination(CatalogSortPagination):
     ordering_choices = DIRECTORY_SORTS
-    text_fields: ClassVar[dict[str, str]] = {"name": "normalized_name"}
+    text_fields: ClassVar[dict[str, str]] = {
+        "name": "normalized_name",
+        "catalog_code": "catalog_code",
+    }
     number_fields = ("book_count",)
 
 

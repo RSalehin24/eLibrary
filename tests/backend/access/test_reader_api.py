@@ -39,7 +39,7 @@ def test_session_is_account_bound_and_does_not_expose_bearer_tokens(reader):
     assert response["Cache-Control"] == "private, no-store"
 
 
-def test_resources_are_protected_and_sandboxed(reader):
+def test_resources_are_protected_and_sandboxed(reader, settings):
     client, _, book, _, _ = reader
     data = launch(client, book).json()
     path = data["resource_base"] + "OEBPS/chapter-1.xhtml"
@@ -52,6 +52,9 @@ def test_resources_are_protected_and_sandboxed(reader):
     assert "default-src 'none'" in response["Content-Security-Policy"]
     assert data["resource_base"] in response["Content-Security-Policy"]
     assert "img-src 'self'" not in response["Content-Security-Policy"]
+    assert f"media-src {settings.FRONTEND_BASE_URL}{data['resource_base']};" in policy
+    assert "media-src 'self'" not in policy
+    assert response["Permissions-Policy"] == "autoplay=()"
     assert response["X-Frame-Options"] == "SAMEORIGIN"
     assert response["Cache-Control"] == "private, no-store"
     assert APIClient().get(path).status_code == 403

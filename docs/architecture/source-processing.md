@@ -47,6 +47,22 @@ source revision, attempt ownership, and requested pause/cancellation. Resuming
 uses stored pages rather than fetching them again. A stale attempt can create an
 unreferenced artifact but cannot replace a committed checkpoint.
 
+Standalone contents lists can reference other books on the configured website.
+The collector follows these component books in source order, including nested
+collections up to eight levels. It checks every destination before collecting
+components, uses the existing page/time/cache limits and keeps the parent cover.
+Distinct source URLs remain distinct even when titles or text match. Ordinary
+references within readable prose are not component books; a readable parent
+requires an explicit contents heading before its linked list.
+
+The combined snapshot retains each component's source structure and reading
+evidence. Verification independently rebuilds each component and requires all
+its collected sections in the combined book, in source order. A missing component,
+cycle, changed text or an older compilation without component proof cannot
+publish. Validator version 3 also permits ordinary later references to publication
+history without misclassifying the whole book as a synopsis. Introductory synopsis
+detection and positive reading evidence remain required.
+
 The worker validates the curated title and content before creating a catalog
 record. The canonical source URL determines identity: distinct source URLs can
 have identical titles without requiring a manual decision. A PostgreSQL advisory
@@ -66,11 +82,18 @@ decisions, continuing an existing preparation, and cancellation. The
 backend derives valid choices from current state. Linking checks both job and
 candidate revisions; it preserves the candidate's metadata, assets, and owners.
 Empty source chapter pages schedule a fresh automatic check after six hours.
+Missing chapters or contents pages use that same availability workflow, rather
+than a manual editorial decision. Inconsistent extraction of already collected
+text remains a separate integrity failure and cannot use that retry as a bypass.
 Availability checks do not exhaust the processing-failure allowance. Other
 incomplete or inconsistent content blocks publication rather than losing text.
 
 Exports use the canonical curated document, including short Bengali body
-sections. A completed export manifest records relative paths, sizes, and checksums
+sections. A canonical single-flow body retains its original inline headings and
+continuous text; the EPUB exporter does not infer new chapters inside already
+verified source content. Explicit canonical nested contents remains authoritative.
+Legacy manual/noncanonical export inputs retain chapter inference. A completed
+export manifest records relative paths, sizes, and checksums
 so pause/resume reuses completed HTML and EPUB files. Completed files are copied
 to immutable names in protected asset storage before one transaction updates
 asset references. Previous valid files remain available. Publication rechecks
@@ -78,6 +101,23 @@ the actor, source, catalog revision, and current attempt and honors a late stop
 request. Source books cannot be published with unresolved work or missing HTML
 and EPUB assets. Source processing prepares checksum-addressed reader resources
 before success, and publication requires those resources to be ready.
+
+Dispatch admission rotates new work, collection continuations and recovery work
+within the processing pool's existing bound. A source defect checkpoint keeps a
+repaired job in the recovery lane after its active error has been cleared, so a
+large older new-book backlog cannot delay the repaired edition indefinitely.
+Python lane selection and database candidate filters use the same marker rule;
+new and continuation work retain their turns.
+
+After a validator update, reconciliation can recollect an unlinked historical
+validation wait whose retained snapshot now proves readable content or a supported
+linked collection. It checks authority, source revision and explicit stops, records
+one attempt per validator version, and retains all earlier attempts. A component
+still unavailable returns to its six-hour wait without an immediate retry loop.
+An audited older partial compilation enters ordinary regeneration immediately;
+its old files and personal data remain intact. Broker congestion can be handled
+through a [named processing queue](../operations/source-job-diagnostics.md#processing-queue-rotation)
+without deleting old messages.
 
 Verification reruns document validation against fetched-page evidence, requires
 all available contents pages and chapters, and compares collected source text

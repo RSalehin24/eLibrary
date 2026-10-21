@@ -75,7 +75,7 @@ test("enabled authenticator expires older sessions and requires a new code at th
   expect((await page.request.get("/api/v1/auth/profile/")).status()).toBe(200);
   expect((await previous.request.get("/api/v1/auth/profile/")).status()).toBe(403);
   await previous.close();
-  await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
+  await page.locator("details.account-menu:visible > summary").click(); await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
   await expect(page).toHaveURL("/");
   await expect(page.getByRole("link", { name: "প্রবেশ করুন", exact: true })).toBeVisible();
   await page.goto("/login/?next=%2Fnotes%2F");

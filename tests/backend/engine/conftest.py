@@ -6,11 +6,7 @@ running in Docker. No mocking — tests run against real infrastructure.
 
 import json
 import os
-import subprocess
-import sys
-import threading
 import time
-from pathlib import Path
 
 import pytest
 import redis as redis_module
@@ -20,7 +16,9 @@ from .constants import *
 
 def _get_redis_host():
     """Get Redis host from environment or default to Docker hostname."""
-    return os.environ.get("REDIS_HOST", os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0"))
+    from apps.ingestion.engine.redis_client import get_redis_url
+
+    return os.environ.get("REDIS_HOST") or get_redis_url()
 
 
 def _parse_redis_url(url):
@@ -75,11 +73,11 @@ def clean_engine_keys(docker_redis_client):
 
 
 @pytest.fixture
-def engine(docker_redis_client, request):
+def engine(docker_redis_client, request, transactional_db):
     """
     Start the Central Job Engine in a background thread.
     The engine subscribes to Redis channels and processes events.
-    
+
     This is a lightweight in-process engine suitable for testing.
     Yields the engine instance for direct interaction.
     """
@@ -98,7 +96,7 @@ def engine(docker_redis_client, request):
 
 
 @pytest.fixture
-def engine_with_heartbeat_check(docker_redis_client, request):
+def engine_with_heartbeat_check(docker_redis_client, request, transactional_db):
     """
     Start the Engine with an active heartbeat timeout checker.
     The checker runs every 2 seconds and marks stale workers.
@@ -125,7 +123,7 @@ def workers(docker_redis_client):
     """
     Factory fixture that creates FakeWorker helpers.
     Returns a function that creates and registers workers.
-    
+
     Usage:
         w1, w2 = workers(2)
         w1.register()
@@ -146,10 +144,7 @@ def workers(docker_redis_client):
 
     # Deregister any workers that were created but not cleaned up
     for worker in created:
-        try:
-            docker_redis_client.delete(worker.worker_key())
-        except Exception:
-            pass
+        docker_redis_client.delete(worker.worker_key())
 
 
 @pytest.fixture
@@ -157,13 +152,18 @@ def jobs_in_db(request):
     """
     Create ProcessingJob records in the database.
     Uses Django's test database (which uses the Docker PostgreSQL).
-    
+
     Usage:
         job = jobs_in_db()  # creates one job
         job1, job2 = jobs_in_db(2)  # creates two jobs
     """
-    from django.utils import timezone
-    from apps.ingestion.models import BookSubmission, ProcessingJob, JobStatus, SubmissionStatus, SubmissionInputType, ResolutionStatus
+    from apps.ingestion.models import (
+        BookSubmission,
+        ProcessingJob,
+        ResolutionStatus,
+        SubmissionInputType,
+        SubmissionStatus,
+    )
 
     created_jobs = []
 
@@ -192,12 +192,9 @@ def jobs_in_db(request):
     yield _create_jobs
 
     # Cleanup
-    for job in created_jobs:
-        try:
-            job.submission.delete()
-            job.delete()
-        except Exception:
-            pass
+    BookSubmission.objects.filter(
+        pk__in=[job.submission_id for job in created_jobs]
+    ).delete()
 
 
 @pytest.fixture
@@ -221,10 +218,12 @@ def captured_events(docker_redis_client):
 
     def handler(message):
         with lock:
-            events.append({
-                "channel": message["channel"],
-                "data": json.loads(message["data"]),
-            })
+            events.append(
+                {
+                    "channel": message["channel"],
+                    "data": json.loads(message["data"]),
+                }
+            )
 
     for ch in channels:
         pubsub.subscribe(**{ch: handler})
@@ -238,12 +237,5 @@ def captured_events(docker_redis_client):
     assert not thread.is_alive(), "The Redis observer did not stop."
     try:
         pubsub.unsubscribe()
-    except Exception:
-        pass
-    try:
+    finally:
         pubsub.close()
-    except Exception:
-        pass
-
-
-

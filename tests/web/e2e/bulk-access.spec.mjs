@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 import { randomUUID } from "node:crypto";
 
 async function createBulkAccount(page) {
@@ -17,7 +17,7 @@ test("bulk permissions retain selections across search and report every item on 
   await page.setViewportSize({ width: 390, height: 844 });
   const account = await createBulkAccount(page);
   await page.goto(`/manage/users-access/${account}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const form = page.locator("form.bulk-access");
   await expect(form.getByRole("heading", { name: "Grant multiple permissions" })).toBeVisible();
   const search = form.getByLabel("Search targets for bulk access");
@@ -51,7 +51,7 @@ test("bulk permissions retain selections across search and report every item on 
   await replay;
   await expect(result.getByRole("status")).toContainText("Created: 0");
   expect(writes[1]).toEqual(writes[0]);
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(form.getByRole("heading", { name: "একসঙ্গে একাধিক অনুমতি দিন" })).toBeVisible();
   await expect(form.getByRole("status")).toContainText("যোগ হয়েছে:");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
@@ -60,7 +60,7 @@ test("bulk permissions retain selections across search and report every item on 
 test("uncertain bulk response keeps selections and prevents an automatic resend", async ({ page }) => {
   await useAccount(page, "access_manager");
   await page.goto(`/manage/users-access/${fixture.access_conflict_reader.id}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const form = page.locator("form.bulk-access");
   await form.getByLabel("Bulk permission target", { exact: true }).selectOption("account");
   let writes = 0;

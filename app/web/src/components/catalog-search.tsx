@@ -33,11 +33,11 @@ export function CatalogSearch({ initialQuery, initialBooks, page, initialFilters
   const currentPage = debounced === initial ? page : 1;
   return <>
     <CatalogFiltersForm pathname="/catalog/" initial={{ ...initialFilters, q: initialQuery }} onChange={(values) => setQuery(catalogFilterQuery(values))} />
-    <CatalogExportControls filters={filters} />
     <div aria-live="polite">{results.isFetching && <p className="muted"><SiteText>{"বই খোঁজা হচ্ছে…"}</SiteText></p>}
-      {results.error && <p className="notice" role="alert"><SiteText>{"বই খোঁজা যায়নি। আবার চেষ্টা করুন।"}</SiteText></p>}</div>
+      {results.error && <p className="notice" role="alert"><SiteText>{"বই খোঁজা যায়নি। আবার চেষ্টা করুন।"}</SiteText> <button type="button" className="button button-quiet" onClick={() => void results.refetch()}><SiteText>আবার চেষ্টা করুন</SiteText></button></p>}</div>
     {results.data?.entries.length ? <BookResults books={results.data.entries} busy={results.isFetching} />
-      : <div className="empty-state"><h2><SiteText>{hasFilters ? "কোনো বই পাওয়া যায়নি" : "এখনও কোনো বই প্রকাশিত হয়নি"}</SiteText></h2><p><SiteText>{hasFilters ? "ফিল্টার বদলে বা কম শর্ত দিয়ে আবার খুঁজুন।" : "প্রকাশিত বই এখানে দেখা যাবে। ব্যক্তিগত বই পাবেন আমার বই পাতায়।"}</SiteText></p></div>}
-    {results.data && !results.isPlaceholderData && <CatalogPagination pathname="/catalog/" page={currentPage} hasMore={results.data.has_more} query={filters.q ?? ""} filters={filters} />}
+      : results.data && <div className="empty-state"><h2><SiteText>{hasFilters ? "কোনো বই পাওয়া যায়নি" : "এখনও কোনো বই প্রকাশিত হয়নি"}</SiteText></h2><p><SiteText>{hasFilters ? "ফিল্টার বদলে বা কম শর্ত দিয়ে আবার খুঁজুন।" : "প্রকাশিত বই এখানে দেখা যাবে। ব্যক্তিগত বই পাবেন আমার বই পাতায়।"}</SiteText></p></div>}
+    {results.data && !results.isPlaceholderData && <CatalogPagination pathname="/catalog/" page={currentPage} hasMore={results.data.has_more} totalPages={results.data.pagination?.page_count} query={filters.q ?? ""} filters={filters} />}
+    <CatalogExportControls filters={filters} />
   </>;
 }

@@ -18,6 +18,7 @@ def extract_dedication_title_and_content(dedication_html, default_title="উৎ�
         plain_text_from_html,
         text_matches_patterns,
     )
+
     cleaned_html = dedupe_html_fragment_blocks(
         clean_extracted_dedication_html(dedication_html)
     )
@@ -60,8 +61,13 @@ def extract_dedication_title_and_content(dedication_html, default_title="উৎ�
 
 def resolve_dedication_heading(dedication_html, default_title="উৎসর্গ"):
     from .front_matter_text_rules import clean_display_text, plain_text_from_html, re
+
     plain_text = plain_text_from_html(dedication_html)
-    lines = [clean_display_text(line) for line in plain_text.splitlines() if clean_display_text(line)]
+    lines = [
+        clean_display_text(line)
+        for line in plain_text.splitlines()
+        if clean_display_text(line)
+    ]
     if not lines:
         return default_title
 
@@ -77,6 +83,7 @@ def normalize_dedication_heading_and_content(dedication_html, default_title="উ
         clean_extracted_dedication_html,
         dedupe_html_fragment_blocks,
     )
+
     heading = resolve_dedication_heading(dedication_html, default_title=default_title)
     cleaned_html = dedupe_html_fragment_blocks(
         clean_extracted_dedication_html(dedication_html)
@@ -86,6 +93,7 @@ def normalize_dedication_heading_and_content(dedication_html, default_title="উ
 
 def extract_leading_front_matter_html(html):
     from .content_segment_extraction import extract_main_content_segments
+
     extracted_html, _, _ = extract_main_content_segments(html)
     return extracted_html
 
@@ -95,13 +103,17 @@ def promote_leading_front_matter(book_info_html, main_content_html):
         extract_main_content_segments,
         merge_front_matter_html_parts,
     )
-    extracted_html, _, cleaned_main_content = extract_main_content_segments(main_content_html)
+
+    extracted_html, _, cleaned_main_content = extract_main_content_segments(
+        main_content_html
+    )
     book_info_html = merge_front_matter_html_parts(book_info_html, extracted_html)
     return book_info_html or "", cleaned_main_content
 
 
 def combined_front_matter_html(book_info_html, main_content_html=""):
     from .content_segment_extraction import merge_front_matter_html_parts
+
     extracted_html = extract_leading_front_matter_html(main_content_html)
     return merge_front_matter_html_parts(book_info_html, extracted_html)
 
@@ -112,6 +124,7 @@ def iter_front_matter_blocks(book_info_html):
         clean_display_text,
         plain_text_from_html,
     )
+
     if not book_info_html:
         return []
 
@@ -144,6 +157,7 @@ def extract_front_matter_entries(book_info_html):
         roles_in_text,
         split_metadata_fragments,
     )
+
     entries = []
     seen = set()
     block_variants = []
@@ -194,7 +208,10 @@ def extract_front_matter_entries(book_info_html):
                     or match_pattern_key(label, FRONT_MATTER_PATTERNS)
                     or normalize_catalog_text(label).replace(" ", "_")
                 )
-                dedupe_key = (normalize_catalog_text(label), normalize_catalog_text(value))
+                dedupe_key = (
+                    normalize_catalog_text(label),
+                    normalize_catalog_text(value),
+                )
                 if dedupe_key in seen:
                     continue
                 seen.add(dedupe_key)
@@ -237,7 +254,10 @@ def extract_front_matter_entries(book_info_html):
 
             for role, names in grouped.items():
                 value = ", ".join(names)
-                dedupe_key = (normalize_catalog_text(fragment), normalize_catalog_text(value))
+                dedupe_key = (
+                    normalize_catalog_text(fragment),
+                    normalize_catalog_text(value),
+                )
                 if dedupe_key in seen:
                     continue
                 seen.add(dedupe_key)
@@ -256,6 +276,7 @@ def extract_front_matter_entries(book_info_html):
 
 def extract_role_contributors(book_info_html):
     from .front_matter_text_rules import extract_contributor_evidence
+
     extracted = []
     for entry in extract_front_matter_entries(book_info_html):
         entry_roles = entry.get("roles") or ([entry["role"]] if entry["role"] else [])
@@ -271,6 +292,11 @@ def extract_role_contributors(book_info_html):
 
 
 def normalize_scraped_book(book_data):
+    from apps.ingestion.services.source_credits import (
+        credit_identity,
+        curate_explicit_credits,
+    )
+
     from .front_matter_text_rules import (
         ContributorRole,
         clean_display_text,
@@ -279,6 +305,7 @@ def normalize_scraped_book(book_data):
         normalize_catalog_text,
         split_multi_value,
     )
+
     front_matter_html = combined_front_matter_html(
         book_data.get("book_info", ""),
         book_data.get("main_content", ""),
@@ -296,7 +323,9 @@ def normalize_scraped_book(book_data):
         seen_contributors.add(contributor_key)
         contributors.append(contributor)
 
-    for contributor in extract_role_contributors(front_matter_html):
+    for contributor in curate_explicit_credits(
+        extract_role_contributors(front_matter_html)
+    ):
         append_contributor(contributor)
 
     weak_author_evidence = extract_contributor_evidence(
@@ -307,12 +336,12 @@ def normalize_scraped_book(book_data):
         append_contributor(contributor)
 
     claimed_names = {
-        normalize_catalog_text(contributor["name"])
+        credit_identity(contributor["name"])
         for contributor in contributors
         if contributor["role"] != ContributorRole.AUTHOR
     }
     for author in weak_author_evidence["authors"]:
-        normalized_name = normalize_catalog_text(author)
+        normalized_name = credit_identity(author)
         if not normalized_name or normalized_name in claimed_names:
             continue
         append_contributor(
@@ -427,6 +456,7 @@ def _resolve_label_key(label):
         canonical_role,
         normalize_catalog_text,
     )
+
     if not label:
         return ""
     normalized = normalize_catalog_text(label)
@@ -445,6 +475,7 @@ def _resolve_label_key(label):
 
 def _bn_label_for_key(key, fallback_label="", *, labels=None):
     from .front_matter_text_rules import clean_display_text
+
     table = labels if labels is not None else BOOK_INFO_KEY_LABELS_BN
     if key in table:
         return table[key]
@@ -453,6 +484,7 @@ def _bn_label_for_key(key, fallback_label="", *, labels=None):
 
 def _emit_book_info_line(label, value):
     from .front_matter_text_rules import clean_display_text, escape
+
     label_html = escape(clean_display_text(label))
     value_html = escape(clean_display_text(value))
     if not value_html:
@@ -464,6 +496,7 @@ def _emit_book_info_line(label, value):
 
 def _add_bucket_value(buckets, key, value):
     from .front_matter_text_rules import clean_display_text, normalize_catalog_text
+
     cleaned = clean_display_text(value)
     if not cleaned:
         return
@@ -573,7 +606,10 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
                         if resolved_key:
                             _add_bucket_value(buckets, resolved_key, value)
                         else:
-                            key_slug = normalize_catalog_text(label).replace(" ", "_") or "other"
+                            key_slug = (
+                                normalize_catalog_text(label).replace(" ", "_")
+                                or "other"
+                            )
                             _add_bucket_value(buckets, key_slug, value)
                             labels.setdefault(key_slug, label)
                     continue
@@ -591,8 +627,7 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
                     g_value = clean_display_text(generic.group("value"))
                     if g_label and g_value and len(g_label) <= 40:
                         key_slug = (
-                            normalize_catalog_text(g_label).replace(" ", "_")
-                            or "other"
+                            normalize_catalog_text(g_label).replace(" ", "_") or "other"
                         )
                         _add_bucket_value(buckets, key_slug, g_value)
                         labels.setdefault(key_slug, g_label)
@@ -633,4 +668,25 @@ def format_book_info_html_ordered(book_info_html, *, book_title="", language="bn
     return "\n".join(output_lines)
 
 
-__all__ = ['BOOK_INFO_KEY_LABELS_BN', 'BOOK_INFO_KEY_LABELS_EN', 'CANONICAL_BOOK_INFO_KEY_ORDER', '_GENERIC_LABEL_VALUE_PATTERN', '_add_bucket_value', '_bn_label_for_key', '_book_info_labels', '_emit_book_info_line', '_resolve_label_key', 'combined_front_matter_html', 'extract_dedication_title_and_content', 'extract_front_matter_entries', 'extract_leading_front_matter_html', 'extract_role_contributors', 'format_book_info_html_ordered', 'iter_front_matter_blocks', 'normalize_dedication_heading_and_content', 'normalize_scraped_book', 'promote_leading_front_matter', 'resolve_dedication_heading']
+__all__ = [
+    "BOOK_INFO_KEY_LABELS_BN",
+    "BOOK_INFO_KEY_LABELS_EN",
+    "CANONICAL_BOOK_INFO_KEY_ORDER",
+    "_GENERIC_LABEL_VALUE_PATTERN",
+    "_add_bucket_value",
+    "_bn_label_for_key",
+    "_book_info_labels",
+    "_emit_book_info_line",
+    "_resolve_label_key",
+    "combined_front_matter_html",
+    "extract_dedication_title_and_content",
+    "extract_front_matter_entries",
+    "extract_leading_front_matter_html",
+    "extract_role_contributors",
+    "format_book_info_html_ordered",
+    "iter_front_matter_blocks",
+    "normalize_dedication_heading_and_content",
+    "normalize_scraped_book",
+    "promote_leading_front_matter",
+    "resolve_dedication_heading",
+]

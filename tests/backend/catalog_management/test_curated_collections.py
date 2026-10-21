@@ -2,6 +2,7 @@ import pytest
 from apps.catalog.models import Book, CollectionBook, CuratedCollection
 from django.db import IntegrityError, transaction
 from django.utils import timezone
+from rest_framework.fields import DateTimeField
 
 pytestmark = pytest.mark.django_db
 
@@ -39,6 +40,8 @@ def test_collection_feed_is_lightweight_and_detail_is_reviewed(
             "name": collection.name,
             "slug": collection.slug,
             "book_count": 2,
+            "catalog_code": None,
+            "created_at": DateTimeField().to_representation(collection.created_at),
         }
     ]
     detail = client.get(

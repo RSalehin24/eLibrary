@@ -12,7 +12,9 @@ SOURCE_DISPATCH_LOCK = 76002018
 
 
 def work_lane(job):
-    if job.error_code:
+    if job.error_code or any(
+        key in job.checkpoint for key in ("source_defect", "source_validation_recovery")
+    ):
         return "recovery"
     return "continuation" if job.checkpoint.get("continuation") else "new"
 
@@ -46,14 +48,17 @@ def source_dispatch_candidates(eligible):
         available_at__lte=timezone.now(),
         job__available_at__lte=timezone.now(),
     )
+    fresh = Q(job__error_code="") & ~Q(
+        job__checkpoint__has_any_keys=["source_defect", "source_validation_recovery"]
+    )
     lanes = [
-        Q(job__error_code="")
+        fresh
         & (
             Q(job__checkpoint__continuation__isnull=True)
             | Q(job__checkpoint__continuation=False)
         ),
-        Q(job__error_code="", job__checkpoint__continuation=True),
-        ~Q(job__error_code=""),
+        fresh & Q(job__checkpoint__continuation=True),
+        ~fresh,
     ]
     previous = (
         JobDispatch.objects.filter(

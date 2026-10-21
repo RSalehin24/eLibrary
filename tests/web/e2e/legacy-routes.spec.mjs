@@ -6,7 +6,7 @@ test("legacy library and writer links retain validated filters", async ({ page }
   const target = new URL(page.url());
   expect(target.searchParams.get("q")).toBe(fixture.query);
   expect(target.searchParams.get("sort")).toBe("title");
-  expect(target.searchParams.get("record_type")).toBe("digital");
+  expect(target.searchParams.has("record_type")).toBe(false);
   expect(target.searchParams.has("next")).toBe(false);
   await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
   await page.goto("/translators/");

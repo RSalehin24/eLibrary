@@ -3,11 +3,11 @@ import { SiteNav, SiteText } from "./site-language";
 import { Icon, type IconName } from "./icon";
 
 const entries: readonly { path: string; label: string; icon: IconName }[] = [
-  { path: "/catalog/", label: "প্রকাশিত বই", icon: "books" },
-  { path: "/contributors/", label: "লেখক ও সহযোগী", icon: "people" },
-  { path: "/categories/", label: "বইয়ের বিভাগ", icon: "tags" },
-  { path: "/series/", label: "বইয়ের সিরিজ", icon: "books" },
-  { path: "/collections/", label: "নির্বাচিত সংগ্রহ", icon: "read" },
+  { path: "/catalog/", label: "সব বই", icon: "books" },
+  { path: "/contributors/", label: "লেখক", icon: "people" },
+  { path: "/categories/", label: "বিভাগ", icon: "tags" },
+  { path: "/series/", label: "সিরিজ", icon: "books" },
+  { path: "/collections/", label: "পাঠতালিকা", icon: "read" },
 ];
 
 export function CatalogBrowseNav({ current }: { current: string }) {

@@ -11,6 +11,10 @@ test("reader preferences validate persisted values and keep supported reading vi
   assert.equal(checkedReaderAppearance({ fontSize: Infinity, theme: "invalid", view: "script", font: "url(x)" }).fontSize, 20);
   assert.deepEqual(checkedReaderAppearance({ fontSize: 90, theme: "dark", view: "spread", font: "sans", lineHeight: 10, width: 1040 }), { fontSize: 40, theme: "dark", view: "spread", font: "sans", lineHeight: 2.4, width: 1040 });
   assert.equal(checkedReaderAppearance({ fontSize: -10 }).fontSize, 14);
+  assert.equal(checkedReaderAppearance(null).width, 0);
+  assert.equal(checkedReaderAppearance({ width: 0 }).width, 0);
+  assert.equal(checkedReaderAppearance({ width: 800 }).width, 800);
+  assert.equal(checkedReaderAppearance({ width: -1 }).width, 0);
 });
 
 test("original reader theme and text shortcuts validate bounds and preserve editing", () => {
@@ -49,6 +53,9 @@ test("keyboard reading leaves form editing, text selection and browser shortcuts
   assert.equal(readerKeyboardDirection({ key: "ArrowRight", shiftKey: true, target: null }), 0);
   assert.equal(readerKeyboardDirection({ key: "ArrowRight", ctrlKey: true, target: null }), 0);
   assert.equal(readerKeyboardDirection({ key: " ", target: { closest: () => ({}) } }), 0);
+  for (const kind of ["audio", "video"]) {
+    assert.equal(readerKeyboardDirection({ key: "ArrowRight", target: { closest: selector => selector.split(",").includes(kind) ? {} : null } }), 0);
+  }
 });
 
 test("book search returns exact text offsets, handles Bengali and bounds repeated matches", () => {

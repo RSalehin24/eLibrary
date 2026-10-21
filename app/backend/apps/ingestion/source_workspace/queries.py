@@ -18,12 +18,12 @@ class SourceSnapshot:
 def source_entries(parameters):
     matches = BookSource.objects.filter(normalized_source_url=OuterRef("source_url"))
     operations = BackgroundJob.objects.filter(source_record_id=OuterRef("pk"))
+    active_operations = operations.filter(state__in=SOURCE_ACTIVE_STATES)
     queryset = (
         SourceCatalogEntry.objects.annotate(
             source_update=F("raw_data__source_update"),
-            active_operation_id=Subquery(
-                operations.filter(state__in=SOURCE_ACTIVE_STATES).values("pk")[:1]
-            ),
+            active_operation_id=Subquery(active_operations.values("pk")[:1]),
+            active_operation_state=Subquery(active_operations.values("state")[:1]),
             latest_operation_id=Subquery(operations.values("pk")[:1]),
             linked=Q(catalog_book__isnull=False) | Exists(matches),
             removed=Case(

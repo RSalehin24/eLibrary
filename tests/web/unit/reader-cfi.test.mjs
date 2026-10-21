@@ -13,8 +13,25 @@ test("legacy CFI points and ranges preserve structural steps, assertions and UTF
   assert.equal(range.start.assertion, "before,after;s=b"); assert.equal(range.end.offset, 7);
 });
 
-test("invalid, excessive and nontext CFIs fail without evaluating their contents", () => {
-  for (const value of ["", "javascript:alert(1)", "epubcfi(/6/2)", "epubcfi(/6/2!/4/2!/2)", "epubcfi(/6/3!/4/2)", "epubcfi(/06/2!/4/2)", "epubcfi(/6/2!/4/2:Infinity)", "epubcfi(/6/2!/4/2:9007199254740992)", "epubcfi(/6/2!/4/2[unclosed)", `epubcfi(/6/2!/${"2/".repeat(200)}1:0)`, "epubcfi(/6/2!/4/2@0:5)"]) assert.equal(parseCfi(value), null, value);
+test("invalid, excessive and malformed CFIs fail without evaluating their contents", () => {
+  for (const value of ["", "javascript:alert(1)", "epubcfi(/6/2)", "epubcfi(/6/2!/4/2!/2)", "epubcfi(/6/3!/4/2)", "epubcfi(/06/2!/4/2)", "epubcfi(/6/2!/4/2:Infinity)", "epubcfi(/6/2!/4/2:9007199254740992)", "epubcfi(/6/2!/4/2[unclosed)", `epubcfi(/6/2!/${"2/".repeat(200)}1:0)`]) assert.equal(parseCfi(value), null, value);
+});
+
+test("CFIs retain image percentages, media seconds and ordered temporal-spatial ranges", () => {
+  assert.deepEqual(parseCfi("epubcfi(/6/2!/4/2@0:100)").start.spatial, { x: 0, y: 100 });
+  const point = parseCfi("epubcfi(/6/2!/4/2~23.5@5.75:97.6)").start;
+  assert.equal(point.temporal, 23.5);
+  assert.deepEqual(point.spatial, { x: 5.75, y: 97.6 });
+  const range = parseCfi("epubcfi(/6/2!/4/2,~0.5,~10)");
+  assert.equal(range.start.temporal, .5); assert.equal(range.end.temporal, 10);
+});
+
+test("coordinate CFIs reject invalid axes, times, ordering and text-node targets", () => {
+  for (const suffix of ["@-1:50", "@100.01:0", "@0:101", "@0:NaN", "@0:Infinity", "@0", "@0:0~1", "~01", "~-1", "~Infinity", "~1e3", "~9007199254740992", "~1:2", "~", "@", "@0:0/2"]) {
+    assert.equal(parseCfi(`epubcfi(/6/2!/4/2${suffix})`), null, suffix);
+  }
+  assert.equal(parseCfi("epubcfi(/6/2!/4/2/1~1)"), null);
+  assert.equal(parseCfi("epubcfi(/6/2@0:0!/4/2)"), null);
 });
 
 test("text assertions unescape CFI syntax while preserving literal carets and UTF-16 in book text", () => {

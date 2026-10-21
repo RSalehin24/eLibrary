@@ -7,6 +7,7 @@ x-app-environment: &app_environment
   DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/bangla_library}
   CELERY_BROKER_URL: ${CELERY_BROKER_URL:-redis://redis:6379/0}
   CELERY_RESULT_BACKEND: ${CELERY_RESULT_BACKEND:-redis://redis:6379/0}
+  BACKGROUND_PROCESSING_QUEUE: ${BACKGROUND_PROCESSING_QUEUE:-processing}
   CELERY_TASK_ALWAYS_EAGER: ${CELERY_TASK_ALWAYS_EAGER:-0}
   PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://127.0.0.1:${BACKEND_PORT:-8000}}
   PUBLIC_API_ORIGIN: ${PUBLIC_API_ORIGIN:-http://127.0.0.1:${BACKEND_PORT:-8000}}
@@ -208,7 +209,7 @@ services:
     command: >
       sh -c "mkdir -p /logs/local/celery &&
       celery -A config worker --pool=solo --loglevel=info --concurrency=1
-      --queues=processing
+      --queues=$${BACKGROUND_PROCESSING_QUEUE:-processing}
       --hostname=processing@%h
       --prefetch-multiplier=1
       --max-tasks-per-child=1

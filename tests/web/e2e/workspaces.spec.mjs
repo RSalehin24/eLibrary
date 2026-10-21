@@ -10,7 +10,8 @@ test("login preserves a private deep link and logout clears access", async ({ pa
   await expect(page).toHaveURL(new RegExp(`/my-books/${encodeURIComponent(fixture.book.slug)}/$`));
   await expect(page.getByRole("heading", { name: fixture.book.title, exact: true, level: 1 })).toBeVisible();
   await expect(page.getByRole("link", { name: "অ্যাডমিন", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
+  await page.locator("details.account-menu:visible > summary").click(); await page.getByRole("button", { name: "প্রস্থান", exact: true }).click();
+  await page.locator("details.account-menu:visible > summary").click();
   await expect(page.getByRole("link", { name: "প্রবেশ করুন", exact: true })).toBeVisible();
   expect((await page.request.get("/api/v1/me/books/")).status()).toBe(403);
 });
@@ -26,22 +27,21 @@ test("reader sees personal progress and cannot open management", async ({ page }
 test("scoped editor receives only the granted management book", async ({ page }) => {
   await useAccount(page, "editor");
   await page.goto("/manage/books/");
-  await expect(page.getByRole("heading", { name: fixture.book.title, exact: true })).toBeVisible();
-  await expect(page.locator(".managed-book-grid .book-card")).toHaveCount(3);
-  await expect(page.getByRole("link", { name: "আমার বইয়ে ফিরুন", exact: true })).toBeVisible();
+  await expect(page.locator(".managed-books-table").getByRole("link", { name: fixture.book.title, exact: true })).toBeVisible();
+  await expect(page.locator(".managed-books-table tbody tr")).toHaveCount(3);
+  await expect(page.getByRole("link", { name: "পাঠকের ভিউ", exact: true })).toBeVisible();
 });
 
 test("administrator profile opens the management controls and marks the active section", async ({ page }) => {
   await useAccount(page, "administrator"); await page.goto("/profile/");
-  await expect(page.locator('.workspace-nav [aria-current="page"]')).toHaveText("প্রোফাইল");
+  await expect(page.getByRole("heading", { name: "প্রোফাইল ও নিরাপত্তা", exact:true })).toBeVisible();
   await page.getByRole("link", { name: "অ্যাডমিন প্যানেল", exact: true }).click();
-  await expect(page).toHaveURL(/\/manage\/$/);
-  const shortcuts = page.getByRole("navigation", { name: "বই তৈরি ও পরিচালনা", exact: true });
-  await expect(shortcuts.getByRole("link", { name: "ওয়েবসাইট থেকে বই তৈরি", exact: false })).toHaveAttribute("href", "/manage/sources/");
-  await expect(shortcuts.getByRole("link", { name: "নিজে বই যোগ করুন", exact: false })).toHaveAttribute("href", "/manage/books/new/");
-  await shortcuts.getByRole("link", { name: "ওয়েবসাইট থেকে বই তৈরি", exact: false }).click();
+  await expect(page).toHaveURL(/\/manage\/sources\/$/);
+  const actions = page.locator(".source-creation-actions");
+  await expect(actions.getByRole("button", { name: "সব বইয়ের তথ্য আনুন", exact: true })).toBeVisible();
+  await expect(actions.getByRole("link", { name: "EPUB আপলোড", exact: true })).toHaveAttribute("href", "/manage/books/new/");
   await expect(page.getByRole("heading", { name: "বই তৈরি", exact: true })).toBeVisible();
-  await expect(page.locator('.workspace-nav [aria-current="page"]')).toHaveText("বই তৈরি");
+  await expect(page.locator('.admin-desktop-navigation .workspace-nav [aria-current="page"]')).toHaveText("বই তৈরি");
   await expect(page.getByRole("button", { name: "সব বইয়ের তথ্য আনুন", exact: true })).toBeVisible();
   await page.getByLabel("বই বা লেখকের নাম", { exact: true }).fill(fixture.sources.query);
   await page.getByRole("search").getByRole("button", { name: "খুঁজুন", exact: true }).click();

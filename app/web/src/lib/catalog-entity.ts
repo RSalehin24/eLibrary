@@ -11,7 +11,7 @@ export { catalogEntityPath } from "./catalog-entity-path";
 
 export type EntityKind = "contributors" | "categories" | "series" | "collections";
 export type EntityPageProps = { params: Promise<{ slug: string }>; searchParams: Promise<RouteQuery> };
-export const entityLabels: Record<EntityKind, string> = { contributors: "লেখক ও সহযোগী", categories: "বইয়ের বিভাগ", series: "বইয়ের সিরিজ", collections: "সম্পাদকের নির্বাচন" };
+export const entityLabels: Record<EntityKind, string> = { contributors: "লেখক ও সহযোগী", categories: "বইয়ের বিভাগ", series: "বইয়ের সিরিজ", collections: "পাঠতালিকা" };
 export const entityFilters: Record<EntityKind, string> = { contributors: "contributor", categories: "category", series: "series", collections: "collection" };
 
 export const getPublicEntity = cache(async (kind: EntityKind, slug: string) => {

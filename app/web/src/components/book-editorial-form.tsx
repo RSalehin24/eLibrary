@@ -1,7 +1,7 @@
 "use client";
 
 import { catalogStateLabel } from "@/lib/catalog-state";
-import { AdminText } from "@/components/admin-language";
+import { AdminNavigation, AdminText } from "@/components/admin-language";
 import { APIError } from "@/api/http";
 import type { BookEditorialUpdate, ManagedBookDetail } from "@/api/types";
 import { useBookEditor } from "@/lib/book-editor";
@@ -31,19 +31,18 @@ export function BookEditorialForm({ initialBook, canProcess = false }: { initial
     <div className="notice"><p><AdminText>{"অবস্থা: "}</AdminText><AdminText>{catalogStateLabel(book.state)}</AdminText></p>
       <p><AdminText>{"সংরক্ষণ করে প্রকাশ করুন। প্রকাশিত বইয়ের পরিবর্তন সংরক্ষণ করলেই দেখা যাবে।"}</AdminText></p></div>
     <EditorialFeedback dirty={dirty} notice={editor.notice} error={error} />
-    <a className="button button-quiet" href="#metadata-history"><Icon name="notes" /><AdminText>{"তথ্যের ইতিহাস"}</AdminText></a>
+    <AdminNavigation className="admin-local-tabs" label="বই সম্পাদনা"><a href="#book-metadata"><Icon name="edit" /><AdminText>বইয়ের তথ্য</AdminText></a><a href="#file-tools"><Icon name="download" /><AdminText>ফাইল</AdminText></a><a href="#metadata-history"><Icon name="notes" /><AdminText>তথ্যের ইতিহাস</AdminText></a></AdminNavigation>
     <div className="editor-toolbar"><button className="button" type="submit" form={`book-edit-${book.id}`} disabled={pending || !dirty}><AdminText>{save.isPending ? "সংরক্ষণ হচ্ছে…" : "পরিবর্তন সংরক্ষণ করুন"}</AdminText></button><EditorialActions book={book} pending={pending} dirty={dirty} onCommand={(action) => { save.reset(); command.mutate(action); }} /></div>
     <BookLifecycleControls editor={editor} />
-    {canProcess && book.record_type !== "manual" && <ProcessingAssets slug={book.slug} />}
-    <BookEpubUpload editor={editor} />
     <form id={`book-edit-${book.id}`} key={`form:${book.updated_at}`} className="editorial-form" onChange={editor.markDirty} onSubmit={(event) => {
       event.preventDefault(); command.reset(); save.mutate(formMetadata(event.currentTarget));
     }}>
-      <BookMetadataFields book={book} pending={pending} errors={errors} />
+      <div id="book-metadata"><BookMetadataFields book={book} pending={pending} errors={errors} /></div>
       <BookFormatFields book={book} pending={pending} errors={errors} />
       <EditorialSEOFields values={book} pending={pending} errors={errors} />
       <fieldset disabled={pending}><EditorialField name="edit_note" label="পরিবর্তনের কারণ (ঐচ্ছিক)" value="" errors={errors.edit_note} maxLength={2000} multiline /></fieldset>
     </form>
+    <section id="file-tools">{canProcess && book.record_type !== "manual" && <ProcessingAssets slug={book.slug} />}<BookEpubUpload editor={editor} /></section>
     <BookMetadataHistory key={`history:${book.updated_at}`} slug={book.slug} revision={book.updated_at} />
   </section>;
 }

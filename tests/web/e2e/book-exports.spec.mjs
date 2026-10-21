@@ -4,6 +4,8 @@ import { test, expect, fixture, useAccount } from "./fixtures.mjs";
 test("catalog exports include the applied search and print the entire filtered list in another tab", async ({ page, context }) => {
   await page.goto(`/catalog/?q=${encodeURIComponent(fixture.query)}`);
   const controls = page.getByRole("region", { name: "বইয়ের তালিকা ডাউনলোড", exact: true });
+  await expect(controls.getByRole("button", { name: "CSV", exact: true })).not.toBeVisible();
+  await controls.locator("summary").click();
   const downloadEvent = page.waitForEvent("download");
   await controls.getByRole("button", { name: "CSV", exact: true }).click();
   const download = await downloadEvent;
@@ -21,12 +23,20 @@ test("catalog exports include the applied search and print the entire filtered l
   await print.close();
 });
 
-test("physical inventory supports filters, grouped XLSX and a direct manual-book creation action on a phone", async ({ page }) => {
+test("physical inventory retains filters and grouped XLSX without printed-book creation on a phone", async ({ page }) => {
   await useAccount(page, "administrator");
   await page.setViewportSize({ width: 320, height: 800 });
+  await page.goto("/physical-books/?binding=hard_cover");
+  await page.locator(".catalog-filters-form").getByRole("link", { name: "ফিল্টার সরান", exact: true }).click();
+  await expect(page).toHaveURL(url => !url.searchParams.has("binding"));
   await page.goto(`/physical-books/?q=${encodeURIComponent(fixture.personal.paper.title)}&binding=hard_cover`);
   await expect(page.getByRole("heading", { name: fixture.personal.paper.title, exact: true })).toBeVisible();
+  await expect(page.getByLabel("বাঁধাই", { exact: true })).not.toBeVisible();
+  await page.locator(".physical-filter-details>summary").click();
+  await expect(page.getByLabel("বাঁধাই", { exact: true })).toHaveValue("hard_cover");
+  await expect(page.locator('input[name="record_type"], select[name="record_type"]')).toHaveCount(0);
   const controls = page.getByRole("region", { name: "বইয়ের তালিকা ডাউনলোড", exact: true });
+  await controls.locator("summary").click();
   await controls.getByLabel("ভাগ করুন", { exact: true }).selectOption("publisher");
   const downloadEvent = page.waitForEvent("download");
   await controls.getByRole("button", { name: "XLSX", exact: true }).click();
@@ -37,6 +47,5 @@ test("physical inventory supports filters, grouped XLSX and a direct manual-book
   await page.addStyleTag({ content: "html { font-size: 200%; }" });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-artifacts/foundation/physical-inventory-320.png", fullPage: true });
-  await page.getByRole("link", { name: "কাগজের বই যোগ করুন", exact: true }).click();
-  await expect(page.getByLabel("বইয়ের ধরন", { exact: true })).toHaveValue("manual");
+  await expect(page.getByRole("link", { name: "কাগজের বই যোগ করুন", exact: true })).toHaveCount(0);
 });

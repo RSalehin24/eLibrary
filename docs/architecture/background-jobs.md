@@ -45,7 +45,8 @@ be inspected before another request is issued.
 
 The dispatcher leases at most fifty records per tick. AMQP publication uses
 durable messages, publisher confirmation, bounded connection/confirmation
-timeouts, and dispatch identifiers only. Heavy work uses `processing`; the
+timeouts, and dispatch identifiers only. Heavy work uses
+`BACKGROUND_PROCESSING_QUEUE` (default `processing`); the
 Kindle and account mail use `delivery`. Non-AMQP transport and an AMQP URL
 incorrectly used as a Celery result backend are rejected before leasing work.
 Broker interruptions leave dispatches pending with bounded backoff. Expired
@@ -91,6 +92,10 @@ python manage.py dispatch_background_jobs --once
 celery -A config.celery worker --queues processing --concurrency 2
 ```
 
+For a custom processing queue, set the same queue in the dispatcher environment
+and worker arguments. See the [preserving queue rotation procedure](../operations/source-job-diagnostics.md#processing-queue-rotation)
+before moving live work. The delivery destination remains separate.
+
 `--once` performs one bounded maintenance/dispatch tick. Dispatch intervals accept
 1–60 seconds. `BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS` defaults to 3600 and accepts
 60–86400; the hard timeout adds sixty seconds. Configure worker concurrency
@@ -111,9 +116,9 @@ interruptions, and the registered Celery task. Publisher tests use injected
 applications; they do not prove live broker behavior. Chromium checks exercise
 phone controls, conflicts, polling, URL errors, and responsive layouts.
 
-The [RabbitMQ proposal](reliability-dependencies.md) awaits approval; its image
-has not been installed. Live broker interruption, source discovery/automation
-integration, duplicate/incomplete source resolution, live queued delivery, portable
-production deployment, supported browsers, physical devices, and capacity
-measurements remain outstanding. This increment does not complete the admin
-or reliability phase.
+The preceding checks describe this increment's original scope. RabbitMQ was
+subsequently approved and installed, and current local broker, source automation,
+recovery and browser simulator results are recorded in the
+[implementation handoff](../implementation-handoff.md). External delivery,
+physical devices and production deployment retain their explicit acceptance
+boundaries there.

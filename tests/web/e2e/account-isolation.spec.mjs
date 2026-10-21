@@ -13,7 +13,7 @@ test("logout in another tab clears the cached profile and its unfinished draft",
   await expect(page.getByLabel("নাম", { exact: true })).toHaveValue("Foundation reader");
   await page.getByLabel("নাম", { exact: true }).fill("আগের অ্যাকাউন্টের অসম্পূর্ণ নাম");
   const other = await context.newPage(); await other.goto("/my-books/");
-  await other.getByRole("button", { name: "প্রস্থান", exact: true }).click();
+  await other.locator("details.account-menu:visible > summary").click(); await other.getByRole("button", { name: "প্রস্থান", exact: true }).click();
   await expect(other).toHaveURL(new URL("/", other.url()).href);
   await expect(page).toHaveURL(/\/login\/\?next=%2Fprofile%2F$/);
   await expect(page.getByLabel("নাম", { exact: true })).toHaveCount(0);

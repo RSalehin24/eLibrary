@@ -5,16 +5,17 @@ import type { EntityKind } from "@/lib/catalog-entity";
 import { BookCover } from "./book-cover";
 import { bookDetailEntityPath } from "@/lib/book-detail-links";
 import { contributorRoles } from "@/lib/contributor-roles";
+import "./book-information.css";
 
-type BookInformationProps = { book: PublicBookDetail; children?: React.ReactNode; personal?: boolean };
+type BookInformationProps = { book: PublicBookDetail; children?: React.ReactNode; personal?: boolean; personalView?: string };
 
 function EntityName({ name, href }: { name: string; href?: string }) {
   return href ? <Link className="text-link" href={href}>{name}</Link> : <span>{name}</span>;
 }
 
-export function BookInformation({ book, children, personal = false }: BookInformationProps) {
+export function BookInformation({ book, children, personal = false, personalView }: BookInformationProps) {
   const authors = book.contributors.filter((person) => person.role === "author");
-  const entityPath = (kind: EntityKind, slug: string, role = "") => bookDetailEntityPath({ kind, slug, role, personal });
+  const entityPath = (kind: EntityKind, slug: string, role = "") => bookDetailEntityPath({ kind, slug, role, personal, view: personalView });
   return <article className="book-detail"><BookCover title={book.title} author={authors.map((author) => author.name).join(", ")} coverUrl={book.cover_url} />
     <div className="book-detail-copy"><p className="eyebrow">{book.categories.map((category) => category.name).join(" · ") || <SiteText>{"বইয়ের পরিচিতি"}</SiteText>}</p><h1>{book.title}</h1>
       {authors.map((author) => <p key={author.id} className="muted"><EntityName name={author.name} href={entityPath("contributors", author.slug, "author")} /></p>)}

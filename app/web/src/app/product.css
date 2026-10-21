@@ -154,7 +154,13 @@
 .entity-directory>li>a:hover { border-color:var(--green); }
 .source-verification h2 { display:flex; align-items:center; gap:10px; font-size:1.125rem; }
 .verification-passed { padding:16px 20px; border:1px solid var(--line); border-radius:8px; background:var(--soft); }
-@media(max-width:480px) { .catalog-browse-navigation a { flex:1 1 40%; } .entity-directory>li>a { flex-wrap:wrap; } .entity-directory>li>a>span { margin-left:auto; } }
+@media(max-width:480px) {
+ .catalog-browse-navigation { gap:4px; margin-bottom:20px; padding-bottom:12px; }
+ .catalog-browse-navigation a { flex:0 1 auto; min-width:0; padding:8px 10px; font-size:.8125rem; background:transparent; border-color:transparent; }
+ .catalog-browse-navigation .icon { width:18px; height:18px; }
+ .entity-directory>li>a { flex-wrap:wrap; }
+ .entity-directory>li>a>span { margin-left:auto; }
+}
 .notification-viewport { position: fixed; inset: auto 1rem 1rem auto; z-index: 120; max-width: min(28rem, calc(100vw - 2rem)); pointer-events: none; }
 .notification-card { display: flex; align-items: center; gap: 1rem; padding: .75rem 1rem; border: 1px solid var(--line); border-radius: .85rem; box-shadow: 0 8px 24px #172c2926; background: var(--surface); color: var(--ink); pointer-events: auto; }
 .notification-card p { margin: 0; }

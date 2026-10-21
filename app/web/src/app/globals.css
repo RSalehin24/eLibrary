@@ -2,6 +2,9 @@
 @import "./reader.css";
 @import "./branding.css";
 @import "./site-language.css";
+@import "./site-header.css";
+@import "./pagination.css";
+@import "./catalog-controls.css";
 @import "./processing.css";
 
 :root { --ink:#1e302a; --muted:#66736d; --paper:#f7f8f6; --green:#174c3c; --line:#dfe5df; --accent:#b58a4c; --surface:#fff; --soft:#eef3ee; --radius:12px; --shadow:0 3px 14px #20392a05; }
@@ -50,9 +53,10 @@ h3 { font-size:1.05rem; line-height:1.55; margin:8px 0; }
 .book-card { position:relative; display:flex; flex-direction:column; min-width:0; border:1px solid var(--line); border-radius:var(--radius); background:white; overflow:hidden; box-shadow:var(--shadow); transition:border-color .16s,box-shadow .16s; }
 .book-card:hover,.book-card:focus-within { border-color:#a8c1af; box-shadow:0 8px 24px #20392a0c; }
 .book-card h3 a::after { content:""; position:absolute; inset:0; }
-.book-card-body>.text-link { position:relative; }
+.book-card-footer { position:relative; margin-top:auto; padding-top:12px; }
+.book-card-body .eyebrow a,.book-card-body .muted a { position:relative; z-index:1; }
 .book-card-body { display:flex; flex:1; flex-direction:column; padding:20px; }
-.book-card-body>.text-link { margin-top:auto; padding-top:12px; font-size:.8125rem; }
+.book-card-footer>.text-link { font-size:.8125rem; }
 .book-card .eyebrow { font-size:.75rem; margin:0; }
 .book-card .muted { font-size:.8125rem; }
 .empty-state { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:40px 24px; border:1px solid var(--line); border-radius:var(--radius); background:white; margin:20px 0; }
@@ -84,8 +88,7 @@ h3 { font-size:1.05rem; line-height:1.55; margin:8px 0; }
 @media(max-width:374px) { .book-grid { grid-template-columns:1fr; } .search-form .button { padding-inline:14px; } }
 @media(prefers-reduced-motion:reduce) { html { scroll-behavior:auto; } *,*::before,*::after { transition:none !important; animation:none !important; } }
 
-.site-header nav a,.account-menu>.text-link { display:inline-flex; align-items:center; gap:8px; }
-.site-header>nav { flex-wrap:wrap; }
+.account-menu>.text-link { display:inline-flex; align-items:center; gap:8px; }
 .catalog-management-shortcut { display:flex; align-items:center; justify-content:space-between; gap:20px; padding:20px; margin:24px 0; background:var(--soft); border:1px solid var(--line); border-radius:var(--radius); }
 .catalog-management-shortcut p { margin:4px 0 0; }
 .book-save-action { display:inline-flex; align-items:center; flex-wrap:wrap; gap:8px; }
@@ -125,12 +128,16 @@ h3 { font-size:1.05rem; line-height:1.55; margin:8px 0; }
 .saved-filter-create form { max-width: 34rem; padding-block: .75rem; }
 .saved-filter-create input { min-width: 0; width: 100%; min-height: 46px; border: 1px solid var(--line); border-radius: 6px; padding: .6rem; }
 .book-layout-controls { display: flex; justify-content: end; gap: .4rem; margin-block: 1rem; }
+.book-list-actions { position:relative; display:flex; align-items:start; flex-wrap:wrap; gap:.5rem; margin-block-start:1rem; }
+.book-list-actions .book-save-action > a { display:none; }
+.book-list-actions .button { max-width:100%; white-space:normal; text-align:start; }
 .book-layout-controls [aria-pressed="true"] { background: var(--green); color: white; border-color: var(--green); }
 .book-table-scroll { overflow-x: auto; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; }
-.book-results-table { width: 100%; min-width: 640px; border-collapse: collapse; text-align: start; }
-.book-results-table th, .book-results-table td { padding: 1rem; border-block-end: 1px solid var(--line); vertical-align: top; text-align: start; }
+.book-results-table { width: 100%; min-width: 960px; table-layout:fixed; border-collapse: collapse; text-align: start; }
+.book-results-table th, .book-results-table td { padding: 1rem; border-block-end: 1px solid var(--line); vertical-align: top; text-align: start; overflow-wrap:anywhere; }
 .book-results-table thead { background: var(--surface); }
-.book-results-table td a, .book-results-table small { display: block; margin-block-end: .35rem; }
+.book-results-table td a:not(.button), .book-results-table small { display: block; margin-block-end: .35rem; }
+.book-results-table .button { padding:8px 10px; font-size:.8125rem; max-width:100%; }
 .book-results-table tbody tr:last-child > * { border-block-end: 0; }
 .catalog-directory-options { display: flex; flex-wrap: wrap; align-items: end; gap: 1rem; margin-block: 1rem 2rem; }
 .catalog-directory-options label { display: grid; gap: .5rem; }

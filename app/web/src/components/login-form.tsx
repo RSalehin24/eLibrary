@@ -8,6 +8,7 @@ import { signIn } from "@/api/auth";
 import { APIError } from "@/api/http";
 import { returnPath } from "@/lib/return-path";
 import Link from "next/link";
+import { clearWorkspaceView } from "@/lib/workspace-view";
 
 function loginErrorMessage(error: Error) {
   if (!(error instanceof APIError)) return "প্রবেশ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।";
@@ -18,12 +19,12 @@ function loginErrorMessage(error: Error) {
   return "ইমেইল ও পাসওয়ার্ড পরীক্ষা করে আবার চেষ্টা করুন।";
 }
 
-export function LoginForm({ nextPath }: { nextPath: string }) {
+export function LoginForm({ nextPath }: { nextPath?: string }) {
   const client = useQueryClient();
   const [codeRequired, setCodeRequired] = useState(false);
   const codeInput = useRef<HTMLInputElement>(null);
   const login = useMutation({ mutationFn: signIn, onSuccess: () => {
-    client.clear(); window.location.replace(returnPath(nextPath));
+    client.clear(); clearWorkspaceView(); window.location.replace(nextPath ? returnPath(nextPath, "/login/") : "/login/");
   }, onError: (error) => {
     if (error instanceof APIError && ["otp_required", "otp_invalid"].includes(error.code)) setCodeRequired(true);
   } });

@@ -22,6 +22,7 @@ from .failure_counts import count_failed_attempts
 from .source_defects import record_source_defect
 from .source_recovery import (
     SOURCE_AVAILABILITY_ERRORS,
+    SOURCE_RECHECK_CHECKPOINT_KEYS,
     rebase_changed_source,
     schedule_source_availability,
 )
@@ -64,8 +65,7 @@ def schedule_source_recheck(job):
     job.checkpoint = {
         key: value
         for key, value in job.checkpoint.items()
-        if key
-        in {"source_revision", "source_url", "catalog_revision", "catalog_book_id"}
+        if key in SOURCE_RECHECK_CHECKPOINT_KEYS
     }
     JobDispatch.objects.create(
         job=job, generation=job.generation, available_at=job.available_at

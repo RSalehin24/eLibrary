@@ -17,7 +17,7 @@ export function ManagedAccountForm({ account, onSaved }: { account: ManagedAccou
   }}><h2><AdminText>{"হিসাবের তথ্য"}</AdminText></h2><p><AdminText>{"ইমেইল: "}</AdminText><span lang="en" className="kindle-address">{account.email}</span></p>
     <AccountField name="full_name" label="পাঠকের নাম" initial={account.full_name} errors={form.errors.full_name} maxLength={255} disabled={form.blocked} />
     <label className="checkbox-field"><input name="is_active" type="checkbox" defaultChecked={account.is_active} disabled={form.blocked} /><AdminText>{"হিসাব সক্রিয়"}</AdminText></label>
-    <label className="checkbox-field"><input name="totp_required" type="checkbox" defaultChecked={account.totp_required} disabled={form.blocked} /><AdminText>{"দুই ধাপে প্রবেশ আবশ্যক"}</AdminText></label>
+    <div id="account-security"><label className="checkbox-field"><input name="totp_required" type="checkbox" defaultChecked={account.totp_required} disabled={form.blocked} /><AdminText>{"দুই ধাপে প্রবেশ আবশ্যক"}</AdminText></label></div>
     <p className="muted"><AdminText>{"হিসাব নিষ্ক্রিয় করলে পাঠক প্রবেশ ও ব্যক্তিগত কাজ করতে পারবেন না। দুই ধাপ আবশ্যক করলে প্রস্তুতি শেষ না করা পর্যন্ত ব্যক্তিগত কাজ বন্ধ থাকবে।"}</AdminText></p>
     <AccountFeedback error={form.saving.error} /><div className="account-actions"><button className="button" disabled={form.blocked}><AdminText>{"হিসাব সংরক্ষণ করুন"}</AdminText></button>
       {form.dirty && !form.saving.error && <button className="button button-quiet" type="reset" disabled={form.saving.isPending}><AdminText>{"লেখা বাদ দিন"}</AdminText></button>}

@@ -5,11 +5,15 @@ from apps.access.views.annotation_launch import (
 from apps.accounts.management_access.bulk import ManagedAccountBulkGrantView
 from apps.accounts.profile_image_api import AccountProfileImageView
 from apps.catalog.views.editions import PublicBookEditionsView
+from apps.catalog.views.list_controls import BookListControlsView
 from apps.catalog.views.personal import PhysicalReadingLogView, SavedBookView
 from apps.common.saved_filter_api import SavedFilterDeleteView, SavedFiltersView
 from django.urls import path
 
 personal_library_routes = [
+    path(
+        "me/book-controls/", BookListControlsView.as_view(), name="book-list-controls"
+    ),
     path(
         "me/bookmarks/<uuid:annotation_id>/launch/",
         AnnotationReaderLaunchView.as_view(),

@@ -3,19 +3,19 @@
 import json
 import time
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .constants import *
 
 
 def now_iso():
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class FakeWorker:
     """
     Simulates a Celery worker that communicates with the Engine via Redis.
-    
+
     In real life, a Celery worker would publish these events via signal handlers.
     This helper lets tests simulate those events without needing a real Celery worker.
     """
@@ -27,122 +27,127 @@ class FakeWorker:
         self.current_job_id = None
 
     def register(self):
-        self.redis.publish(CH_WORKER_REGISTER, json.dumps({
-            "hostname": self.hostname,
-            "capabilities": self.capabilities,
-            "pool_size": 1,
-            "concurrency": 1,
-            "timestamp": now_iso(),
-        }))
+        self.redis.publish(
+            CH_WORKER_REGISTER,
+            json.dumps(
+                {
+                    "hostname": self.hostname,
+                    "capabilities": self.capabilities,
+                    "pool_size": 1,
+                    "concurrency": 1,
+                    "timestamp": now_iso(),
+                }
+            ),
+        )
 
     def heartbeat(self):
-        self.redis.publish(CH_WORKER_HEARTBEAT, json.dumps({
-            "hostname": self.hostname,
-            "timestamp": now_iso(),
-        }))
+        self.redis.publish(
+            CH_WORKER_HEARTBEAT,
+            json.dumps(
+                {
+                    "hostname": self.hostname,
+                    "timestamp": now_iso(),
+                }
+            ),
+        )
 
     def claim_job(self, job_id):
         self.current_job_id = job_id
 
     def complete_job(self, job_id, status="succeeded", error_message=""):
-        self.redis.publish(CH_WORKER_DONE, json.dumps({
-            "hostname": self.hostname,
-            "job_id": job_id,
-            "status": status,
-            "error_message": error_message,
-            "timestamp": now_iso(),
-        }))
+        self.redis.publish(
+            CH_WORKER_DONE,
+            json.dumps(
+                {
+                    "hostname": self.hostname,
+                    "job_id": job_id,
+                    "status": status,
+                    "error_message": error_message,
+                    "timestamp": now_iso(),
+                }
+            ),
+        )
         self.current_job_id = None
 
     def fail_job(self, job_id, error_message="processing failed"):
         self.complete_job(job_id, status="failed", error_message=error_message)
 
     def deregister(self):
-        self.redis.publish(CH_WORKER_DEREGISTER, json.dumps({
-            "hostname": self.hostname,
-            "timestamp": now_iso(),
-        }))
+        self.redis.publish(
+            CH_WORKER_DEREGISTER,
+            json.dumps(
+                {
+                    "hostname": self.hostname,
+                    "timestamp": now_iso(),
+                }
+            ),
+        )
 
     def worker_key(self):
         return WORKER_KEY.format(hostname=self.hostname)
 
 
-def publish_job_request(redis_client, job_id, job_type="reprocess", handler="process_submission", **kwargs):
+def publish_job_request(
+    redis_client, job_id, job_type="reprocess", handler="process_submission", **kwargs
+):
     """Publish a job request as Django would after creating a ProcessingJob."""
     redis_client.hset("engine:job:handlers", str(job_id), handler)
     redis_client.rpush(PENDING_QUEUE, str(job_id))
-    redis_client.publish(CH_JOB_REQUEST, json.dumps({
-        "job_id": str(job_id),
-        "job_type": job_type,
-        "handler": handler,
-        "args": kwargs,
-        "timestamp": now_iso(),
-    }))
+    redis_client.publish(
+        CH_JOB_REQUEST,
+        json.dumps(
+            {
+                "job_id": str(job_id),
+                "job_type": job_type,
+                "handler": handler,
+                "args": kwargs,
+                "timestamp": now_iso(),
+            }
+        ),
+    )
 
 
 def wait_for_redis_key(redis_client, key, timeout=5.0):
     """Wait for a Redis key to exist, or until timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if redis_client.exists(key):
-            return True
-        time.sleep(0.1)
-    return False
+    return wait_for_condition(lambda: redis_client.exists(key), timeout)
 
 
 def wait_for_redis_key_value(redis_client, key, expected_value, timeout=5.0):
     """Wait for a Redis key to have an expected value, or until timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        value = redis_client.get(key)
-        if value == expected_value:
-            return True
-        time.sleep(0.1)
-    return False
+    return wait_for_condition(lambda: redis_client.get(key) == expected_value, timeout)
 
 
 def wait_for_redis_hash_field(redis_client, key, field, timeout=5.0):
     """Wait for a Redis hash to have a specific field, or until timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if redis_client.hexists(key, field):
-            return True
-        time.sleep(0.1)
-    return False
+    return wait_for_condition(lambda: redis_client.hexists(key, field), timeout)
 
 
-def wait_for_redis_hash_field_value(redis_client, key, field, expected_value, timeout=5.0):
+def wait_for_redis_hash_field_value(
+    redis_client, key, field, expected_value, timeout=5.0
+):
     """Wait for a Redis hash field to have an expected value, or until timeout."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        value = redis_client.hget(key, field)
-        if value == expected_value:
-            return True
-        time.sleep(0.1)
-    return False
+    return wait_for_condition(
+        lambda: redis_client.hget(key, field) == expected_value, timeout
+    )
 
 
 def wait_for_queue_length(redis_client, expected_length, timeout=5.0):
     """Wait for the pending queue to reach an expected length."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        length = redis_client.llen(PENDING_QUEUE)
-        if length == expected_length:
-            return True
-        time.sleep(0.1)
-    return False
+    return wait_for_condition(
+        lambda: redis_client.llen(PENDING_QUEUE) == expected_length, timeout
+    )
 
 
 def wait_for_condition(condition_fn, timeout=5.0, interval=0.1):
-    """
-    Generic wait for a condition function to return True.
-    """
-    deadline = time.time() + timeout
-    while time.time() < deadline:
+    """Use elapsed time so wall-clock corrections cannot expire a live wait."""
+    deadline = time.monotonic() + timeout
+    while True:
         if condition_fn():
             return True
-        time.sleep(interval)
-    return False
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        time.sleep(min(interval, remaining))
 
 
 def assert_worker_status(redis_client, hostname, expected_status):
@@ -176,7 +181,9 @@ def assert_job_active(redis_client, job_id, expected_worker=None):
 def assert_job_not_active(redis_client, job_id):
     """Assert a job is NOT in the active jobs hash."""
     worker = redis_client.hget(ACTIVE_JOBS, str(job_id))
-    assert worker is None, f"Job {job_id} should not be active but is assigned to '{worker}'"
+    assert worker is None, (
+        f"Job {job_id} should not be active but is assigned to '{worker}'"
+    )
 
 
 def assert_event(event_list, channel, **expected_data):
@@ -187,10 +194,7 @@ def assert_event(event_list, channel, **expected_data):
     for event in event_list:
         if event["channel"] != channel:
             continue
-        matches = all(
-            event["data"].get(k) == v
-            for k, v in expected_data.items()
-        )
+        matches = all(event["data"].get(k) == v for k, v in expected_data.items())
         if matches:
             return
     raise AssertionError(

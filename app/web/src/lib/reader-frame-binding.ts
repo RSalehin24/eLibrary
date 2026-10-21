@@ -1,14 +1,14 @@
-import { applyAppearance, restoreAnchor, scrollFraction, visibleAnchor, type ReaderAppearance, type ReadingAnchor } from "./reader-document";
+import { applyAppearance, restoreAnchor, scrollFraction, visibleAnchor, readingAnchorPoint, type ReaderAppearance, type ReadingAnchor } from "./reader-document";
 import { documentLink } from "./reader-links";
 import type { ReadingPosition } from "./reading-position";
 import { selectionRange, jumpToRange } from "./reader-annotations";
-import { cfiRange } from "./reader-cfi";
+import { restoreLegacyCfi } from "./reader-media-position";
 import { bookmarkTextRange } from "./bookmark-text-anchor";
 import { observeReaderDocument } from "./reader-observation";
 import { bindReaderInteraction } from "./reader-interaction";
 import type { ReaderGesture } from "./reader-gestures";
 
-export type FrameLocation = { fraction: number; anchor: ReadingAnchor | null };
+export type FrameLocation = { fraction: number; anchor: ReadingAnchor | null; pendingCfi?: string; document?: Document };
 export type FrameBindings = { src: string; appearance: ReaderAppearance; position: ReadingPosition;
   onPosition: (position: ReadingPosition) => void; onNavigate: (target: URL) => boolean;
   onExternal: (href: string) => void; onFailure: () => void; onRestoreFailure: () => void; onReady: () => void; onDocument: (document: Document) => void; onPage: (direction: number) => void; onShortcut: (event: KeyboardEvent) => void; onGesture: (gesture: ReaderGesture) => void };
@@ -21,7 +21,13 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
     if (!bindings.onNavigate(new URL(document.URL))) bindings.onFailure();
     return;
   }
-  if (!location.anchor && (document.scrollingElement?.scrollTop ?? 0) > 0) location.anchor = visibleAnchor(document);
+  if (location.document !== document) {
+    for (const media of document.querySelectorAll<HTMLMediaElement>("audio,video")) {
+      media.pause(); media.autoplay = false; media.controls = true;
+    }
+    location.document = document;
+  }
+  if (!location.anchor && !location.pendingCfi && (document.scrollingElement?.scrollTop ?? 0) > 0) location.anchor = visibleAnchor(document);
   applyAppearance(document, bindings.appearance);
   const fragmentRestored = !location.anchor && jumpToFragment(document, bindings.position.fragment);
   if (location.anchor || !fragmentRestored) restoreAnchor(document, location.anchor, location.fraction);
@@ -35,15 +41,20 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
     const range = bookmarkTextRange(document, bindings.position.textAnchor);
     if (!range || !jumpToRange(document, range)) bindings.onRestoreFailure();
   }
-  if (bindings.position.legacyCfi && !location.anchor) {
-    const range = cfiRange(document, bindings.position.legacyCfi);
-    const matchingText = !bindings.position.legacyText || range?.toString().trim() === bindings.position.legacyText.trim();
-    if (!range || !matchingText || !jumpToRange(document, range)) bindings.onRestoreFailure();
-  }
+  let active = true, restoringCfi = Boolean(location.pendingCfi || bindings.position.legacyCfi && !location.anchor);
+  if (restoringCfi) location.pendingCfi ??= bindings.position.legacyCfi;
+  const stopCfi = restoringCfi
+    ? restoreLegacyCfi(document, location.pendingCfi!, { text: bindings.position.legacyText, onFailure: bindings.onRestoreFailure, onComplete: anchor => {
+      delete location.pendingCfi;
+      if (anchor) location.anchor = anchor;
+      restoringCfi = false;
+      queueMicrotask(() => { if (active) scroll(); });
+    } })
+    : () => {};
   let width = frame.clientWidth;
   let height = frame.clientHeight;
   const scroll = () => {
-    if (frame.clientWidth === width && frame.clientHeight === height) recordLocation(document, bindings, location);
+    if (!restoringCfi && frame.clientWidth === width && frame.clientHeight === height) recordLocation(document, bindings, location);
   };
   const link = (event: MouseEvent) => followDocumentLink(document, bindings, event);
   document.addEventListener("scroll", scroll, { passive: true });
@@ -61,13 +72,16 @@ export function bindReaderFrame(frame: HTMLIFrameElement, bindings: FrameBinding
   scroll();
   bindings.onReady();
   bindings.onDocument(document);
-  return () => { stopInteraction(); stopObserving(); document.removeEventListener("scroll", scroll); document.removeEventListener("click", link); observer.disconnect(); };
+  return () => { active = false; stopCfi(); stopInteraction(); stopObserving(); document.removeEventListener("scroll", scroll); document.removeEventListener("click", link); observer.disconnect(); };
 }
 
 function recordLocation(document: Document, bindings: FrameBindings, location: FrameLocation) {
   location.fraction = scrollFraction(document);
   // Reflow may reveal earlier text on a page; retain the passage being adjusted.
-  if (!window.document.querySelector("dialog[open]")) location.anchor = visibleAnchor(document);
+  const mediaAnchor = location.anchor?.node.nodeType === 1 ? location.anchor : null;
+  const point = mediaAnchor && readingAnchorPoint(mediaAnchor);
+  const top = mediaAnchor?.viewportFraction === undefined ? mediaAnchor?.top : document.documentElement.clientHeight * mediaAnchor.viewportFraction;
+  if (!window.document.querySelector("dialog[open]") && (!mediaAnchor || !point || Math.abs(point.y - top!) > 2)) location.anchor = visibleAnchor(document);
   bindings.onPosition({ chapter: bindings.position.chapter, offset: location.fraction });
 }
 

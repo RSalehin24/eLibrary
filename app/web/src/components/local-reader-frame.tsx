@@ -28,7 +28,8 @@ export function LocalReaderFrame(props: Props) {
     document.addEventListener("click", navigate);
     return () => { stop(); document.removeEventListener("click", navigate); };
   }, [document, appearance, onDocument, onNavigate, onBoundary, onShortcut, onGesture]);
-  return <iframe ref={frame} className="reader-frame local-reader-frame" title={props.title} sandbox="allow-same-origin" srcDoc={props.html} onLoad={() => {
+  // WebKit requires script permission for parent-installed reader handlers; the generated CSP blocks authored scripts.
+  return <iframe ref={frame} className="reader-frame local-reader-frame" title={props.title} sandbox="allow-same-origin allow-scripts" srcDoc={props.html} onLoad={() => {
     const current = frame.current?.contentDocument;
     if (!current?.body) return;
     applyAppearance(current, props.appearance);

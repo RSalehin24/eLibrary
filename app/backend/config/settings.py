@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from config.background_limits import background_limits
+from config.background_limits import background_limits, processing_queue_name
 from config.environment import (
     append_unique,
     database_config,
@@ -11,8 +11,9 @@ from config.environment import (
     hostname_from_url,
     normalized_origin,
 )
+from config.logging import logging_settings
 from config.production import validate_production_settings
-from config.rest import rest_framework_settings
+from config.rest import api_schema_settings, rest_framework_settings
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -31,10 +32,16 @@ CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS", "")
 CORS_ALLOWED_ORIGINS = env_list("DJANGO_CORS_ALLOWED_ORIGINS", "")
 CORS_ALLOW_CREDENTIALS = env_bool("DJANGO_CORS_ALLOW_CREDENTIALS", True)
 
-for host in {hostname_from_url(FRONTEND_BASE_URL), hostname_from_url(PUBLIC_API_ORIGIN)}:
+for host in {
+    hostname_from_url(FRONTEND_BASE_URL),
+    hostname_from_url(PUBLIC_API_ORIGIN),
+}:
     append_unique(ALLOWED_HOSTS, host)
 
-for origin in {normalized_origin(FRONTEND_BASE_URL), normalized_origin(PUBLIC_API_ORIGIN)}:
+for origin in {
+    normalized_origin(FRONTEND_BASE_URL),
+    normalized_origin(PUBLIC_API_ORIGIN),
+}:
     append_unique(CSRF_TRUSTED_ORIGINS, origin)
     append_unique(CORS_ALLOWED_ORIGINS, origin)
 
@@ -45,9 +52,7 @@ if DEBUG:
             append_unique(CSRF_TRUSTED_ORIGINS, origin)
             append_unique(CORS_ALLOWED_ORIGINS, origin)
 
-PASSWORD_CREATE_FRONTEND_PATH = env(
-    "PASSWORD_CREATE_FRONTEND_PATH", "/create-password"
-)
+PASSWORD_CREATE_FRONTEND_PATH = env("PASSWORD_CREATE_FRONTEND_PATH", "/create-password")
 PASSWORD_RESET_FRONTEND_PATH = env(
     "PASSWORD_RESET_FRONTEND_PATH", "/reset-password/confirm"
 )
@@ -58,7 +63,9 @@ DEMO_USER_EMAIL = env("DEMO_USER_EMAIL", "demo_user.library@rsalehin24.me")
 DEMO_USER_PASSWORD = env("DEMO_USER_PASSWORD", "")
 SOURCE_SITE_EMAIL = env("SOURCE_SITE_EMAIL", "")
 SOURCE_SITE_PASSWORD = env("SOURCE_SITE_PASSWORD", "")
-DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "RSalehin24 Library <library@rsalehin24.me>")
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", "RSalehin24 Library <library@rsalehin24.me>"
+)
 SOURCE_SITE_HOST = env("SOURCE_SITE_HOST", "").strip().lower()
 SOURCE_SITE_CATALOG_URL = env("SOURCE_SITE_CATALOG_URL", "").strip()
 SOURCE_REQUEST_INTERVAL_SECONDS = env("SOURCE_REQUEST_INTERVAL_SECONDS", "2")
@@ -125,21 +132,38 @@ ASGI_APPLICATION = "config.asgi.application"
 DATABASES = {
     "default": {
         **database_config(
-            env("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/bangla_library")
+            env(
+                "DATABASE_URL",
+                "postgresql://postgres:postgres@postgres:5432/bangla_library",
+            )
         ),
         "CONN_MAX_AGE": env_int("DB_CONN_MAX_AGE", 60),
         "CONN_HEALTH_CHECKS": True,
     }
 }
 REDIS_CACHE_URL = env("REDIS_CACHE_URL", "redis://redis:6379/1")
-CACHES = {"default": {
-    "BACKEND": "django.core.cache.backends.redis.RedisCache" if APP_ENV == "production" else "django.core.cache.backends.locmem.LocMemCache",
-    "LOCATION": REDIS_CACHE_URL if APP_ENV == "production" else "elibrary-development",
-    "OPTIONS": {"socket_connect_timeout": 2, "socket_timeout": 2, "max_connections": 32} if APP_ENV == "production" else {},
-}}
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache"
+        if APP_ENV == "production"
+        else "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": REDIS_CACHE_URL
+        if APP_ENV == "production"
+        else "elibrary-development",
+        "OPTIONS": {
+            "socket_connect_timeout": 2,
+            "socket_timeout": 2,
+            "max_connections": 32,
+        }
+        if APP_ENV == "production"
+        else {},
+    }
+}
 
 AUTH_PASSWORD_VALIDATORS = [
-    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+    {
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
+    },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
@@ -155,35 +179,29 @@ USE_I18N = True
 USE_TZ = True
 
 REST_FRAMEWORK = rest_framework_settings(env)
-SPECTACULAR_SETTINGS = {
-    "TITLE": "Bengali Library API",
-    "VERSION": "1.0.0",
-    "COMPONENT_SPLIT_PATCH": False,
-    "ENUM_NAME_OVERRIDES": {
-        "HighlightKindEnum": "apps.access.models.HighlightKind.choices",
-        "BackgroundJobStateEnum": "apps.processing.job_models.BackgroundJobState.choices",
-        "BackgroundJobKindEnum": "apps.processing.job_models.BackgroundJobKind.choices",
-        "LifecycleStateEnum": "apps.common.models.LifecycleState.choices",
-        "JobControlActionEnum": "apps.processing.job_serializers.JOB_CONTROL_ACTIONS",
-        "BulkJobControlActionEnum": "apps.processing.bulk_control_serializers.BULK_JOB_CONTROL_ACTIONS",
-    },
-}
+SPECTACULAR_SETTINGS = api_schema_settings()
 CSRF_FAILURE_VIEW = "apps.common.csrf.csrf_failure"
 
 STATIC_URL = "/static/"
 RUNTIME_STORAGE_DIR = Path(env("RUNTIME_STORAGE_DIR", str(BASE_DIR / "storage")))
 # Auth cookie state file lives in the runtime storage dir so it always tracks the
 # mounted storage volume. An explicit SOURCE_SITE_AUTH_STATE_PATH still overrides it.
-SOURCE_SITE_AUTH_STATE_PATH = env("SOURCE_SITE_AUTH_STATE_PATH", "") or str(RUNTIME_STORAGE_DIR / "source_site_auth.json")
+SOURCE_SITE_AUTH_STATE_PATH = env("SOURCE_SITE_AUTH_STATE_PATH", "") or str(
+    RUNTIME_STORAGE_DIR / "source_site_auth.json"
+)
 STATIC_ROOT = Path(env("STATIC_ROOT", str(RUNTIME_STORAGE_DIR / "staticfiles")))
 STATICFILES_DIRS = [BASE_DIR / "static"]
 MEDIA_URL = "/media/"
 MEDIA_ROOT = Path(env("MEDIA_ROOT", str(RUNTIME_STORAGE_DIR / "media")))
-PROTECTED_FILES_USE_NGINX = env_bool("PROTECTED_FILES_USE_NGINX", APP_ENV == "production")
+PROTECTED_FILES_USE_NGINX = env_bool(
+    "PROTECTED_FILES_USE_NGINX", APP_ENV == "production"
+)
 FILE_UPLOAD_PERMISSIONS = 0o640
 FILE_UPLOAD_DIRECTORY_PERMISSIONS = 0o750
 
-public_urls_use_https = any(origin.startswith("https://") for origin in {FRONTEND_BASE_URL, PUBLIC_API_ORIGIN})
+public_urls_use_https = any(
+    origin.startswith("https://") for origin in {FRONTEND_BASE_URL, PUBLIC_API_ORIGIN}
+)
 
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = env("SESSION_COOKIE_SAMESITE", "Lax")
@@ -191,7 +209,9 @@ SESSION_COOKIE_SECURE = env_bool("SESSION_COOKIE_SECURE", public_urls_use_https)
 CSRF_COOKIE_SECURE = env_bool("CSRF_COOKIE_SECURE", public_urls_use_https)
 CSRF_COOKIE_SAMESITE = env("CSRF_COOKIE_SAMESITE", "Lax")
 SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", APP_ENV == "production")
-SECURE_HSTS_SECONDS = env_int("DJANGO_SECURE_HSTS_SECONDS", 31536000 if APP_ENV == "production" else 0)
+SECURE_HSTS_SECONDS = env_int(
+    "DJANGO_SECURE_HSTS_SECONDS", 31536000 if APP_ENV == "production" else 0
+)
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
@@ -211,15 +231,24 @@ CELERY_TASK_EAGER_PROPAGATES = True
 # RabbitMQ 4.3 rejects transient non-exclusive control and event queues.
 CELERY_CONTROL_QUEUE_DURABLE = True
 CELERY_EVENT_QUEUE_EXCLUSIVE = True
-BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS, KINDLE_MAX_ATTACHMENT_BYTES = background_limits(env_int)
+BACKGROUND_JOB_SOFT_TIMEOUT_SECONDS, KINDLE_MAX_ATTACHMENT_BYTES = background_limits(
+    env_int
+)
+BACKGROUND_PROCESSING_QUEUE = processing_queue_name(
+    env("BACKGROUND_PROCESSING_QUEUE", "processing")
+)
 PROCESSING_USE_LIVE_SYNC = env_bool("PROCESSING_USE_LIVE_SYNC", True)
-PROCESSING_INLINE_PIPELINE_ADVANCE = env_bool("PROCESSING_INLINE_PIPELINE_ADVANCE", False)
+PROCESSING_INLINE_PIPELINE_ADVANCE = env_bool(
+    "PROCESSING_INLINE_PIPELINE_ADVANCE", False
+)
 CELERY_PROCESSING_CONCURRENCY = int(env("CELERY_PROCESSING_CONCURRENCY", "1"))
 
 BREVO_API_KEY = env("BREVO_API_KEY", "")
 EMAIL_BACKEND = env(
     "EMAIL_BACKEND",
-    "anymail.backends.brevo.EmailBackend" if BREVO_API_KEY else "django.core.mail.backends.console.EmailBackend",
+    "anymail.backends.brevo.EmailBackend"
+    if BREVO_API_KEY
+    else "django.core.mail.backends.console.EmailBackend",
 )
 EMAIL_HOST = env("EMAIL_HOST", "")
 EMAIL_PORT = int(env("EMAIL_PORT", "587"))
@@ -240,37 +269,27 @@ ANYMAIL = {
     },
 }
 
-LOGGING = {
-    "version": 1,
-    "disable_existing_loggers": False,
-    "formatters": {
-        "structured": {
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
-        }
-    },
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "structured",
-        }
-    },
-    "root": {
-        "handlers": ["console"],
-        "level": env("LOG_LEVEL", "INFO"),
-    },
-}
+LOGGING = logging_settings(env("LOG_LEVEL", "INFO"))
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-validate_production_settings({
-    "APP_ENV": APP_ENV, "DEBUG": DEBUG, "SECRET_KEY": SECRET_KEY,
-    "CELERY_TASK_ALWAYS_EAGER": CELERY_TASK_ALWAYS_EAGER,
-    "SESSION_COOKIE_SECURE": SESSION_COOKIE_SECURE, "CSRF_COOKIE_SECURE": CSRF_COOKIE_SECURE,
-    "SECURE_SSL_REDIRECT": SECURE_SSL_REDIRECT,
-    "LEGACY_API_ENABLED": LEGACY_API_ENABLED,
-    "ALLOWED_HOSTS": ALLOWED_HOSTS, "PUBLIC_BASE_URL": PUBLIC_BASE_URL,
-    "PUBLIC_API_ORIGIN": PUBLIC_API_ORIGIN, "FRONTEND_BASE_URL": FRONTEND_BASE_URL,
-    "DATABASES": DATABASES, "CELERY_BROKER_URL": CELERY_BROKER_URL,
-    "LEGACY_ENGINE_ENABLED": LEGACY_ENGINE_ENABLED,
-    "REDIS_CACHE_URL": REDIS_CACHE_URL,
-})
+validate_production_settings(
+    {
+        "APP_ENV": APP_ENV,
+        "DEBUG": DEBUG,
+        "SECRET_KEY": SECRET_KEY,
+        "CELERY_TASK_ALWAYS_EAGER": CELERY_TASK_ALWAYS_EAGER,
+        "SESSION_COOKIE_SECURE": SESSION_COOKIE_SECURE,
+        "CSRF_COOKIE_SECURE": CSRF_COOKIE_SECURE,
+        "SECURE_SSL_REDIRECT": SECURE_SSL_REDIRECT,
+        "LEGACY_API_ENABLED": LEGACY_API_ENABLED,
+        "ALLOWED_HOSTS": ALLOWED_HOSTS,
+        "PUBLIC_BASE_URL": PUBLIC_BASE_URL,
+        "PUBLIC_API_ORIGIN": PUBLIC_API_ORIGIN,
+        "FRONTEND_BASE_URL": FRONTEND_BASE_URL,
+        "DATABASES": DATABASES,
+        "CELERY_BROKER_URL": CELERY_BROKER_URL,
+        "LEGACY_ENGINE_ENABLED": LEGACY_ENGINE_ENABLED,
+        "REDIS_CACHE_URL": REDIS_CACHE_URL,
+    }
+)

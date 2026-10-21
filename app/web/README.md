@@ -57,14 +57,21 @@ From `app/web`, run `npm run generate:api`. Do not edit generated contracts.
 `tests/web` uses synthetic records in the isolated reference database
 on port 55432. Its fixture generator rejects production databases and writes
 random credentials to a new, mode-0600 file outside the repository. It does not
-reset existing application data. Generate a fresh fixture for each full browser
-run because editorial tests intentionally save and publish their own records.
+reset existing application data. Generate a fresh fixture for each specification
+because editorial tests intentionally save and publish their own records.
 
 Use the approved Playwright 1.64.0 runner from this workspace:
 
 ```sh
 FOUNDATION_FIXTURE_PATH=/private/tmp/library-preview.json app/web/node_modules/.bin/playwright test --config tests/web/playwright.config.mjs --project=chromium
 ```
+
+`tests/web/run_isolated.py --project chromium` seeds each specification separately
+and stores private fixture/log files under a new artifact directory. It requires
+the same reference database and runtime environment as `seed_preview.py`.
+Use explicit specification filenames for mobile projects; their configured
+journeys are a selected subset. Run specifications that control the single
+provider's discovery operation sequentially, including saved automation runs.
 
 Run this from the repository root with both servers available. For a production
 artifact whose canonical origin differs from the local browser URL, also set
@@ -83,6 +90,24 @@ For the complete UI suite, configure Django's SMTP backend with a loopback host
 and synthetic sender (see `docs/implementation-handoff.md`). Kindle requests
 require mail readiness even when the worker is stopped and no mail is sent.
 
+## Admin and reader interfaces
+
+Admin home opens Book Creation or the first authorized section. Six sidebar
+sections become a labelled drawer on phones; the former overview remains at
+`/manage/overview/`. Reader View uses the same account with My Books, Browse,
+Notes and Kindle, including labelled bottom navigation on phones. Secondary
+settings, paper books, local EPUB and help are in the account menu.
+
+Search/sort controls stay compact. Optional metadata conditions use inline panels;
+book-type and added/request-date browsing filters are retired. Old website and
+saved-filter links discard those conditions. Pagination links preserve current
+conditions without reintroducing the retired keys. Source rows display the actual
+job state instead of calling every active request running. Book editing puts
+metadata first, with Files and History links that retain unsaved forms.
+
+See [interface redesign](../../docs/operations/interface-redesign.md) and
+[sitewide verification](../../docs/operations/sitewide-ui-review.md).
+
 ## Catalog administration
 
 `/manage/entities/` directly lists contributors, with category, series and curated
@@ -98,6 +123,12 @@ combined personal list with visible Add/Remove controls on book pages. Manual
 review is not required; source books publish automatically after source, export
 and reader checks. `/manage/unfinished/` tracks the source website's unfinished
 category separately from application processing failures.
+
+My Books keeps compact search and sort controls above results; download controls
+follow pagination and export the entire filtered view. Clearing an unsubmitted
+query resets its input, and reopening a saved search restores its submitted values.
+See [personal-library layout](../../docs/operations/personal-library-layout.md)
+for browser coverage and navigation behavior.
 
 ## Protected reader
 
@@ -119,7 +150,7 @@ validation limits. `/profile/` includes names, password/session changes, Kindle
 addresses, and authenticator setup/login. See `docs/architecture/account-settings.md`.
 `/kindle/` adds selected-recipient requests, private history, per-address outcomes,
 and revision-checked cancellation. The delivery worker and a loopback SMTP server
-verify acceptance/uncertainty handling; live RabbitMQ/device arrival remain work.
+verify acceptance/uncertainty handling; actual device receipt remains unverified.
 See `docs/architecture/kindle-delivery.md`. Profile-image upload/removal is available.
 Password-link confirmation/setup uses
 `/create-password/` and `/reset-password/confirm/` with CSRF, nonce consumption,
@@ -131,8 +162,8 @@ are available in Users & Access. See `docs/architecture/account-mail.md`.
 `/manage/jobs/` adds status filters, bounded pagination, execution details, and
 revision-checked pause/cancel/resume. Authorized processors can request EPUB
 preparation from book management. The persisted worker, confirmed dispatcher,
-and recovery logic are covered by local PostgreSQL tests; live RabbitMQ testing
-awaits image approval. See `docs/architecture/background-jobs.md` for commands,
+and recovery logic are covered by local PostgreSQL and approved RabbitMQ
+simulations. See `docs/architecture/background-jobs.md` for commands,
 connection budgets, and the remaining source/delivery workflows.
 
 `/manage/users-access/` adds private account search, revision-checked account
@@ -140,8 +171,9 @@ settings, and global/book/category/writer grants. Reference searches are bounded
 obsolete reads are cancelled, and grant creation preserves ownership. Protected
 accounts and uncertain writes retain explicit backend controls. See
 `docs/architecture/users-access.md`. Queued invitation creation/resend and
-anonymous reset requests now use the persisted delivery workflow; live broker
-verification and bulk outcomes remain part of the accepted administration work.
+anonymous reset requests use the persisted delivery workflow. Multi-target grants
+return explicit per-item outcomes. Simulator evidence and the remaining external
+checks are recorded in [the handoff](../../docs/implementation-handoff.md).
 
 `/manage/` shows counts for authorized books/sources/accounts, eligible queue age,
 active work, and recent failure links. It polls work status independently of
@@ -150,14 +182,18 @@ static catalog counts. See `docs/architecture/management-overview.md`.
 `/manage/sources/` adds SQL-filtered discovery-record inspection and exact catalog
 linkage, with separate metadata permissions and EPUB preparation for linked books.
 It excludes raw source payloads and book bodies from paginated reads. See
-`docs/architecture/source-workspace.md` for the remaining discovery/processing,
-bulk resolution, and automation work.
+`docs/architecture/source-workspace.md` for discovery/processing, bulk controls
+and automation behavior.
 
 ## Installation and offline launch
 
-Production `postbuild` generates the root service worker and generic offline
-notice alongside the standalone artifact. It caches fingerprinted static files
-only. Root manifest/icons and installation controls are included. Updates wait
+Production `postbuild` generates the root service worker, generic offline
+notice and anonymous local EPUB reader shell alongside the standalone artifact.
+The cache contains these public shells and fingerprinted static files only.
+`/local-reader/` opens device files without upload and can launch offline after
+installation; library content and account responses are never cached. See
+`docs/operations/local-epub-reader.md` for format and resource limits.
+Root manifest/icons and installation controls are included. Updates wait
 for user acceptance, unsaved work, and progress saving. See
 `docs/architecture/pwa.md` for the cache boundary and outstanding physical-device
 installation checks. Run `npm test` with Node 22.18 or newer; the coordinator

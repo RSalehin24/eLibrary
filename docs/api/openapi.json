@@ -1152,6 +1152,24 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "created_after",
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "created_before",
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "nullable": true
+                        }
+                    },
+                    {
+                        "in": "query",
                         "name": "cursor",
                         "schema": {
                             "type": "string",
@@ -1245,12 +1263,16 @@
                                 "name",
                                 "-name",
                                 "book_count",
-                                "-book_count"
+                                "-book_count",
+                                "catalog_code",
+                                "-catalog_code",
+                                "created_at",
+                                "-created_at"
                             ],
                             "type": "string",
                             "default": ""
                         },
-                        "description": "* `` - \n* `name` - name\n* `-name` - -name\n* `book_count` - book_count\n* `-book_count` - -book_count"
+                        "description": "* `` - \n* `name` - name\n* `-name` - -name\n* `book_count` - book_count\n* `-book_count` - -book_count\n* `catalog_code` - catalog_code\n* `-catalog_code` - -catalog_code\n* `created_at` - created_at\n* `-created_at` - -created_at"
                     }
                 ],
                 "tags": [
@@ -2771,6 +2793,41 @@
                 "parameters": [
                     {
                         "in": "query",
+                        "name": "enabled",
+                        "schema": {
+                            "enum": [
+                                "all",
+                                "enabled",
+                                "disabled"
+                            ],
+                            "type": "string",
+                            "default": "all",
+                            "minLength": 1
+                        },
+                        "description": "* `all` - all\n* `enabled` - enabled\n* `disabled` - disabled"
+                    },
+                    {
+                        "in": "query",
+                        "name": "frequency",
+                        "schema": {
+                            "enum": [
+                                "daily",
+                                "weekly",
+                                "biweekly",
+                                "monthly",
+                                "bimonthly",
+                                "quarterly",
+                                "four_monthly",
+                                "half_yearly",
+                                ""
+                            ],
+                            "type": "string",
+                            "default": ""
+                        },
+                        "description": "* `daily` - Daily\n* `weekly` - Weekly\n* `biweekly` - Bi-weekly\n* `monthly` - Monthly\n* `bimonthly` - Bi-monthly\n* `quarterly` - Every 3 months\n* `four_monthly` - Every 4 months\n* `half_yearly` - Half-yearly"
+                    },
+                    {
+                        "in": "query",
                         "name": "limit",
                         "schema": {
                             "type": "integer",
@@ -2787,6 +2844,30 @@
                             "minimum": 1,
                             "default": 1
                         }
+                    },
+                    {
+                        "in": "query",
+                        "name": "q",
+                        "schema": {
+                            "type": "string",
+                            "default": "",
+                            "maxLength": 150
+                        }
+                    },
+                    {
+                        "in": "query",
+                        "name": "sort",
+                        "schema": {
+                            "enum": [
+                                "name",
+                                "next_run",
+                                "-next_run"
+                            ],
+                            "type": "string",
+                            "default": "name",
+                            "minLength": 1
+                        },
+                        "description": "* `name` - name\n* `next_run` - next_run\n* `-next_run` - -next_run"
                     }
                 ],
                 "tags": [
@@ -3077,6 +3158,100 @@
                         "description": ""
                     },
                     "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            },
+            "post": {
+                "operationId": "automation_run_now",
+                "parameters": [
+                    {
+                        "in": "path",
+                        "name": "identifier",
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "manage"
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AutomationRunCommand"
+                            }
+                        },
+                        "application/x-www-form-urlencoded": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AutomationRunCommand"
+                            }
+                        },
+                        "multipart/form-data": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AutomationRunCommand"
+                            }
+                        }
+                    },
+                    "required": true
+                },
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AutomationRunAccepted"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "400": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "403": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "404": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/APIError"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
+                    "409": {
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -7546,6 +7721,47 @@
                 }
             }
         },
+        "/api/v1/me/book-controls/": {
+            "get": {
+                "operationId": "book_list_controls",
+                "parameters": [
+                    {
+                        "in": "query",
+                        "name": "slugs",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            "maxItems": 100,
+                            "minItems": 1
+                        },
+                        "required": true
+                    }
+                ],
+                "tags": [
+                    "me"
+                ],
+                "security": [
+                    {
+                        "cookieAuth": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/BookListControls"
+                                }
+                            }
+                        },
+                        "description": ""
+                    }
+                }
+            }
+        },
         "/api/v1/me/bookmarks/": {
             "get": {
                 "operationId": "personal_bookmarks",
@@ -8075,7 +8291,7 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "$ref": "#/components/schemas/PublicBookDetail"
+                                    "$ref": "#/components/schemas/PersonalBookDetail"
                                 }
                             }
                         },
@@ -10198,6 +10414,14 @@
                 "operationId": "reader_resource",
                 "parameters": [
                     {
+                        "in": "header",
+                        "name": "Range",
+                        "schema": {
+                            "type": "string"
+                        },
+                        "description": "Single byte range for embedded audio/video resources."
+                    },
+                    {
                         "in": "path",
                         "name": "asset_path",
                         "schema": {
@@ -10235,6 +10459,17 @@
                         },
                         "description": ""
                     },
+                    "206": {
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        },
+                        "description": ""
+                    },
                     "404": {
                         "content": {
                             "application/json": {
@@ -10244,6 +10479,9 @@
                             }
                         },
                         "description": ""
+                    },
+                    "416": {
+                        "description": "No response body"
                     }
                 }
             }
@@ -11015,6 +11253,40 @@
                     "state"
                 ]
             },
+            "AutomationRunAccepted": {
+                "type": "object",
+                "properties": {
+                    "run_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "nullable": true
+                    },
+                    "state": {
+                        "$ref": "#/components/schemas/AutomationRunAcceptedStateEnum"
+                    },
+                    "error_code": {
+                        "type": "string"
+                    }
+                },
+                "required": [
+                    "error_code",
+                    "job_id",
+                    "run_id",
+                    "state"
+                ]
+            },
+            "AutomationRunAcceptedStateEnum": {
+                "enum": [
+                    "queued",
+                    "blocked"
+                ],
+                "type": "string",
+                "description": "* `queued` - queued\n* `blocked` - blocked"
+            },
             "AutomationRunCollection": {
                 "type": "object",
                 "properties": {
@@ -11031,6 +11303,23 @@
                 "required": [
                     "entries",
                     "pagination"
+                ]
+            },
+            "AutomationRunCommand": {
+                "type": "object",
+                "properties": {
+                    "operation_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "expected_updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "required": [
+                    "expected_updated_at",
+                    "operation_id"
                 ]
             },
             "AutomationRunStateEnum": {
@@ -11690,13 +11979,13 @@
             "BookContentsEntry": {
                 "type": "object",
                 "properties": {
-                    "label": {
-                        "type": "string"
-                    },
                     "depth": {
                         "type": "integer",
                         "maximum": 8,
                         "minimum": 0
+                    },
+                    "label": {
+                        "type": "string"
                     }
                 },
                 "required": [
@@ -11980,16 +12269,49 @@
             "BookFrontMatter": {
                 "type": "object",
                 "properties": {
-                    "label": {
+                    "value": {
                         "type": "string"
                     },
-                    "value": {
+                    "label": {
                         "type": "string"
                     }
                 },
                 "required": [
                     "label",
                     "value"
+                ]
+            },
+            "BookListControl": {
+                "type": "object",
+                "properties": {
+                    "slug": {
+                        "type": "string"
+                    },
+                    "saved": {
+                        "type": "boolean"
+                    },
+                    "can_send_kindle": {
+                        "type": "boolean"
+                    }
+                },
+                "required": [
+                    "can_send_kindle",
+                    "saved",
+                    "slug"
+                ]
+            },
+            "BookListControls": {
+                "type": "object",
+                "properties": {
+                    "entries": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/BookListControl"
+                        }
+                    }
+                },
+                "required": [
+                    "entries"
                 ]
             },
             "BookRelationships": {
@@ -12466,6 +12788,30 @@
                 ],
                 "type": "string",
                 "description": "* `source` - source\n* `export` - export\n* `reader` - reader"
+            },
+            "CollectionPagination": {
+                "type": "object",
+                "properties": {
+                    "page": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "limit": {
+                        "type": "integer"
+                    },
+                    "total_count": {
+                        "type": "integer"
+                    },
+                    "page_count": {
+                        "type": "integer"
+                    }
+                },
+                "required": [
+                    "limit",
+                    "page",
+                    "page_count",
+                    "total_count"
+                ]
             },
             "ColorEnum": {
                 "enum": [
@@ -13385,12 +13731,16 @@
                     },
                     "has_more": {
                         "type": "boolean"
+                    },
+                    "pagination": {
+                        "$ref": "#/components/schemas/CollectionPagination"
                     }
                 },
                 "required": [
                     "entries",
                     "has_more",
-                    "next_cursor"
+                    "next_cursor",
+                    "pagination"
                 ]
             },
             "LifecycleStateEnum": {
@@ -13531,6 +13881,10 @@
                     "totp_required": {
                         "type": "boolean",
                         "default": false
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "default": true
                     }
                 },
                 "required": [
@@ -14542,6 +14896,153 @@
                     "email"
                 ]
             },
+            "PersonalBookDetail": {
+                "type": "object",
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid",
+                        "readOnly": true
+                    },
+                    "title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "slug": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "catalog_code": {
+                        "type": "string",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "language": {
+                        "type": "string"
+                    },
+                    "edition": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "contributors": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicContributor"
+                        }
+                    },
+                    "categories": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicCategory"
+                        }
+                    },
+                    "series": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/PublicSeries"
+                        }
+                    },
+                    "cover_url": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "summary": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "record_type": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/RecordTypeEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "manual_publisher": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "manual_price": {
+                        "type": "string",
+                        "format": "decimal",
+                        "pattern": "^-?\\d{0,8}(?:\\.\\d{0,2})?$",
+                        "readOnly": true,
+                        "nullable": true
+                    },
+                    "manual_binding": {
+                        "allOf": [
+                            {
+                                "$ref": "#/components/schemas/ManualBindingEnum"
+                            }
+                        ],
+                        "readOnly": true
+                    },
+                    "manual_is_compilation": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "editorial_description": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "alternative_names": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "maxLength": 255
+                        },
+                        "readOnly": true,
+                        "maxItems": 20
+                    },
+                    "seo_title": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "seo_description": {
+                        "type": "string",
+                        "readOnly": true
+                    },
+                    "social_image_url": {
+                        "type": "string",
+                        "format": "uri",
+                        "readOnly": true
+                    },
+                    "indexable": {
+                        "type": "boolean",
+                        "readOnly": true
+                    },
+                    "library_view": {
+                        "type": "string",
+                        "readOnly": true
+                    }
+                },
+                "required": [
+                    "alternative_names",
+                    "catalog_code",
+                    "categories",
+                    "contributors",
+                    "cover_url",
+                    "edition",
+                    "editorial_description",
+                    "id",
+                    "indexable",
+                    "language",
+                    "library_view",
+                    "manual_binding",
+                    "manual_is_compilation",
+                    "manual_price",
+                    "manual_publisher",
+                    "record_type",
+                    "seo_description",
+                    "seo_title",
+                    "series",
+                    "slug",
+                    "social_image_url",
+                    "summary",
+                    "title"
+                ]
+            },
             "PersonalBookmarks": {
                 "type": "object",
                 "properties": {
@@ -14874,12 +15375,16 @@
                     },
                     "has_more": {
                         "type": "boolean"
+                    },
+                    "pagination": {
+                        "$ref": "#/components/schemas/CollectionPagination"
                     }
                 },
                 "required": [
                     "entries",
                     "has_more",
-                    "next_cursor"
+                    "next_cursor",
+                    "pagination"
                 ]
             },
             "PublicBookDetail": {
@@ -15147,12 +15652,16 @@
                     },
                     "has_more": {
                         "type": "boolean"
+                    },
+                    "pagination": {
+                        "$ref": "#/components/schemas/CollectionPagination"
                     }
                 },
                 "required": [
                     "entries",
                     "has_more",
-                    "next_cursor"
+                    "next_cursor",
+                    "pagination"
                 ]
             },
             "PublicEntityDetail": {
@@ -15235,10 +15744,22 @@
                     "book_count": {
                         "type": "integer",
                         "readOnly": true
+                    },
+                    "catalog_code": {
+                        "type": "string",
+                        "nullable": true,
+                        "readOnly": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "readOnly": true
                     }
                 },
                 "required": [
                     "book_count",
+                    "catalog_code",
+                    "created_at",
                     "id",
                     "name",
                     "slug"
@@ -16056,6 +16577,18 @@
                         "readOnly": true,
                         "nullable": true
                     },
+                    "active_operation_state": {
+                        "readOnly": true,
+                        "nullable": true,
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/BackgroundJobStateEnum"
+                            },
+                            {
+                                "$ref": "#/components/schemas/NullEnum"
+                            }
+                        ]
+                    },
                     "can_process": {
                         "type": "boolean",
                         "readOnly": true
@@ -16069,6 +16602,7 @@
                 },
                 "required": [
                     "active_operation_id",
+                    "active_operation_state",
                     "author_line",
                     "book",
                     "can_edit_book",

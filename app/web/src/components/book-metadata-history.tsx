@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { readMetadataHistory } from "@/api/metadata-history";
 import { metadataActorFallback, metadataSourceLabel } from "@/lib/metadata-history";
-import { AdminDate, AdminNavigation, AdminNumber, AdminText } from "./admin-language";
+import { AdminDate, AdminText } from "./admin-language";
 import { Icon } from "./icon";
+import { NumberedPagination } from "./numbered-pagination";
 
 export function BookMetadataHistory({ slug, revision }: { slug: string; revision: string }) {
   const [page, setPage] = useState(1);
@@ -23,10 +24,6 @@ export function BookMetadataHistory({ slug, revision }: { slug: string; revision
       <p><AdminDate value={version.created_at} /> · {version.created_by ? version.created_by.name || <AdminText>{"নাম সংরক্ষিত নেই"}</AdminText> : <AdminText>{metadataActorFallback(version.source)}</AdminText>}</p>
       <p>{version.notes || <AdminText>{"পরিবর্তনের কারণ লেখা হয়নি।"}</AdminText>}</p>
     </li>)}</ol>
-    {pagination && pagination.total_count > pagination.limit && <AdminNavigation label="তথ্যের ইতিহাসের পাতা" className="account-actions">
-      <button className="button button-quiet" type="button" disabled={page === 1 || history.isFetching} onClick={() => setPage(page - 1)}><AdminText>{"আগের পাতা"}</AdminText></button>
-      <span aria-live="polite"><AdminNumber value={page} /> / <AdminNumber value={Math.ceil(pagination.total_count / pagination.limit)} /></span>
-      <button className="button button-quiet" type="button" disabled={page * pagination.limit >= pagination.total_count || history.isFetching} onClick={() => setPage(page + 1)}><AdminText>{"পরের পাতা"}</AdminText></button>
-    </AdminNavigation>}
+    {pagination && <NumberedPagination page={page} totalPages={Math.max(1, Math.ceil(pagination.total_count / pagination.limit))} onPageChange={setPage} busy={history.isFetching} label="তথ্যের ইতিহাসের পাতা" />}
   </section>;
 }

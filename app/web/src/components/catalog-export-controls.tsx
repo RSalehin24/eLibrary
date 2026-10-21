@@ -44,15 +44,17 @@ export function CatalogExportControls({ filters, scope = "catalog" }: { filters:
     } finally { setBusy(""); }
   }
   return <section className="catalog-export-controls" aria-label={text("বইয়ের তালিকা ডাউনলোড", "Download book list")}>
-    <div className="editorial-actions"><strong>{text("তালিকা ডাউনলোড", "Download list")}</strong>
+    <details className="catalog-export-menu" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+      <summary className="button button-quiet"><Icon name="download" />{text("তালিকা ডাউনলোড", "Download list")}<Icon name="chevron" /></summary>
+      <div className="catalog-export-panel"><p className="muted">{text("বর্তমান ফিল্টারের সব বই থাকবে। শুধু এই পাতার বই নয়।", "Includes every book matching these filters, across all pages.")}</p>
       {scope === "physical" && <div className="catalog-filter-field"><label htmlFor={groupingId}>{text("ভাগ করুন", "Group by")}</label><select id={groupingId} value={grouping} onChange={(event) => setGrouping(event.target.value)} disabled={!!busy}>
         {Object.entries(groupLabels).map(([value, labels]) => <option key={value} value={value}>{labels[language === "bn" ? 0 : 1]}</option>)}
       </select></div>}
-      {(scope === "physical" ? ["csv", "pdf", "xlsx"] : ["csv", "pdf"]).map(format => <button className="button button-quiet" type="button" key={format} onClick={() => void download(format)} disabled={!!busy} aria-busy={busy === format}>
+      <div className="catalog-export-options">{(scope === "physical" ? ["csv", "pdf", "xlsx"] : ["csv", "pdf"]).map(format => <button className="button button-quiet" type="button" key={format} onClick={() => void download(format)} disabled={!!busy} aria-busy={busy === format}>
         <Icon name="download" />{format.toUpperCase()}{busy === format ? text(" তৈরি হচ্ছে…", " generating…") : ""}
       </button>)}
-      <a className="button button-quiet" href={exportURL("print")} target="_blank" rel="noopener"><Icon name="external" />{text("প্রিন্ট / PDF হিসেবে সংরক্ষণ", "Print / Save as PDF")}</a>
-    </div><p className="muted">{text("বর্তমান ফিল্টারের সব বই থাকবে। শুধু এই পাতার বই নয়।", "Includes every book matching these filters, across all pages.")}</p>
+      <a className="button button-quiet" href={exportURL("print")} target="_blank" rel="noopener" aria-label={text("প্রিন্ট / PDF হিসেবে সংরক্ষণ", "Print / Save as PDF")}><Icon name="external" />{text("প্রিন্ট", "Print")}</a></div>
+    </div></details>
     {message && <p role={failed ? "alert" : "status"} className={failed ? "field-error" : "success-message"}>{message}</p>}
   </section>;
 }

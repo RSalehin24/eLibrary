@@ -6,7 +6,9 @@ import type { ReactNode } from "react";
 import type { SourceEntry } from "@/api/types";
 import { sourceStatus } from "@/lib/source-status";
 import { catalogStateLabel } from "@/lib/catalog-state";
+import { jobStates } from "@/lib/job-status";
 import { useAdminLanguage } from "./admin-language";
+import { Icon } from "./icon";
 import { SourceUpdateStatus } from "./source-update-status";
 
 type Props = {
@@ -34,7 +36,7 @@ export function SourceTable(props: Props) {
       <td className="source-check"><label className="source-select-control"><input type="checkbox" checked={props.selected.has(entry.id)} disabled={props.blocked || (!props.selected.has(entry.id) && (!entry.can_process || props.limitReached))} onChange={() => props.onToggle(entry)} aria-label={`${entry.title} — ${t("নির্বাচন করুন")}`} /></label></td>
       <td className="source-title"><h2><Link href={`/manage/sources/${entry.id}/`}>{entry.title}</Link></h2><SourceUpdateStatus entry={entry} /></td>
       <td data-label={t("লেখক")}>{entry.author_line || t("লেখকের তথ্য নেই")}</td>
-      <td data-label={t("অবস্থা")}><span className="status-label">{t(entry.active_operation_id ? "কাজ চলছে" : entry.book && !entry.book.deleted_at ? catalogStateLabel(entry.book.state) : sourceStatus(entry))}</span></td>
+      <td data-label={t("অবস্থা")}><span className={`status-label status-${entry.active_operation_state ?? entry.book?.state ?? "unlinked"}`}>{t(entry.active_operation_state ? jobStates[entry.active_operation_state] : entry.active_operation_id ? "প্রক্রিয়াকরণ" : entry.book && !entry.book.deleted_at ? catalogStateLabel(entry.book.state) : sourceStatus(entry))}</span></td>
       <td className="source-row-actions"><SourceRowAction entry={entry} blocked={props.blocked || (props.limitReached && !props.selected.has(entry.id))} onCreate={props.onCreate} /><Link className="text-link" href={`/manage/sources/${entry.id}/`}>{t(entry.book && !entry.book.deleted_at ? "বইয়ের ফাইল" : "বিস্তারিত")}</Link></td>
     </tr>)}</tbody></table>;
 }
@@ -42,8 +44,10 @@ export function SourceTable(props: Props) {
 function SourceRowAction({ entry, blocked, onCreate }: Pick<Props, "blocked" | "onCreate"> & { entry: SourceEntry }) {
   const { t } = useAdminLanguage();
   const job = entry.active_operation_id || entry.latest_operation_id;
-  if (entry.book && !entry.book.deleted_at) return <>{entry.can_edit_book && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(entry.book.slug)}/`}>{t("বইয়ের তথ্য সম্পাদনা করুন")}</Link>}{job && <Link className="text-link" href={`/manage/jobs/${job}/`}>{t("কাজ দেখুন")}</Link>}</>;
-  if (job) return <Link className="text-link" href={`/manage/jobs/${job}/`}>{t("কাজ দেখুন")}</Link>;
+  const updated = entry.source_update?.status === "available";
+  const editLabel = updated ? "বই আপডেট করুন" : "বইয়ের তথ্য সম্পাদনা করুন";
+  if (entry.book && !entry.book.deleted_at) return <>{entry.can_edit_book && <Link className={`button button-quiet${updated ? " source-update-action" : ""}`} href={`/manage/books/${encodeURIComponent(entry.book.slug)}/`} aria-label={t(editLabel)} title={t(editLabel)}><Icon name={updated ? "refresh" : "edit"} /><span className="source-action-label">{t(editLabel)}</span></Link>}{job && <Link className="text-link" href={`/manage/jobs/${job}/`}><Icon name="jobs" />{t("কাজ দেখুন")}</Link>}</>;
+  if (job) return <Link className="text-link" href={`/manage/jobs/${job}/`}><Icon name="jobs" />{t("কাজ দেখুন")}</Link>;
   if (!entry.can_process) return <span className="muted">{t("এই লিংক থেকে বই তৈরি করা যাবে না")}</span>;
   return <button type="button" className="button button-quiet" disabled={blocked} onClick={() => onCreate(entry)}>{t("বই তৈরি করুন")}</button>;
 }

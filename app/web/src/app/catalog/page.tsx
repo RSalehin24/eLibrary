@@ -1,8 +1,8 @@
+import { retiredFilterRedirect } from "@/lib/browse-filters";
 import { SiteText } from "@/components/site-language";
 import { localizeMetadata } from "@/lib/metadata-language";
 import type { Metadata } from "next";
-import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { publicRequest, sessionRequest } from "@/api/server";
 import type { BookCollection } from "@/api/types";
 import { catalogFilterKeys, catalogNeedsAccount } from "@/lib/catalog-filters";
@@ -25,6 +25,8 @@ export async function generateMetadata({ searchParams }: { searchParams: SearchP
 
 export default async function CatalogPage({ searchParams }: { searchParams: SearchParameters }) {
   const queryParameters = await searchParams;
+  const destination = retiredFilterRedirect("/catalog/", queryParameters);
+  if (destination) redirect(destination);
   const q = queryValue(queryParameters, "q");
   const pageNumber = catalogPageNumber(queryParameters);
   if (q.length > 120) notFound();
@@ -36,8 +38,8 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   try { books = await (catalogNeedsAccount(filters) ? sessionRequest<BookCollection> : publicRequest<BookCollection>)(`catalog/books/?${parameters}`); }
   catch (error) { if (error instanceof APIError && error.status === 400) notFound(); throw error; }
   if (pageNumber > 1 && !books.entries.length) notFound();
-  return <><CatalogBrowseNav current="/catalog/" /><header className="page-title"><p className="eyebrow"><SiteText>{"বাংলা বইয়ের সন্ধানে"}</SiteText></p><h1><SiteText>{"বইয়ের পাঠাগার"}</SiteText></h1>
-    <p className="muted"><SiteText>{"বইয়ের নাম বা লেখকের নাম দিয়ে খুঁজুন।"}</SiteText></p><Link className="text-link" href="/collections/"><SiteText>{"সম্পাদকের নির্বাচন দেখুন →"}</SiteText></Link></header>
+  return <section className="catalog-page"><header className="page-title catalog-page-title"><h1><SiteText>{"সব বই"}</SiteText></h1>
+    </header><CatalogBrowseNav current="/catalog/" />
     <ManagedBooksShortcut /><CatalogSearch key={`${parameters}`} initialFilters={filters} initialQuery={q} initialBooks={books} page={pageNumber} />
-    </>;
+    </section>;
 }

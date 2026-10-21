@@ -1,11 +1,11 @@
 import { randomUUID } from "node:crypto";
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
 test("queue filters save and restore while bulk pause and resume keep job history", async ({ page }) => {
   await useAccount(page, "administrator");
   const identifier = fixture.preparation_job.id;
   await page.goto(`/manage/jobs/?q=${identifier}`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await expect(page.locator(".job-card")).toHaveCount(1);
   const views = page.getByRole("navigation", { name: "Job views", exact: true });
   for (const name of ["Active Jobs", "History", "Recovery"]) await expect(views.getByRole("link", { name, exact: true })).toBeVisible();
@@ -20,21 +20,24 @@ test("queue filters save and restore while bulk pause and resume keep job histor
   const name = `Queue ${randomUUID()}`;
   let saved;
   try {
-    await page.getByText("Save these filters", { exact: true }).click();
+    await page.locator(".saved-catalog-filters > summary").click();
     await page.getByLabel("Filter name", { exact: true }).fill(name);
     const accepted = page.waitForResponse(response => response.url().includes("/me/saved-filters/") && response.request().method() === "POST");
     await page.locator(".saved-filter-create").getByRole("button", { name: "Save", exact: true }).click();
     const response = await accepted;
     expect(response.status()).toBe(201); saved = (await response.json()).id;
     await page.getByRole("link", { name: "Clear all filters", exact: true }).click();
+    await expect(page.getByRole("searchbox", { name: "Search jobs", exact: true })).toHaveValue("");
+    if (await page.locator(".saved-catalog-filters").getAttribute("open") === null) await page.locator(".saved-catalog-filters > summary").click();
     await page.locator(".saved-filter-list").getByRole("link", { name, exact: true }).click();
     await expect(page.getByRole("searchbox", { name: "Search jobs", exact: true })).toHaveValue(identifier);
     await expect(page.locator(".job-card")).toHaveCount(1);
+    if (await page.locator(".saved-catalog-filters").getAttribute("open") === null) await page.locator(".saved-catalog-filters > summary").click();
     await page.getByRole("button", { name: `${name}: Delete saved filter`, exact: true }).click();
     await expect(page.locator(".saved-filter-list").getByRole("link", { name, exact: true })).toHaveCount(0); saved = undefined;
     const detail = await (await page.request.get(`/api/v1/manage/jobs/${identifier}/`)).json();
     expect(detail.state).toBe("queued");
-    await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+    await setLanguage(page, "bn");
     await expect(page.getByRole("searchbox", { name: "কাজ খুঁজুন", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
   } finally {
@@ -62,7 +65,7 @@ test("failed source selections expose revision-pinned retry recreate and reversi
   for (const [action, label] of [["retry_source", "Retry Saved Work"], ["recreate_source", "Recreate from Website"], ["archive_book", "Archive Books"]]) {
     current = source;
     await page.goto(`/manage/jobs/?q=${identifier}`);
-    await page.getByRole("button", { name: "English", exact: true }).click();
+    await setLanguage(page, "en");
     await expect(page.locator(".job-card .status-label")).toHaveText("Failed");
     await page.getByRole("checkbox", { name: "Select available jobs on this page", exact: true }).check();
     const controls = page.getByRole("region", { name: "Selected job controls", exact: true });
@@ -74,7 +77,7 @@ test("failed source selections expose revision-pinned retry recreate and reversi
     expect(command.entries).toEqual([{ id: identifier, expected_updated_at: source.updated_at, ...(action === "retry_source" ? {} : { expected_book_updated_at: source.book.updated_at }) }]);
     expect(command.operation_id).toMatch(/^[0-9a-f-]{36}$/);
   }
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await expect(page.getByRole("button", { name: "বই আর্কাইভে রাখুন", exact: true })).toBeVisible();
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });

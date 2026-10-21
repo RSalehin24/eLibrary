@@ -106,3 +106,32 @@ for failed/recoverable source jobs and visible bilingual retry, recreate and
 archive buttons. A control is enabled only when every selected job supports it.
 Failed work never uses the paused-job resume command. The response omits private
 inputs and reading bodies, and recovery choices do not add per-row SQL queries.
+
+## Processing queue rotation
+
+`BACKGROUND_PROCESSING_QUEUE` selects the durable-job processing destination and
+defaults to `processing`. Use the same value for the dispatcher and processing
+worker's `--queues` argument. The current platform Compose file supplies both;
+its configured worker concurrency also sets the dispatch admission capacity.
+Names are bounded to 255 ASCII bytes using letters, digits, dots, underscores and
+hyphens, with an initial letter or digit. The reserved `delivery` and `amq.`
+names are rejected. Account mail and Kindle continue to route to `delivery`.
+
+A large backlog of obsolete broker envelopes can delay current fenced work even
+when the database admission limit is small. To move current source jobs safely:
+
+1. Stop the dispatcher, scheduler and processing workers gracefully, allowing
+   the active attempt to finish. Preserve the broker queues and persistent data.
+2. Set a fresh processing queue consistently for publisher and worker.
+3. Inspect `python manage.py rebalance_source_dispatches`. Run it with `--apply`
+   to fence already-published, unstarted current source tickets and create fresh
+   generations through the existing audited admission service.
+4. Start one matching processing pool, dispatcher and scheduler. Confirm that
+   current work advances, outstanding dispatches remain bounded and no consumer
+   was added to the delivery queue.
+
+Old envelopes and attempt history remain intact. Generation checks reject old
+tickets if their queue is consumed later. The rebalance command is source-only;
+it does not replay an uncertain mail outcome or move other job kinds. Review
+non-source pending work separately before changing a shared production queue.
+Do not purge a queue to improve its dashboard count.

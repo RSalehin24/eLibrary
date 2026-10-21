@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 
 from .content_text import canonical_text
 
-VALIDATOR_VERSION = 2
+VALIDATOR_VERSION = 3
 DESCRIPTION_PATTERN = re.compile(
     r"(?:\bis\s+(?:a|an|the)\b.{0,100}\b(?:novel|comedy|play|collection|book)\b"
     r"|\b(?:portrays|published in|written (?:in|around)|the story (?:follows|revolves))\b"
@@ -30,17 +30,22 @@ def inline_classification(html):
     )
     if READING_HEADING.search(headings) or soup.select(".poem,.poetry,pre,blockquote"):
         return "inline_reading"
-    if (len(paragraphs) >= 3 or len(soup.select("br")) >= 3) and not DESCRIPTION_PATTERN.search(text):
+    # Later references to publications are ordinary prose, not landing-page synopses.
+    if len(paragraphs) >= 3 or len(soup.select("br")) >= 3:
         return "inline_reading"
     return "unknown_layout"
 
 
 def classify_source(snapshot):
+    from .collection_index import linked_book_entries
+
     payload = snapshot.get("raw_scrape_payload", {})
     items = payload.get("content_items", [])
     if items:
         return "chaptered_book"
     html = payload.get("main_content", "")
+    if linked_book_entries(html, snapshot.get("canonical_url", "")):
+        return "linked_collection"
     return inline_classification(html)
 
 

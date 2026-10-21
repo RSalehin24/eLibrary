@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 import { setReadingView, increaseTextSize } from "./reader-controls.mjs";
 
 test.afterEach(async ({ page }) => { await page.unrouteAll({ behavior: "wait" }); });
@@ -28,12 +28,12 @@ async function openPreparedReader(page) {
 test("reader controls translate while book text, chapter titles and reading settings are preserved", async ({ page }) => {
   await openPreparedReader(page);
   await expect(page.frameLocator(".reader-frame").getByRole("heading", { name: "প্রথম অধ্যায়", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.getByRole("button", { name: "Reading Settings", exact: true }).click();
   await expect(page.getByLabel("Page Theme", { exact: true })).toBeVisible();
   await page.getByLabel("Page Theme", { exact: true }).selectOption("sepia");
   await page.getByRole("button", { name: "Close", exact: true }).click();
-  await page.getByRole("button", { name: "বাংলা", exact: true }).click();
+  await setLanguage(page, "bn");
   await page.getByRole("button", { name: "পড়ার সেটিংস", exact: true }).click();
   await expect(page.getByLabel("পাতার রং", { exact: true })).toHaveValue("sepia");
   await page.getByRole("button", { name: "বন্ধ করুন", exact: true }).click();
@@ -49,7 +49,7 @@ test("generated source chapters use the reader's margins on a phone", async ({ p
     wrapper.style.cssText = 'margin:40px;font-family:"Kalpurush",sans-serif';
     wrapper.append(...body.childNodes); body.append(wrapper);
   });
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await increaseTextSize(page);
   const width = await content.locator("#paragraph-1").evaluate(element => element.getBoundingClientRect().width);
   expect(width).toBeGreaterThan(320);
@@ -58,7 +58,7 @@ test("generated source chapters use the reader's margins on a phone", async ({ p
 
 test("reader has real pagination, text resizing, two page views and persistent appearance", async ({ page }) => {
   await openPreparedReader(page);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const content = page.frameLocator(".reader-frame");
   await setReadingView(page, "single");
   await expect(content.locator("html")).toHaveAttribute("data-reader-view", "single");
@@ -71,12 +71,10 @@ test("reader has real pagination, text resizing, two page views and persistent a
   await increaseTextSize(page);
   await expect(content.locator("body")).toHaveCSS("font-size", "22px");
   await expect(content.locator("p").first()).toHaveCSS("font-size", "22px");
-  await page.getByRole("button", { name: "Reading Settings", exact: true }).click();
   for (let step = 0; step < 4; step++) await page.getByRole("button", { name: "Decrease Text Size", exact: true }).click();
   await expect(page.getByRole("button", { name: "Decrease Text Size", exact: true })).toBeDisabled();
   await expect(content.locator("body")).toHaveCSS("font-size", "14px");
   for (let step = 0; step < 4; step++) await page.getByRole("button", { name: "Increase Text Size", exact: true }).click();
-  await page.getByRole("dialog").getByRole("button", { name: "Close", exact: true }).click();
   await setReadingView(page, "spread");
   await expect(content.locator("html")).toHaveAttribute("data-reader-view", "spread");
   const metrics = await content.locator("body").evaluate(body => ({ column: parseFloat(getComputedStyle(body).columnWidth), width: document.documentElement.clientWidth }));
@@ -96,7 +94,7 @@ test("reader has real pagination, text resizing, two page views and persistent a
 });
 
 test("reader enters and exits fullscreen or the supported focus view without losing the book", async ({ page }) => {
-  await openPreparedReader(page); await page.getByRole("button", { name: "English", exact: true }).click();
+  await openPreparedReader(page); await setLanguage(page, "en");
   const supported = await page.evaluate(() => document.fullscreenEnabled === true && !!Element.prototype.requestFullscreen);
   await page.getByRole("button", { name: supported ? "Fullscreen" : "Focus Mode", exact: true }).click();
   if (supported) await expect.poll(() => page.evaluate(() => !!document.fullscreenElement)).toBe(true);
@@ -115,7 +113,7 @@ test("reader enters and exits fullscreen or the supported focus view without los
 
 test("browsers without native fullscreen retain an immersive keyboard-accessible focus view", async ({ page }) => {
   await page.addInitScript(() => { Object.defineProperty(document, "fullscreenEnabled", { value: false }); });
-  await openPreparedReader(page); await page.getByRole("button", { name: "English", exact: true }).click();
+  await openPreparedReader(page); await setLanguage(page, "en");
   await page.getByRole("button", { name: "Focus Mode", exact: true }).click();
   await expect(page.locator(".reader-workspace")).toHaveClass(/reader-focus-mode/);
   await page.locator(".reader-frame").click({ position: { x: 100, y: 80 } }); await page.keyboard.press("Escape");
@@ -125,7 +123,7 @@ test("browsers without native fullscreen retain an immersive keyboard-accessible
 });
 
 test("original theme and text shortcuts work inside chapters and leave search editing alone", async ({ page }) => {
-  await openPreparedReader(page); await page.getByRole("button", { name: "English", exact: true }).click();
+  await openPreparedReader(page); await setLanguage(page, "en");
   await page.locator(".reader-frame").click({ position: { x: 100, y: 80 } });
   await page.keyboard.press("Control+2");
   const body = page.frameLocator(".reader-frame").locator("body");
@@ -142,7 +140,7 @@ test("original theme and text shortcuts work inside chapters and leave search ed
 });
 
 test("font and view changes keep the current passage visible", async ({ page }) => {
-  await openPreparedReader(page); await page.getByRole("button", { name: "English", exact: true }).click();
+  await openPreparedReader(page); await setLanguage(page, "en");
   const passage = page.frameLocator(".reader-frame").locator("#paragraph-25");
   await passage.evaluate(element => element.scrollIntoView());
   const visible = () => passage.evaluate(element => Array.from(element.getClientRects()).some(rect => rect.right > 0 && rect.left < innerWidth && rect.bottom > 0 && rect.top < innerHeight));
@@ -161,7 +159,7 @@ test("font and view changes keep the current passage visible", async ({ page }) 
 
 test("book search finds text across chapters and opens the exact match without authored network requests", async ({ page }) => {
   const unexpected = []; page.on("response", response => { if (response.url().includes("reader-network-canary")) unexpected.push(response.status()); });
-  await openPreparedReader(page); await page.getByRole("button", { name: "English", exact: true }).click();
+  await openPreparedReader(page); await setLanguage(page, "en");
   await page.getByRole("button", { name: "Search Book", exact: true }).click();
   await page.getByLabel("Word or Phrase", { exact: true }).fill("অনুচ্ছেদ 40");
   await page.getByRole("dialog").getByRole("button", { name: "Search", exact: true }).click();
@@ -182,7 +180,7 @@ test("reader keyboard controls work while CSP blocks authored scripts and event 
     expect(response.headers()["content-security-policy"]).toContain("script-src 'none';");
     await route.fulfill({ response, body: (await response.text()).replace("</body>", payload + "</body>") });
   });
-  await page.reload(); await page.getByRole("button", { name: "English", exact: true }).click();
+  await page.reload(); await setLanguage(page, "en");
   const content = page.frameLocator(".reader-frame");
   await setReadingView(page, "single");
   await page.getByRole("button", { name: "Next Page", exact: true }).click();
@@ -196,7 +194,7 @@ test("book search reports unavailable chapters and can be retried", async ({ pag
   const session = await openPreparedReader(page);
   const unavailable = `**${session.resource_base}${session.chapters[1].path}`;
   await page.route(unavailable, route => route.fulfill({ status: 503 }));
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   await page.getByRole("button", { name: "Search Book", exact: true }).click();
   await page.getByLabel("Word or Phrase", { exact: true }).fill("অনুচ্ছেদ 40");
   await page.getByRole("dialog").getByRole("button", { name: "Search", exact: true }).click();
@@ -211,7 +209,7 @@ test("public book details put reading controls before metadata and open the actu
   await useAccount(page, "reading_reader"); await readerAPI(page);
   await page.goto(`/books/${encodeURIComponent(fixture.reading_book.slug)}/`);
   for (const language of ["English", "বাংলা"]) {
-    await page.getByRole("button", { name: language, exact: true }).click();
+    await setLanguage(page, language === "English" ? "en" : "bn");
     const actions = page.locator(".book-primary-actions");
     const read = actions.getByRole("button", { name: /^(Read Book|বই পড়ুন)$/ }).or(actions.getByRole("link", { name: /^(Continue Reading|পড়া চালিয়ে যান)$/ }));
     await expect(read).toBeVisible();
@@ -234,7 +232,7 @@ test("book details show saved reading progress and only that book's personal not
   const note = `Book detail note ${crypto.randomUUID()}`;
   expect((await page.request.post(`${origin}/api/v1/reading/sessions/${session.id}/highlights/`, { headers, data: { chapter_href: session.chapters[0].path, selector: { start: 0, end: 4 }, text: "বাংলা", note } })).status()).toBe(201);
   await page.goto(`/books/${encodeURIComponent(fixture.update_book.slug)}/`);
-  await page.getByRole("button", { name: "English", exact: true }).click();
+  await setLanguage(page, "en");
   const summary = page.locator(".book-reading-summary");
   await expect(summary.getByRole("heading", { name: "Your reading and notes", exact: true })).toBeVisible();
   await expect(summary.locator(".book-facts")).toContainText("25%");

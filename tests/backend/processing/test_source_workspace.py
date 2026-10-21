@@ -5,6 +5,7 @@ from apps.access.models import PermissionGrant, PermissionScope
 from apps.accounts.models import User
 from apps.catalog.models import Book, BookSource
 from apps.ingestion.models import SourceCatalogEntry
+from apps.processing.job_models import BackgroundJob
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
@@ -182,3 +183,38 @@ def test_source_display_links_omit_credentials_in_queries_and_fragments(
 def test_missing_source_record_returns_an_explicit_not_found(client, processor):
     response = client.get(SOURCES + f"{uuid4()}/")
     assert response.status_code == 404 and response.json()["code"] == "not_found"
+
+
+@pytest.mark.parametrize(
+    "state",
+    [
+        "queued",
+        "running",
+        "retry_wait",
+        "paused",
+        "needs_attention",
+        "succeeded",
+        "failed",
+    ],
+)
+def test_source_rows_and_details_report_the_actual_active_job_state(
+    client, processor, state
+):
+    entry = source_entry(901)
+    operation = BackgroundJob.objects.create(
+        source_record=entry,
+        kind="process_source",
+        state=state,
+        requested_by=processor,
+        available_at=timezone.now(),
+    )
+    expected = None if state in {"succeeded", "failed"} else state
+    for result in (
+        client.get(SOURCES).json()["entries"][0],
+        client.get(SOURCES + f"{entry.pk}/").json(),
+    ):
+        assert result["active_operation_state"] == expected
+        assert result["active_operation_id"] == (
+            str(operation.pk) if expected else None
+        )
+        assert result["latest_operation_id"] == str(operation.pk)

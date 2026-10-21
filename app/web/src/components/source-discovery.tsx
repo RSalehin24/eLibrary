@@ -28,13 +28,13 @@ export function SourceDiscovery({ options: initial, catalogScope = "all" }: { op
   const operation = options.active_operation_id ?? accepted ?? options.latest_operation_id;
   return <><button type="button" className="button button-quiet admin-main-action" disabled={blocked} onClick={() => submit({ max_pages: options.maximum_pages, fetch_all: true })}><Icon name="download" />{t("সব বইয়ের তথ্য আনুন")}</button>
     <section className="admin-control-card source-sync" aria-label={t("বইয়ের তালিকা")}>
-    <form className="limited-fetch" onChange={form.markDirty} onSubmit={(event) => { event.preventDefault(); submit({ max_pages: Number(new FormData(event.currentTarget).get("max_pages")), fetch_all: false }); }}>
+    <details className="source-advanced"><summary>{t("সীমিত সংগ্রহ")}</summary><form className="limited-fetch" onChange={form.markDirty} onSubmit={(event) => { event.preventDefault(); submit({ max_pages: Number(new FormData(event.currentTarget).get("max_pages")), fetch_all: false }); }}>
       <label className="visually-hidden" htmlFor="discovery-max-pages">{t("সর্বোচ্চ কত পাতা সংগ্রহ হবে")}</label><div><input id="discovery-max-pages" name="max_pages" type="number" required min="1" max={options.maximum_pages} defaultValue={options.default_max_pages} disabled={blocked} /><button className="button button-quiet" disabled={blocked}>{t("কয়েকটি পাতা আনুন")}</button></div>
-    </form>
+    </form></details>
     {!options.configured && <p className="notice">{t("বইয়ের তালিকা সংগ্রহ করতে ওয়েবসাইটের সেটিংস ঠিক করতে হবে।")}</p>}
     {query.isError && <p className="field-error" role="alert">{t("হালনাগাদ অবস্থা পাওয়া যায়নি।")} <button className="button button-quiet" onClick={() => void query.refetch()}>{t("আবার দেখুন")}</button></p>}
     <AccountFeedback error={form.saving.error} />
     {form.saving.error && identifier && <Link className="text-link" href={`/manage/jobs/${identifier}/`}>{t("অনুরোধের অবস্থা দেখুন →")}</Link>}
-    {operation && <SourceOperation id={operation} />}
+    {operation && <details className="source-operation-receipt" open={!!options.active_operation_id || !!accepted}><summary>{t("তথ্য আনা")}</summary><SourceOperation id={operation} /></details>}
   </section></>;
 }

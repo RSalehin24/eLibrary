@@ -4,6 +4,7 @@ from apps.ingestion.services.normalization import plain_text_from_html
 
 from .classification import classification_evidence
 from .content_text import canonical_text
+from .linked_verification import linked_source_issues
 
 
 def source_text_issues(document, snapshot):
@@ -20,7 +21,21 @@ def source_text_issues(document, snapshot):
     ]
 
 
-def source_verification(result):
+def source_collection_issues(snapshot):
+    structure = snapshot.get("manifest", {}).get("source_structure", {})
+    errors = []
+    if int(structure.get("topics_expected", 0)) > int(
+        structure.get("topics_fetched", 0)
+    ) or structure.get("content_incomplete"):
+        errors.append("Not all available source chapters were collected.")
+    if structure.get("toc_incomplete") or int(
+        structure.get("source_total_pages", 0)
+    ) > int(structure.get("fetched_total_pages", 0)):
+        errors.append("Not all source contents pages were collected.")
+    return errors
+
+
+def source_verification(result, lineage=()):
     document = result.get("document", {})
     snapshot = result.get("source_snapshot", {})
     validation = validate_document(document, snapshot)
@@ -32,16 +47,12 @@ def source_verification(result):
     errors = list(validation["errors"])
     if not pages or not fetched:
         errors.append("No fetched source page is available for verification.")
-    if expected > collected or structure.get("content_incomplete"):
-        errors.append("Not all available source chapters were collected.")
-    if structure.get("toc_incomplete") or int(
-        structure.get("source_total_pages", 0)
-    ) > int(structure.get("fetched_total_pages", 0)):
-        errors.append("Not all source contents pages were collected.")
+    errors.extend(source_collection_issues(snapshot))
     errors.extend(
         warning for warning in validation["warnings"] if "not assigned" in warning
     )
     errors.extend(source_text_issues(document, snapshot))
+    errors.extend(linked_source_issues(snapshot, source_verification, lineage))
     evidence = classification_evidence(snapshot)
     if not evidence["reading_content"]:
         errors.append("The source does not provide verified reading content.")

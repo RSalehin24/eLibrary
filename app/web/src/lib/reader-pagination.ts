@@ -22,7 +22,7 @@ export function turnReaderPage(document: Document, direction: number) {
 export function readerKeyboardDirection(event: KeyboardEvent) {
   if (event.altKey || event.ctrlKey || event.metaKey || event.defaultPrevented) return 0;
   if (event.shiftKey && event.key !== " ") return 0;
-  if ((event.target as Element | null)?.closest?.('input,textarea,select,button,a,[contenteditable="true"]')) return 0;
+  if ((event.target as Element | null)?.closest?.('input,textarea,select,button,a,audio,video,[contenteditable="true"]')) return 0;
   if (["ArrowLeft", "PageUp"].includes(event.key) || event.key === " " && event.shiftKey) return -1;
   if (["ArrowRight", "PageDown", " "].includes(event.key)) return 1;
   return 0;

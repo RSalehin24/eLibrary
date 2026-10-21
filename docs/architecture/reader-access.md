@@ -180,8 +180,16 @@ the reader now resolves supported legacy text points/ranges and element points
 into the current document. Image and other element points use the resolved
 element's geometry when a collapsed range has no text rectangle. Hidden or
 missing targets report a restoration failure. The bounded parser follows [EPUB CFI's structural and UTF-16 offset rules](https://w3c.github.io/epub-specs/epub33/epubcfi/),
-checks spine/item identity and element/text assertions, and rejects unsupported
-media locations, malformed syntax and out-of-range targets. A legacy highlight
+checks spine/item identity and element/text assertions, and rejects malformed
+syntax and out-of-range targets. Image/video spatial points resolve against the
+rendered media, accounting for object-fit letterboxing, borders and padding.
+Audio/video temporal points wait for metadata and an actual settled seek without
+starting playback. Both ends of a media range must identify the same element and
+have valid ordered offsets. Unknown geometry, unavailable media, rejected seeks
+and stale identities produce the bilingual restoration notice; original CFIs
+remain intact. Pending restoration survives reader rerenders and suppresses
+progress writes until it settles. The restored point stays at its viewport
+position through text and control reflow. A legacy highlight
 is painted only when the resolved text matches the original quotation. Its
 original CFI and note are retained. A missing/stale target shows an explicit
 bilingual notice rather than marking different text. Existing chapter/fraction
@@ -189,6 +197,15 @@ bookmarks continue to work, and original package-relative reading paths and
 fragments open their actual chapter; an absent fragment identifier shows the
 restoration notice. Annotations from a different prepared
 publication remain excluded by the existing edition filter.
+
+Authorized embedded audio/video uses native controls with autoplay disabled.
+The reader's CSP permits media only under that account-bound session's resource
+prefix, and permission is rechecked for each resource request. Development media
+responses support single byte ranges, open-ended and suffix ranges, and correct
+206/416 responses so native seeking works. Production retains protected Nginx
+delivery. Unsupported multiple ranges use the full response, in accordance with
+[HTTP range semantics](https://www.rfc-editor.org/rfc/rfc9110.html#name-range).
+Reader keyboard navigation does not intercept native audio/video controls.
 
 Personal notes use account-filtered, signed cursor collections with short
 previews and separate full details. They remain available to their author after
@@ -205,11 +222,22 @@ edition with structural/text checks. Missing or obsolete prepared resources retu
 verify that requested annotations belong to that account, book and edition before
 the server renders the exact target. Highlights verify their original quotation
 before selecting text. Launching does not overwrite saved reading progress.
+Painting saved highlights preserves the verified active selection, including when
+annotations arrive after an exact passage has already opened.
 An active session for that edition is reused, including a currently valid
 Read Once session; this never grants another opening after that session expires.
 The note editor disables navigation while edits are unsaved or a mutation is pending.
 Ctrl/Command + Enter saves notes in both the personal editor and reader selection
 form; pending saves cannot be resubmitted with the shortcut.
+
+Catalog and My Books cards and table rows include save/remove actions and the
+permitted Kindle composer link. One private `GET /api/v1/me/book-controls/`
+request takes up to 100 validated repeated `slugs` parameters. It returns only
+visible books, with saved state and Kindle availability computed from current
+ownership/scoped grants, quarantine state and an available ready EPUB. Paper
+books never show Kindle actions. The existing save mutation and query cache are
+shared with detail pages; a list batch seeds save state without a read per row.
+Removing a saved book refreshes My Books so saved-only rows disappear immediately.
 
 ## Verification and remaining scope
 

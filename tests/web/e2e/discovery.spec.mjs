@@ -14,7 +14,9 @@ test("public catalog and metadata work without JavaScript", async ({ browser, ba
   expect(markup.name).toBe(fixture.book.title);
   await page.goto(`/catalog/?q=${fixture.query}`);
   await expect(page.getByRole("link", { name: "পরের পাতা", exact: true })).toHaveAttribute("href", /page=2/);
+  expect(new URL(await page.getByRole("link", { name: "পরের পাতা", exact: true }).getAttribute("href"), baseURL).searchParams.has("record_type")).toBe(false);
   await page.getByRole("link", { name: "পরের পাতা", exact: true }).click();
+  await expect(page).toHaveURL(url => url.searchParams.get("page") === "2" && url.searchParams.get("q") === fixture.query);
   await expect(page.locator(".book-card")).toHaveCount(3);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
   await context.close();
@@ -41,7 +43,7 @@ test("search on page two requests page one after the query changes", async ({ pa
 
 test("public contributor and category pages provide ordinary paginated links", async ({ page }) => {
   await page.goto(`/books/${encodeURIComponent(fixture.book.slug)}/`);
-  await page.locator('a[href^="/contributors/"]').click();
+  await page.locator('a[href^="/contributors/"][href$="?role=author"]').click();
   await expect(page.locator(".book-card")).toHaveCount(24);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "noindex, follow");
   await page.getByRole("link", { name: "পরের পাতা", exact: true }).click();
@@ -59,6 +61,10 @@ test("curated collection shows reviewed introduction and editorial book order", 
   await expect(page.locator(".book-card")).toHaveCount(3);
   await expect(page.locator(".book-card").first()).toContainText(fixture.book.title);
   await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", "index, follow");
-  await page.goto("/collections/");
-  await expect(page.getByRole("link", { name: fixture.collection.name, exact: true })).toBeVisible();
+  await page.goto(`/collections/?q=${encodeURIComponent(fixture.collection.name)}`);
+  const entry = page.locator(".entity-directory").getByRole("link").filter({ has: page.getByText(fixture.collection.name, { exact: true }) });
+  await expect(entry).toBeVisible();
+  await expect(entry).toContainText("৩ টি বই");
+  await entry.click();
+  await expect(page.getByRole("heading", { name: fixture.collection.name, exact: true })).toBeVisible();
 });

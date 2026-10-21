@@ -1,4 +1,4 @@
-import { test, expect, fixture, useAccount } from "./fixtures.mjs";
+import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 import { newDigitalBook, readingEPUB } from "./book-fixture.mjs";
 
 test("job workspace rejects readers and metadata-only editors", async ({ page }) => {
@@ -88,7 +88,7 @@ test("catalog results expose empty historical syncs, failures and the next creat
   await page.route(`**${path}`, (route) => route.request().method() === "GET" ? route.fulfill({ json: job }) : route.abort());
   await page.goto(`/manage/jobs/${fixture.preparation_job.id}/`);
   for (const language of ["English", "বাংলা"]) {
-    await page.getByRole("button", { name: language, exact: true }).click();
+    await setLanguage(page, language === "English" ? "en" : "bn");
     const english = language === "English";
     const refresh = page.getByRole("button", { name: english ? "Refresh Status" : "অবস্থা হালনাগাদ করুন", exact: true });
     job = { ...job, state: "succeeded", discovered_entries: 0, error_code: "" };

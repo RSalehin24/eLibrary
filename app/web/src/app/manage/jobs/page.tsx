@@ -1,3 +1,5 @@
+import { SiteText } from "@/components/site-language";
+import Link from "next/link";
 import { localizeMetadata } from "@/lib/metadata-language";
 import { notFound } from "next/navigation";
 import { sessionRequest } from "@/api/server";
@@ -21,5 +23,5 @@ export default async function JobsPage({ searchParams }: { searchParams: Promise
   let initial: BackgroundJobCollection;
   try { initial = await sessionRequest<BackgroundJobCollection>(`manage/jobs/?${parameters}`); }
   catch (error) { if (error instanceof APIError && error.status === 404) notFound(); throw error; }
-  return <><h1><AdminText>কাজ পরিচালনা</AdminText></h1><ManagedJobs key={parameters.toString()} initial={initial} filter={parameters.toString()} /></>;
+  return <><header className="admin-page-heading"><h1><SiteText>কাজের অবস্থা</SiteText></h1><Link className="text-link" href="/manage/overview/"><AdminText>সারসংক্ষেপ</AdminText></Link></header><ManagedJobs key={parameters.toString()} initial={initial} filter={parameters.toString()} /></>;
 }
