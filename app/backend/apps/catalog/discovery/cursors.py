@@ -18,7 +18,6 @@ def cursor_context(parameters):
             "contributor_role",
             "series",
             "collection",
-            "record_type",
             "ownership",
             "sort",
         )

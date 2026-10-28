@@ -43,7 +43,7 @@ def require_entity_workspace(actor):
 def filtered_entities(actor, kind, query):
     from apps.common.text import normalize_catalog_text
 
-    fields = ["id", "name", "slug", "updated_at", "editorial_reviewed_at"]
+    fields = ["id", "name", "slug", "updated_at"]
     if kind == "collections":
         fields.append("state")
     return (

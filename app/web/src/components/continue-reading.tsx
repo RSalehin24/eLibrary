@@ -8,7 +8,7 @@ import { ContinueReadingAction } from "./continue-reading-action";
 const maximumContinueReadingBooks = 3;
 
 export async function ContinueReading() {
-  const recent = await sessionRequest<LibraryCollection>("me/books/?view=recent&record_type=digital");
+  const recent = await sessionRequest<LibraryCollection>("me/books/?view=recent");
   const entries = recent.entries.filter(book => book.progress_percent !== null && book.progress_percent < 100).slice(0, maximumContinueReadingBooks);
   if (!entries.length) return null;
   return <section className="continue-reading" aria-labelledby="continue-reading-heading"><h2 id="continue-reading-heading"><SiteText>পড়া চালিয়ে যান</SiteText></h2><div className="continue-reading-list">{entries.map(book => <article key={book.id}>

@@ -26,9 +26,7 @@ def url(book):
 
 def test_published_cover_is_real_image_and_metadata_has_its_url(settings):
     settings.PROTECTED_FILES_USE_NGINX = False
-    book = Book.objects.create(
-        title="Cover book", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="Cover book", state="published")
     cover(book)
     client = APIClient()
     response = client.get(url(book))
@@ -60,9 +58,7 @@ def test_private_cover_requires_existing_reader_permission():
 
 
 def test_absent_and_non_image_assets_are_not_served():
-    book = Book.objects.create(
-        title="Missing cover", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="Missing cover", state="published")
     client = APIClient()
     assert client.get(url(book)).status_code == 404
     assert (
@@ -78,9 +74,7 @@ def test_absent_and_non_image_assets_are_not_served():
 
 def test_cover_uses_nginx_protected_delivery(settings):
     settings.PROTECTED_FILES_USE_NGINX = True
-    book = Book.objects.create(
-        title="Nginx cover", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="Nginx cover", state="published")
     cover(book)
     response = APIClient().get(url(book))
     assert response.status_code == 200

@@ -21,6 +21,9 @@ for (const width of [320, 375, 390, 768, 820, 1024, 1366, 1920]) {
     expect(button.height).toBeGreaterThanOrEqual(44);
     await page.keyboard.press("Escape");
     if (width === 390 || width === 1366) await page.screenshot({ path: `test-artifacts/foundation/manage-${width}.png`, fullPage: true });
+    await expect(page.locator('.managed-books-table a[href$="/files/"]')).toHaveCount(0);
+    expect((await page.request.get(`/manage/books/${encodeURIComponent(fixture.book.slug)}/`)).status()).toBe(404);
+    await useAccount(page, "administrator");
     await page.goto(`/manage/books/${encodeURIComponent(fixture.book.slug)}/`);
     await expect(page.getByLabel("বিস্তারিত বিবরণ", { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);

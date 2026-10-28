@@ -15,6 +15,7 @@ class WorkspaceAccessSerializer(serializers.Serializer):
     manage = serializers.BooleanField()
     management_sections = serializers.ListField(child=serializers.CharField())
     can_create_books = serializers.BooleanField()
+    can_edit_books = serializers.BooleanField()
 
 
 class WorkspaceSessionSerializer(serializers.Serializer):

@@ -1,7 +1,17 @@
+import json
+
+import pytest
+from apps.access.models import PermissionGrant, PermissionScope
+from apps.accounts.models import User
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
 
 
 @pytest.mark.django_db
-def test_superadmin_can_create_update_and_delete_managed_users_with_grants_and_totp_policy(client):
+def test_superadmin_can_create_update_and_delete_managed_users_with_grants_and_totp_policy(
+    client,
+):
     superadmin = User.objects.create_superuser(
         email="superadmin@example.com",
         password="strong-password-123",
@@ -100,7 +110,7 @@ def test_managed_users_list_supports_search_filter_and_sort(client):
         full_name="Alpha User",
         is_active=True,
     )
-    disabled_user = User.objects.create_user(
+    User.objects.create_user(
         email="bravo@example.com",
         password="strong-password-123",
         full_name="Bravo User",
@@ -120,9 +130,7 @@ def test_managed_users_list_supports_search_filter_and_sort(client):
     )
     client.force_login(superadmin)
 
-    disabled_response = client.get(
-        "/api/auth/users/?status=disabled&sort=email_desc"
-    )
+    disabled_response = client.get("/api/auth/users/?status=disabled&sort=email_desc")
     assert disabled_response.status_code == 200
     assert [row["email"] for row in disabled_response.json()["rows"]] == [
         "bravo@example.com",
@@ -165,7 +173,10 @@ def test_superadmin_cannot_edit_own_account_from_managed_users_endpoint(client):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "You cannot edit your own account from Users & Access."
+    assert (
+        response.json()["detail"]
+        == "You cannot edit your own account from Users & Access."
+    )
 
 
 @pytest.mark.django_db
@@ -189,7 +200,10 @@ def test_password_reset_confirm_requires_logout_when_authenticated(client):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Please log out first before resetting a password from this link."
+    assert (
+        response.json()["detail"]
+        == "Please log out first before resetting a password from this link."
+    )
 
 
 @pytest.mark.django_db

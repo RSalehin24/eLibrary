@@ -1,29 +1,18 @@
 from pathlib import Path
-from smtplib import SMTPAuthenticationError
 from urllib.parse import quote
 
 import pytest
-from bs4 import BeautifulSoup
-from django.core import mail
-from django.core.files.base import ContentFile
-from django.test import override_settings
-
-from apps.access.models import PermissionGrant, PermissionScope, PreviewAccessSession
+from apps.access.models import PermissionGrant, PermissionScope
 from apps.accounts.models import User
 from apps.catalog.models import (
     Book,
-    BookCategory,
-    BookContributor,
-    Category,
-    Contributor,
-    ContributorRole,
     GeneratedAsset,
     GeneratedAssetStatus,
     GeneratedAssetType,
 )
-from apps.common.permissions import user_has_scope
 from apps.ingestion.models import BookSubmission, ResolutionStatus, SubmissionStatus
-from apps.access.views import normalize_preview_book_sections
+from django.core import mail
+from django.test import override_settings
 
 
 def assert_content_disposition_filename(header_value, expected_filename):
@@ -35,8 +24,10 @@ def assert_content_disposition_filename(header_value, expected_filename):
 
 @pytest.mark.django_db
 def test_download_and_reader_launch_are_protected(tmp_path, client):
-    user = User.objects.create_user(email="access@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Access Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="access@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Access Book", state="ready")
     epub_path = Path(tmp_path) / "access-book.epub"
     html_path = Path(tmp_path) / "book.html"
     epub_path.write_bytes(b"epub")
@@ -63,13 +54,19 @@ def test_download_and_reader_launch_are_protected(tmp_path, client):
     denied = client.get(f"/api/access/books/{book.slug}/download/epub/")
     assert denied.status_code == 403
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE
+    )
     allowed = client.get(f"/api/access/books/{book.slug}/download/epub/")
     assert allowed.status_code == 200
-    assert_content_disposition_filename(allowed.headers["Content-Disposition"], "Access Book.epub")
+    assert_content_disposition_filename(
+        allowed.headers["Content-Disposition"], "Access Book.epub"
+    )
     assert b"".join(allowed.streaming_content) == b"epub"
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.PREVIEW_HTML
+    )
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
     assert launch.status_code == 200
 
@@ -83,9 +80,13 @@ def test_download_and_reader_launch_are_protected(tmp_path, client):
 
 
 @pytest.mark.django_db
-def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grants(tmp_path, client):
-    user = User.objects.create_user(email="owner-access@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Owned Book", state="ready", review_state="approved")
+def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grants(
+    tmp_path, client
+):
+    user = User.objects.create_user(
+        email="owner-access@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Owned Book", state="ready")
     cover_path = Path(tmp_path) / "book_cover.jpg"
     html_path = Path(tmp_path) / "book.html"
     epub_path = Path(tmp_path) / "owned-book.epub"
@@ -132,12 +133,19 @@ def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grant
 
     list_response = client.get("/api/catalog/books/?ownership=mine")
     assert list_response.status_code == 200
-    assert list_response.json()[0]["cover_download_url"].endswith(f"/api/access/books/{book.slug}/download/cover/")
+    assert list_response.json()[0]["cover_download_url"].endswith(
+        f"/api/access/books/{book.slug}/download/cover/"
+    )
 
     detail_response = client.get(f"/api/catalog/books/{book.slug}/")
     assert detail_response.status_code == 200
-    asset_urls = {asset["asset_type"]: asset["download_url"] for asset in detail_response.json()["assets"]}
-    assert asset_urls["cover"].endswith(f"/api/access/books/{book.slug}/download/cover/")
+    asset_urls = {
+        asset["asset_type"]: asset["download_url"]
+        for asset in detail_response.json()["assets"]
+    }
+    assert asset_urls["cover"].endswith(
+        f"/api/access/books/{book.slug}/download/cover/"
+    )
     assert asset_urls["html"].endswith(f"/api/access/books/{book.slug}/download/html/")
     assert asset_urls["epub"].endswith(f"/api/access/books/{book.slug}/download/epub/")
 
@@ -156,9 +164,13 @@ def test_book_owner_can_access_cover_downloads_and_reader_without_explicit_grant
 
 
 @pytest.mark.django_db
-def test_download_uses_current_book_title_for_cover_and_epub_filenames(tmp_path, client):
-    user = User.objects.create_user(email="filename-access@example.com", password="strong-password-123")
-    book = Book.objects.create(title="বর্তমান বই নাম", state="ready", review_state="approved")
+def test_download_uses_current_book_title_for_cover_and_epub_filenames(
+    tmp_path, client
+):
+    user = User.objects.create_user(
+        email="filename-access@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="বর্তমান বই নাম", state="ready")
     epub_path = Path(tmp_path) / "মযলস.epub"
     cover_path = Path(tmp_path) / "book_cover.jpg"
     epub_path.write_bytes(b"epub")
@@ -181,26 +193,38 @@ def test_download_uses_current_book_title_for_cover_and_epub_filenames(tmp_path,
         file_size=cover_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE)
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.DOWNLOAD_FILE
+    )
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.PREVIEW_HTML
+    )
     client.force_login(user)
 
     epub_response = client.get(f"/api/access/books/{book.slug}/download/epub/")
     cover_response = client.get(f"/api/access/books/{book.slug}/download/cover/")
     assert epub_response.status_code == 200
     assert cover_response.status_code == 200
-    assert_content_disposition_filename(epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub")
-    assert_content_disposition_filename(cover_response.headers["Content-Disposition"], "বর্তমান বই নাম.jpg")
+    assert_content_disposition_filename(
+        epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub"
+    )
+    assert_content_disposition_filename(
+        cover_response.headers["Content-Disposition"], "বর্তমান বই নাম.jpg"
+    )
     assert b"".join(epub_response.streaming_content) == b"epub"
     assert b"".join(cover_response.streaming_content) == b"cover"
 
     launch = client.post(f"/api/access/books/{book.slug}/reader-launch/")
     manifest_path = launch.json()["manifest_url"].replace("http://testserver", "")
     manifest = client.get(manifest_path)
-    reader_epub_path = manifest.json()["epub_download_url"].replace("http://testserver", "")
+    reader_epub_path = manifest.json()["epub_download_url"].replace(
+        "http://testserver", ""
+    )
     reader_epub_response = client.get(reader_epub_path)
     assert reader_epub_response.status_code == 200
-    assert_content_disposition_filename(reader_epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub")
+    assert_content_disposition_filename(
+        reader_epub_response.headers["Content-Disposition"], "বর্তমান বই নাম.epub"
+    )
     assert b"".join(reader_epub_response.streaming_content) == b"epub"
 
 
@@ -215,7 +239,7 @@ def test_book_can_be_sent_to_all_configured_kindle_emails(tmp_path, client):
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com", "reader-two@kindle.com"],
     )
-    book = Book.objects.create(title="Kindle Delivery Book", state="ready", review_state="approved")
+    book = Book.objects.create(title="Kindle Delivery Book", state="ready")
     epub_path = Path(tmp_path) / "kindle-delivery.epub"
     epub_path.write_bytes(b"epub")
 
@@ -227,7 +251,9 @@ def test_book_can_be_sent_to_all_configured_kindle_emails(tmp_path, client):
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -238,4 +264,7 @@ def test_book_can_be_sent_to_all_configured_kindle_emails(tmp_path, client):
     assert payload["failedEmails"] == []
     assert payload["senderEmail"] == "kindle-sender@example.com"
     assert all(message.body == "" for message in mail.outbox)
-    assert all(message.attachments[0][0] == "Kindle Delivery Book.epub" for message in mail.outbox)
+    assert all(
+        message.attachments[0][0] == "Kindle Delivery Book.epub"
+        for message in mail.outbox
+    )

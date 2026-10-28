@@ -1,7 +1,22 @@
+from pathlib import Path
+
+import pytest
+from apps.access.models import PermissionGrant, PermissionScope
+from apps.accounts.models import User
+from apps.catalog.models import (
+    Book,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+
+
 @pytest.mark.django_db
 def test_read_once_permission_blocks_subsequent_launches(tmp_path, client):
-    user = User.objects.create_user(email="once-reader@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Read Once Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="once-reader@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Read Once Book", state="ready")
     epub_path = Path(tmp_path) / "read-once.epub"
     epub_path.write_bytes(b"epub")
 
@@ -14,7 +29,9 @@ def test_read_once_permission_blocks_subsequent_launches(tmp_path, client):
         file_size=epub_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_ONCE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_ONCE
+    )
     client.force_login(user)
 
     # First launch should succeed
@@ -28,8 +45,10 @@ def test_read_once_permission_blocks_subsequent_launches(tmp_path, client):
 
 @pytest.mark.django_db
 def test_read_once_permission_blocks_html_previews(tmp_path, client):
-    user = User.objects.create_user(email="once-html-reader@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Read Once HTML Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="once-html-reader@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Read Once HTML Book", state="ready")
     html_path = Path(tmp_path) / "preview.html"
     html_path.write_text("<html></html>", encoding="utf-8")
 
@@ -42,8 +61,12 @@ def test_read_once_permission_blocks_html_previews(tmp_path, client):
         file_size=html_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_ONCE)
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_ONCE
+    )
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.PREVIEW_HTML
+    )
     client.force_login(user)
 
     # First HTML download should succeed
@@ -57,8 +80,10 @@ def test_read_once_permission_blocks_html_previews(tmp_path, client):
 
 @pytest.mark.django_db
 def test_read_once_html_preview_blocks_reader_launch(tmp_path, client):
-    user = User.objects.create_user(email="once-cross-reader@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Cross Read Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="once-cross-reader@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Cross Read Book", state="ready")
     epub_path = Path(tmp_path) / "cross.epub"
     html_path = Path(tmp_path) / "cross.html"
     epub_path.write_bytes(b"epub")
@@ -81,8 +106,12 @@ def test_read_once_html_preview_blocks_reader_launch(tmp_path, client):
         file_size=html_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_ONCE)
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_ONCE
+    )
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.PREVIEW_HTML
+    )
     client.force_login(user)
 
     # First download HTML preview
@@ -96,8 +125,10 @@ def test_read_once_html_preview_blocks_reader_launch(tmp_path, client):
 
 @pytest.mark.django_db
 def test_read_once_without_preview_html_permission_cannot_view_html(tmp_path, client):
-    user = User.objects.create_user(email="once-no-html@example.com", password="strong-password-123")
-    book = Book.objects.create(title="No HTML Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="once-no-html@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="No HTML Book", state="ready")
     epub_path = Path(tmp_path) / "no-html.epub"
     html_path = Path(tmp_path) / "no-html.html"
     epub_path.write_bytes(b"epub")
@@ -120,7 +151,9 @@ def test_read_once_without_preview_html_permission_cannot_view_html(tmp_path, cl
         file_size=html_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_ONCE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_ONCE
+    )
     client.force_login(user)
 
     # Cannot download HTML preview because preview_html permission is missing
@@ -139,7 +172,6 @@ def test_read_once_without_preview_html_permission_cannot_view_html(tmp_path, cl
 @pytest.mark.django_db
 def test_read_once_mutual_exclusion_validation(client):
     from apps.accounts.serializers.managed_users import ManagedUserCreateSerializer
-    from rest_framework import serializers
 
     # Try creating user with both global scopes
     serializer = ManagedUserCreateSerializer(
@@ -154,18 +186,25 @@ def test_read_once_mutual_exclusion_validation(client):
 
     # Try creating PermissionGrant with both scopes for the same target
     from apps.access.serializers import PermissionGrantSerializer
-    user = User.objects.create_user(email="grant-fail@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Grant Fail Book", state="ready", review_state="approved")
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_ONCE)
+    user = User.objects.create_user(
+        email="grant-fail@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Grant Fail Book", state="ready")
+
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_ONCE
+    )
 
     grant_serializer = PermissionGrantSerializer(
-        data={
-            "user": user.id,
-            "book": book.id,
-            "scope": "read:durable"
-        }
+        data={"user": user.id, "book": book.id, "scope": "read:durable"}
     )
     assert grant_serializer.is_valid() is False
-    assert "non_field_errors" in grant_serializer.errors or "detail" in grant_serializer.errors or any("Read Once and Durable Read" in err for err in grant_serializer.errors.values())
-
+    assert (
+        "non_field_errors" in grant_serializer.errors
+        or "detail" in grant_serializer.errors
+        or any(
+            "Read Once and Durable Read" in err
+            for err in grant_serializer.errors.values()
+        )
+    )

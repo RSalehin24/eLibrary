@@ -2,11 +2,9 @@ import json
 from copy import deepcopy
 from io import StringIO
 from pathlib import Path
+from typing import ClassVar
 
 import pytest
-from bs4 import BeautifulSoup
-from django.core.management import call_command
-
 from apps.catalog.models import (
     CuratedBookDocument,
     CuratedDocumentStatus,
@@ -14,15 +12,22 @@ from apps.catalog.models import (
     CuratedSection,
     GeneratedAsset,
 )
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
+from apps.ingestion.management.commands.curate_source_site_books import (
+    verify_curated_result,
+)
+from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline import book_manifest
 from apps.ingestion.pipeline.book_manifest import build_manifest_from_legacy_payload
-from apps.ingestion.management.commands.curate_source_site_books import verify_curated_result
-from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline.curated_persistence import persist_curated_book
 from apps.ingestion.pipeline.curated_pipeline import curate_book_document
-from apps.ingestion.pipeline.curated_validation import source_chrome_hits, validate_document
+from apps.ingestion.pipeline.curated_validation import (
+    source_chrome_hits,
+    validate_document,
+)
 from apps.ingestion.services.legacy_adapter import generate_exports
+from bs4 import BeautifulSoup
+from django.core.management import call_command
 
 
 def fake_scraped_payload(tmp_path, *, content_items=None):
@@ -72,7 +77,9 @@ def patch_scraper(monkeypatch, payload):
     )
 
 
-def test_curated_document_extracts_entities_sections_and_generated_toc(monkeypatch, tmp_path):
+def test_curated_document_extracts_entities_sections_and_generated_toc(
+    monkeypatch, tmp_path
+):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
 
     curated = curate_book_document("https://example.com/books/sophie/")
@@ -114,11 +121,13 @@ def test_curated_document_routes_structural_failures_to_review(monkeypatch, tmp_
             "path": ["এক"],
         },
     ]
-    patch_scraper(monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items))
+    patch_scraper(
+        monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items)
+    )
 
     curated = curate_book_document("https://www.example.com/books/duplicate/")
 
-    assert curated["status"] == CuratedDocumentStatus.REVIEW_REQUIRED
+    assert curated["status"] == CuratedDocumentStatus.INVALID
     assert "Duplicate content path: এক." in curated["validation"]["errors"]
 
 
@@ -184,7 +193,7 @@ def test_curated_validation_rejects_partial_source_fetches(monkeypatch, tmp_path
 
     validation = validate_document(document, snapshot)
 
-    assert validation["status"] == CuratedDocumentStatus.REVIEW_REQUIRED
+    assert validation["status"] == CuratedDocumentStatus.INVALID
     assert validation["errors"] == [
         "Source page was not fetched: https://www.example.com/books/partial/chapter/ (404)."
     ]
@@ -207,12 +216,14 @@ def test_curated_validation_rejects_empty_discovered_toc_leaf(monkeypatch, tmp_p
 
     validation = validate_document(document, curated["source_snapshot"])
 
-    assert validation["status"] == CuratedDocumentStatus.REVIEW_REQUIRED
+    assert validation["status"] == CuratedDocumentStatus.INVALID
     assert "TOC content leaf has no extracted body: শূন্য অধ্যায়." in validation["errors"]
 
 
 @pytest.mark.django_db
-def test_curated_persistence_writes_document_evidence_and_projection(monkeypatch, tmp_path):
+def test_curated_persistence_writes_document_evidence_and_projection(
+    monkeypatch, tmp_path
+):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
     source_url = "https://www.example.com/books/sophie/"
     curated = curate_book_document(source_url)
@@ -221,20 +232,33 @@ def test_curated_persistence_writes_document_evidence_and_projection(monkeypatch
 
     assert book.title == "সোফির জগৎ"
     assert book.state == LifecycleState.READY
-    assert book.review_state == ReviewState.PENDING
-    assert book.raw_scrape_payload["curated_document_model_id"] == str(curated_document.id)
+    assert not hasattr(book, "review_state")
+    assert book.raw_scrape_payload["curated_document_model_id"] == str(
+        curated_document.id
+    )
     assert "content_items" not in book.raw_scrape_payload
     assert book.raw_scrape_payload["content_summary"]["content_item_count"] == 1
     assert book.content_items[0]["content"] == "<p>মূল লেখা</p>"
-    assert curated_document.document["projection"]["content_summary"]["content_item_count"] == 1
-    assert all("html" not in section for section in curated_document.document["sections"])
+    assert (
+        curated_document.document["projection"]["content_summary"]["content_item_count"]
+        == 1
+    )
+    assert all(
+        "html" not in section for section in curated_document.document["sections"]
+    )
     assert CuratedBookDocument.objects.count() == 1
-    assert CuratedEntity.objects.filter(document=curated_document, role="translator").exists()
-    assert CuratedSection.objects.filter(document=curated_document, section_type="body").exists()
+    assert CuratedEntity.objects.filter(
+        document=curated_document, role="translator"
+    ).exists()
+    assert CuratedSection.objects.filter(
+        document=curated_document, section_type="body"
+    ).exists()
 
 
 @pytest.mark.django_db
-def test_curated_result_verification_catches_persisted_content_mismatch(monkeypatch, tmp_path):
+def test_curated_result_verification_catches_persisted_content_mismatch(
+    monkeypatch, tmp_path
+):
     patch_scraper(monkeypatch, fake_scraped_payload(tmp_path))
     source_url = "https://www.example.com/books/sophie/"
     curated = curate_book_document(source_url)
@@ -337,7 +361,9 @@ def test_curate_command_can_require_validated_documents(monkeypatch, tmp_path):
         {"title": "এক", "content": "<p>প্রথম</p>", "type": "lesson", "path": ["এক"]},
         {"title": "এক", "content": "<p>দ্বিতীয়</p>", "type": "lesson", "path": ["এক"]},
     ]
-    patch_scraper(monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items))
+    patch_scraper(
+        monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items)
+    )
     report_path = tmp_path / "require-validated-report.json"
 
     call_command(
@@ -355,7 +381,8 @@ def test_curate_command_can_require_validated_documents(monkeypatch, tmp_path):
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["processed"] == 1
-    assert report["review_required"] == 1
+    assert report["invalid"] == 1
+    assert "review_required" not in report
     assert report["failed"] == 1
     assert "Duplicate content path: এক." in report["results"][0]["validation_errors"]
     assert CuratedBookDocument.objects.count() == 0
@@ -393,17 +420,22 @@ def test_curate_command_can_require_catalog_metadata_match(monkeypatch, tmp_path
     assert report["processed"] == 1
     assert report["catalog_mismatches"] == 1
     assert report["blocked"] == 1
-    assert "Catalog title mismatch: expected ভুল বই; extracted সোফির জগৎ." in result["catalog_errors"]
+    assert (
+        "Catalog title mismatch: expected ভুল বই; extracted সোফির জগৎ."
+        in result["catalog_errors"]
+    )
     assert CuratedBookDocument.objects.count() == 0
 
 
 @pytest.mark.django_db
-def test_review_required_curated_book_persists_without_assets(monkeypatch, tmp_path):
+def test_invalid_curated_book_persists_without_assets(monkeypatch, tmp_path):
     duplicate_items = [
         {"title": "এক", "content": "<p>প্রথম</p>", "type": "lesson", "path": ["এক"]},
         {"title": "এক", "content": "<p>দ্বিতীয়</p>", "type": "lesson", "path": ["এক"]},
     ]
-    patch_scraper(monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items))
+    patch_scraper(
+        monkeypatch, fake_scraped_payload(tmp_path, content_items=duplicate_items)
+    )
     curated = curate_book_document("https://www.example.com/books/review/")
 
     book, _curated_document = persist_curated_book(
@@ -411,8 +443,8 @@ def test_review_required_curated_book_persists_without_assets(monkeypatch, tmp_p
         source_url="https://www.example.com/books/review/",
     )
 
-    assert book.state == LifecycleState.NEEDS_REVIEW
-    assert book.review_state == ReviewState.NEEDS_REVIEW
+    assert book.state == LifecycleState.FAILED
+    assert not hasattr(book, "review_state")
     assert GeneratedAsset.objects.filter(book=book).count() == 0
 
 
@@ -503,17 +535,17 @@ def test_manifest_parser_preserves_paginated_sectioned_nested_toc():
 def test_manifest_content_fetch_does_not_retain_content_soups():
     class FakeResponse:
         status_code = 200
-        headers = {"content-type": "text/html; charset=utf-8"}
+        headers: ClassVar = {"content-type": "text/html; charset=utf-8"}
         encoding = "utf-8"
         apparent_encoding = "utf-8"
         content = """
         <article>
           <div class="entry-content"><p>অধ্যায়ের লেখা</p></div>
         </article>
-        """.encode("utf-8")
+        """.encode()
 
     class FakeSession:
-        headers = {}
+        headers: ClassVar = {}
 
         def get(self, *_args, **_kwargs):
             return FakeResponse()

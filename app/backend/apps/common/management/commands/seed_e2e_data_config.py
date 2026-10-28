@@ -22,7 +22,6 @@ from apps.access.models import (
 from apps.accounts.models import User
 from apps.catalog.models import (
     Book,
-    BookRecordType,
     BookSource,
     GeneratedAsset,
     GeneratedAssetStatus,
@@ -31,7 +30,7 @@ from apps.catalog.models import (
 from apps.catalog.models.choices import ContributorRole
 from apps.catalog.services import replace_book_relations
 from apps.common.epub_utils import build_simple_epub
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.common.text import normalize_catalog_text
 from apps.ingestion.models import (
     BookSubmission,
@@ -39,8 +38,6 @@ from apps.ingestion.models import (
     CatalogCurationMode,
     CatalogCurationRun,
     CatalogCurationTrigger,
-    DuplicateReview,
-    DuplicateReviewStatus,
     JobStatus,
     JobType,
     ProcessingJob,
@@ -190,7 +187,6 @@ __all__ = [
     "SUBMISSION_TITLES",
     "BaseCommand",
     "Book",
-    "BookRecordType",
     "BookSource",
     "BookSubmission",
     "Bookmark",
@@ -201,8 +197,6 @@ __all__ = [
     "CommandError",
     "ContentFile",
     "ContributorRole",
-    "DuplicateReview",
-    "DuplicateReviewStatus",
     "GeneratedAsset",
     "GeneratedAssetStatus",
     "GeneratedAssetType",
@@ -217,7 +211,6 @@ __all__ = [
     "Q",
     "ReadingSession",
     "ResolutionStatus",
-    "ReviewState",
     "SeedBook",
     "SourceCatalogEntry",
     "SourceCatalogRefreshState",

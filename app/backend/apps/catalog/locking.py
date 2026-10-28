@@ -11,3 +11,7 @@ def lock_title(title):
     )
     with connection.cursor() as cursor:
         cursor.execute("SELECT pg_advisory_xact_lock(%s)", [key])
+
+
+def lock_entity_kind(kind):
+    lock_title(f"catalog-entity:{kind}")

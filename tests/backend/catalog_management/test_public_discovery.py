@@ -16,7 +16,7 @@ CATALOG_URL = "/api/v1/catalog/books/"
 
 
 def published_book(**fields):
-    return Book.objects.create(state="published", review_state="approved", **fields)
+    return Book.objects.create(state="published", **fields)
 
 
 def test_public_feed_exposes_published_undeleted_metadata_without_manual_review(client):
@@ -26,11 +26,9 @@ def test_public_feed_exposes_published_undeleted_metadata_without_manual_review(
         main_content_html="PRIVATE CHAPTER",
         raw_scrape_payload={"secret": "PRIVATE"},
     )
-    Book.objects.create(title="খসড়া", state="draft", review_state="approved")
-    pending = Book.objects.create(
-        title="অপর্যালোচিত", state="published", review_state="pending"
-    )
-    Book.objects.create(title="প্রস্তুত", state="ready", review_state="approved")
+    Book.objects.create(title="খসড়া", state="draft")
+    pending = Book.objects.create(title="অপর্যালোচিত", state="published")
+    Book.objects.create(title="প্রস্তুত", state="ready")
     withdrawn = published_book(title="প্রত্যাহৃত")
     withdrawn.soft_delete()
     response = client.get(CATALOG_URL)
@@ -69,11 +67,8 @@ def test_public_detail_contains_visible_metadata_without_content_or_asset_paths(
         "categories",
         "series",
         "summary",
-        "record_type",
-        "manual_publisher",
-        "manual_price",
-        "manual_binding",
-        "manual_is_compilation",
+        "publisher",
+        "is_compilation",
         "editorial_description",
         "alternative_names",
         "seo_title",
@@ -85,16 +80,18 @@ def test_public_detail_contains_visible_metadata_without_content_or_asset_paths(
 
 
 @pytest.mark.parametrize(
-    "state,review",
+    "state,quality",
     [
-        ("draft", "approved"),
-        ("ready", "approved"),
-        ("published", "rejected"),
-        ("archived", "approved"),
+        ("draft", "unchecked"),
+        ("ready", "unchecked"),
+        ("published", "quarantined"),
+        ("archived", "unchecked"),
     ],
 )
-def test_nonpublic_detail_returns_404(client, state, review):
-    book = Book.objects.create(title="গোপন বই", state=state, review_state=review)
+def test_nonpublic_detail_returns_404(client, state, quality):
+    book = Book.objects.create(
+        title="গোপন বই", state=state, source_quality_state=quality
+    )
     response = client.get(f"{CATALOG_URL}{book.slug}/")
     assert response.status_code == 404
     assert response.json()["code"] == "not_found"

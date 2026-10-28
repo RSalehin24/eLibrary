@@ -1,62 +1,21 @@
-import json
 from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
 
 import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
-from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
 from apps.ingestion.models import (
     CatalogAutomationFrequency,
-    BookSubmission,
     CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
-    JobStatus,
-    MatchCandidate,
-    ProcessingJob,
-    ResolutionStatus,
-    SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
-    SubmissionStatus,
-    TitleResolutionAttempt,
 )
 from apps.ingestion.services.curation import (
     get_catalog_automation_settings,
     next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
 )
-from apps.ingestion.pipeline import scraper as legacy_scraper
-from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
 from apps.ingestion.services.normalization import (
     clean_extracted_dedication_html,
-    extract_main_content_segments,
     extract_front_matter_entries,
     normalize_scraped_book,
     promote_leading_front_matter,
-    split_leading_front_sections,
 )
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.submissions import (
-    create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    sync_assets,
-)
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
+from django.utils import timezone
 
 
 @pytest.mark.django_db
@@ -65,10 +24,14 @@ def test_next_catalog_automation_run_at_uses_monthly_frequency_from_latest_run()
     now = timezone.make_aware(datetime(2026, 3, 23, 10, 0, 0), timezone_value)
     settings_obj = get_catalog_automation_settings()
     settings_obj.enabled = True
-    settings_obj.daily_run_time = now.astimezone(timezone_value).replace(hour=6, minute=30).time()
+    settings_obj.daily_run_time = (
+        now.astimezone(timezone_value).replace(hour=6, minute=30).time()
+    )
     settings_obj.frequency = CatalogAutomationFrequency.MONTHLY
     settings_obj.save()
-    type(settings_obj).objects.filter(pk=settings_obj.pk).update(updated_at=now - timedelta(days=90))
+    type(settings_obj).objects.filter(pk=settings_obj.pk).update(
+        updated_at=now - timedelta(days=90)
+    )
     settings_obj.refresh_from_db()
 
     latest_run = CatalogCurationRun.objects.create(
@@ -107,7 +70,11 @@ def test_front_matter_extraction_handles_inline_labels_and_role_detection():
         }
     )
 
-    assert [entry["key"] for entry in entries] == ["translator", "first_published", "publisher"]
+    assert [entry["key"] for entry in entries] == [
+        "translator",
+        "first_published",
+        "publisher",
+    ]
     assert any(
         contributor["name"] == "অনুবাদক এক" and contributor["role"] == "translator"
         for contributor in normalized["contributors"]
@@ -133,7 +100,9 @@ def test_front_matter_promotion_extracts_title_prefixed_translator_and_publicati
     </div>
     """
 
-    book_info_html, cleaned_main_content = promote_leading_front_matter("", main_content_html)
+    book_info_html, cleaned_main_content = promote_leading_front_matter(
+        "", main_content_html
+    )
     entries = extract_front_matter_entries(book_info_html)
     normalized = normalize_scraped_book(
         {
@@ -146,8 +115,14 @@ def test_front_matter_promotion_extracts_title_prefixed_translator_and_publicati
         }
     )
 
-    assert any(entry["role"] == "translator" and "সালমান হক" in entry["value"] for entry in entries)
-    assert any(entry["key"] == "first_published" and entry["value"] == "মার্চ ২০২৩" for entry in entries)
+    assert any(
+        entry["role"] == "translator" and "সালমান হক" in entry["value"]
+        for entry in entries
+    )
+    assert any(
+        entry["key"] == "first_published" and entry["value"] == "মার্চ ২০২৩"
+        for entry in entries
+    )
     assert "অনুবাদ: সালমান হক, ইশরাক অর্ণব" not in cleaned_main_content
     assert "প্রথম প্রকাশ: মার্চ ২০২৩" not in cleaned_main_content
     assert "এটাই মূল কনটেন্ট।" in cleaned_main_content
@@ -175,7 +150,11 @@ def test_normalize_scraped_book_ignores_translator_biography_and_keeps_only_name
         }
     )
 
-    translators = [entry["name"] for entry in normalized["contributors"] if entry["role"] == "translator"]
+    translators = [
+        entry["name"]
+        for entry in normalized["contributors"]
+        if entry["role"] == "translator"
+    ]
 
     assert translators == ["মাকসুদুজ্জামান খান"]
 
@@ -193,7 +172,11 @@ def test_normalize_scraped_book_splits_multiple_translators_joined_with_connecto
         }
     )
 
-    translators = [entry["name"] for entry in normalized["contributors"] if entry["role"] == "translator"]
+    translators = [
+        entry["name"]
+        for entry in normalized["contributors"]
+        if entry["role"] == "translator"
+    ]
 
     assert translators == ["সালমান হক", "ইশরাক অর্ণব"]
 
@@ -215,7 +198,10 @@ def test_front_matter_extraction_rejects_translator_prose_without_name_like_valu
     )
 
     assert not any(entry["role"] == "translator" for entry in entries)
-    assert not any(contributor["role"] == "translator" for contributor in normalized["contributors"])
+    assert not any(
+        contributor["role"] == "translator"
+        for contributor in normalized["contributors"]
+    )
 
 
 def test_clean_extracted_dedication_html_removes_repeated_dedication_heading():

@@ -1,3 +1,16 @@
+from pathlib import Path
+from smtplib import SMTPAuthenticationError
+
+import pytest
+from apps.access.models import PermissionGrant, PermissionScope
+from apps.accounts.models import User
+from apps.catalog.models import (
+    Book,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+from django.test import override_settings
 
 
 @pytest.mark.django_db
@@ -9,7 +22,9 @@
     EMAIL_HOST_PASSWORD="fake-smtp-key",
     ACCOUNT_INVITE_FROM_EMAIL="kindle-sender@example.com",
 )
-def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(tmp_path, client, monkeypatch):
+def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(
+    tmp_path, client, monkeypatch
+):
     selected_backends = []
     closed_connections = []
 
@@ -41,7 +56,7 @@ def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(tmp_pat
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com"],
     )
-    book = Book.objects.create(title="Kindle Brevo Fallback", state="ready", review_state="approved")
+    book = Book.objects.create(title="Kindle Brevo Fallback", state="ready")
     epub_path = Path(tmp_path) / "kindle-brevo-fallback.epub"
     epub_path.write_bytes(b"epub")
 
@@ -53,7 +68,9 @@ def test_send_to_kindle_falls_back_to_smtp_when_primary_backend_is_brevo(tmp_pat
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -95,14 +112,17 @@ def test_send_to_kindle_uses_configured_smtp_credentials_for_brevo_backend(
         return DummyConnection()
 
     monkeypatch.setattr("apps.access.views.assets.get_connection", fake_get_connection)
-    monkeypatch.setattr("django.core.mail.message.EmailMessage.send", lambda self, fail_silently=False: 1)
+    monkeypatch.setattr(
+        "django.core.mail.message.EmailMessage.send",
+        lambda self, fail_silently=False: 1,
+    )
 
     user = User.objects.create_user(
         email="kindle-reader-brevo-smtp-defaults@example.com",
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com"],
     )
-    book = Book.objects.create(title="Kindle Brevo SMTP Defaults", state="ready", review_state="approved")
+    book = Book.objects.create(title="Kindle Brevo SMTP Defaults", state="ready")
     epub_path = Path(tmp_path) / "kindle-brevo-smtp-defaults.epub"
     epub_path.write_bytes(b"epub")
 
@@ -114,7 +134,9 @@ def test_send_to_kindle_uses_configured_smtp_credentials_for_brevo_backend(
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -147,7 +169,7 @@ def test_send_to_kindle_returns_502_when_smtp_config_is_missing(tmp_path, client
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com"],
     )
-    book = Book.objects.create(title="Kindle Missing SMTP Host", state="ready", review_state="approved")
+    book = Book.objects.create(title="Kindle Missing SMTP Host", state="ready")
     epub_path = Path(tmp_path) / "kindle-missing-smtp.epub"
     epub_path.write_bytes(b"epub")
 
@@ -159,7 +181,9 @@ def test_send_to_kindle_returns_502_when_smtp_config_is_missing(tmp_path, client
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -211,11 +235,7 @@ def test_send_to_kindle_returns_specific_502_when_smtp_authentication_fails(
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com"],
     )
-    book = Book.objects.create(
-        title="Kindle Brevo SMTP Auth Failure",
-        state="ready",
-        review_state="approved",
-    )
+    book = Book.objects.create(title="Kindle Brevo SMTP Auth Failure", state="ready")
     epub_path = Path(tmp_path) / "kindle-brevo-auth-failure.epub"
     epub_path.write_bytes(b"epub")
 
@@ -227,7 +247,9 @@ def test_send_to_kindle_returns_specific_502_when_smtp_authentication_fails(
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")

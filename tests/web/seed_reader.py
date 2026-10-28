@@ -9,9 +9,7 @@ def create_reading_book(user, customize=None):
     from apps.access.reading.preparation import prepare_epub_asset
     from apps.catalog.models import Book, GeneratedAsset, GeneratedAssetType, UserBook
 
-    book = Book.objects.create(
-        title=f"পড়ার পরীক্ষা {uuid4().hex[:8]}", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title=f"পড়ার পরীক্ষা {uuid4().hex[:8]}", state="published")
     path = (
         Path(settings.MEDIA_ROOT) / "protected" / "reader-fixtures" / f"{book.pk}.epub"
     )
@@ -52,3 +50,14 @@ def write_reader_fixture(path, customize=None):
     if customize:
         customize(publication, chapters)
     epub.write_epub(str(path), publication)
+
+
+def create_upload_book(user):
+    def clean_upload(publication, chapters):
+        for chapter in chapters:
+            chapter.content = (
+                f"<html><body><h1>{chapter.title}</h1>"
+                "<p>বাংলা বইয়ের সম্পূর্ণ পরীক্ষার লেখা।</p></body></html>"
+            )
+
+    return create_reading_book(user, clean_upload)

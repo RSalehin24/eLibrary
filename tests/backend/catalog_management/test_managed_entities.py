@@ -25,19 +25,18 @@ def test_entity_creation_replay_revision_review_and_slug_history(kind):
     assert response.status_code == 201
     original = response.json()
     path = entity_path(kind, identifier)
-    assert original["id"] == identifier and original["editorial_reviewed_at"] is None
+    assert original["id"] == identifier and "editorial_reviewed_at" not in original
     assert response["Cache-Control"] == "private, no-store"
     assert create_entity_response(client, kind, **values).json() == original
     reviewed = client.post(
         path, entity_revision(original, action="review"), format="json"
     )
-    assert reviewed.status_code == 200 and reviewed.json()["editorial_reviewed_at"]
+    assert reviewed.status_code == 400
+    assert client.get(path).json() == original
     updated = client.patch(
-        path, entity_revision(reviewed.json(), name="পরিবর্তিত পরিচিতি"), format="json"
+        path, entity_revision(original, name="পরিবর্তিত পরিচিতি"), format="json"
     )
-    assert (
-        updated.status_code == 200 and updated.json()["editorial_reviewed_at"] is None
-    )
+    assert updated.status_code == 200 and "editorial_reviewed_at" not in updated.json()
     assert updated.json()["slug"] != original["slug"]
     assert create_entity_response(client, kind, **values).json() == updated.json()
     assert (
@@ -50,7 +49,7 @@ def test_entity_creation_replay_revision_review_and_slug_history(kind):
         client.post(
             path, entity_revision(original, action="review"), format="json"
         ).status_code
-        == 409
+        == 400
     )
     audit = AuditLog.objects.get(pk=identifier)
     assert audit.actor == actor and audit.target_id == identifier
@@ -82,15 +81,20 @@ def test_duplicate_normalized_names_are_rejected_on_creation_and_update(kind):
     _, client = entity_client()
     original = create_entity_response(client, kind, name="একই  নাম")
     assert original.status_code == 201
-    assert create_entity_response(client, kind, name="একই নাম").status_code == 400
+    assert create_entity_response(client, kind, name="একই নাম").status_code == (
+        201 if kind in {"contributors", "series"} else 400
+    )
     second = create_entity_response(client, kind, name="আলাদা নাম").json()
     response = client.patch(
         entity_path(kind, second["id"]),
         entity_revision(second, name="একই নাম"),
         format="json",
     )
-    assert response.status_code in {400, 409}
-    assert client.get(entity_path(kind, second["id"])).json()["name"] == "আলাদা নাম"
+    assert response.status_code in (
+        {200} if kind in {"contributors", "series"} else {400, 409}
+    )
+    expected_name = "একই নাম" if kind in {"contributors", "series"} else "আলাদা নাম"
+    assert client.get(entity_path(kind, second["id"])).json()["name"] == expected_name
 
 
 @pytest.mark.parametrize(

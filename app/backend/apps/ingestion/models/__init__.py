@@ -8,7 +8,6 @@ from .choices import (
     CatalogAutomationFrequency,
     CatalogCurationMode,
     CatalogCurationTrigger,
-    DuplicateReviewStatus,
     JobStatus,
     JobType,
     ResolutionStatus,
@@ -18,7 +17,7 @@ from .choices import (
     SubmissionStatus,
 )
 from .editions import SourceEdition, SourceEditionPage
-from .processing import DuplicateReview, ProcessingJob, ProcessingLog
+from .processing import ProcessingJob, ProcessingLog
 from .source_rate import SourceHostHealth, SourceRequestWindow
 from .submissions import BookSubmission, MatchCandidate, TitleResolutionAttempt
 
@@ -29,8 +28,6 @@ __all__ = [
     "CatalogCurationMode",
     "CatalogCurationRun",
     "CatalogCurationTrigger",
-    "DuplicateReview",
-    "DuplicateReviewStatus",
     "JobStatus",
     "JobType",
     "MatchCandidate",

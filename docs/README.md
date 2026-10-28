@@ -4,13 +4,19 @@ This folder contains the repo’s operational and domain-specific documentation.
 
 ## Folder Layout
 
+- `docs/application-reader-engine-implementation/`: verified planning package with nested website, reader, engine, shared-contract, and release plans
 - `docs/operations/`: local development, deployment, and log-viewing guides
 - `docs/ingestion/`: ingestion-specific notes and source metadata references
 - `docs/errors/`: error reference documentation
 
 ## Start Here
 
-- Current implementation handoff: [implementation-handoff.md](implementation-handoff.md)
+- Current product specification: [application-reader-engine-plan.md](application-reader-engine-plan.md)
+- Module implementation plans and planning verification: [application-reader-engine-implementation/README.md](application-reader-engine-implementation/README.md)
+- Latest complete requirement verification: [application-reader-engine-implementation/shared/verification/requirement-verification.md](application-reader-engine-implementation/shared/verification/requirement-verification.md)
+- Current implementation evidence and remaining gates: [application-reader-engine-progress/README.md](application-reader-engine-progress/README.md)
+- Current machine-transfer handover: [application-reader-engine-progress/handover/README.md](application-reader-engine-progress/handover/README.md)
+- Historical implementation handoff: [implementation-handoff.md](implementation-handoff.md)
 - New platform: [architecture/platform-foundation.md](architecture/platform-foundation.md)
 - Isolated HTTPS verification: [operations/local-platform-verification.md](operations/local-platform-verification.md)
 - Simulator acceptance results: [operations/simulator-acceptance.md](operations/simulator-acceptance.md)

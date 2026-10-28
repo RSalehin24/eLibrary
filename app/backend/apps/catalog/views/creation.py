@@ -4,7 +4,6 @@ from rest_framework.response import Response
 
 from apps.catalog.editorial.creation import created_book
 from apps.catalog.serializers.management import ManagedBookDetailSerializer
-from apps.catalog.views.editorial import managed_book_by_slug
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
 
@@ -22,8 +21,4 @@ class ManagedBookCreationView(VersionedAPIView):
     )
     def get(self, request, identifier):
         book = created_book(request.user, identifier)
-        return Response(
-            ManagedBookDetailSerializer(
-                managed_book_by_slug(request.user, book.slug)
-            ).data
-        )
+        return Response(ManagedBookDetailSerializer(book).data)

@@ -1,8 +1,24 @@
+import json
+
+import pytest
+from apps.accounts.models import User
+from apps.ingestion.models import (
+    BookSubmission,
+    CatalogCurationRun,
+    JobStatus,
+    ProcessingJob,
+    ResolutionStatus,
+    SubmissionOrigin,
+    SubmissionStatus,
+)
+from apps.ingestion.services.legacy_adapter import normalize_text
 
 
 @pytest.mark.django_db
 def test_processing_manager_can_start_catalog_curation_run(client, monkeypatch):
-    admin = User.objects.create_superuser(email="curation-admin@example.com", password="strong-password-123")
+    admin = User.objects.create_superuser(
+        email="curation-admin@example.com", password="strong-password-123"
+    )
     queued_run = CatalogCurationRun.objects.create(
         trigger="manual",
         mode="pending",
@@ -13,11 +29,15 @@ def test_processing_manager_can_start_catalog_curation_run(client, monkeypatch):
     )
     client.force_login(admin)
 
-    monkeypatch.setattr("apps.ingestion.views.create_catalog_curation_run", lambda **kwargs: queued_run)
+    monkeypatch.setattr(
+        "apps.ingestion.views.create_catalog_curation_run", lambda **kwargs: queued_run
+    )
 
     response = client.post(
         "/api/ingestion/catalog/curation-runs/",
-        data=json.dumps({"mode": "pending", "refresh_catalog": True, "refresh_max_pages": 80}),
+        data=json.dumps(
+            {"mode": "pending", "refresh_catalog": True, "refresh_max_pages": 80}
+        ),
         content_type="application/json",
     )
 
@@ -28,7 +48,9 @@ def test_processing_manager_can_start_catalog_curation_run(client, monkeypatch):
 
 @pytest.mark.django_db
 def test_processing_manager_can_update_catalog_automation_settings(client):
-    admin = User.objects.create_superuser(email="automation-admin@example.com", password="strong-password-123")
+    admin = User.objects.create_superuser(
+        email="automation-admin@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     response = client.patch(
@@ -56,7 +78,9 @@ def test_processing_manager_can_update_catalog_automation_settings(client):
 
 @pytest.mark.django_db
 def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkeypatch):
-    admin = User.objects.create_superuser(email="origin-admin@example.com", password="strong-password-123")
+    admin = User.objects.create_superuser(
+        email="origin-admin@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     user_submission = BookSubmission.objects.create(
@@ -77,8 +101,14 @@ def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkey
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.QUEUED,
     )
-    user_job = ProcessingJob.objects.create(submission=user_submission, status=JobStatus.QUEUED)
-    ProcessingJob.objects.create(submission=curation_submission, status=JobStatus.QUEUED, task_id="already-dispatched")
+    user_job = ProcessingJob.objects.create(
+        submission=user_submission, status=JobStatus.QUEUED
+    )
+    ProcessingJob.objects.create(
+        submission=curation_submission,
+        status=JobStatus.QUEUED,
+        task_id="already-dispatched",
+    )
     dispatched_ids = []
 
     def fake_dispatch(job, force=False):
@@ -88,7 +118,10 @@ def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkey
         job.save(update_fields=["task_id", "queue_name", "updated_at"])
         return job
 
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job", fake_dispatch)
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.resolution_and_queueing.dispatch_processing_job",
+        fake_dispatch,
+    )
 
     job_response = client.get("/api/ingestion/jobs/?origin=user")
     submission_response = client.get("/api/ingestion/submissions/?origin=curation")
@@ -101,7 +134,9 @@ def test_processing_lists_filter_by_origin_and_recover_stale_jobs(client, monkey
     assert job_response.status_code == 200
     assert [entry["id"] for entry in job_response.json()] == [str(user_job.id)]
     assert submission_response.status_code == 200
-    assert [entry["id"] for entry in submission_response.json()] == [str(curation_submission.id)]
+    assert [entry["id"] for entry in submission_response.json()] == [
+        str(curation_submission.id)
+    ]
     assert recover_response.status_code == 202
     assert recover_response.json()["recovered_jobs"] == 1
     assert dispatched_ids == [str(user_job.id)]

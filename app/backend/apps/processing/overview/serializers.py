@@ -41,9 +41,6 @@ class BookCountsSerializer(serializers.Serializer):
     ready = serializers.IntegerField()
     published = serializers.IntegerField()
     archived = serializers.IntegerField()
-    editorial_pending = serializers.IntegerField(
-        help_text="Deprecated compatibility field. Always zero; manual editorial review is not required."
-    )
 
 
 class SourceCountsSerializer(serializers.Serializer):

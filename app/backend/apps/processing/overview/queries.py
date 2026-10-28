@@ -8,7 +8,7 @@ from apps.accounts.link_mail.queries import invitation_jobs
 from apps.accounts.management_access.policy import editable_accounts
 from apps.accounts.models import User
 from apps.accounts.workspaces import management_sections
-from apps.catalog.discovery.management import metadata_managed_books
+from apps.catalog.discovery.management import inspectable_managed_books
 from apps.common.models import LifecycleState
 from apps.ingestion.source_workspace.queries import source_entries
 from apps.processing.job_models import (
@@ -113,14 +113,14 @@ def overview_work(actor):
 
 def book_counts(actor):
     counts = (
-        metadata_managed_books(actor)
+        inspectable_managed_books(actor)
         .values("id", "state")
         .aggregate(
             total=Count("id", distinct=True),
             draft=Count(
                 "id",
                 distinct=True,
-                filter=Q(state__in=[LifecycleState.DRAFT, LifecycleState.NEEDS_REVIEW]),
+                filter=Q(state__in=[LifecycleState.DRAFT, LifecycleState.FAILED]),
             ),
             processing=Count(
                 "id", distinct=True, filter=Q(state=LifecycleState.PROCESSING)
@@ -134,7 +134,7 @@ def book_counts(actor):
             ),
         )
     )
-    return {**counts, "editorial_pending": 0}
+    return counts
 
 
 def source_counts():

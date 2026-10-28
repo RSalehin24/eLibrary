@@ -1,7 +1,7 @@
 """Compatibility facade for the named test_processing_api modules."""
-from pathlib import Path as _Path
 
-_MODULE_DIR = _Path(__file__).with_name("test_processing_api_cases")
+from importlib import import_module as _import_module
+
 _MODULE_FILES = (
     "helpers.py",
     "catalog_matrix_helpers.py",
@@ -15,6 +15,7 @@ _MODULE_FILES = (
     "state_payload_and_tables.py",
     "automation_ownership_flows.py",
     "catalog_phase_resume_flows.py",
+    "catalog_phase_resume_flows_additional.py",
     "catalog_phase_matrix_tests.py",
     "catalog_phase_serialization.py",
     "catalog_sync_parallel.py",
@@ -26,12 +27,20 @@ _MODULE_FILES = (
     "queue_fallback_and_reset.py",
     "maintenance_and_actions.py",
     "duplicate_resolution_actions.py",
+    "duplicate_resolution_actions_additional.py",
     "automation_persistence.py",
-
 )
 
 for _module_file in _MODULE_FILES:
-    _module_path = _MODULE_DIR / _module_file
-    exec(compile(_module_path.read_text(encoding="utf-8"), str(_module_path), "exec"), globals())
+    _module = _import_module(
+        f"tests.backend.processing.test_processing_api_cases.{_module_file[:-3]}"
+    )
+    globals().update(
+        {
+            name: value
+            for name, value in vars(_module).items()
+            if not name.startswith("_")
+        }
+    )
 
-del _Path, _MODULE_DIR, _MODULE_FILES, _module_file, _module_path
+del _import_module, _MODULE_FILES, _module_file, _module

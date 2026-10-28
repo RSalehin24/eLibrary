@@ -20,6 +20,6 @@ export default async function ManagedBookPage({ params }: { params: Promise<{ sl
   catch (error) { if (error instanceof APIError && error.status === 404) notFound(); throw error; }
   return <><Link className="text-link" href="/manage/books/"><AdminText>{"← বই পরিচালনায় ফিরুন"}</AdminText></Link>
     <div className="source-book-overview"><ReaderBookCover slug={book.slug} title={book.title} /><h1>{book.title}</h1></div><BookEditorialForm key={book.id} initialBook={book} canProcess={session.workspaces.management_sections.includes("jobs")} />
-    {session.workspaces.can_create_books && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(book.slug)}/relationships/`}><AdminText>{"বইয়ের সম্পর্ক ও সংস্করণ সম্পাদনা করুন"}</AdminText></Link>}
+    {session.workspaces.can_edit_books && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(book.slug)}/relationships/`}><AdminText>{"বইয়ের সম্পর্ক ও সংস্করণ সম্পাদনা করুন"}</AdminText></Link>}
     </>;
 }

@@ -12,8 +12,11 @@ async function selectBook(page, title) {
   await page.getByLabel("নির্বাচিত বই: নাম খুঁজুন", { exact: true }).fill(title);
   const selector = page.getByLabel("নির্বাচিত বই: যোগ করুন", { exact: true });
   await expect(selector).toBeEnabled();
-  await expect(selector.getByRole("option", { name: title, exact: true })).toHaveCount(1);
-  await selector.selectOption({ label: title });
+  const result = await (await page.request.get(`/api/v1/manage/catalog-references/?kind=books&q=${encodeURIComponent(title)}`)).json();
+  const matches = result.entries.filter(entry => entry.name === title);
+  expect(matches).toHaveLength(1);
+  await expect(selector.locator(`option[value="${matches[0].id}"]`)).toHaveCount(1);
+  await selector.selectOption(matches[0].id);
 }
 
 test("managers create edit and search all four entity kinds without manual review", async ({ page }) => {

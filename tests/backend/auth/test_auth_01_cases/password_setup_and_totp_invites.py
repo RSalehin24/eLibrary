@@ -1,3 +1,19 @@
+import json
+
+import pytest
+from apps.accounts.models import User
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core import mail
+from django.test import override_settings
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from django_otp.plugins.otp_totp.models import TOTPDevice
+from rest_framework.test import APIClient
+
+from tests.backend.auth.test_auth_01_cases.totp_and_managed_user_invites import (
+    build_totp_token,
+    extract_setup_link_params,
+)
 
 
 @pytest.mark.django_db
@@ -147,7 +163,9 @@ def test_resending_setup_email_invalidates_previous_create_password_link(client)
     FRONTEND_BASE_URL="http://127.0.0.1:5173",
     FRONTEND_PORT="5173",
 )
-def test_totp_required_invite_keeps_setup_resend_available_until_totp_is_confirmed(client):
+def test_totp_required_invite_keeps_setup_resend_available_until_totp_is_confirmed(
+    client,
+):
     superadmin = User.objects.create_superuser(
         email="totp-onboarding-superadmin@example.com",
         password="strong-password-123",
@@ -224,4 +242,6 @@ def test_totp_required_invite_keeps_setup_resend_available_until_totp_is_confirm
         f"/api/auth/users/{invite_user.id}/resend-setup-email/"
     )
     assert resend_after_totp.status_code == 400
-    assert resend_after_totp.json()["detail"] == "This user does not need a setup email."
+    assert (
+        resend_after_totp.json()["detail"] == "This user does not need a setup email."
+    )

@@ -6,7 +6,7 @@ from apps.accounts.management_access.bulk import ManagedAccountBulkGrantView
 from apps.accounts.profile_image_api import AccountProfileImageView
 from apps.catalog.views.editions import PublicBookEditionsView
 from apps.catalog.views.list_controls import BookListControlsView
-from apps.catalog.views.personal import PhysicalReadingLogView, SavedBookView
+from apps.catalog.views.personal import SavedBookView
 from apps.common.saved_filter_api import SavedFilterDeleteView, SavedFiltersView
 from django.urls import path
 
@@ -41,11 +41,6 @@ personal_library_routes = [
         name="account-profile-image",
     ),
     path("me/books/<str:slug>/saved/", SavedBookView.as_view(), name="saved-book"),
-    path(
-        "me/books/<str:slug>/physical-log/",
-        PhysicalReadingLogView.as_view(),
-        name="physical-reading-log",
-    ),
     path(
         "catalog/books/<str:slug>/editions/",
         PublicBookEditionsView.as_view(),

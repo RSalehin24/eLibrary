@@ -20,7 +20,6 @@ export function BookEpubUpload({ editor }: { editor: BookEditor }) {
   const uncertain = !!upload.error && (!(upload.error instanceof APIError) || upload.error.status !== 400);
   const blocked = pending || dirty || uncertain;
   useUnsavedChanges(!!file);
-  if (book.record_type !== "digital") return null;
   const sourceMismatch = upload.error instanceof APIError && upload.error.fieldErrors.file?.some((message) => message.startsWith("The EPUB reading text does not match"));
   const sourceProofMissing = upload.error instanceof APIError && /Regenerate the website book|retained source evidence/.test(upload.error.detail);
   return <section className="account-section" id="book-upload"><h2><AdminText>{"EPUB আপলোড"}</AdminText></h2><p className="muted"><AdminText>{"সর্বোচ্চ ২৪ MiB। বই পড়ার ফাইল স্বয়ংক্রিয়ভাবে পরীক্ষা ও প্রস্তুত হবে। সব পরীক্ষা সফল হলে নতুন ফাইল চালু হবে; ততক্ষণ প্রকাশিত বইয়ের আগের ফাইল চালু থাকবে।"}</AdminText></p>
@@ -33,7 +32,7 @@ export function BookEpubUpload({ editor }: { editor: BookEditor }) {
     {!sourceMismatch && !sourceProofMissing && <AccountFeedback error={upload.error} />}
     {sourceProofMissing && <p className="field-error" role="alert"><AdminText>{"ওয়েবসাইটের বইটি আবার তৈরি করুন। লেখার স্বয়ংক্রিয় যাচাই শেষ হলে একই লেখার EPUB আপলোড করতে পারবেন।"}</AdminText></p>}
     {upload.error instanceof APIError && upload.error.fieldErrors.file && <p className="field-error" role="alert"><AdminText>{sourceMismatch ? "EPUB-এ ওয়েবসাইটের সব অধ্যায়ের লেখা মেলেনি। বইটি আবার তৈরি করুন অথবা একই লেখার সম্পূর্ণ EPUB দিন। আগের ফাইল বদলায়নি।" : "সঠিক EPUB ফাইল দিন; আকার সর্বোচ্চ ২৪ MiB হতে পারে।"}</AdminText></p>}
-    {upload.isSuccess && <p role="status"><AdminText>{"EPUB পরীক্ষা করে পড়ার জন্য প্রস্তুত করা হয়েছে। প্রকাশিত বইয়ে নতুন ফাইল চালু হয়েছে। নতুন বই হলে প্রকাশ করুন বাটন ব্যবহার করুন।"}</AdminText></p>}
+    {upload.isSuccess && <p role="status"><AdminText>{"EPUB ও HTML প্রস্তুত হয়েছে। বইটি এখন পড়া যাবে।"}</AdminText></p>}
     {uncertain && <button className="button button-quiet" onClick={reloadManagedForm}><AdminText>{"বর্তমান তথ্য খুলুন"}</AdminText></button>}
   </section>;
 }

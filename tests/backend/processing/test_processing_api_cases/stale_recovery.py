@@ -1,5 +1,17 @@
+from datetime import timedelta
 
-from apps.processing.models import ProcessingSyncState
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import (
+    BookCreationRequest,
+    BookRecord,
+    ProcessingSyncState,
+    ProcessingSyncStatus,
+)
+from apps.processing.services import get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import record_payload
 
 
 @pytest.mark.django_db
@@ -35,8 +47,13 @@ def test_processing_maintenance_requeues_stale_request_with_checkpoint():
 
 
 @pytest.mark.django_db
-def test_processing_maintenance_recovers_stale_sync_and_runtime_tick_resumes(monkeypatch):
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work', lambda: False)
+def test_processing_maintenance_recovers_stale_sync_and_runtime_tick_resumes(
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work",
+        lambda: False,
+    )
     sync_state = get_sync_state()
     sync_state.status = ProcessingSyncStatus.SYNCING
     sync_state.remote_pages = [[record_payload("stale-sync-record")], []]

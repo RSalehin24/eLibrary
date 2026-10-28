@@ -316,7 +316,9 @@ def apply_resume_action(processing_request, *, actor=None):
     return processing_request
 
 
-_REVIEW_REQUIRED_ERROR_MSG = "Curated document requires review before asset generation."
+_VALIDATION_FAILED_ERROR_MSG = (
+    "Curated document failed automatic validation; no files were generated."
+)
 
 
 def _strip_source_chrome_from_document(document):

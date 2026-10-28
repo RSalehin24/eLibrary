@@ -1,12 +1,13 @@
 from .job_lifecycle import SubmissionOrigin
 
 
-def create_submission_records(submitter, parsed_entries, auto_process=True, origin=SubmissionOrigin.USER):
+def create_submission_records(
+    submitter, parsed_entries, auto_process=True, origin=SubmissionOrigin.USER
+):
     from .job_lifecycle import (
         AuditLog,
         BookSubmission,
         ResolutionStatus,
-        ReviewState,
         SubmissionStatus,
         find_existing_book_by_source_url,
         normalize_text,
@@ -22,6 +23,7 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
         capture_source_page_metadata,
         sync_submission_from_canonical,
     )
+
     submissions = []
 
     for entry in parsed_entries:
@@ -56,13 +58,9 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
                     sync_submission_from_canonical(submission, reusable_submission)
                     submissions.append(submission)
                     continue
-                source_metadata = capture_source_page_metadata(submission.resolved_url)
-                if source_metadata:
-                    submission.raw_payload = {
-                        **submission.raw_payload,
-                        "source_page_metadata": source_metadata["raw_data"],
-                    }
-                existing_book = find_existing_book_by_source_url(submission.resolved_url)
+                existing_book = find_existing_book_by_source_url(
+                    submission.resolved_url
+                )
                 if existing_book:
                     fulfill_submission_with_existing_book(
                         submission,
@@ -72,16 +70,37 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
                     )
                     submissions.append(submission)
                     continue
+                source_metadata = capture_source_page_metadata(submission.resolved_url)
+                if source_metadata:
+                    submission.raw_payload = {
+                        **submission.raw_payload,
+                        "source_page_metadata": source_metadata["raw_data"],
+                    }
                 submission.resolution_status = ResolutionStatus.RESOLVED
                 submission.resolution_confidence = 1.0
                 submission.status = SubmissionStatus.QUEUED
-                submission.save(update_fields=["resolved_url", "raw_payload", "resolution_status", "resolution_confidence", "status", "updated_at"])
+                submission.save(
+                    update_fields=[
+                        "resolved_url",
+                        "raw_payload",
+                        "resolution_status",
+                        "resolution_confidence",
+                        "status",
+                        "updated_at",
+                    ]
+                )
             except ValueError as exc:
                 submission.resolution_status = ResolutionStatus.INVALID
-                submission.status = SubmissionStatus.NEEDS_REVIEW
-                submission.review_state = ReviewState.NEEDS_REVIEW
+                submission.status = SubmissionStatus.FAILED
                 submission.error_message = str(exc)
-                submission.save(update_fields=["resolution_status", "status", "review_state", "error_message", "updated_at"])
+                submission.save(
+                    update_fields=[
+                        "resolution_status",
+                        "status",
+                        "error_message",
+                        "updated_at",
+                    ]
+                )
         else:
             reusable_submission = find_reusable_submission(
                 normalized_input=submission.normalized_input,
@@ -102,7 +121,9 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
                     sync_submission_from_canonical(submission, reusable_submission)
                     submissions.append(submission)
                     continue
-                existing_book = find_existing_book_by_source_url(submission.resolved_url)
+                existing_book = find_existing_book_by_source_url(
+                    submission.resolved_url
+                )
                 if existing_book:
                     fulfill_submission_with_existing_book(
                         submission,
@@ -115,7 +136,11 @@ def create_submission_records(submitter, parsed_entries, auto_process=True, orig
                     submissions.append(submission)
                     continue
 
-        if auto_process and submission.resolved_url and submission.status == SubmissionStatus.QUEUED:
+        if (
+            auto_process
+            and submission.resolved_url
+            and submission.status == SubmissionStatus.QUEUED
+        ):
             queue_submission(submission, actor=submitter)
             submission.refresh_from_db()
 
@@ -130,6 +155,7 @@ def detect_metadata_duplicate(scraped_data):
         normalize_scraped_book,
         texts_are_similar,
     )
+
     return _detect_metadata_duplicate(
         scraped_data,
         normalize_scraped_book_fn=normalize_scraped_book,
@@ -139,6 +165,7 @@ def detect_metadata_duplicate(scraped_data):
 
 def find_exact_existing_book(scraped_data):
     from .job_lifecycle import _find_exact_existing_book, normalize_scraped_book
+
     return _find_exact_existing_book(
         scraped_data,
         normalize_scraped_book_fn=normalize_scraped_book,
@@ -151,6 +178,7 @@ def sync_assets(book, job, scraped_data):
         REQUIRED_GENERATED_ASSET_TYPES,
         _sync_assets,
     )
+
     return _sync_assets(
         book,
         job,
@@ -163,6 +191,7 @@ def sync_assets(book, job, scraped_data):
 def complete_processed_submission(submission, book, normalized_url, source="scrape"):
     from .job_lifecycle import _complete_processed_submission, ensure_preview_session
     from .retry_and_deduplication import sync_deduplicated_submissions
+
     return _complete_processed_submission(
         submission,
         book,
@@ -175,6 +204,7 @@ def complete_processed_submission(submission, book, normalized_url, source="scra
 
 def sync_metadata_relations(book, normalized):
     from .job_lifecycle import _sync_metadata_relations, replace_book_relations
+
     return _sync_metadata_relations(
         book,
         normalized,
@@ -191,6 +221,7 @@ def persist_scraped_book(submission, job, scraped_data, target_book=None):
         normalize_scraped_book,
         normalize_source_url,
     )
+
     return _persist_scraped_book(
         submission,
         scraped_data,
@@ -212,6 +243,7 @@ def persist_curated_book(submission, job, curated_result, target_book=None):
         find_existing_book_by_source_url,
         replace_book_relations,
     )
+
     return _persist_curated_book(
         curated_result,
         source_url=submission.resolved_url,
@@ -225,8 +257,19 @@ def persist_curated_book(submission, job, curated_result, target_book=None):
 
 def cancel_requested_for_job(job):
     from .job_lifecycle import JobStatus
+
     job.refresh_from_db(fields=["status", "cancel_requested", "updated_at"])
     return job.status == JobStatus.CANCELLED or job.cancel_requested
 
 
-__all__ = ['cancel_requested_for_job', 'complete_processed_submission', 'create_submission_records', 'detect_metadata_duplicate', 'find_exact_existing_book', 'persist_curated_book', 'persist_scraped_book', 'sync_assets', 'sync_metadata_relations']
+__all__ = [
+    "cancel_requested_for_job",
+    "complete_processed_submission",
+    "create_submission_records",
+    "detect_metadata_duplicate",
+    "find_exact_existing_book",
+    "persist_curated_book",
+    "persist_scraped_book",
+    "sync_assets",
+    "sync_metadata_relations",
+]

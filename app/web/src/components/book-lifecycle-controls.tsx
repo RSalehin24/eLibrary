@@ -10,7 +10,7 @@ import { AdminDialog } from "./admin-dialog";
 import { AccountFeedback } from "./account-feedback";
 import { AdminText } from "./admin-language";
 
-const problemLabels = { paper_book: "কাগজের বইয়ের ফাইল আবার তৈরি করা যায় না।", processing_access_required: "বই আবার তৈরি করতে প্রসেসিংয়ের অনুমতি প্রয়োজন।", unfinished_work: "চলমান কাজ শেষ বা বাতিল করে আবার চেষ্টা করুন।", source_unavailable: "এই বইয়ের জন্য নির্ধারিত ওয়েবসাইটের উৎস পাওয়া যায়নি। EPUB আপলোড করতে পারবেন।" };
+const problemLabels = { processing_access_required: "বই আবার তৈরি করতে প্রসেসিংয়ের অনুমতি প্রয়োজন।", unfinished_work: "চলমান কাজ শেষ বা বাতিল করে আবার চেষ্টা করুন।", source_unavailable: "এই বইয়ের জন্য নির্ধারিত ওয়েবসাইটের উৎস পাওয়া যায়নি। EPUB আপলোড করতে পারবেন।" };
 
 export function BookLifecycleControls({ editor }: { editor: BookEditor }) {
   const { book, dirty, pending, regenerate, remove } = editor;
@@ -20,7 +20,7 @@ export function BookLifecycleControls({ editor }: { editor: BookEditor }) {
   const blocked = pending || dirty || !!changed || !!regenerate.error || !!remove.error;
   const operation = regenerate.data?.operation_id ?? controls.data?.active_operation_id;
   return <section className="book-lifecycle-controls"><h2><AdminText>বইয়ের কাজ</AdminText></h2><div className="account-actions">
-    {book.record_type !== "manual" && <AdminDialog title="বই আবার তৈরি করবেন?" trigger="বই আবার তৈরি করুন" icon="refresh" dialogRef={regenerateDialog} disabled={blocked || !controls.data?.can_regenerate}>
+    {<AdminDialog title="বই আবার তৈরি করবেন?" trigger="বই আবার তৈরি করুন" icon="refresh" dialogRef={regenerateDialog} disabled={blocked || !controls.data?.can_regenerate}>
       <p>{book.title}</p><p><AdminText>ওয়েবসাইট থেকে নতুন করে লেখা এনে HTML ও EPUB তৈরি হবে। আগের ফাইল ও পাঠকের নোট সংরক্ষিত থাকবে। স্বয়ংক্রিয় যাচাই সফল হলে বই প্রকাশিত হবে।</AdminText></p>
       <button className="button" disabled={blocked || !controls.data?.can_regenerate} onClick={() => { regenerateDialog.current?.close(); regenerate.mutate(crypto.randomUUID()); }}><AdminText>আবার তৈরি শুরু করুন</AdminText></button>
     </AdminDialog>}
@@ -30,7 +30,7 @@ export function BookLifecycleControls({ editor }: { editor: BookEditor }) {
     </AdminDialog>
     {operation && <Link className="button button-quiet" href={`/manage/jobs/${operation}/`}><AdminText>কাজের অবস্থা দেখুন</AdminText></Link>}
   </div>
-    {controls.data?.regeneration_problem && book.record_type !== "manual" && <p className="muted"><AdminText>{problemLabels[controls.data.regeneration_problem]}</AdminText></p>}
+    {controls.data?.regeneration_problem && <p className="muted"><AdminText>{problemLabels[controls.data.regeneration_problem]}</AdminText></p>}
     {dirty && <p className="muted"><AdminText>আগে সম্পাদিত তথ্য সংরক্ষণ করুন।</AdminText></p>}
     {controls.isError && <p className="notice" role="alert"><AdminText>বইয়ের নিয়ন্ত্রণ পাওয়া যায়নি।</AdminText> <button className="button button-quiet" onClick={() => void controls.refetch()}><AdminText>আবার দেখুন</AdminText></button></p>}
     {regenerate.isPending && <p role="status"><AdminText>বই আবার তৈরির কাজ যোগ হচ্ছে…</AdminText></p>}

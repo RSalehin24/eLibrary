@@ -21,7 +21,7 @@ def definition(**changes):
         "operation_id": str(uuid4()),
         "target": "catalog",
         "name": "Saved catalog",
-        "params": {"q": "বাংলা", "sort": "title", "record_type": "digital"},
+        "params": {"q": "বাংলা", "sort": "title"},
         **changes,
     }
 

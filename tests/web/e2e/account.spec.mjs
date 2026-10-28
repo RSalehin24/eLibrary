@@ -90,9 +90,9 @@ test("enabled authenticator expires older sessions and requires a new code at th
   await expect(page).toHaveURL(/\/notes\/$/);
 });
 
-test("changing a password keeps the current session and clears password fields", async ({ page, browser }) => {
+test("changing a password keeps the current session and clears password fields", async ({ page, browser, baseURL }) => {
   await useAccount(page, "profile_reader"); await page.goto("/profile/");
-  const other = await browser.newContext(); const previous = await other.newPage(); await useAccount(previous, "profile_reader");
+  const other = await browser.newContext({ baseURL }); const previous = await other.newPage(); await useAccount(previous, "profile_reader");
   const password = randomBytes(24).toString("base64url");
   await page.getByLabel("বর্তমান পাসওয়ার্ড", { exact: true }).fill(fixture.profile_reader.password);
   await page.getByLabel("নতুন পাসওয়ার্ড", { exact: true }).fill(password);
@@ -101,6 +101,6 @@ test("changing a password keeps the current session and clears password fields",
   await expect(page.getByRole("status").filter({ hasText: "পরিবর্তন সংরক্ষিত হয়েছে" })).toBeVisible();
   await expect(page.getByLabel("বর্তমান পাসওয়ার্ড", { exact: true })).toHaveValue("");
   expect((await page.request.get("/api/v1/auth/profile/")).status()).toBe(200);
-  expect((await previous.request.get("http://127.0.0.1:3000/api/v1/auth/profile/")).status()).toBe(403);
+  expect((await previous.request.get("/api/v1/auth/profile/")).status()).toBe(403);
   await other.close();
 });

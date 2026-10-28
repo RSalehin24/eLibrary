@@ -15,7 +15,7 @@ test("manual EPUB upload validates files and automatically prepares the reader",
   await expect(submit).toBeEnabled();
   await file.setInputFiles({ name: "book.epub", mimeType: "application/epub+zip", buffer });
   await submit.click();
-  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB পরীক্ষা করে পড়ার জন্য প্রস্তুত করা হয়েছে" })).toBeVisible();
+  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB ও HTML প্রস্তুত হয়েছে" })).toBeVisible();
   await expect(file).toHaveValue("");
   await expect(page.locator("#book-files")).toContainText("অনলাইনে পড়ার জন্য প্রস্তুত");
   await expect(page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true })).toHaveCount(0);

@@ -12,7 +12,6 @@ import { SiteLanguageSwitch, useSiteLanguage } from "./site-language";
 
 const links: { href: string; label: string; icon: IconName }[] = [
   { href: "/profile/", label: "প্রোফাইল", icon: "people" },
-  { href: "/physical-books/", label: "কাগজের বই", icon: "books" },
   { href: "/local-reader/", label: "নিজের EPUB পড়ুন", icon: "read" },
   { href: "/help/", label: "সহায়তা", icon: "help" },
 ];

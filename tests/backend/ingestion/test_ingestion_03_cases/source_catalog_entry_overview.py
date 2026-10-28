@@ -1,8 +1,30 @@
+import pytest
+from apps.accounts.models import User
+from apps.catalog.models import (
+    Book,
+    BookSource,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+from apps.common.models import LifecycleState
+from apps.ingestion.models import (
+    BookSubmission,
+    JobStatus,
+    ProcessingJob,
+    SourceCatalogEntry,
+    SubmissionOrigin,
+    SubmissionStatus,
+)
 
 
 @pytest.mark.django_db
-def test_source_catalog_entries_overview_returns_summary_and_reviewable_rows_only(client):
-    admin = User.objects.create_superuser(email="catalog-overview@example.com", password="strong-password-123")
+def test_source_catalog_entries_overview_returns_summary_and_reviewable_rows_only(
+    client,
+):
+    admin = User.objects.create_superuser(
+        email="catalog-overview@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     failed_source_url = "https://www.example.com/books/failed-overview/"
@@ -36,8 +58,16 @@ def test_source_catalog_entries_overview_returns_summary_and_reviewable_rows_onl
         source_url=ready_source_url,
         normalized_source_url=ready_source_url,
     )
-    GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.HTML, status=GeneratedAssetStatus.READY)
-    GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.EPUB, status=GeneratedAssetStatus.READY)
+    GeneratedAsset.objects.create(
+        book=ready_book,
+        asset_type=GeneratedAssetType.HTML,
+        status=GeneratedAssetStatus.READY,
+    )
+    GeneratedAsset.objects.create(
+        book=ready_book,
+        asset_type=GeneratedAssetType.EPUB,
+        status=GeneratedAssetStatus.READY,
+    )
     SourceCatalogEntry.objects.create(
         source_url=ready_source_url,
         title="Ready Overview",

@@ -83,9 +83,7 @@ def test_invalid_book_selection_cannot_leave_a_collection_or_audit(selection):
 
 def test_collection_publication_review_withdrawal_and_redirects():
     _, client = entity_client()
-    book = Book.objects.create(
-        title="প্রকাশিত বই", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="প্রকাশিত বই", state="published")
     data = create_entity_response(client, "collections", book_ids=[str(book.pk)]).json()
     path = entity_path("collections", data["id"])
     assert (
@@ -94,9 +92,13 @@ def test_collection_publication_review_withdrawal_and_redirects():
         ).status_code
         == 409
     )
-    reviewed = client.post(
-        path, entity_revision(data, action="review"), format="json"
-    ).json()
+    assert (
+        client.post(
+            path, entity_revision(data, action="review"), format="json"
+        ).status_code
+        == 400
+    )
+    reviewed = data
     assert (
         client.post(
             path, entity_revision(reviewed, action="publish"), format="json"
@@ -112,9 +114,7 @@ def test_collection_publication_review_withdrawal_and_redirects():
         ),
         format="json",
     ).json()
-    reviewed = client.post(
-        path, entity_revision(updated, action="review"), format="json"
-    ).json()
+    reviewed = updated
     published = client.post(
         path, entity_revision(reviewed, action="publish"), format="json"
     )
@@ -125,9 +125,7 @@ def test_collection_publication_review_withdrawal_and_redirects():
         path, entity_revision(published.json(), name="নতুন নির্বাচিত সংগ্রহ"), format="json"
     ).json()
     assert client.get(public).status_code == 200
-    reviewed = client.post(
-        path, entity_revision(renamed, action="review"), format="json"
-    ).json()
+    reviewed = renamed
     redirect = client.get(public)
     assert redirect.status_code == 200 and redirect.json()["slug"] == reviewed["slug"]
     withdrawn = client.post(

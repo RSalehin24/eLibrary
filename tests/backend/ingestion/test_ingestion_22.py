@@ -3,17 +3,17 @@
 Tests bypass the full scraped-book normaliser and inject a normalised
 shape directly so each branch can be exercised in isolation.
 """
+
 from __future__ import annotations
 
 import pytest
-
 from apps.catalog.models import (
     Book,
     BookContributor,
     Contributor,
     ContributorRole,
 )
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.ingestion.services.submissions_support.detection import (
     CLASSIFY_EXACT_DUPLICATE,
     CLASSIFY_NEEDS_REVIEW,
@@ -21,7 +21,6 @@ from apps.ingestion.services.submissions_support.detection import (
     CLASSIFY_NEW_WORK,
     classify_incoming_book,
 )
-
 
 pytestmark = pytest.mark.django_db
 
@@ -31,16 +30,19 @@ def _make_book(*, title, authors=(), translators=(), publisher="", edition=""):
         title=title,
         source_site="example.com",
         state=LifecycleState.READY,
-        review_state=ReviewState.APPROVED,
-        manual_publisher=publisher,
+        publisher=publisher,
         edition=edition,
     )
     for name in authors:
         contributor, _ = Contributor.objects.get_or_create(name=name)
-        BookContributor.objects.create(book=book, contributor=contributor, role=ContributorRole.AUTHOR)
+        BookContributor.objects.create(
+            book=book, contributor=contributor, role=ContributorRole.AUTHOR
+        )
     for name in translators:
         contributor, _ = Contributor.objects.get_or_create(name=name)
-        BookContributor.objects.create(book=book, contributor=contributor, role=ContributorRole.TRANSLATOR)
+        BookContributor.objects.create(
+            book=book, contributor=contributor, role=ContributorRole.TRANSLATOR
+        )
     return book
 
 
@@ -48,19 +50,24 @@ def _stub_normalizer(*, authors=(), translators=()):
     def _fn(scraped_data):
         contributors = []
         for name in authors:
-            contributors.append({"name": name, "role": ContributorRole.AUTHOR, "raw_value": name})
+            contributors.append(
+                {"name": name, "role": ContributorRole.AUTHOR, "raw_value": name}
+            )
         for name in translators:
-            contributors.append({"name": name, "role": ContributorRole.TRANSLATOR, "raw_value": name})
+            contributors.append(
+                {"name": name, "role": ContributorRole.TRANSLATOR, "raw_value": name}
+            )
         return {
             "title": scraped_data.get("book_title", ""),
             "contributors": contributors,
             "series": [],
             "categories": [],
             "raw_strings": {
-                "manual_publisher": scraped_data.get("publisher", ""),
+                "publisher": scraped_data.get("publisher", ""),
                 "edition": scraped_data.get("edition", ""),
             },
         }
+
     return _fn
 
 

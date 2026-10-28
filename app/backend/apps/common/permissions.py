@@ -11,7 +11,9 @@ def granted_scope_queryset(user, book=None):
 
     queryset = PermissionGrant.objects.active_for_user(user)
     if book is None:
-        return queryset.filter(book__isnull=True, category__isnull=True, contributor__isnull=True)
+        return queryset.filter(
+            book__isnull=True, category__isnull=True, contributor__isnull=True
+        )
 
     return queryset.filter(
         models.Q(book__isnull=True, category__isnull=True, contributor__isnull=True)
@@ -31,9 +33,14 @@ def user_has_scope(user, scopes, book=None):
     if user.is_superuser or user.is_staff:
         return True
 
-    return granted_scope_queryset(user, book=book).filter(
-        models.Q(scope=PermissionScope.ADMIN_FULL_CONTROL) | models.Q(scope__in=scopes)
-    ).exists()
+    return (
+        granted_scope_queryset(user, book=book)
+        .filter(
+            models.Q(scope=PermissionScope.ADMIN_FULL_CONTROL)
+            | models.Q(scope__in=scopes)
+        )
+        .exists()
+    )
 
 
 def user_owns_book(user, book):
@@ -59,19 +66,24 @@ def user_has_read_once_limit(user, book):
         return False
 
     from apps.access.models import BookOpeningRecord
+
     return BookOpeningRecord.objects.filter(user=user, book=book).exists()
 
 
 def user_can_download_book_assets(user, book):
-    from apps.catalog.content_quality import book_is_quarantined
-    if book_is_quarantined(book):
+    from apps.catalog.content_quality import book_is_unavailable
+
+    if book_is_unavailable(book):
         return False
-    return user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=book) or user_owns_book(user, book)
+    return user_has_scope(
+        user, [PermissionScope.DOWNLOAD_FILE], book=book
+    ) or user_owns_book(user, book)
 
 
 def user_can_view_preview_html(user, book):
-    from apps.catalog.content_quality import book_is_quarantined
-    if book_is_quarantined(book):
+    from apps.catalog.content_quality import book_is_unavailable
+
+    if book_is_unavailable(book):
         return False
     if user_owns_book(user, book):
         return True
@@ -81,10 +93,13 @@ def user_can_view_preview_html(user, book):
 
 
 def user_can_send_to_kindle(user, book):
-    from apps.catalog.content_quality import book_is_quarantined
-    if book_is_quarantined(book):
+    from apps.catalog.content_quality import book_is_unavailable
+
+    if book_is_unavailable(book):
         return False
-    return user_has_scope(user, [PermissionScope.SEND_KINDLE], book=book) or user_owns_book(user, book)
+    return user_has_scope(
+        user, [PermissionScope.SEND_KINDLE], book=book
+    ) or user_owns_book(user, book)
 
 
 def user_can_configure_kindle(user):
@@ -93,14 +108,34 @@ def user_can_configure_kindle(user):
     return (
         user_has_scope(user, [PermissionScope.SEND_KINDLE])
         or UserBook.objects.filter(user=user, book__deleted_at__isnull=True).exists()
-        or PermissionGrant.objects.active_for_user(user).filter(scope=PermissionScope.SEND_KINDLE).exists()
+        or PermissionGrant.objects.active_for_user(user)
+        .filter(scope=PermissionScope.SEND_KINDLE)
+        .exists()
     )
 
 
 def user_can_create_catalog_book(user):
     return bool(
-        getattr(user, "is_authenticated", False) and user.is_active
+        getattr(user, "is_authenticated", False)
+        and user.is_active
+        and not user.requires_totp_setup
         and user_has_scope(user, [PermissionScope.METADATA_EDIT])
+    )
+
+
+def is_book_administrator(user):
+    if not (
+        getattr(user, "is_authenticated", False)
+        and user.is_active
+        and not user.requires_totp_setup
+    ):
+        return False
+    return bool(
+        user.is_staff
+        or user.is_superuser
+        or granted_scope_queryset(user)
+        .filter(scope=PermissionScope.ADMIN_FULL_CONTROL)
+        .exists()
     )
 
 
@@ -111,8 +146,9 @@ def user_can_launch_reader(user, book):
 
 
 def user_has_reader_access(user, book):
-    from apps.catalog.content_quality import book_is_quarantined
-    if book_is_quarantined(book):
+    from apps.catalog.content_quality import book_is_unavailable
+
+    if book_is_unavailable(book):
         return False
     if user_owns_book(user, book):
         return True
@@ -169,13 +205,12 @@ class CanManageProcessing(ScopePermission):
     required_scopes = (PermissionScope.PROCESSING_MANAGE,)
 
 
-class CanEditMetadata(ScopePermission):
-    required_scopes = (PermissionScope.METADATA_EDIT,)
-    allow_book_scoped = True
+class CanEditMetadata(BasePermission):
+    def has_permission(self, request, view):
+        return is_book_administrator(request.user)
 
-
-class CanViewPhysicalBooksList(ScopePermission):
-    required_scopes = (PermissionScope.PHYSICAL_BOOKS_VIEW,)
+    def has_object_permission(self, request, view, obj):
+        return is_book_administrator(request.user)
 
 
 class IsSuperAdmin(BasePermission):

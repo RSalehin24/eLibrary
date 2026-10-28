@@ -24,11 +24,9 @@ class LibraryBookSerializer(PublicBookListSerializer):
         fields = (
             *PublicBookListSerializer.Meta.fields,
             "state",
-            "review_state",
             "progress_percent",
             "last_location",
             "activity_at",
-            "record_type",
         )
         read_only_fields = fields
 

@@ -79,12 +79,9 @@ class MyBookDetailView(VersionedAPIView):
         queryset = with_public_relations(
             visible_personal_books(request.user).only(
                 *PUBLIC_BOOK_FIELDS,
-                "record_type",
                 "summary",
-                "manual_binding",
-                "manual_publisher",
-                "manual_price",
-                "manual_is_compilation",
+                "publisher",
+                "is_compilation",
                 *EDITORIAL_DETAIL_FIELDS,
             )
         )

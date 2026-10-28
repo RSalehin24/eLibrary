@@ -9,6 +9,7 @@ import { readCatalogReferences } from "@/api/entities";
 import type { CatalogReference } from "@/api/types";
 import type { EntityKind } from "@/lib/catalog-entity";
 import { useDebouncedQuery } from "@/lib/debounced-query";
+import { catalogReferenceLabel } from "@/lib/catalog-reference-label";
 
 type SearchProps = { kind: EntityKind | "books"; label: string; disabled: boolean; excluded?: string[]; onChoose: (entry: CatalogReference) => void; errors?: string[] };
 
@@ -27,7 +28,7 @@ export function CatalogReferenceSearch({ kind, label, disabled, excluded = [], o
         const entry = references.data?.entries.find((value) => value.id === event.target.value);
         if (entry) onChoose(entry);
       }}><option value=""><AdminText>{"একটি বেছে নিন"}</AdminText></option>
-        {references.data?.entries.filter((entry) => !excluded.includes(entry.id)).map((entry) => <option key={entry.id} value={entry.id}>{entry.name}</option>)}
+        {references.data?.entries.filter((entry) => !excluded.includes(entry.id)).map((entry) => <option key={entry.id} value={entry.id}>{catalogReferenceLabel(entry)}</option>)}
       </select></div>
     {references.data?.has_more && <p className="muted"><AdminText>{"প্রথম ২৪টি ফল দেখানো হচ্ছে। আরও নির্দিষ্ট নাম দিয়ে খুঁজুন।"}</AdminText></p>}
     {!references.isFetching && !references.isError && !references.data?.entries.length && <p className="muted"><AdminText>{"এই নামে কোনো ফল পাওয়া যায়নি।"}</AdminText></p>}

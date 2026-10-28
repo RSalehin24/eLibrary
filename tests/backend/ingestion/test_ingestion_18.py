@@ -1,67 +1,33 @@
-import json
-from datetime import datetime, timedelta
 from pathlib import Path
-from urllib.parse import quote
 
 import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
 from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
+from apps.catalog.models import (
+    Book,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
 from apps.ingestion.models import (
-    CatalogAutomationFrequency,
     BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
     JobStatus,
-    MatchCandidate,
     ProcessingJob,
-    ResolutionStatus,
-    SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
     SubmissionStatus,
-    TitleResolutionAttempt,
 )
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
-from apps.ingestion.pipeline import scraper as legacy_scraper
-from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
-)
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
 from apps.ingestion.services.submissions import (
-    create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
     process_submission_job,
-    queue_submission,
-    sync_assets,
 )
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
 
 
 @pytest.mark.django_db
 def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypatch):
-    user = User.objects.create_user(email="processor@example.com", password="strong-password-123")
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
+        lambda source_url: None,
+    )
+    user = User.objects.create_user(
+        email="processor@example.com", password="strong-password-123"
+    )
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
@@ -84,7 +50,14 @@ def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypat
         "book_info": "<p>অনুবাদ: অনুবাদক এক</p><p>সম্পাদক: সম্পাদক এক</p>",
         "dedication": "<p>উৎসর্গ</p>",
         "toc": [{"title": "অধ্যায় ১", "type": "lesson", "has_content": True}],
-        "content_items": [{"title": "অধ্যায় ১", "content": "<p>বিষয়বস্তু</p>", "type": "lesson", "parent": None}],
+        "content_items": [
+            {
+                "title": "অধ্যায় ১",
+                "content": "<p>বিষয়বস্তু</p>",
+                "type": "lesson",
+                "parent": None,
+            }
+        ],
         "output_folder": str(tmp_path),
     }
     generated_payload = {}
@@ -96,12 +69,20 @@ def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypat
         generated_payload.update(book_data)
         output_dir = Path(book_data["output_folder"])
         output_dir.mkdir(parents=True, exist_ok=True)
-        (output_dir / "book.html").write_text("<html><body>book</body></html>", encoding="utf-8")
+        (output_dir / "book.html").write_text(
+            "<html><body>book</body></html>", encoding="utf-8"
+        )
         (output_dir / "টেস্ট বুক.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
+        fake_scrape_book,
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.generate_exports",
+        fake_generate_exports,
+    )
 
     processed_job = process_submission_job(str(job.id))
     submission.refresh_from_db()
@@ -111,7 +92,10 @@ def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypat
     assert Book.objects.count() == 1
 
     book = Book.objects.get()
-    contributor_roles = {(relation.contributor.name, relation.role) for relation in book.book_contributors.all()}
+    contributor_roles = {
+        (relation.contributor.name, relation.role)
+        for relation in book.book_contributors.all()
+    }
     assert ("লেখক এক", "author") in contributor_roles
     assert ("লেখক দুই", "author") in contributor_roles
     assert ("অনুবাদক এক", "translator") in contributor_roles
@@ -127,8 +111,16 @@ def test_process_submission_job_persists_metadata_and_assets(tmp_path, monkeypat
 
 
 @pytest.mark.django_db
-def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_wrong(tmp_path, monkeypatch):
-    user = User.objects.create_user(email="processor-cover@example.com", password="strong-password-123")
+def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_wrong(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
+        lambda source_url: None,
+    )
+    user = User.objects.create_user(
+        email="processor-cover@example.com", password="strong-password-123"
+    )
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
@@ -151,7 +143,14 @@ def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_w
         "book_info": "",
         "dedication": "",
         "toc": [{"title": "অধ্যায় ১", "type": "lesson", "has_content": True}],
-        "content_items": [{"title": "অধ্যায় ১", "content": "<p>বিষয়বস্তু</p>", "type": "lesson", "parent": None}],
+        "content_items": [
+            {
+                "title": "অধ্যায় ১",
+                "content": "<p>বিষয়বস্তু</p>",
+                "type": "lesson",
+                "parent": None,
+            }
+        ],
         "output_folder": str(tmp_path),
     }
 
@@ -168,8 +167,14 @@ def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_w
         (output_dir / "কভার টেস্ট বুক.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
+        fake_scrape_book,
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.generate_exports",
+        fake_generate_exports,
+    )
 
     process_submission_job(str(job.id))
 
@@ -179,10 +184,18 @@ def test_process_submission_job_resolves_cover_asset_when_scraped_extension_is_w
 
 
 @pytest.mark.django_db
-def test_process_submission_job_keeps_only_media_copies_of_generated_assets(tmp_path, settings, monkeypatch):
+def test_process_submission_job_keeps_only_media_copies_of_generated_assets(
+    tmp_path, settings, monkeypatch
+):
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
+        lambda source_url: None,
+    )
     settings.MEDIA_ROOT = tmp_path / "media"
 
-    user = User.objects.create_user(email="single-copy@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="single-copy@example.com", password="strong-password-123"
+    )
     submission = BookSubmission.objects.create(
         submitter=user,
         input_type="url",
@@ -206,7 +219,14 @@ def test_process_submission_job_keeps_only_media_copies_of_generated_assets(tmp_
         "book_info": "",
         "dedication": "",
         "toc": [{"title": "অধ্যায় ১", "type": "lesson", "has_content": True}],
-        "content_items": [{"title": "অধ্যায় ১", "content": "<p>বিষয়বস্তু</p>", "type": "lesson", "parent": None}],
+        "content_items": [
+            {
+                "title": "অধ্যায় ১",
+                "content": "<p>বিষয়বস্তু</p>",
+                "type": "lesson",
+                "parent": None,
+            }
+        ],
         "output_folder": str(output_dir),
     }
 
@@ -215,12 +235,20 @@ def test_process_submission_job_keeps_only_media_copies_of_generated_assets(tmp_
 
     def fake_generate_exports(book_data):
         output_dir.mkdir(parents=True, exist_ok=True)
-        (output_dir / "book.html").write_text("<html><body>book</body></html>", encoding="utf-8")
+        (output_dir / "book.html").write_text(
+            "<html><body>book</body></html>", encoding="utf-8"
+        )
         (output_dir / "একক কপি বই.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", fake_scrape_book)
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.generate_exports", fake_generate_exports)
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
+        fake_scrape_book,
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.generate_exports",
+        fake_generate_exports,
+    )
 
     process_submission_job(str(job.id))
 

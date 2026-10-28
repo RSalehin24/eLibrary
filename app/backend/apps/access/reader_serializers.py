@@ -49,6 +49,7 @@ class ReaderSessionSerializer(serializers.Serializer):
 
 
 class ReaderAccessSerializer(serializers.Serializer):
+    can_edit_book = serializers.BooleanField()
     cover_url = serializers.CharField(allow_null=True)
     html_url = serializers.CharField(allow_null=True)
     can_read = serializers.BooleanField()

@@ -6,9 +6,7 @@ pytestmark = pytest.mark.django_db
 
 def test_public_numbered_pages_match_cursor_feed(client):
     for index in range(3):
-        Book.objects.create(
-            title=f"প্রকাশিত {index}", state="published", review_state="approved"
-        )
+        Book.objects.create(title=f"প্রকাশিত {index}", state="published")
     first = client.get("/api/v1/catalog/books/", {"page": 1, "limit": 2}).json()
     second = client.get("/api/v1/catalog/books/", {"page": 2, "limit": 2}).json()
     cursor_page = client.get(

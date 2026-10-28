@@ -15,7 +15,11 @@ def regenerated_export_payload(book, payload):
     metadata = export_payload_from_book(book, payload)
     for field in ("book_title", "author", "series", "book_type"):
         payload[field] = metadata[field]
-    if payload.get("cover"):
+    if "cover" in book.metadata_overrides:
+        payload["cover"] = ""
+        if book.metadata_overrides["cover"] is None:
+            return payload
+    elif payload.get("cover"):
         return payload
     cover = book.generated_assets.filter(asset_type="cover", status="ready").first()
     if cover is None or not asset_is_available(cover):

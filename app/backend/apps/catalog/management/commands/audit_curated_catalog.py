@@ -31,17 +31,13 @@ from apps.catalog.models import (
     CuratedBookDocument,
     GeneratedAsset,
 )
-from apps.catalog.models.choices import GeneratedAssetType, GeneratedAssetStatus
-
+from apps.catalog.models.choices import GeneratedAssetType
 
 _HTML_TAG = re.compile(r"<[^>]+>")
 
 
 def chapter_has_visible_text(xhtml_bytes):
-    try:
-        text = xhtml_bytes.decode("utf-8", errors="replace")
-    except Exception:
-        return False
+    text = xhtml_bytes.decode("utf-8", errors="replace")
     text = _HTML_TAG.sub(" ", text)
     text = text.replace("&nbsp;", " ").replace("&#160;", " ")
     return bool(text.strip())
@@ -62,14 +58,15 @@ def inspect_epub(path):
             xhtml_names = [n for n in names if n.lower().endswith(".xhtml")]
             details["xhtml_count"] = len(xhtml_names)
             content_pages = [
-                n for n in xhtml_names
+                n
+                for n in xhtml_names
                 if os.path.basename(n) not in {"nav.xhtml", "cover.xhtml"}
             ]
             non_empty = 0
             for name in content_pages:
                 try:
                     data = zf.read(name)
-                except Exception:
+                except (OSError, RuntimeError, KeyError, zipfile.BadZipFile):
                     reasons.append(f"unreadable:{name}")
                     continue
                 if chapter_has_visible_text(data):
@@ -92,30 +89,27 @@ class Command(BaseCommand):
     help = "Generate a quality-audit report for the curated catalogue."
 
     def add_arguments(self, parser):
-        parser.add_argument("--report-path", default="/app/logs/audit_curated_catalog.json")
+        parser.add_argument(
+            "--report-path", default="/app/logs/audit_curated_catalog.json"
+        )
         parser.add_argument("--failure-sample-size", type=int, default=50)
         parser.add_argument("--media-root", default="/storage/media/scraped-books")
 
     def handle(self, *args, **options):
         report_path = options["report_path"]
         sample_size = options["failure_sample_size"]
-        media_root = options["media_root"]
 
         book_total = Book.objects.count()
         curated_total = CuratedBookDocument.objects.count()
-        # Quarantine breakdown (Book.review_state==REJECTED == quality-gate
-        # quarantined; Book.state==ARCHIVED is the published-side signal).
-        from apps.common.models import LifecycleState, ReviewState
-        quarantined = Book.objects.filter(
-            review_state=ReviewState.REJECTED,
-            state=LifecycleState.ARCHIVED,
-        ).count()
-        needs_review = Book.objects.filter(
-            review_state=ReviewState.NEEDS_REVIEW,
-        ).count()
+        from apps.common.models import LifecycleState
+
+        quarantined = Book.objects.filter(source_quality_state="quarantined").count()
+        preparation_failed = Book.objects.filter(state=LifecycleState.FAILED).count()
 
         structure_counter = Counter()
-        for value in CuratedBookDocument.objects.values_list("structure_type", flat=True):
+        for value in CuratedBookDocument.objects.values_list(
+            "structure_type", flat=True
+        ):
             structure_counter[value or ""] += 1
 
         contributor_role_counter = Counter()
@@ -127,9 +121,11 @@ class Command(BaseCommand):
         epub_bad = 0
         failure_samples = []
 
-        epub_assets = GeneratedAsset.objects.filter(
-            asset_type=GeneratedAssetType.EPUB
-        ).select_related("book").iterator(chunk_size=200)
+        epub_assets = (
+            GeneratedAsset.objects.filter(asset_type=GeneratedAssetType.EPUB)
+            .select_related("book")
+            .iterator(chunk_size=200)
+        )
         seen_book_ids = set()
         for asset in epub_assets:
             book = asset.book
@@ -183,7 +179,7 @@ class Command(BaseCommand):
             },
             "quarantine": {
                 "quarantined": quarantined,
-                "needs_review": needs_review,
+                "preparation_failed": preparation_failed,
             },
             "structure_type_histogram": dict(structure_counter.most_common()),
             "contributor_role_counts": {

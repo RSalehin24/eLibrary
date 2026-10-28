@@ -13,7 +13,7 @@ async function command(page, pathname, data) {
 
 async function privateRoutes(page) {
   await useAccount(page, "administrator");
-  const book = await command(page, "manage/books/", { operation_id: randomUUID(), title: `Layout audit ${fixture.query}`, record_type: "manual" });
+  const book = await command(page, "manage/books/", { operation_id: randomUUID(), title: `Layout audit ${fixture.query}` });
   const schedule = await command(page, "manage/automations/", { operation_id: randomUUID(), name: `Layout audit ${fixture.query}`, enabled: false,
     frequency: "weekly", first_run_local: "2035-01-31T20:30", time_zone: "Asia/Dhaka", source_max_pages: 3, processing_limit: 2, fetch_all: false, process_all: false, catalog_scope: "unfinished", rebuild_updated: true });
   await useAccount(page, "reading_reader");
@@ -38,7 +38,7 @@ export async function layoutRoutes(page) {
       ["series", "/series/"], ["series-detail", `/series/${path(fixture.layout.series.slug)}/`],
       ["collections", "/collections/"], ["collection", `/collections/${path(fixture.collection.slug)}/`],
       ["book", `/books/${path(fixture.book.slug)}/`], ["editions", `/books/${path(fixture.book.slug)}/editions/`],
-      ["about", "/about/"], ["contact", "/contact/"], ["help", "/help/"], ["local-reader", "/local-reader/"], ["legacy-library", "/library/"],
+      ["about", "/about/"], ["contact", "/contact/"], ["help", "/help/"], ["local-reader", "/local-reader/"],
     ] },
     { name: "authentication", routes: [
       ["login", "/login/"], ["reset-password", "/reset-password/"],
@@ -47,7 +47,7 @@ export async function layoutRoutes(page) {
     ] },
     { name: "personal", account: "reading_reader", routes: [
       ["my-books", "/my-books/"], ["personal-book", `/my-books/${path(fixture.reading_book.slug)}/`],
-      ["paper-books", "/physical-books/"], ["notes", "/notes/"], ["profile", "/profile/"],
+      ["notes", "/notes/"], ["profile", "/profile/"],
       ["reader-redirect", "/reader/"], ["reader", `/reader/${records.reader.id}/`],
     ] },
     { name: "kindle", account: "kindle_reader", routes: [
@@ -71,6 +71,6 @@ export async function layoutRoutes(page) {
       ["users-access", "/manage/users-access/"], ["account-detail", `/manage/users-access/${fixture.managed_reader.id}/`],
       ["invite", "/manage/users-access/invite/"], ["mail-operation", `/manage/users-access/mail/${fixture.overview.mail_issue}/`],
     ] },
-    { name: "missing-pages", status: 404, routes: [["missing-page", "/missing-layout-audit/"], ["missing-book", "/books/missing-layout-audit/"]] },
+    { name: "missing-pages", status: 404, routes: [["missing-page", "/missing-layout-audit/"], ["missing-book", "/books/missing-layout-audit/"], ["retired-physical", "/physical-books/"], ["retired-alias", "/library/"]] },
   ];
 }

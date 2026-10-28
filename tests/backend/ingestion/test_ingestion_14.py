@@ -1,62 +1,27 @@
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
-
 import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
 from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
+from apps.catalog.models import (
+    Book,
+    BookContributor,
+    BookSource,
+    Category,
+    Contributor,
+    Series,
+)
 from apps.ingestion.models import (
-    CatalogAutomationFrequency,
     BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
     JobStatus,
-    MatchCandidate,
     ProcessingJob,
     ResolutionStatus,
-    SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
     SubmissionStatus,
-    TitleResolutionAttempt,
 )
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
-from apps.ingestion.pipeline import scraper as legacy_scraper
-from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
-)
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
+from apps.ingestion.services.legacy_adapter import normalize_source_url, normalize_text
 from apps.ingestion.services.submissions import (
-    create_submission_records,
     detect_metadata_duplicate,
     find_exact_existing_book,
     process_submission_job,
-    queue_submission,
-    sync_assets,
 )
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
+from django.db import IntegrityError
 
 
 @pytest.mark.django_db
@@ -64,15 +29,14 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
     tmp_path,
     monkeypatch,
 ):
-    user = User.objects.create_user(email="unique-title-only@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="unique-title-only@example.com", password="strong-password-123"
+    )
     existing_source_url = "https://www.example.com/books/shared-title-old/"
     incoming_source_url = "https://www.example.com/books/shared-title-new/"
 
     existing_book = Book.objects.create(
-        title="শ্রেষ্ঠ কবিতা",
-        source_site="example.com",
-        state="ready",
-        review_state="approved",
+        title="শ্রেষ্ঠ কবিতা", source_site="example.com", state="ready"
     )
     BookSource.objects.create(
         book=existing_book,
@@ -114,8 +78,14 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
         "output_folder": str(tmp_path),
     }
 
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata", lambda _url: None)
-    monkeypatch.setattr("apps.ingestion.services.submission_modules.job_lifecycle.scrape_book", lambda _url: sample)
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.retry_and_deduplication.capture_source_page_metadata",
+        lambda _url: None,
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.submission_modules.job_lifecycle.scrape_book",
+        lambda _url: sample,
+    )
 
     original_create = Book.objects.create
     conflict_raised = {"value": False}
@@ -145,16 +115,17 @@ def test_process_submission_job_does_not_reuse_same_title_book_when_source_url_d
 @pytest.mark.django_db
 def test_find_exact_existing_book_does_not_match_when_categories_differ():
     existing_book = Book.objects.create(
-        title="শ্রেষ্ঠ কবিতা",
-        source_site="example.com",
-        state="ready",
-        review_state="approved",
+        title="শ্রেষ্ঠ কবিতা", source_site="example.com", state="ready"
     )
     existing_author = Contributor.objects.create(name="মহাদেব সাহ")
     existing_category = Category.objects.create(name="কবিতা")
-    BookContributor.objects.create(book=existing_book, contributor=existing_author, role="author")
+    BookContributor.objects.create(
+        book=existing_book, contributor=existing_author, role="author"
+    )
     book_category = existing_book.book_categories.model
-    book_category.objects.create(book=existing_book, category=existing_category, raw_value=existing_category.name)
+    book_category.objects.create(
+        book=existing_book, category=existing_category, raw_value=existing_category.name
+    )
 
     matched = find_exact_existing_book(
         {
@@ -169,12 +140,16 @@ def test_find_exact_existing_book_does_not_match_when_categories_differ():
 
 @pytest.mark.django_db
 def test_detect_metadata_duplicate_does_not_match_when_categories_differ():
-    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready", review_state="approved")
+    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready")
     existing_author = Contributor.objects.create(name="মহাদেব সাহ")
     existing_category = Category.objects.create(name="কবিতা")
-    BookContributor.objects.create(book=existing_book, contributor=existing_author, role="author")
+    BookContributor.objects.create(
+        book=existing_book, contributor=existing_author, role="author"
+    )
     book_category = existing_book.book_categories.model
-    book_category.objects.create(book=existing_book, category=existing_category, raw_value=existing_category.name)
+    book_category.objects.create(
+        book=existing_book, category=existing_category, raw_value=existing_category.name
+    )
 
     duplicate = detect_metadata_duplicate(
         {
@@ -189,12 +164,14 @@ def test_detect_metadata_duplicate_does_not_match_when_categories_differ():
 
 @pytest.mark.django_db
 def test_detect_metadata_duplicate_does_not_match_when_target_series_does_not_match_existing():
-    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready", review_state="approved")
+    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready")
     existing_author = Contributor.objects.create(name="মহাদেব সাহ")
     existing_category = Category.objects.create(name="কবিতা")
     existing_series = Series.objects.create(name="প্রথম খণ্ড")
 
-    BookContributor.objects.create(book=existing_book, contributor=existing_author, role="author")
+    BookContributor.objects.create(
+        book=existing_book, contributor=existing_author, role="author"
+    )
     existing_book.book_categories.model.objects.create(
         book=existing_book,
         category=existing_category,
@@ -221,13 +198,17 @@ def test_detect_metadata_duplicate_does_not_match_when_target_series_does_not_ma
 
 @pytest.mark.django_db
 def test_detect_metadata_duplicate_does_not_match_when_translators_differ():
-    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready", review_state="approved")
+    existing_book = Book.objects.create(title="শ্রেষ্ঠ কবিতা", state="ready")
     existing_author = Contributor.objects.create(name="মহাদেব সাহ")
     existing_translator = Contributor.objects.create(name="অনুবাদক এক")
     existing_category = Category.objects.create(name="কবিতা")
 
-    BookContributor.objects.create(book=existing_book, contributor=existing_author, role="author")
-    BookContributor.objects.create(book=existing_book, contributor=existing_translator, role="translator")
+    BookContributor.objects.create(
+        book=existing_book, contributor=existing_author, role="author"
+    )
+    BookContributor.objects.create(
+        book=existing_book, contributor=existing_translator, role="translator"
+    )
     existing_book.book_categories.model.objects.create(
         book=existing_book,
         category=existing_category,

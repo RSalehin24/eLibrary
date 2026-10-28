@@ -19,6 +19,7 @@ from apps.catalog.discovery.slugs import catalog_object_by_slug
 from apps.catalog.models import Book, GeneratedAssetStatus, GeneratedAssetType
 from apps.common.api import VersionedAPIView
 from apps.common.permissions import (
+    is_book_administrator,
     user_can_download_book_assets,
     user_can_launch_reader,
     user_can_send_to_kindle,
@@ -40,21 +41,6 @@ class ReaderAccessView(VersionedAPIView):
         book = catalog_object_by_slug(
             with_cover_asset(Book.objects.filter(deleted_at__isnull=True)), slug
         )
-        if book.record_type == "manual":
-            return Response(
-                {
-                    "can_read": False,
-                    "can_download": False,
-                    "prepared": False,
-                    "can_send_kindle": False,
-                    "active_session_id": None,
-                    "progress_session_id": None,
-                    "html_url": None,
-                    "cover_url": None,
-                    "reading_progress": None,
-                    "last_opened_at": None,
-                }
-            )
         can_access = user_has_reader_access(request.user, book)
         session = active_reader_session(request.user, book) if can_access else None
         asset = book.generated_assets.filter(
@@ -73,6 +59,7 @@ class ReaderAccessView(VersionedAPIView):
         reading = ReadingSession.objects.filter(user=request.user, book=book).first()
         return Response(
             {
+                "can_edit_book": is_book_administrator(request.user),
                 "can_read": user_can_launch_reader(request.user, book),
                 "can_download": bool(
                     file_available and user_can_download_book_assets(request.user, book)

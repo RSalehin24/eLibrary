@@ -1,3 +1,14 @@
+import pytest
+from apps.ingestion.models import SourceCatalogEntry
+from apps.processing.models import BookCreationRequest, BookRecord
+from apps.processing.services import get_sync_state
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_sync,
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -83,7 +94,9 @@ def test_catalog_automation_waits_for_manual_runtime_before_creating_requests(cl
     payload = advance_processing_sync(client, count=2)
     assert payload["sync"]["status"] == "idle"
     assert BookRecord.objects.filter(pk="new-record").exists()
-    assert BookRecord.objects.get(pk="existing-record").name == "Existing Record Revised"
+    assert (
+        BookRecord.objects.get(pk="existing-record").name == "Existing Record Revised"
+    )
     assert not BookCreationRequest.objects.exists()
 
     _mutation, payload = post_processing_mutation(
@@ -107,9 +120,14 @@ def test_catalog_automation_waits_for_manual_runtime_before_creating_requests(cl
 
 
 @pytest.mark.django_db
-def test_processing_sync_start_ignores_remote_pages_when_overrides_are_disabled(client, monkeypatch):
+def test_processing_sync_start_ignores_remote_pages_when_overrides_are_disabled(
+    client, monkeypatch
+):
     login_processing_admin(client)
-    monkeypatch.setattr('apps.processing.view_modules.read_stream_and_sync_start_views.allow_processing_remote_page_payloads', lambda: False)
+    monkeypatch.setattr(
+        "apps.processing.view_modules.read_stream_and_sync_start_views.allow_processing_remote_page_payloads",
+        lambda: False,
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -124,9 +142,14 @@ def test_processing_sync_start_ignores_remote_pages_when_overrides_are_disabled(
 
 
 @pytest.mark.django_db
-def test_catalog_automation_ignores_stale_remote_pages_when_overrides_are_disabled(client, monkeypatch):
+def test_catalog_automation_ignores_stale_remote_pages_when_overrides_are_disabled(
+    client, monkeypatch
+):
     login_processing_admin(client)
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.allow_processing_remote_page_payloads', lambda: False)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.allow_processing_remote_page_payloads",
+        lambda: False,
+    )
 
     sync_state = get_sync_state()
     sync_state.remote_pages = [[record_payload("stale-remote-record")], []]
@@ -204,7 +227,10 @@ def test_catalog_automation_can_pause_and_stop_active_sync(client):
     )
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["runMode"] == "catalog_automation"
-    assert payload["sync"]["message"] == "Continuing automated catalog sync from the saved endpoint."
+    assert (
+        payload["sync"]["message"]
+        == "Continuing automated catalog sync from the saved endpoint."
+    )
     assert payload["sync"]["pageIndex"] == 1
 
     _mutation, payload = post_processing_mutation(
@@ -213,4 +239,7 @@ def test_catalog_automation_can_pause_and_stop_active_sync(client):
     )
     assert payload["sync"]["status"] == "idle"
     assert payload["sync"]["message"] == "Automated catalog sync stopped."
-    assert payload["automation"]["catalog"]["statusMessage"] == "Automated catalog sync stopped."
+    assert (
+        payload["automation"]["catalog"]["statusMessage"]
+        == "Automated catalog sync stopped."
+    )

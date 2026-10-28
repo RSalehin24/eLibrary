@@ -1,3 +1,12 @@
+import pytest
+from apps.processing.models import BookRecord
+from apps.processing.services import PROCESSING_SYNC_KEY_INCOMPLETE, get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    post_processing_mutation,
+)
 
 
 @pytest.mark.django_db
@@ -46,8 +55,14 @@ def test_incomplete_automation_can_pause_resume_and_complete(client):
     )
     assert payload["sync"]["status"] == "paused"
     assert payload["sync"]["runMode"] == "incomplete_automation"
-    assert BookRecord.objects.get(pk="resume-incomplete-a").resolved_from_incomplete is True
-    assert BookRecord.objects.get(pk="resume-incomplete-b").resolved_from_incomplete is False
+    assert (
+        BookRecord.objects.get(pk="resume-incomplete-a").resolved_from_incomplete
+        is True
+    )
+    assert (
+        BookRecord.objects.get(pk="resume-incomplete-b").resolved_from_incomplete
+        is False
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -55,19 +70,30 @@ def test_incomplete_automation_can_pause_resume_and_complete(client):
     )
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["runMode"] == "incomplete_automation"
-    assert payload["sync"]["message"] == "Restarting incomplete catalog sync from the beginning."
+    assert (
+        payload["sync"]["message"]
+        == "Restarting incomplete catalog sync from the beginning."
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
         "/api/processing/sync/advance/",
     )
     assert payload["sync"]["status"] == "idle"
-    assert payload["sync"]["message"] == "Incomplete catalog sync complete. Updated 2 books."
-    assert BookRecord.objects.get(pk="resume-incomplete-b").resolved_from_incomplete is True
+    assert (
+        payload["sync"]["message"]
+        == "Incomplete catalog sync complete. Updated 2 books."
+    )
+    assert (
+        BookRecord.objects.get(pk="resume-incomplete-b").resolved_from_incomplete
+        is True
+    )
 
 
 @pytest.mark.django_db
-def test_incomplete_automation_uses_incomplete_sync_remote_pages_source(client, monkeypatch):
+def test_incomplete_automation_uses_incomplete_sync_remote_pages_source(
+    client, monkeypatch
+):
     login_processing_admin(client)
     expected_pages = [
         [
@@ -87,7 +113,10 @@ def test_incomplete_automation_uses_incomplete_sync_remote_pages_source(client, 
         ],
         [],
     ]
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.incomplete_sync_remote_pages', lambda: expected_pages)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_catalog_queries.incomplete_sync_remote_pages",
+        lambda: expected_pages,
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -139,8 +168,14 @@ def test_incomplete_automation_live_sync_fetches_incrementally_and_resolves_stal
             ]
         return []
 
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch', lambda: True)
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page', fake_fetch_live_incomplete_page)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page",
+        fake_fetch_live_incomplete_page,
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -164,7 +199,10 @@ def test_incomplete_automation_live_sync_fetches_incrementally_and_resolves_stal
         "/api/processing/sync/advance/",
     )
     assert payload["sync"]["status"] == "idle"
-    assert payload["sync"]["message"] == "Incomplete catalog sync complete. Updated 1 book."
+    assert (
+        payload["sync"]["message"]
+        == "Incomplete catalog sync complete. Updated 1 book."
+    )
     assert page_calls == [1, 2]
     stale_record = BookRecord.objects.get(pk="stale-incomplete-live")
     assert stale_record.resolved_from_incomplete is True
@@ -198,8 +236,14 @@ def test_incomplete_automation_live_sync_pause_and_resume_restarts_from_beginnin
             ]
         return []
 
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch', lambda: True)
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page', fake_fetch_live_incomplete_page)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_catalog_queries.should_use_live_incomplete_fetch",
+        lambda: True,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_catalog_fetch.fetch_live_incomplete_page",
+        fake_fetch_live_incomplete_page,
+    )
 
     _mutation, _payload = post_processing_mutation(
         client,
@@ -229,7 +273,10 @@ def test_incomplete_automation_live_sync_pause_and_resume_restarts_from_beginnin
         "/api/processing/sync/resume/",
     )
     assert payload["sync"]["status"] == "syncing"
-    assert payload["sync"]["message"] == "Restarting incomplete catalog sync from the beginning."
+    assert (
+        payload["sync"]["message"]
+        == "Restarting incomplete catalog sync from the beginning."
+    )
     assert payload["sync"]["progress"]["savedData"]["liveFetch"] is True
     assert payload["sync"]["progress"]["savedData"]["nextPageIndex"] == 0
 

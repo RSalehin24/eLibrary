@@ -14,16 +14,10 @@ test("directory dates validate calendar days and ordered inclusive ranges", () =
   assert.equal(validDirectoryFilters({ sort: "constructor" }), false);
 });
 
-test("legacy writer directories preserve creation dates and catalog code ordering", () => {
+test("retired directory aliases cannot restore old type or date conditions", () => {
   for (const route of ["writers", "translators", "editors", "publishers"]) {
-    const target = new URL(legacyRouteTarget(route, { sort: "-catalog_code", created_after: "2026-01-02", created_before: "2026-01-03" }), "http://library.test");
-    assert.equal(target.pathname, "/contributors/");
-    assert.equal(target.searchParams.get("sort"), "-catalog_code");
-    assert.equal(target.searchParams.get("created_after"), "2026-01-02");
-    assert.equal(target.searchParams.get("created_before"), "2026-01-03");
+    assert.equal(legacyRouteTarget(route, { record_type: "manual", created_after: "2026-01-02" }), null);
   }
-  assert.equal(legacyRouteTarget("writers", { created_before: "2026-02-30" }), null);
-  assert.equal(legacyRouteTarget("writers", { sort: "password" }), null);
 });
 
 test("directory control labels are translated while source names remain authored", () => {

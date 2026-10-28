@@ -12,6 +12,15 @@ def book_is_quarantined(book):
     return book.source_quality_state == "quarantined"
 
 
+def book_is_unavailable(book):
+    return bool(
+        book is None
+        or book.deleted_at
+        or book.state in {LifecycleState.ARCHIVED, LifecycleState.SOFT_DELETED}
+        or book_is_quarantined(book)
+    )
+
+
 @transaction.atomic
 def quarantine_book(book, evidence, actor=None):
     current = Book.objects.select_for_update().get(pk=book.pk)

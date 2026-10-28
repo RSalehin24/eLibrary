@@ -14,7 +14,7 @@ def test_legacy_unpublished_states_are_counted_without_manual_review(client):
     )
     for state in [
         LifecycleState.DRAFT,
-        LifecycleState.NEEDS_REVIEW,
+        LifecycleState.FAILED,
         LifecycleState.PROCESSING,
         LifecycleState.READY,
         LifecycleState.PUBLISHED,
@@ -33,15 +33,12 @@ def test_legacy_unpublished_states_are_counted_without_manual_review(client):
         "ready": 1,
         "published": 1,
         "archived": 1,
-        "editorial_pending": 0,
     }
     assert counts["total"] == sum(
         counts[state]
         for state in ["draft", "processing", "ready", "published", "archived"]
     )
-    Book.objects.filter(state=LifecycleState.PUBLISHED).update(
-        editorial_reviewed_at=timezone.now()
-    )
+    Book.objects.filter(state=LifecycleState.PUBLISHED).update()
     assert client.get(OVERVIEW).json()["books"] == counts
 
 
@@ -57,5 +54,4 @@ def test_empty_catalog_has_no_review_requirement(client):
         "ready": 0,
         "published": 0,
         "archived": 0,
-        "editorial_pending": 0,
     }

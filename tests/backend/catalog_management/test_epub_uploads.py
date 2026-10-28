@@ -31,8 +31,8 @@ def test_uploaded_epub_is_private_and_automatically_prepared_without_unpublishin
     assert response.status_code == 200
     assert response["Cache-Control"] == "private, no-store"
     assert response.json()["state"] == "published"
-    assert response.json()["review_state"] == "approved"
-    assert response.json()["editorial_reviewed_at"] is None
+    assert "review_state" not in response.json()
+    assert "editorial_reviewed_at" not in response.json()
     asset = GeneratedAsset.objects.get(book=book, asset_type="epub")
     assert asset.checksum == hashlib.sha256(path.read_bytes()).hexdigest()
     assert asset.is_protected and asset.status == "ready" and not asset.source_job
@@ -46,7 +46,7 @@ def test_uploaded_epub_is_private_and_automatically_prepared_without_unpublishin
 def test_replacement_preserves_old_bytes_and_stale_uploads_change_nothing(upload_book):
     _, book, _, _ = upload_book
     assert send_upload(upload_book).status_code == 200
-    original = GeneratedAsset.objects.get(book=book)
+    original = GeneratedAsset.objects.get(book=book, asset_type="epub")
     old_path, checksum = Path(original.file.path), original.checksum
     assert send_upload(upload_book).status_code == 409
     book.refresh_from_db()
@@ -102,7 +102,7 @@ def test_upload_requires_metadata_authority_for_the_specific_book(upload_book):
     PermissionGrant.objects.create(
         user=editor, book=book, scope=PermissionScope.METADATA_EDIT
     )
-    assert send_upload(upload_book).status_code == 200
+    assert send_upload(upload_book).status_code == 404
 
 
 @pytest.mark.parametrize("state", SOURCE_ACTIVE_STATES)
@@ -123,13 +123,15 @@ def test_upload_cannot_race_an_unfinished_source_operation(upload_book, state):
     assert not GeneratedAsset.objects.exists()
 
 
-def test_paper_records_reject_files_and_unknown_fields_are_not_ignored(upload_book):
-    _, book, _, _ = upload_book
+def test_unified_upload_rejects_removed_flags_and_accepts_valid_files(upload_book):
     assert send_upload(upload_book, publish=True).status_code == 400
-    book.record_type = "manual"
-    book.save()
-    assert send_upload(upload_book).status_code == 400
+
     assert not GeneratedAsset.objects.exists()
+    assert send_upload(upload_book).status_code == 200
+    assert set(GeneratedAsset.objects.values_list("asset_type", flat=True)) == {
+        "html",
+        "epub",
+    }
 
 
 def test_session_upload_requires_csrf_before_any_mutation(upload_book):
@@ -165,4 +167,5 @@ def test_concurrent_uploads_publish_one_asset_revision(upload_book):
     with ThreadPoolExecutor(max_workers=2) as pool:
         futures = [pool.submit(upload_once) for _ in range(2)]
         assert sorted(result.result(timeout=20) for result in futures) == [200, 409]
-    assert GeneratedAsset.objects.count() == AuditLog.objects.count() == 1
+    assert GeneratedAsset.objects.count() == 2
+    assert AuditLog.objects.count() == 1

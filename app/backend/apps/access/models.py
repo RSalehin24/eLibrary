@@ -1,10 +1,12 @@
 import secrets
 from datetime import timedelta
+from typing import ClassVar
 
 from django.db import models
 from django.utils import timezone
 
 from apps.common.models import TimeStampedModel, UUIDPrimaryKeyModel
+
 from .publication_models import PreparedPublication
 
 
@@ -22,7 +24,6 @@ class PermissionScope(models.TextChoices):
     READ_DURABLE = "read:durable", "Durable Read"
     DOWNLOAD_FILE = "download:file", "Download Ebook"
     METADATA_EDIT = "metadata:edit", "Edit Metadata"
-    PHYSICAL_BOOKS_VIEW = "physical_books:view", "View Physical Books List"
     PROCESSING_MANAGE = "processing:manage", "Manage Processing"
     ACCESS_MANAGE = "access:manage", "Manage Access"
     VIEW_SOURCE_RECORDS = "source_records:view", "View Records' Source"
@@ -36,7 +37,6 @@ ACCOUNT_MANAGEABLE_PERMISSION_SCOPES = (
     PermissionScope.PROCESSING_MANAGE,
     PermissionScope.VIEW_SOURCE_RECORDS,
     PermissionScope.METADATA_EDIT,
-    PermissionScope.PHYSICAL_BOOKS_VIEW,
     PermissionScope.READ_ONCE,
     PermissionScope.SEND_KINDLE,
     PermissionScope.READ_DURABLE,
@@ -66,7 +66,9 @@ class PermissionGrantQuerySet(models.QuerySet):
 
 
 class PermissionGrant(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="permission_grants")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="permission_grants"
+    )
     book = models.ForeignKey(
         "catalog.Book",
         on_delete=models.CASCADE,
@@ -103,8 +105,14 @@ class PermissionGrant(UUIDPrimaryKeyModel, TimeStampedModel):
     objects = PermissionGrantQuerySet.as_manager()
 
     class Meta:
-        ordering = ["user__email", "scope", "book__title", "category__name", "contributor__name"]
-        constraints = [
+        ordering: ClassVar = [
+            "user__email",
+            "scope",
+            "book__title",
+            "category__name",
+            "contributor__name",
+        ]
+        constraints: ClassVar = [
             models.CheckConstraint(
                 condition=(
                     models.Q(book__isnull=True, category__isnull=True)
@@ -134,7 +142,9 @@ class PreviewAccessSession(UUIDPrimaryKeyModel, TimeStampedModel):
         blank=True,
         null=True,
     )
-    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="preview_sessions")
+    book = models.ForeignKey(
+        "catalog.Book", on_delete=models.CASCADE, related_name="preview_sessions"
+    )
     source_submission = models.ForeignKey(
         "ingestion.BookSubmission",
         on_delete=models.SET_NULL,
@@ -145,12 +155,15 @@ class PreviewAccessSession(UUIDPrimaryKeyModel, TimeStampedModel):
     expires_at = models.DateTimeField(default=default_preview_expiry)
     launch_count = models.PositiveIntegerField(default=0)
     prepared_publication = models.ForeignKey(
-        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        PreparedPublication,
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
         related_name="reader_sessions",
     )
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar = ["-created_at"]
 
     @property
     def is_active(self):
@@ -158,8 +171,12 @@ class PreviewAccessSession(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class ReadingSession(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="reading_sessions")
-    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="reading_sessions")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="reading_sessions"
+    )
+    book = models.ForeignKey(
+        "catalog.Book", on_delete=models.CASCADE, related_name="reading_sessions"
+    )
     preview_session = models.ForeignKey(
         PreviewAccessSession,
         on_delete=models.SET_NULL,
@@ -172,13 +189,17 @@ class ReadingSession(UUIDPrimaryKeyModel, TimeStampedModel):
     last_opened_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ["-last_opened_at"]
+        ordering: ClassVar = ["-last_opened_at"]
         unique_together = ("user", "book")
 
 
 class Bookmark(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="bookmarks")
-    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="bookmarks")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="bookmarks"
+    )
+    book = models.ForeignKey(
+        "catalog.Book", on_delete=models.CASCADE, related_name="bookmarks"
+    )
     location = models.CharField(max_length=255)
     label = models.CharField(max_length=255, blank=True)
     note = models.TextField(blank=True)
@@ -186,16 +207,22 @@ class Bookmark(UUIDPrimaryKeyModel, TimeStampedModel):
     chapter_label = models.CharField(max_length=255, blank=True)
     preview_text = models.CharField(max_length=280, blank=True)
     prepared_publication = models.ForeignKey(
-        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        PreparedPublication,
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
         related_name="bookmarks",
     )
 
     class Meta:
-        ordering = ["book__title", "-created_at"]
-        constraints = [models.UniqueConstraint(
-            fields=("user", "book", "location", "prepared_publication"),
-            name="bookmark_reader_edition_location", nulls_distinct=False,
-        )]
+        ordering: ClassVar = ["book__title", "-created_at"]
+        constraints: ClassVar = [
+            models.UniqueConstraint(
+                fields=("user", "book", "location", "prepared_publication"),
+                name="bookmark_reader_edition_location",
+                nulls_distinct=False,
+            )
+        ]
 
 
 class HighlightColor(models.TextChoices):
@@ -212,24 +239,35 @@ class HighlightKind(models.TextChoices):
 
 
 class Highlight(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="highlights")
-    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="highlights")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="highlights"
+    )
+    book = models.ForeignKey(
+        "catalog.Book", on_delete=models.CASCADE, related_name="highlights"
+    )
     cfi_range = models.CharField(max_length=1024)
     chapter_href = models.CharField(max_length=512, blank=True)
     chapter_label = models.CharField(max_length=255, blank=True)
     text = models.TextField()
     note = models.TextField(blank=True)
-    color = models.CharField(max_length=16, choices=HighlightColor.choices, default=HighlightColor.YELLOW)
-    kind = models.CharField(max_length=16, choices=HighlightKind.choices, default=HighlightKind.HIGHLIGHT)
+    color = models.CharField(
+        max_length=16, choices=HighlightColor.choices, default=HighlightColor.YELLOW
+    )
+    kind = models.CharField(
+        max_length=16, choices=HighlightKind.choices, default=HighlightKind.HIGHLIGHT
+    )
     tags = models.JSONField(default=list, blank=True)
     prepared_publication = models.ForeignKey(
-        PreparedPublication, on_delete=models.PROTECT, blank=True, null=True,
+        PreparedPublication,
+        on_delete=models.PROTECT,
+        blank=True,
+        null=True,
         related_name="highlights",
     )
 
     class Meta:
-        ordering = ["-created_at"]
-        indexes = [
+        ordering: ClassVar = ["-created_at"]
+        indexes: ClassVar = [
             models.Index(fields=["user", "-created_at"]),
             models.Index(fields=["user", "book"]),
             models.Index(fields=["user", "kind"]),
@@ -237,9 +275,12 @@ class Highlight(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class BookOpeningRecord(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="opening_records")
-    book = models.ForeignKey("catalog.Book", on_delete=models.CASCADE, related_name="opening_records")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="opening_records"
+    )
+    book = models.ForeignKey(
+        "catalog.Book", on_delete=models.CASCADE, related_name="opening_records"
+    )
 
     class Meta:
         unique_together = ("user", "book")
-

@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import zipfile
+from contextlib import contextmanager
 from pathlib import Path
 from uuid import uuid4
 from xml.etree import ElementTree
@@ -15,11 +16,12 @@ from apps.catalog.models import (
     GeneratedAssetType,
     MetadataVersion,
 )
-from apps.common.models import AuditLog, LifecycleState, ReviewState
+from apps.common.models import AuditLog, LifecycleState
 from apps.processing.job_models import SOURCE_ACTIVE_STATES, BackgroundJobKind
-from django.db import transaction
+from django.db import DatabaseError, transaction
 from rest_framework.exceptions import APIException, ValidationError
 
+from .epub_html import stage_epub_html
 from .epub_source_proof import verify_uploaded_source_text
 from .service import EditorialConflict, revision_checked_book
 
@@ -33,6 +35,15 @@ class EpubStorageUnavailable(APIException):
     default_detail = (
         "EPUB storage is temporarily unavailable. The current book is unchanged."
     )
+
+
+@contextmanager
+def uploaded_storage_guard():
+    try:
+        yield
+    except (DatabaseError, OSError):
+        logger.warning("EPUB storage or publication persistence is unavailable.")
+        raise EpubStorageUnavailable() from None
 
 
 def validate_epub_upload(upload):
@@ -79,8 +90,6 @@ def stage_uploaded_asset(book, upload):
 
 
 def require_uploadable_book(book):
-    if book.record_type != "digital":
-        raise ValidationError({"file": "EPUB uploads require a digital book record."})
     unfinished = book.background_jobs.filter(
         kind=BackgroundJobKind.PROCESS_SOURCE, state__in=SOURCE_ACTIVE_STATES
     )
@@ -122,13 +131,33 @@ def preserve_previous_asset(actor, book):
 @transaction.atomic
 def commit_uploaded_asset(actor, command, staged):
     book_id, expected = command
-    asset, publication = staged
     book = uploadable_revision(actor, book_id, expected)
+    return activate_uploaded_assets(actor, book, staged)
+
+
+def activate_uploaded_assets(actor, book, staged):
+    asset, publication, html = staged
     verify_uploaded_source_text(book, publication)
     preserve_previous_asset(actor, book)
+    for candidate in (asset, html):
+        commit_staged_asset(book, candidate)
+    if book.state != LifecycleState.ARCHIVED:
+        book.state = LifecycleState.PUBLISHED
+    book.save(update_fields=["state", "updated_at"])
+    AuditLog.objects.create(
+        actor=actor,
+        verb="catalog.epub.upload",
+        target_type=book._meta.label_lower,
+        target_id=str(book.pk),
+        payload={"checksum": asset.checksum, "file_size": asset.file_size},
+    )
+    return book
+
+
+def commit_staged_asset(book, asset):
     GeneratedAsset.objects.update_or_create(
         book=book,
-        asset_type=GeneratedAssetType.EPUB,
+        asset_type=asset.asset_type,
         defaults={
             field: getattr(asset, field)
             for field in (
@@ -144,37 +173,28 @@ def commit_uploaded_asset(actor, command, staged):
             )
         },
     )
-    book.editorial_reviewed_at = None
-    book.review_state = ReviewState.APPROVED
-    if book.state not in {LifecycleState.PUBLISHED, LifecycleState.ARCHIVED}:
-        book.state = LifecycleState.READY
-    book.save(
-        update_fields=["editorial_reviewed_at", "review_state", "state", "updated_at"]
-    )
-    AuditLog.objects.create(
-        actor=actor,
-        verb="catalog.epub.upload",
-        target_type=book._meta.label_lower,
-        target_id=str(book.pk),
-        payload={"checksum": asset.checksum, "file_size": asset.file_size},
-    )
-    return book
 
 
 def replace_managed_epub(actor, book_id, values):
-    book = uploadable_revision(actor, book_id, values["expected_updated_at"])
+    with uploaded_storage_guard():
+        book = uploadable_revision(actor, book_id, values["expected_updated_at"])
+        staged = prepare_uploaded_assets(book, values["file"])
+        return commit_uploaded_asset(
+            actor, (book_id, values["expected_updated_at"]), staged
+        )
+
+
+def prepare_uploaded_assets(book, upload):
     try:
-        asset = stage_uploaded_asset(book, values["file"])
+        asset = stage_uploaded_asset(book, upload)
         publication = prepare_epub_asset(asset)
         if publication.checksum != asset.checksum:
             raise InvalidEpub("The uploaded EPUB changed during preparation.")
-        return commit_uploaded_asset(
-            actor, (book_id, values["expected_updated_at"]), (asset, publication)
-        )
-    except InvalidEpub:
-        raise ValidationError(
-            {"file": "Upload a valid EPUB with readable chapter resources."}
-        ) from None
+        verify_uploaded_source_text(book, publication)
+        html = stage_epub_html(book, publication)
+        return asset, publication, html
+    except InvalidEpub as error:
+        raise ValidationError({"file": str(error)}, code="invalid_epub") from None
     except OSError:
         logger.warning("Manual EPUB storage or reader preparation is unavailable.")
         raise EpubStorageUnavailable() from None

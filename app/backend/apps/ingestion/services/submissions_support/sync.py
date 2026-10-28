@@ -7,7 +7,9 @@ def root_submission(submission):
     return submission.canonical_submission or submission
 
 
-def build_retry_payload(raw_payload, actor, previous_status, previous_error_message, reset_keys):
+def build_retry_payload(
+    raw_payload, actor, previous_status, previous_error_message, reset_keys
+):
     next_payload = dict(raw_payload or {})
     for key in (
         "requeued",
@@ -40,7 +42,6 @@ def sync_submission_from_canonical(
         "resolution_status",
         "resolution_confidence",
         "status",
-        "review_state",
         "linked_book",
         "duplicate_of_book",
         "error_message",

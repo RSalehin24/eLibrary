@@ -70,8 +70,14 @@ def test_concurrent_creators_cannot_duplicate_a_name(kind, model):
         for _ in actors
     ]
     results = concurrent_requests(actors, requests)
-    assert sorted(status for status, _ in results) == [201, 400]
-    assert model.objects.count() == AuditLog.objects.count() == 1
+    assert sorted(status for status, _ in results) == (
+        [201, 201] if kind == "contributors" else [201, 400]
+    )
+    assert (
+        model.objects.count()
+        == AuditLog.objects.count()
+        == (2 if kind == "contributors" else 1)
+    )
 
 
 def test_cross_kind_uuid_collision_rolls_back_the_losing_entity():
@@ -188,10 +194,10 @@ def test_existing_uuid_collision_and_edit_take_kind_lock_before_entity_lock():
     attempt = Event()
     creating_thread = get_ident()
 
-    def notify_lock(title):
+    def notify_lock(kind):
         if get_ident() != creating_thread:
             attempt.set()
-        lock_title(title)
+        lock_title(f"catalog-entity:{kind}")
 
     request = (
         "patch",
@@ -200,7 +206,8 @@ def test_existing_uuid_collision_and_edit_take_kind_lock_before_entity_lock():
     )
     with (
         patch(
-            "apps.catalog.editorial.entity_service.lock_title", side_effect=notify_lock
+            "apps.catalog.editorial.entity_service.lock_entity_kind",
+            side_effect=notify_lock,
         ),
         ThreadPoolExecutor(max_workers=1) as executor,
     ):

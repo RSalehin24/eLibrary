@@ -27,7 +27,6 @@ def source_book():
     book = Book.objects.create(
         title="Verified source credits",
         state="published",
-        review_state="approved",
         raw_scrape_payload={
             "author": "জেমস রোলিন্স, সাঈম শামস",
             "book_info": "<p>অনুবাদক: সাঈম শামস্</p>",
@@ -55,11 +54,8 @@ def test_repair_preserves_book_files_identities_and_can_restore_exact_relationsh
     assert set(Contributor.objects.values_list("pk", flat=True)) == identities
     assert apply_credit_repair(source_book.pk) is None
     source_book.refresh_from_db()
-    assert (source_book.slug, source_book.state, source_book.review_state) == (
-        original_slug,
-        "published",
-        "approved",
-    )
+    assert (source_book.slug, source_book.state) == (original_slug, "published")
+    assert not hasattr(source_book, "review_state")
     asset.refresh_from_db()
     assert asset.legacy_path == "preserved.epub"
     restore_credit_repair(audit.pk)

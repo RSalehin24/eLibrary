@@ -37,7 +37,7 @@ test("uploads prepare the reader automatically and explicit preparation conflict
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/`);
   await page.getByLabel("বইয়ের EPUB ফাইল", { exact: true }).setInputFiles({ name: "book.epub", mimeType: "application/epub+zip", buffer: bytes });
   await page.getByRole("button", { name: "EPUB আপলোড করুন", exact: true }).click();
-  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB পরীক্ষা করে পড়ার জন্য প্রস্তুত করা হয়েছে" })).toBeVisible();
+  await expect(page.locator("#book-upload").getByRole("status").filter({ hasText: "EPUB ও HTML প্রস্তুত হয়েছে। বইটি এখন পড়া যাবে।" })).toBeVisible();
   await expect(page.getByRole("button", { name: "পড়ার জন্য প্রস্তুত করুন", exact: true })).toHaveCount(0);
   const assets = await (await page.request.get(`/api/v1/manage/books/${encodeURIComponent(book.slug)}/assets/`)).json();
   const asset = assets.find(entry => entry.asset_type === "epub");

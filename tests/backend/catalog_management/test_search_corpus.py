@@ -12,13 +12,7 @@ def corpus():
     author = Contributor.objects.create(name="বিভূতিভূষণ বন্দ্যোপাধ্যায়")
     reviewed = timezone.now()
     novels = [
-        Book.objects.create(
-            title=title,
-            alternative_names=aliases,
-            editorial_reviewed_at=reviewed,
-            state="published",
-            review_state="approved",
-        )
+        Book.objects.create(title=title, alternative_names=aliases, state="published")
         for title, aliases in [
             ("পথের পাঁচালী", ["Pather Panchali"]),
             ("পথের পাঁচালী: দ্বিতীয় সংস্করণ", []),
@@ -62,7 +56,7 @@ def test_corpus_identifier_and_published_aliases_do_not_require_review(client, c
     book = corpus[0]
     response = client.get("/api/v1/catalog/books/", {"q": book.catalog_code.lower()})
     assert [entry["id"] for entry in response.json()["entries"]] == [str(book.pk)]
-    Book.objects.filter(pk=book.pk).update(editorial_reviewed_at=None)
+    Book.objects.filter(pk=book.pk).update()
     assert client.get("/api/v1/catalog/books/", {"q": "Pather Panchali"}).json()[
         "entries"
     ][0]["id"] == str(book.pk)

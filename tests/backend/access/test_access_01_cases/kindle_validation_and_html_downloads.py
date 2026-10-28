@@ -1,3 +1,15 @@
+from pathlib import Path
+
+import pytest
+from apps.access.models import PermissionGrant, PermissionScope
+from apps.accounts.models import User
+from apps.catalog.models import (
+    Book,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+from django.core import mail
 
 
 @pytest.mark.django_db
@@ -7,7 +19,7 @@ def test_send_to_kindle_ignores_invalid_legacy_domains(tmp_path, client):
         password="strong-password-123",
         kindle_emails=["reader-one@kindle.com", "reader-two@example.com"],
     )
-    book = Book.objects.create(title="Kindle Delivery Legacy", state="ready", review_state="approved")
+    book = Book.objects.create(title="Kindle Delivery Legacy", state="ready")
     epub_path = Path(tmp_path) / "kindle-delivery-legacy.epub"
     epub_path.write_bytes(b"epub")
 
@@ -19,7 +31,9 @@ def test_send_to_kindle_ignores_invalid_legacy_domains(tmp_path, client):
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
@@ -38,7 +52,7 @@ def test_send_to_kindle_requires_configured_emails(tmp_path, client):
         email="missing-kindle@example.com",
         password="strong-password-123",
     )
-    book = Book.objects.create(title="Missing Kindle Config", state="ready", review_state="approved")
+    book = Book.objects.create(title="Missing Kindle Config", state="ready")
     epub_path = Path(tmp_path) / "missing-kindle.epub"
     epub_path.write_bytes(b"epub")
 
@@ -50,19 +64,26 @@ def test_send_to_kindle_requires_configured_emails(tmp_path, client):
         content_type="application/epub+zip",
         file_size=epub_path.stat().st_size,
     )
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.SEND_KINDLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.SEND_KINDLE
+    )
     client.force_login(user)
 
     response = client.post(f"/api/access/books/{book.slug}/send-to-kindle/")
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Add at least one Kindle email in your profile before sending."
+    assert (
+        response.json()["detail"]
+        == "Add at least one Kindle email in your profile before sending."
+    )
 
 
 @pytest.mark.django_db
 def test_html_download_inlines_stale_relative_cover_references(tmp_path, client):
-    user = User.objects.create_user(email="html-download@example.com", password="strong-password-123")
-    book = Book.objects.create(title="HTML Download Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="html-download@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="HTML Download Book", state="ready")
     html_path = Path(tmp_path) / "book.html"
     cover_path = Path(tmp_path) / "book_cover.jpg"
     html_path.write_text(
@@ -88,7 +109,9 @@ def test_html_download_inlines_stale_relative_cover_references(tmp_path, client)
         file_size=cover_path.stat().st_size,
     )
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.PREVIEW_HTML)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.PREVIEW_HTML
+    )
     client.force_login(user)
 
     response = client.get(f"/api/access/books/{book.slug}/download/html/")

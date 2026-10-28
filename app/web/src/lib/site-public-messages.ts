@@ -177,7 +177,7 @@ export const sitePublicMessages: Readonly<Record<string, string>> = {
   "বাংলা বইয়ের সঙ্গে সংযোগ": "Stay connected to Bengali books",
   "বাংলা ভাষার পাঠক ছড়িয়ে আছেন সারা পৃথিবীতে। বাংলা পাঠাগার বইয়ের পরিচিতি, লেখক ও সংস্করণের তথ্য এক জায়গায় এনে সেই পাঠকদের বই খুঁজতে সাহায্য করে।": "Bengali readers live all around the world. Bangla Library brings book, author, and edition information together to help readers discover books.",
   "বইয়ের পরিচিতি সবার জন্য": "Book details for everyone",
-  "প্রকাশিত বইয়ের নাম, লেখক ও পরিচিতি অ্যাকাউন্ট ছাড়াই দেখা যায়। বইয়ের পরিচিতি প্রকাশের আগে তথ্য পর্যালোচনা করা হয়।": "Published book titles, authors, and descriptions are available without an account. Details are reviewed before publication.",
+  "প্রকাশিত বইয়ের নাম, লেখক ও পরিচিতি অ্যাকাউন্ট ছাড়াই দেখা যায়। প্রস্তুতি ও স্বয়ংক্রিয় যাচাই সফল হলে বই প্রকাশিত হয়।": "Published book titles, authors and descriptions are available without an account. Books publish automatically after successful preparation and checks.",
   "আপনার নিজের পাঠের জায়গা": "Your own reading space",
   "অ্যাকাউন্টে যুক্ত বই, পড়ার অবস্থান ও ব্যক্তিগত নোট আপনার পাঠের অংশ। বই পড়া, ডাউনলোড করা ও কিন্ডলে পাঠানোর সুযোগ বই এবং অ্যাকাউন্টের অনুমতির ওপর নির্ভর করে।": "Your books, reading position, and private notes are part of your personal library. Reading, downloads, and Kindle delivery depend on the book and your account permissions.",
   "তথ্যের মান": "Information Quality",

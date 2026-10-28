@@ -48,6 +48,8 @@ def commit_source_assets(ownership, stored):
             job, book, read_source_result(job.pk, job.checkpoint["document_ref"])
         )
     for kind, properties in stored.items():
+        if kind == GeneratedAssetType.COVER and "cover" in book.metadata_overrides:
+            continue
         GeneratedAsset.objects.update_or_create(
             book=book, asset_type=kind, defaults=properties
         )

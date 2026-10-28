@@ -21,7 +21,7 @@ pytestmark = pytest.mark.django_db
 
 def catalog_books():
     return [
-        Book.objects.create(title=title, state="published", manual_publisher=publisher)
+        Book.objects.create(title=title, state="published", publisher=publisher)
         for title, publisher in [
             ("Zulu", "Second"),
             ("alpha", "First"),
@@ -40,7 +40,7 @@ def test_catalog_combines_entities_type_role_and_account_ownership():
         BookContributor.objects.create(book=book, contributor=writer, role="author")
         BookCategory.objects.create(book=book, category=category)
         BookSeries.objects.create(book=book, series=series)
-    books[1].record_type = "manual"
+
     books[1].save()
     actor = User.objects.create_user(email="filter-owner@example.test")
     UserBook.objects.create(user=actor, book=books[1])
@@ -50,7 +50,6 @@ def test_catalog_combines_entities_type_role_and_account_ownership():
         "category": category.slug,
         "series": series.slug,
         "contributor_role": "author",
-        "record_type": "manual",
         "ownership": "mine",
     }
     assert client.get("/api/v1/catalog/books/", values).json()["entries"] == []
@@ -67,8 +66,8 @@ def test_catalog_combines_entities_type_role_and_account_ownership():
     assert (
         client.get(
             "/api/v1/catalog/books/", {**values, "record_type": "digital"}
-        ).json()["entries"]
-        == []
+        ).status_code
+        == 400
     )
     assert result["Cache-Control"] == "private, no-store"
 
@@ -82,8 +81,8 @@ def test_catalog_combines_entities_type_role_and_account_ownership():
         "-created_at",
         "catalog_code",
         "-catalog_code",
-        "manual_publisher",
-        "-manual_publisher",
+        "publisher",
+        "-publisher",
     ],
 )
 def test_catalog_sort_cursor_has_stable_ties_and_no_skipped_records(ordering):

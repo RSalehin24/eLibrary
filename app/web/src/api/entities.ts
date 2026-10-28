@@ -2,7 +2,7 @@ import { apiRequest } from "./http";
 import { apiMutation } from "./mutation";
 import type { CatalogReferences, EntityCreate, EntityUpdate, ManagedEntity } from "./types";
 import type { EntityKind } from "@/lib/catalog-entity";
-import type { EditorialCommand } from "./editorial";
+export type EntityCommand = "publish" | "withdraw";
 
 export function readCatalogReferences(kind: EntityKind | "books", query: string, signal: AbortSignal) {
   const parameters = new URLSearchParams({ kind, q: query, limit: "24" });
@@ -21,6 +21,6 @@ export function updateManagedEntity(kind: EntityKind, entity: ManagedEntity, inp
   return apiMutation<ManagedEntity>(managedEntityPath(kind, entity.id), { method: "PATCH", body: JSON.stringify({ ...input, expected_updated_at: entity.updated_at }) });
 }
 
-export function commandManagedEntity(kind: EntityKind, entity: ManagedEntity, action: EditorialCommand) {
+export function commandManagedEntity(kind: EntityKind, entity: ManagedEntity, action: EntityCommand) {
   return apiMutation<ManagedEntity>(managedEntityPath(kind, entity.id), { method: "POST", body: JSON.stringify({ action, expected_updated_at: entity.updated_at }) });
 }

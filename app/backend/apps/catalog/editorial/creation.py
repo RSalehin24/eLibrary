@@ -4,7 +4,7 @@ from apps.accounts.models import User
 from apps.catalog.editorial.service import EditorialConflict
 from apps.catalog.locking import lock_title
 from apps.catalog.models import Book
-from apps.common.models import AuditLog, LifecycleState, ReviewState
+from apps.common.models import AuditLog, LifecycleState
 from apps.common.permissions import user_can_create_catalog_book
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
@@ -37,8 +37,7 @@ def persist_creation(actor, identifier, values):
     with transaction.atomic():
         book = Book.objects.create(
             id=identifier,
-            state=LifecycleState.NEEDS_REVIEW,
-            review_state=ReviewState.NEEDS_REVIEW,
+            state=LifecycleState.DRAFT,
             **values,
         )
         AuditLog.objects.create(

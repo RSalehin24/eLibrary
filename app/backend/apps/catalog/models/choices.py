@@ -24,20 +24,9 @@ class GeneratedAssetStatus(models.TextChoices):
     FAILED = "failed", "Failed"
 
 
-class BookRecordType(models.TextChoices):
-    DIGITAL = "digital", "Digital"
-    MANUAL = "manual", "Manual"
-
-
-class ManualBindingType(models.TextChoices):
-    HARD_COVER = "hard_cover", "Hard Cover"
-    PAPER_BACK = "paper_back", "Paper Back"
-
-
 class CuratedDocumentStatus(models.TextChoices):
     DRAFT = "draft", "Draft"
     VALIDATED = "validated", "Validated"
-    REVIEW_REQUIRED = "review_required", "Review required"
     INVALID = "invalid", "Invalid"
 
 

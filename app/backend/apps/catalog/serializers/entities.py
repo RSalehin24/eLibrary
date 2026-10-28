@@ -3,7 +3,7 @@ from rest_framework import serializers
 from apps.catalog.models import Contributor
 from apps.catalog.serializers.editorial import (
     PUBLIC_EDITORIAL_FIELDS,
-    ReviewedEditorialSerializer,
+    PublicEditorialSerializer,
 )
 from apps.common.collection_pagination import CollectionPaginationSerializer
 
@@ -28,7 +28,7 @@ class PublicEntityCollectionSerializer(serializers.Serializer):
     pagination = CollectionPaginationSerializer()
 
 
-class PublicEntityDetailSerializer(ReviewedEditorialSerializer):
+class PublicEntityDetailSerializer(PublicEditorialSerializer):
     class Meta:
         model = Contributor
         fields = ("id", "name", "slug", *PUBLIC_EDITORIAL_FIELDS)

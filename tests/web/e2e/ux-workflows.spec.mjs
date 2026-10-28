@@ -30,7 +30,7 @@ test("books and primary actions fit the first screen in both languages", async (
         const bounds = await action.boundingBox(); expect(bounds.y + bounds.height).toBeLessThan(height); expect(bounds.height).toBeGreaterThanOrEqual(44);
       }
       if (width > 1200) {
-        await expect(page.locator(".admin-main-action")).toHaveCount(5);
+        await expect(page.locator(".admin-main-action")).toHaveCount(4);
         const firstAction = await page.locator(".admin-main-action").first().boundingBox();
         for (const control of await page.locator(".admin-main-action").all()) {
           const action = await control.boundingBox();
@@ -60,10 +60,10 @@ test("a completed source exposes actual EPUB and HTML files and direct editorial
   }
   await expect(page.getByRole("button", { name: "Prepare for Reading", exact: true })).toHaveCount(0);
   if (entry.content_summary?.check_completeness) await expect(page.locator(".source-content-summary")).toContainText("Only a short text");
-  await page.getByRole("link", { name: "Edit & Publish", exact: true }).click();
+  await page.getByRole("link", { name: "Edit Book", exact: true }).click();
   await expect(page.getByRole("heading", { level: 1, name: entry.book.title, exact: true })).toBeVisible();
   await expect(page.locator(".editor-toolbar").getByRole("button", { name: "Save Changes", exact: true })).toBeVisible();
-  await expect(page.locator(".editor-toolbar").getByRole("button", { name: "Publish", exact: true })).toBeVisible();
+  await expect(page.locator(".editor-toolbar").getByRole("button", { name: "Publish", exact: true })).toHaveCount(0);
 });
 
 test("Bengali source dates contain no English day periods, zone labels or digits", async ({ page }) => {

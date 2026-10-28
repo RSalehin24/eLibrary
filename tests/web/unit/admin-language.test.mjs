@@ -86,13 +86,15 @@ test("translated count suffixes retain their spacing and manual review is not re
 });
 
 test("unpublished records and manual uploads do not request draft review", () => {
-  for (const state of ["draft", "needs_review"]) {
+  for (const state of ["draft"]) {
     assert.equal(translateAdmin("en", catalogStateLabel(state)), "Unpublished");
     assert.equal(translateAdmin("bn", catalogStateLabel(state)), "প্রকাশিত নয়");
   }
   const help = "ডিজিটাল বইয়ের নথি তৈরির পরে EPUB আপলোড করতে পারবেন। নতুন নথি পর্যালোচনার জন্য সংরক্ষিত হবে। পাঠকের মালিকানা ও পড়ার অনুমতি আলাদাভাবে পরিচালনা করা হয়।";
-  assert.equal(translateAdmin("en", help), "Enter the book details, then upload an EPUB or add a paper book record. Publish when ready.");
-  assert.equal(translateAdmin("bn", help), "বইয়ের তথ্য দিয়ে EPUB আপলোড করুন, অথবা কাগজের বই যোগ করুন। প্রস্তুত হলে প্রকাশ করুন।");
+  assert.match(translateAdmin("en", help), /publishes automatically after successful preparation/);
+  assert.doesNotMatch(translateAdmin("en", help), /paper book|Publish when ready|review/);
+  assert.match(translateAdmin("bn", help), /স্বয়ংক্রিয়ভাবে প্রকাশিত হবে/);
+  assert.doesNotMatch(translateAdmin("bn", help), /কাগজের বই|পর্যালোচনা/);
 });
 
 test("EPUB upload guidance explains automatic preparation and source matching in both languages", () => {

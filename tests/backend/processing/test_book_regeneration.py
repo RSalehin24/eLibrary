@@ -45,7 +45,7 @@ def test_regeneration_reuses_the_book_and_preserves_previous_files_sessions_and_
         and book.seo_title == "Edited SEO"
     )
     assert list(book.contributors.values_list("name", flat=True)) == ["সম্পাদিত লেখক"]
-    assert book.state == "published" and book.editorial_reviewed_at is None
+    assert book.state == "published" and (not hasattr(book, "editorial_reviewed_at"))
     assert "বাংলা লেখা" in book.main_content_html
     assert (
         MetadataVersion.objects.get(book=book, source="before_regeneration").snapshot[
@@ -124,10 +124,7 @@ def test_regeneration_needs_both_metadata_and_processing_authority(regeneration)
     client = APIClient()
     client.force_authenticate(actor)
     path = f"/api/v1/manage/books/{book.slug}/"
-    assert (
-        client.get(path + "controls/").json()["regeneration_problem"]
-        == "processing_access_required"
-    )
+    assert client.get(path + "controls/").status_code == 404
     assert (
         client.post(
             path + "regenerate/",
@@ -137,7 +134,7 @@ def test_regeneration_needs_both_metadata_and_processing_authority(regeneration)
             },
             format="json",
         ).status_code
-        == 403
+        == 404
     )
     PermissionGrant.objects.filter(user=actor).delete()
     PermissionGrant.objects.create(user=actor, scope=PermissionScope.PROCESSING_MANAGE)

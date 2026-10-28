@@ -1,5 +1,12 @@
 # Application completeness audit — 21 October 2026
 
+The [current product specification](../application-reader-engine-plan.md) supersedes
+the physical inventory/logs, type classification, manual book review/publication
+and obsolete route compatibility recorded below. Those capabilities are intentionally
+removed in the current implementation. Other entries and historical test totals
+remain reference evidence; current checks and unaccepted gates are tracked in
+[implementation progress](../application-reader-engine-progress/README.md).
+
 ## Approved interface redesign — current checkpoint
 
 The separate admin/reader plan is implemented and under final browser verification.

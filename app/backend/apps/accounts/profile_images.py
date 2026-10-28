@@ -1,19 +1,12 @@
-import io
 import logging
-import warnings
-from uuid import uuid4
 
-from django.core.files.base import ContentFile
 from django.db import DatabaseError, transaction
-from PIL import Image, ImageOps, UnidentifiedImageError
-from rest_framework.exceptions import PermissionDenied, ValidationError
+from rest_framework.exceptions import PermissionDenied
 
 from apps.accounts.models import User
 from apps.accounts.profile_services import ProfileConflict
+from apps.common.images import normalized_uploaded_image
 
-MAX_IMAGE_BYTES = 5 * 1024 * 1024
-MAX_IMAGE_PIXELS = 2048 * 2048
-MAX_IMAGE_SIDE_PIXELS = 2048
 AVATAR_SIDE_PIXELS = 512
 logger = logging.getLogger(__name__)
 
@@ -27,42 +20,7 @@ def profile_image_url(user):
 
 
 def normalized_profile_image(upload):
-    if upload.size > MAX_IMAGE_BYTES:
-        raise ValidationError({"image": "Choose an image up to 5 MiB."})
-    data = upload.read(MAX_IMAGE_BYTES + 1)
-    try:
-        with warnings.catch_warnings():
-            warnings.simplefilter("error", Image.DecompressionBombWarning)
-            return encode_avatar(data)
-    except (
-        UnidentifiedImageError,
-        OSError,
-        ValueError,
-        Image.DecompressionBombError,
-        Image.DecompressionBombWarning,
-    ) as error:
-        raise ValidationError(
-            {
-                "image": "Choose a valid, single-frame PNG, JPEG, or WebP image up to 2048×2048 pixels."
-            }
-        ) from error
-
-
-def encode_avatar(data):
-    with Image.open(io.BytesIO(data)) as source:
-        if (
-            source.format not in {"PNG", "JPEG", "WEBP"}
-            or max(source.size) > MAX_IMAGE_SIDE_PIXELS
-            or source.width * source.height > MAX_IMAGE_PIXELS
-            or getattr(source, "is_animated", False)
-        ):
-            raise ValueError("Unsupported profile image.")
-        source.load()
-        image = ImageOps.exif_transpose(source).convert("RGBA")
-        image.thumbnail((AVATAR_SIDE_PIXELS, AVATAR_SIDE_PIXELS))
-        output = io.BytesIO()
-        image.save(output, format="PNG")
-    return ContentFile(output.getvalue(), name=f"{uuid4()}.png")
+    return normalized_uploaded_image(upload, AVATAR_SIDE_PIXELS)
 
 
 def remove_obsolete_image(storage, name):

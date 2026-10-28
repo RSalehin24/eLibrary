@@ -6,14 +6,14 @@ export async function newDigitalBook(page) {
   const session = await (await page.request.get("/api/v1/auth/session/")).json();
   const response = await page.request.post("/api/v1/manage/books/", {
     headers: { "X-CSRFToken": session.csrf_token },
-    data: { operation_id: randomUUID(), title: `আপলোডের পরীক্ষা ${randomUUID()}`, record_type: "digital" },
+    data: { operation_id: randomUUID(), title: `আপলোডের পরীক্ষা ${randomUUID()}` },
   });
   expect(response.status()).toBe(201);
   return response.json();
 }
 
 export async function readingEPUB(page) {
-  const response = await page.request.get(`/api/v1/reading/books/${encodeURIComponent(fixture.reading_book.slug)}/download/`);
+  const response = await page.request.get(`/api/v1/reading/books/${encodeURIComponent(fixture.upload_book.slug)}/download/`);
   expect(response.status()).toBe(200);
   const bytes = await response.body(), comment = Buffer.from(randomUUID());
   const end = bytes.lastIndexOf(Buffer.from("504b0506", "hex"));

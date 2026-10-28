@@ -7,17 +7,16 @@ import { useQuery } from "@tanstack/react-query";
 import { readSession } from "@/api/catalog";
 import { readerAccess } from "@/api/reading";
 import { BookReadingActions } from "./book-reading-actions";
-import { SaveBookButton } from "./save-book-button";
 
-export function BookActions({ slug, recordType }: { slug: string; recordType?: string }) {
+export function BookActions({ slug }: { slug: string }) {
   const account = useQuery({ queryKey: ["private", "session"], queryFn: ({ signal }) => readSession(signal) });
   const access = useQuery({ queryKey: ["private", "reader-access", slug],
     queryFn: ({ signal }) => readerAccess(slug, signal), refetchOnWindowFocus: "always", enabled: account.data?.authenticated === true && !account.data.user?.totp_setup_required });
   if (account.isPending) return <p className="muted" role="status"><SiteText>{"অ্যাকাউন্টের তথ্য দেখা হচ্ছে…"}</SiteText></p>;
   if (!account.data?.authenticated) return <p className="notice"><SiteText>{"বই পড়ার অনুমতি দেখতে "}</SiteText><Link className="text-link" href={`/login/?next=${encodeURIComponent(`/books/${slug}/`)}`}><SiteText>{"প্রবেশ করুন"}</SiteText></Link>।</p>;
   if (account.data.user?.totp_setup_required) return <p className="notice"><SiteText>{"বই পড়ার আগে "}</SiteText><Link className="text-link" href={`/profile/?next=${encodeURIComponent(`/books/${slug}/`)}`}><SiteText>{"দুই ধাপের নিরাপত্তা চালু করুন"}</SiteText></Link>।</p>;
-  if (recordType === "manual") return <><SaveBookButton slug={slug} /><p className="notice"><SiteText>{"কাগজের বইয়ের জন্য "}</SiteText><Link className="text-link" href={`/my-books/${encodeURIComponent(slug)}/`}><SiteText>{"পড়ার হিসাব রাখুন →"}</SiteText></Link></p></>;
   return <div className="book-actions">
+    {!access.isError && access.data?.can_edit_book && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(slug)}/`}><SiteText>বইয়ের তথ্য সম্পাদনা করুন</SiteText></Link>}
     {access.data && <BookReadingActions slug={slug} access={access.data} />}
     {access.data?.can_download && <a className="button button-quiet" href={`/api/v1/reading/books/${encodeURIComponent(slug)}/download/`}><SiteText>{"EPUB ডাউনলোড"}</SiteText></a>}
     {access.isPending && <p className="muted" role="status"><SiteText>{"অনুমতি দেখা হচ্ছে…"}</SiteText></p>}

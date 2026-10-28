@@ -1,87 +1,75 @@
 # Entity and book relationship administration
 
-`/manage/entities/` opens the contributor list immediately, with shared tabs for
-categories, series and collections. Each row has Edit and View Books actions;
-related-book links include drafts within the manager's permission scope.
-Contributor lists can filter author, translator, editor, publisher and other roles.
-Lists search names and aliases in SQL, paginate at
-1–100 records, and fetch only their displayed fields. Full editorial text is
-loaded on the detail page. All responses prohibit private caching.
+The current [product specification](../application-reader-engine-plan.md) removes
+editorial approval and restricts existing-book bibliographic edits to administrators.
+[Implementation progress](../application-reader-engine-progress/README.md) records
+actual verification and pending acceptance.
 
-`/api/v1/manage/entities/<kind>/` lists and creates entities; the UUID detail
-route reads, updates, reviews, and, for collections, publishes or withdraws them.
-Creation requires global metadata authority. Contributor/category grants permit
-editing only the exact granted entity; a book grant does not grant entity editing.
-Mutations lock and reload the actor before checking authority, then compare the
-expected timestamp. Names must contain letters or numbers and remain unique
-after normalization within their kind. Kind-level name locks serialize concurrent
-creation and renames, including collections whose legacy model permits duplicate
-names. An existing entity with an unchanged legacy duplicate name may need a
-distinct name before saving through this workspace.
+## Entity workspace and identity
 
-Creation and updates take the kind lock before the entity row lock. This also
-prevents a creation UUID collision against a legacy record from deadlocking
-with an edit of that record.
+`/manage/entities/` opens the contributor list, with shared category, series and
+reading-list tabs. Lists search names and aliases, paginate at 1–100 records and
+load full descriptions only on detail pages. Responses prohibit private caching.
+Creation requires current global metadata-creation authority. Contributor/category
+grants permit access to the exact granted entity; a book grant does not grant
+entity editing.
 
-Creation uses one UUID for the entity and immutable creation audit. Replay verifies
-the actor, verb, model kind, target UUID, and original payload before returning
-the current entity. Changed input or a colliding command conflicts. Updates and
-commands also create audit records; existing slug history preserves public
-canonical redirects after renaming.
+Contributor and series display names are not unique identities. Separate current
+records can have the same normalized name while retaining different UUIDs, slugs
+and catalog numbers. A source namespace and key can bind one contributor or series
+through `EntitySourceBinding`; the database enforces one target and a unique
+namespace/key pair. Repeated binding use is idempotent. A display-name-only match
+does not merge unrelated people or series. Category and reading-list name validation
+retains its existing taxonomy/list rules.
 
-Collections accept at most 100 unique book UUIDs in explicit order. Selection
-replacement, metadata, review reset, and audit writes share one transaction.
-Missing or deleted selections roll back the entire command. Detail responses
-include ordered book IDs and labels in one joined query. Publication requires
-a nonempty introduction and selected books. The public collection feed
-continues to expose only eligible public books. Saved metadata is visible without
-a separate manual-review step; revisions, authorization and validation still apply.
-The existing review API remains compatible for older clients.
+Creation UUIDs are checked against immutable audits before replay. Actor, model
+kind, target and original input must match. Changed input conflicts. Kind locks
+precede entity row locks. Mutations reload current authority and compare
+`expected_updated_at` before saving.
 
-Public `/contributors/`, `/categories/` and `/series/` pages list names associated
-with public books. Their bounded search/pagination API is
-`/api/v1/catalog/entities/<kind>/`. Draft-only names remain private. Contributor
-role filters match the role on the same published book and persist through book
-links and pagination. Signed cursors are bound to the directory kind and role.
+A non-admin cannot mutate a contributor, category or series linked to a book, even
+through an otherwise authorized entity endpoint. Link creation and entity edits use
+the same kind locks to close the attachment race. An administrator's linked edit
+advances affected book revisions, preserves relationship overrides and marks file
+metadata as potentially different. Authorized reading-list description, membership
+and ordering remain ordinary list curation.
 
-Reference searches at `/api/v1/manage/catalog-references/` return at most 100
-IDs/names (the UI requests 24), plus `has_more`. Book results respect metadata
-management scope. The UI debounces searches and cancels obsolete reads. Selections
-persist across searches, support keyboard-accessible ordering/removal, and do not
-download the entire catalog. Validation preserves drafts. Revision conflicts and
-uncertain mutations block repeated writes until the current result is inspected.
-Unsaved work and pending writes participate in the PWA update guard.
+## Reading lists
 
-## Book relationships and editions
+Reading lists accept at most 100 unique book UUIDs in explicit order. Membership,
+metadata and audit writes commit together. Missing or deleted selections roll back
+the command. Publishing a list requires an introduction and a selection of books;
+public contents expose only eligible public books. No review endpoint or approval
+step remains.
 
-Global metadata managers reach `/manage/books/<slug>/relationships/` from the book
-editor. `GET` and `PATCH` on the matching versioned API expose contributor roles,
-categories, ordered series, and edition grouping. A contributor may hold several
-distinct roles; duplicate contributor/role pairs and duplicate category/series
-IDs are rejected. All selections have a 100-entry limit and must resolve to
-existing entities. Unknown and malformed nested fields are rejected.
+Public contributor/category/series directories include names associated with public
+books. Contributor role filtering applies to the role on that same book. Signed
+cursors are bound to the directory and role; drafts do not leak through public
+counts or linked-book lists.
 
-Relationship edits require global authority because contributor/category links
-also determine scoped book permissions. They never assign ownership or grants.
-Every command checks the source book's revision, records its previous relationships
-in `MetadataVersion`, and clears editorial review. Invalid selections roll back
-all replacements and snapshots.
+## References, relationships and editions
 
-An explicit `edition_of` book joins that book's existing group. If it has no group,
-a new `BookGroup` is created and both books receive snapshots, new timestamps,
-and review resets. Selecting a book in another group moves only the edited book;
-it does not merge groups. `null` detaches only the edited book and retains the
-other records. A command lock precedes book row locks to prevent reciprocal
-edition requests from deadlocking. Edition names are bounded to 100 per detail,
-with an explicit indication of additional members. This is administration of
-existing groups; public cross-edition browsing remains separate work.
+`/api/v1/manage/catalog-references/` returns bounded IDs/names and catalog numbers
+where available, with `has_more`. The UI requests 24 results, debounces queries and
+cancels obsolete reads. Catalog numbers distinguish equal names in selection lists;
+commands send explicit UUIDs. Book-reference searches for relationship changes
+require administrator access.
 
-## Verification
+Administrators edit contributor roles, categories, ordered series and edition groups
+at `/manage/books/<slug>/relationships/` and its versioned API. Duplicate UUID/role
+pairs, duplicate category/series IDs, malformed nested fields, unavailable selections
+and more than 100 entries are rejected. Changes record the previous relationships,
+advance the catalog revision and preserve overrides. They do not grant ownership
+or access. Permission applicability is queried from current relationships.
 
-PostgreSQL tests cover CSRF, scoped/revoked authority, immutable UUID replay,
-normalized-name races, revision conflicts, publication and slug history, invalid
-selection rollback, book labels without N+1 queries, contributor roles/order,
-relationship snapshots, and concurrent/reciprocal edition commands. Browser
-journeys cover all entity kinds, remote selection, collection publication, stale
-drafts, uncertain requests, role isolation, edition attachment/detachment, and
-320-pixel layouts at 200% text. No dependency was added.
+An explicit `edition_of` selection joins the chosen book's group, creating a group
+if necessary. It never guesses a group from equal names or merges existing groups.
+`null` detaches only the edited book. A command lock precedes book locks to prevent
+reciprocal edition edits from deadlocking. Detail responses bound related editions
+to 100 and indicate additional members. Public edition browsing applies publication
+and access filtering independently.
+
+Backend and browser checks cover role denial, scoped listing, current-actor reload,
+UUID replay, name identity, bounded queries, stale commands, atomic relationship
+replacement, concurrent edits and explicit edition attachment/detachment. Current
+results and visual acceptance remain in the implementation evidence record.

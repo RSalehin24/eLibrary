@@ -1,5 +1,6 @@
 from http import HTTPStatus
 
+from django.http import Http404
 from rest_framework.exceptions import ValidationError
 from rest_framework.views import APIView
 
@@ -13,6 +14,11 @@ ERROR_CODES: dict[int, str] = {
 
 
 class VersionedAPIView(APIView):
+    def initial(self, request, *args, **kwargs):
+        if "/" in kwargs.get("slug", ""):
+            raise Http404
+        super().initial(request, *args, **kwargs)
+
     def handle_exception(self, exc):
         response = super().handle_exception(exc)
         detail = response.data

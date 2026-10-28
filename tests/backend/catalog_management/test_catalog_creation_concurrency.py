@@ -40,11 +40,7 @@ def creator(email):
 
 def test_parallel_repeated_creation_produces_one_book_and_audit():
     actor = creator("parallel-creator@library.test")
-    values = {
-        "operation_id": str(uuid4()),
-        "title": "এক অনুরোধের বই",
-        "record_type": "digital",
-    }
+    values = {"operation_id": str(uuid4()), "title": "এক অনুরোধের বই"}
     results = concurrent_creations([actor, actor], [values, values])
     assert all(status == 201 for status, _ in results)
     assert results[0][1]["id"] == results[1][1]["id"]
@@ -58,7 +54,6 @@ def test_different_creators_can_enter_editions_with_the_same_title():
         {
             "operation_id": str(uuid4()),
             "title": "একই নামের পৃথক সংস্করণ",
-            "record_type": "manual",
             "edition": str(index),
         }
         for index in range(2)
@@ -73,12 +68,7 @@ def test_cross_account_identifier_collision_cannot_return_another_creation():
     actors = [creator(f"collision-{index}@library.test") for index in range(2)]
     identifier = str(uuid4())
     commands = [
-        {
-            "operation_id": identifier,
-            "title": f"পৃথক বই {index}",
-            "record_type": "digital",
-        }
-        for index in range(2)
+        {"operation_id": identifier, "title": f"পৃথক বই {index}"} for index in range(2)
     ]
     results = concurrent_creations(actors, commands)
     assert sorted(status for status, _ in results) == [201, 409]

@@ -32,9 +32,7 @@ def test_readers_anonymous_and_disabled_accounts_cannot_read_overview(client):
 def test_scoped_editors_count_only_manageable_books_without_other_domains(client):
     editor = User.objects.create_user(email="overview-editor@library.test")
     draft = Book.objects.create(title="অনুমোদিত খসড়া")
-    approved = Book.objects.create(
-        title="অনুমোদিত প্রকাশনা", state="published", editorial_reviewed_at=timezone.now()
-    )
+    approved = Book.objects.create(title="অনুমোদিত প্রকাশনা", state="published")
     Book.objects.create(title="অন্য বই")
     removed = Book.objects.create(title="অপসারিত", deleted_at=timezone.now())
     for book in [draft, approved, removed]:
@@ -52,7 +50,6 @@ def test_scoped_editors_count_only_manageable_books_without_other_domains(client
         "ready": 0,
         "published": 1,
         "archived": 0,
-        "editorial_pending": 0,
     }
     assert data["sources"] is None and data["accounts"] is None
     assert data["work"]["processing"] is None and data["work"]["account_mail"] is None

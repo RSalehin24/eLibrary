@@ -1,3 +1,23 @@
+import json
+from datetime import datetime, timedelta
+from unittest.mock import patch
+
+import pytest
+from apps.accounts.models import User
+from apps.accounts.serializers.support import (
+    PasswordLinkTokenGenerator,
+    password_link_token_generator,
+)
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.core import mail
+from django.test import override_settings
+from django.utils.encoding import force_bytes
+from django.utils.http import urlsafe_base64_encode
+from rest_framework.test import APIClient
+
+from tests.backend.auth.test_auth_01_cases.totp_and_managed_user_invites import (
+    extract_reset_link_params,
+)
 
 
 @pytest.mark.django_db
@@ -24,9 +44,7 @@ def test_password_reset_request_sends_reset_confirm_link_email(client):
     assert response.json()["detail"] == "Reset email has been sent."
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [user.email]
-    assert (
-        "http://127.0.0.1:5173/reset-password/confirm?uid=" in mail.outbox[0].body
-    )
+    assert "http://127.0.0.1:5173/reset-password/confirm?uid=" in mail.outbox[0].body
     assert (
         "This link stays valid for 6 hours from the time it was generated."
         in mail.outbox[0].body
@@ -224,7 +242,9 @@ def test_password_reset_request_omits_invited_users_with_pending_setup(client):
 
 
 @pytest.mark.django_db
-def test_password_reset_request_returns_missing_user_message_when_email_is_unknown(client):
+def test_password_reset_request_returns_missing_user_message_when_email_is_unknown(
+    client,
+):
     response = client.post(
         "/api/auth/password-reset/",
         data=json.dumps({"email": "missing-user@example.com"}),

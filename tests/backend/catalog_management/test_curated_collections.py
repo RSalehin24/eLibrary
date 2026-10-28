@@ -1,7 +1,6 @@
 import pytest
 from apps.catalog.models import Book, CollectionBook, CuratedCollection
 from django.db import IntegrityError, transaction
-from django.utils import timezone
 from rest_framework.fields import DateTimeField
 
 pytestmark = pytest.mark.django_db
@@ -12,15 +11,10 @@ def collection_with_books():
         name="নির্বাচিত বাংলা গল্প",
         state="published",
         editorial_description="গল্প বাছাইয়ের পর্যালোচিত সম্পাদকীয় পরিচিতি।",
-        editorial_reviewed_at=timezone.now(),
         indexing_eligible=True,
     )
-    earlier = Book.objects.create(
-        title="প্রথম নির্বাচিত বই", state="published", review_state="approved"
-    )
-    later = Book.objects.create(
-        title="দ্বিতীয় নির্বাচিত বই", state="published", review_state="approved"
-    )
+    earlier = Book.objects.create(title="প্রথম নির্বাচিত বই", state="published")
+    later = Book.objects.create(title="দ্বিতীয় নির্বাচিত বই", state="published")
     private = Book.objects.create(title="গোপন খসড়া")
     CollectionBook.objects.create(collection=collection, book=earlier, position=5)
     CollectionBook.objects.create(collection=collection, book=later, position=20)

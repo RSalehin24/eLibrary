@@ -5,7 +5,7 @@ const { navigationIsCurrent } = await typescriptModule(new URL("../../../app/web
 
 test("related reader pages keep Browse or My Books selected", () => {
   for (const path of ["/books/a/", "/contributors/", "/contributors/a/", "/categories/a/", "/series/a/", "/collections/a/"]) assert.equal(navigationIsCurrent(path, "/catalog/"), true);
-  assert.equal(navigationIsCurrent("/physical-books/", "/my-books/"), true);
+  assert.equal(navigationIsCurrent("/physical-books/", "/my-books/"), false);
   assert.equal(navigationIsCurrent("/my-books/a/", "/my-books/"), true);
   assert.equal(navigationIsCurrent("/notes/", "/catalog/"), false);
 });

@@ -4,7 +4,6 @@ import pytest
 from apps.catalog.models import Book, BookContributor, Category, Contributor, Series
 from apps.catalog.models.editorial import validate_social_image
 from django.core.exceptions import ValidationError
-from django.utils import timezone
 
 pytestmark = pytest.mark.django_db
 
@@ -68,15 +67,12 @@ def test_alias_normalization_survives_partial_save():
 
 def test_published_book_aliases_are_searchable_without_review(client):
     book = Book.objects.create(
-        title="পথের পাঁচালী",
-        state="published",
-        review_state="approved",
-        alternative_names=["Pather Panchali"],
+        title="পথের পাঁচালী", state="published", alternative_names=["Pather Panchali"]
     )
     assert client.get("/api/v1/catalog/books/?q=Pather").json()["entries"][0][
         "id"
     ] == str(book.pk)
-    book.editorial_reviewed_at = timezone.now()
+
     book.save()
     assert client.get("/api/v1/catalog/books/?q=Pather").json()["entries"][0][
         "id"
@@ -85,13 +81,9 @@ def test_published_book_aliases_are_searchable_without_review(client):
 
 def test_reviewed_contributor_aliases_match_linked_books(client):
     author = Contributor.objects.create(
-        name="রবীন্দ্রনাথ ঠাকুর",
-        alternative_names=["Rabindranath Tagore"],
-        editorial_reviewed_at=timezone.now(),
+        name="রবীন্দ্রনাথ ঠাকুর", alternative_names=["Rabindranath Tagore"]
     )
-    book = Book.objects.create(
-        title="গীতাঞ্জলি", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="গীতাঞ্জলি", state="published")
     BookContributor.objects.create(book=book, contributor=author)
     assert client.get("/api/v1/catalog/books/?q=Tagore").json()["entries"][0][
         "id"
@@ -103,7 +95,7 @@ def test_indexing_requires_eligibility_and_substantive_description():
         title="বই", indexing_eligible=True, editorial_description="সম্পাদিত পরিচিতি"
     )
     assert book.is_indexable is True
-    book.editorial_reviewed_at = timezone.now()
+
     assert book.is_indexable is True
     book.editorial_description = "   "
     assert book.is_indexable is False

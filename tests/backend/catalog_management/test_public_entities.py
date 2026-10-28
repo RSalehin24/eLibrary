@@ -8,7 +8,6 @@ from apps.catalog.models import (
     Contributor,
     Series,
 )
-from django.utils import timezone
 
 pytestmark = pytest.mark.django_db
 
@@ -37,7 +36,7 @@ def test_public_entity_requires_a_published_book_without_manual_review(
     assert response.status_code == 200
     assert response.json()["editorial_description"] == entity.editorial_description
     assert response.json()["indexable"] is False
-    entity.editorial_reviewed_at = timezone.now()
+
     entity.indexing_eligible = True
     entity.editorial_description = "পর্যালোচিত পরিচিতি"
     old_slug = entity.slug

@@ -15,8 +15,6 @@ def library_books(user):
         Book.objects.filter(user_books__user=user, deleted_at__isnull=True).only(
             *PUBLIC_BOOK_FIELDS,
             "state",
-            "review_state",
-            "record_type",
         ),
         user,
     )
@@ -25,7 +23,7 @@ def library_books(user):
 def library_queryset(user, parameters):
     queryset = annotate_personal_books(
         personal_feed(user, parameters.get("view", "all")), user
-    ).only(*PUBLIC_BOOK_FIELDS, "state", "review_state", "record_type")
+    ).only(*PUBLIC_BOOK_FIELDS, "state")
     queryset = filter_public_books(queryset, parameters)
     queryset = filter_owned_books(queryset, parameters, user)
     if parameters.get("sort", "").lstrip("-") == "requested_at":

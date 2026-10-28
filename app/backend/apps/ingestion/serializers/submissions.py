@@ -1,3 +1,5 @@
+from typing import ClassVar
+
 from rest_framework import serializers
 
 from apps.catalog.serializers import BookListSerializer
@@ -9,22 +11,37 @@ from .common import present_status
 class MatchCandidateSerializer(serializers.ModelSerializer):
     class Meta:
         model = MatchCandidate
-        fields = ["id", "rank", "candidate_title", "candidate_author", "candidate_url", "confidence", "is_selected"]
+        fields: ClassVar = [
+            "id",
+            "rank",
+            "candidate_title",
+            "candidate_author",
+            "candidate_url",
+            "confidence",
+            "is_selected",
+        ]
 
 
 class ProcessingJobSerializer(serializers.ModelSerializer):
     status = serializers.SerializerMethodField()
     submission_id = serializers.UUIDField(source="submission.id", read_only=True)
-    submission_input = serializers.CharField(source="submission.original_input", read_only=True)
-    submission_origin = serializers.CharField(source="submission.origin", read_only=True)
+    submission_input = serializers.CharField(
+        source="submission.original_input", read_only=True
+    )
+    submission_origin = serializers.CharField(
+        source="submission.origin", read_only=True
+    )
     submission_status = serializers.SerializerMethodField()
-    submission_resolution_status = serializers.CharField(source="submission.resolution_status", read_only=True)
+    submission_resolution_status = serializers.CharField(
+        source="submission.resolution_status", read_only=True
+    )
     target_book_slug = serializers.SerializerMethodField()
     target_book_title = serializers.SerializerMethodField()
     target_book_deleted = serializers.SerializerMethodField()
+
     class Meta:
         model = ProcessingJob
-        fields = [
+        fields: ClassVar = [
             "id",
             "submission_id",
             "job_type",
@@ -80,7 +97,7 @@ class ProcessingJobSerializer(serializers.ModelSerializer):
 
 class ProcessingBookSummarySerializer(BookListSerializer):
     class Meta(BookListSerializer.Meta):
-        fields = ["id", "title", "slug", "authors", "series"]
+        fields: ClassVar = ["id", "title", "slug", "authors", "series"]
 
 
 class SubmissionSerializer(serializers.ModelSerializer):
@@ -96,7 +113,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = BookSubmission
-        fields = [
+        fields: ClassVar = [
             "id",
             "input_type",
             "origin",
@@ -105,7 +122,6 @@ class SubmissionSerializer(serializers.ModelSerializer):
             "resolution_status",
             "resolution_confidence",
             "status",
-            "review_state",
             "error_message",
             "linked_book_slug",
             "linked_book",
@@ -129,11 +145,23 @@ class SubmissionSerializer(serializers.ModelSerializer):
         return present_status(obj.status)
 
     def get_candidates(self, obj):
-        attempt = obj.resolution_attempts.first() or (obj.canonical_submission.resolution_attempts.first() if obj.canonical_submission_id else None)
-        return MatchCandidateSerializer(attempt.match_candidates.all()[:3], many=True).data if attempt else []
+        attempt = obj.resolution_attempts.first() or (
+            obj.canonical_submission.resolution_attempts.first()
+            if obj.canonical_submission_id
+            else None
+        )
+        return (
+            MatchCandidateSerializer(attempt.match_candidates.all()[:3], many=True).data
+            if attempt
+            else []
+        )
 
     def get_latest_job(self, obj):
-        job = obj.processing_jobs.first() or (obj.canonical_submission.processing_jobs.first() if obj.canonical_submission_id else None)
+        job = obj.processing_jobs.first() or (
+            obj.canonical_submission.processing_jobs.first()
+            if obj.canonical_submission_id
+            else None
+        )
         return ProcessingJobSerializer(job).data if job else None
 
     def get_linked_book_slug(self, obj):
@@ -160,6 +188,7 @@ class SubmissionSerializer(serializers.ModelSerializer):
 
     def get_uses_existing_request(self, obj):
         return bool(obj.canonical_submission_id)
+
 
 __all__ = [
     "MatchCandidateSerializer",

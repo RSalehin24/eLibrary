@@ -1,3 +1,16 @@
+import json
+
+import pytest
+from apps.ingestion.models import SourceCatalogEntry
+from apps.processing import services as processing_services
+from apps.processing.models import BookRecord
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_sync,
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -150,7 +163,10 @@ def test_processing_sync_mirrors_checkpoint_progress_and_clears_it_on_stop(
             self.store.pop(key, None)
 
     fake_checkpoint_client = FakeCheckpointClient()
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_checkpoint_client)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client",
+        lambda: fake_checkpoint_client,
+    )
 
     response = client.post(
         "/api/processing/sync/start/",
@@ -169,7 +185,9 @@ def test_processing_sync_mirrors_checkpoint_progress_and_clears_it_on_stop(
     assert mirrored_payload["status"] == "syncing"
     assert mirrored_payload["progress"]["savedData"]["nextPageIndex"] == 0
 
-    response = client.post("/api/processing/sync/pause/", content_type="application/json")
+    response = client.post(
+        "/api/processing/sync/pause/", content_type="application/json"
+    )
     assert response.status_code == 200
     _mutation, _payload = post_processing_mutation(
         client,
@@ -181,7 +199,9 @@ def test_processing_sync_mirrors_checkpoint_progress_and_clears_it_on_stop(
     assert mirrored_payload["progress"]["savedData"]["nextPageIndex"] == 1
     assert mirrored_payload["fetchedCount"] == 1
 
-    response = client.post("/api/processing/sync/stop/", content_type="application/json")
+    response = client.post(
+        "/api/processing/sync/stop/", content_type="application/json"
+    )
     assert response.status_code == 200
     assert checkpoint_key not in fake_checkpoint_client.store
 

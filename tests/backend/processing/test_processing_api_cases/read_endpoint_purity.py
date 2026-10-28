@@ -1,3 +1,17 @@
+import pytest
+from apps.processing.models import (
+    BookRecord,
+    ProcessingAutomationKind,
+    ProcessingAutomationSettings,
+    ProcessingSyncStatus,
+)
+from apps.processing.services import PROCESSING_SYNC_KEY_CATALOG, get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -45,10 +59,14 @@ def test_processing_get_endpoints_do_not_advance_pausing_sync(client, read_path)
 @pytest.mark.django_db
 def test_processing_state_does_not_run_due_automations(client, monkeypatch):
     login_processing_admin(client)
-    scheduled_time = timezone.localtime(timezone.now()).replace(
-        second=0,
-        microsecond=0,
-    ).time()
+    scheduled_time = (
+        timezone.localtime(timezone.now())
+        .replace(
+            second=0,
+            microsecond=0,
+        )
+        .time()
+    )
     ProcessingAutomationSettings.objects.update_or_create(
         kind=ProcessingAutomationKind.CATALOG,
         defaults={
@@ -60,8 +78,14 @@ def test_processing_state_does_not_run_due_automations(client, monkeypatch):
             "status_message": "",
         },
     )
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work', lambda: False)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline",
+        lambda: False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_enqueue_processing_sync_work",
+        lambda: False,
+    )
 
     response = client.get("/api/processing/state/?includeLists=0")
 

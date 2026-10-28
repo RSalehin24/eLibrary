@@ -32,7 +32,7 @@ PUBLIC_BOOK_FIELDS = (
     "title",
     "slug",
     "catalog_code",
-    "manual_language",
+    "language",
     "edition",
     "created_at",
 )
@@ -94,8 +94,6 @@ def filter_contributor_books(queryset, parameters):
 
 def filter_public_books(queryset, parameters):
     queryset = filter_contributor_books(queryset, parameters)
-    if parameters.get("record_type", "all") != "all":
-        queryset = queryset.filter(record_type=parameters["record_type"])
     for parameter, relation, model in (
         ("category", "book_categories__category_id__in", Category),
         ("series", "book_series__series_id__in", Series),

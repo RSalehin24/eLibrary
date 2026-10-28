@@ -38,7 +38,6 @@ def job_queryset(user):
             "book__title",
             "book__slug",
             "book__updated_at",
-            "book__record_type",
             "book__state",
             "book__deleted_at",
             "source_record__id",

@@ -4,7 +4,7 @@ test("book totals show lifecycle counts without a manual-review counter in eithe
   await page.setViewportSize({ width: 390, height: 844 });
   await useAccount(page, "administrator");
   const { books } = await (await page.request.get("/api/v1/manage/overview/")).json();
-  expect(books.editorial_pending).toBe(0);
+  expect(Object.hasOwn(books, "editorial_pending")).toBe(false);
   expect(books.total).toBe(books.draft + books.processing + books.ready + books.published + books.archived);
   await page.goto("/manage/overview/");
   for (const [language, title, labels] of [

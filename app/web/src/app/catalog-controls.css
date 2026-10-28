@@ -25,11 +25,6 @@
 .saved-filters-panel .search-row { display:flex; gap:8px; }
 .saved-filters-panel .search-row input { flex:1; }
 .catalog-controls:has(.saved-catalog-filters) { margin-bottom:8px; }
-.physical-filter-details { margin:8px 0 16px; }
-.physical-filter-details>summary { display:inline-flex; list-style:none; cursor:pointer; }
-.physical-filter-details>summary::-webkit-details-marker { display:none; }
-.physical-filter-details>form { margin-top:12px; padding:16px; border:1px solid var(--line); border-radius:10px; background:var(--surface); align-items:end; }
-.physical-filter-details:not([open])>form { display:none; }
 .catalog-export-controls { margin:24px 0; padding-top:12px; border-top:1px solid var(--line); }
 .catalog-export-menu>summary { list-style:none; cursor:pointer; min-height:44px; padding:8px 12px; font-size:.8125rem; }
 .catalog-export-menu>summary::-webkit-details-marker { display:none; }

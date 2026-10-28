@@ -7,8 +7,12 @@ from .catalog import (
     SourceCatalogRefreshStateSerializer,
 )
 from .common import BulkIdsSerializer, SubmissionBatchCreateSerializer, present_status
-from .reviews import DuplicateReviewDecisionSerializer, DuplicateReviewSerializer, ProcessingLogSerializer
-from .submissions import MatchCandidateSerializer, ProcessingJobSerializer, SubmissionSerializer
+from .reviews import ProcessingLogSerializer
+from .submissions import (
+    MatchCandidateSerializer,
+    ProcessingJobSerializer,
+    SubmissionSerializer,
+)
 
 __all__ = [
     "BulkIdsSerializer",
@@ -16,8 +20,6 @@ __all__ = [
     "CatalogAutomationSettingsUpdateSerializer",
     "CatalogCurationRunCreateSerializer",
     "CatalogCurationRunSerializer",
-    "DuplicateReviewDecisionSerializer",
-    "DuplicateReviewSerializer",
     "MatchCandidateSerializer",
     "ProcessingJobSerializer",
     "ProcessingLogSerializer",

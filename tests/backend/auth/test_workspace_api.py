@@ -27,6 +27,7 @@ def test_anonymous_session_has_reader_workspace_and_csrf_cookie(client):
         "manage": False,
         "management_sections": [],
         "can_create_books": False,
+        "can_edit_books": False,
     }
     assert payload["csrf_token"]
     assert "csrftoken" in response.cookies

@@ -2,7 +2,6 @@ import pytest
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.access.publication_models import PreparedPublication
 from apps.accounts.models import User
-from apps.catalog.editorial.service import publish_book, review_book_editorial
 from apps.catalog.models import UserBook
 from apps.ingestion.source_processing.resolution import resolve_source_job
 from apps.processing.jobs.execution_errors import ExecutionFailure
@@ -13,15 +12,13 @@ from source_processing_fixtures import execute_source_job
 pytestmark = pytest.mark.django_db
 
 
-def test_a_curated_reviewed_source_book_can_be_read_without_an_extra_preparation_request(
+def test_a_curated_source_book_can_be_read_without_an_extra_preparation_request(
     curated_job,
 ):
     execute_source_job(curated_job)
     assert curated_job.state == "succeeded"
-    book = review_book_editorial(
-        curated_job.requested_by, curated_job.book_id, curated_job.book.updated_at
-    )
-    book = publish_book(curated_job.requested_by, book.pk, book.updated_at)
+    book = curated_job.book
+    assert book.state == "published"
     reader = User.objects.create_user(email="curated-book-reader@library.test")
     PermissionGrant.objects.create(
         user=reader, book=book, scope=PermissionScope.READ_DURABLE

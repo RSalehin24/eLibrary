@@ -17,7 +17,7 @@ from apps.catalog.editorial.service import (
     revision_checked_book,
 )
 from apps.catalog.models import MetadataVersion
-from apps.common.models import AuditLog, LifecycleState, ReviewState
+from apps.common.models import AuditLog, LifecycleState
 from apps.common.text import normalize_catalog_text
 from apps.ingestion.models import SourceCatalogEntry
 from apps.ingestion.pipeline.curated_persistence import (
@@ -61,9 +61,9 @@ def request_book_regeneration(actor, book_id, values):
     require_processing_manager(actor)
     snapshot = get_object_or_404(metadata_managed_books(actor), pk=book_id)
     url = configured_book_source(snapshot)
-    if snapshot.record_type != "digital" or not url:
+    if not url:
         raise ValidationError(
-            "Regeneration requires a digital book from the configured website."
+            "Regeneration requires a book from the configured website."
         )
     command = regeneration_command(snapshot, values, url)
     existing = matching_source_command(actor, values["operation_id"], command)
@@ -81,16 +81,10 @@ def request_book_regeneration(actor, book_id, values):
         and book.source_quality_state != "quarantined"
     )
     if not preserve_publication:
-        book.state, book.review_state, book.editorial_reviewed_at = (
-            LifecycleState.PROCESSING,
-            ReviewState.PENDING,
-            None,
-        )
+        book.state = LifecycleState.PROCESSING
         book.save(
             update_fields=[
                 "state",
-                "review_state",
-                "editorial_reviewed_at",
                 "updated_at",
             ]
         )

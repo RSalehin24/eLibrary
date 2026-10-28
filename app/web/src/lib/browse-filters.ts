@@ -1,6 +1,6 @@
 import type { RouteQuery } from "./route-query";
 
-const retiredFilters = new Set(["record_type", "created_after", "created_before", "from_date", "to_date"]);
+const retiredFilters = new Set(["record_type", "book_type", "review_state", "binding", "manual_price", "created_after", "created_before", "from_date", "to_date", "requested_after", "requested_before", "added_after", "added_before"]);
 
 export function currentBrowseFilters<Value>(values: Readonly<Record<string, Value>>): Record<string, Value> {
   return Object.fromEntries(Object.entries(values).filter(([key]) => !retiredFilters.has(key)));

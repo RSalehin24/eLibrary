@@ -21,7 +21,7 @@ export async function CatalogEntityPage({ kind, ...props }: EntityPageProps & { 
   const destination = retiredFilterRedirect(pathname, query);
   if (destination) redirect(destination);
   if (role && !Object.hasOwn(contributorRoles, role)) notFound();
-  const parameters = new URLSearchParams({ [entityFilters[kind]]: entity.slug, record_type: "all", page: String(page) });
+  const parameters = new URLSearchParams({ [entityFilters[kind]]: entity.slug, page: String(page) });
   if (role) parameters.set("contributor_role", role);
   const books = await publicRequest<BookCollection>(`catalog/books/?${parameters}`);
   if (page > 1 && !books.entries.length) notFound();

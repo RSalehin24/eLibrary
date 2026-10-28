@@ -1,24 +1,30 @@
 import { test, expect, fixture, useAccount, setLanguage } from "./fixtures.mjs";
 
-test("blocked source publication explains regeneration in both languages without replaying the request", async ({ page }) => {
+test("metadata grantees cannot enter book editors or invoke retired publication", async ({ page }) => {
   await useAccount(page, "editor");
-  await page.goto(`/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`);
-  let requests = 0;
-  await page.route("**/api/v1/manage/books/*/publish/", async route => {
-    requests += 1;
-    await route.fulfill({ status: 409, json: { code: "state_conflict", detail: "Regenerate the source book to verify its complete text and files.", field_errors: {} } });
-  });
-  await page.getByRole("button", { name: "প্রকাশ করুন", exact: true }).click();
-  const alert = page.locator(".editorial-workspace").getByRole("alert");
-  await expect(alert).toContainText("বইয়ের সম্পূর্ণ লেখা ও ফাইল স্বয়ংক্রিয়ভাবে যাচাই করতে বইটি আবার তৈরি করুন।");
-  await expect(alert).not.toContainText("তথ্য বদলেছে");
-  await setLanguage(page, "en");
-  await expect(alert).toContainText("Regenerate this book to verify its complete text and files automatically.");
-  expect(requests).toBe(1);
+  const path = `/api/v1/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`;
+  expect((await page.request.get(path)).status()).toBe(404);
+  expect((await page.request.get(`/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`)).status()).toBe(404);
+  await page.goto(`/books/${encodeURIComponent(fixture.book.slug)}/`);
+  await expect(page.getByRole("link", { name: "বইয়ের তথ্য সম্পাদনা করুন", exact: true })).toHaveCount(0);
+  const session = await (await page.request.get("/api/v1/auth/session/")).json();
+  const headers = { "X-CSRFToken": session.csrf_token };
+  expect((await page.request.patch(path, { headers, data: { title: "Forbidden metadata", expected_updated_at: new Date().toISOString() } })).status()).toBe(404);
+  expect((await page.request.post(path + "publish/", { headers })).status()).toBe(404);
+  expect((await page.request.post(path + "review/", { headers })).status()).toBe(404);
 });
 
 test("saved editorial changes publish directly with canonical redirects", async ({ page }) => {
-  await useAccount(page, "editor");
+  await useAccount(page, "administrator");
+  const session = await (await page.request.get("/api/v1/auth/session/")).json();
+  const metadata = await (await page.request.get(`/api/v1/manage/books/${encodeURIComponent(fixture.editorial_book.slug)}/`)).json();
+  const epub = await page.request.get(`/api/v1/reading/books/${encodeURIComponent(fixture.upload_book.slug)}/download/`);
+  expect(epub.status()).toBe(200);
+  const prepared = await page.request.post(`/api/v1/manage/books/${encodeURIComponent(metadata.slug)}/epub/`, {
+    headers: { "X-CSRFToken": session.csrf_token },
+    multipart: { expected_updated_at: metadata.updated_at, file: { name: "reading.epub", mimeType: "application/epub+zip", buffer: await epub.body() } },
+  });
+  expect(prepared.status()).toBe(200); expect((await prepared.json()).state).toBe("published");
   await page.goto(`/manage/books/${encodeURIComponent(fixture.editorial_book.slug)}/`);
   await page.getByLabel("বইয়ের নাম", { exact: true }).fill(`${fixture.editorial_book.title} সংশোধিত`);
   await page.getByLabel("বিস্তারিত বিবরণ", { exact: true }).fill("পর্যালোচিত মৌলিক সম্পাদকীয় বর্ণনা।");
@@ -28,7 +34,7 @@ test("saved editorial changes publish directly with canonical redirects", async 
   await expect(page.locator("form.editorial-form")).toHaveCount(1);
   await expect(page.locator("#metadata-history")).toHaveCount(1);
   await page.getByLabel("সার্চ ইঞ্জিনে দেখানোর অনুমতি", { exact: true }).check();
-  await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "পর্যালোচনা অনুমোদন করুন" })).toHaveCount(0);
   await page.getByRole("button", { name: "পরিবর্তন সংরক্ষণ করুন" }).click();
   await expect(page).toHaveURL(/%E0%A6%B8%E0%A6%82%E0%A6%B6%E0%A7%8B%E0%A6%A7%E0%A6%BF%E0%A6%A4\/$/);
@@ -42,8 +48,8 @@ test("saved editorial changes publish directly with canonical redirects", async 
   await expect(history.getByText("Book details edited", { exact: true })).toBeVisible();
   await setLanguage(page, "bn");
 
-  await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "প্রকাশ করুন", exact: true }).click();
+  await expect(page.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "ডাউনলোড করা ফাইলে আগের তথ্য থাকতে পারে" })).toBeVisible();
   await page.getByRole("link", { name: "প্রকাশিত পাতা দেখুন" }).click();
   await expect(page.getByText("পর্যালোচিত মৌলিক সম্পাদকীয় বর্ণনা।", { exact: true })).toBeVisible();
   await expect(page).toHaveTitle(/সম্পাদিত বইয়ের বিশেষ শিরোনাম/);
@@ -54,7 +60,7 @@ test("saved editorial changes publish directly with canonical redirects", async 
 });
 
 test("stale editorial form shows a conflict without replaying the update", async ({ page }) => {
-  await useAccount(page, "editor");
+  await useAccount(page, "administrator");
   await page.goto(`/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`);
   const otherPage = await page.context().newPage();
   await otherPage.goto(`/manage/books/${encodeURIComponent(fixture.conflict_book.slug)}/`);
@@ -67,7 +73,7 @@ test("stale editorial form shows a conflict without replaying the update", async
   await page.getByRole("button", { name: "পরিবর্তন সংরক্ষণ করুন" }).click();
   await expect(page.locator(".editorial-workspace").getByRole("alert")).toContainText("বইটির তথ্য বদলেছে");
   expect(updates).toBe(1);
-  await expect(otherPage.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toBeEnabled();
+  await expect(otherPage.getByRole("button", { name: "প্রকাশ করুন", exact: true })).toHaveCount(0);
   await expect(otherPage.getByRole("button", { name: "পর্যালোচনা অনুমোদন করুন" })).toHaveCount(0);
   await otherPage.close();
 });

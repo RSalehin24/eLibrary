@@ -21,7 +21,6 @@ class SubmissionStatus(models.TextChoices):
     PENDING_RESOLUTION = "pending_resolution", "Pending resolution"
     QUEUED = "queued", "Queued"
     PROCESSING = "processing", "Processing"
-    NEEDS_REVIEW = "needs_review", "Needs review"
     READY = "ready", "Ready"
     FAILED = "failed", "Failed"
     CANCELLED = "cancelled", "Cancelled"
@@ -41,13 +40,6 @@ class JobType(models.TextChoices):
     RESOLUTION = "resolution", "Resolution"
     INGESTION = "ingestion", "Ingestion"
     REPROCESS = "reprocess", "Reprocess"
-
-
-class DuplicateReviewStatus(models.TextChoices):
-    PENDING = "pending", "Pending"
-    CONFIRMED = "confirmed", "Confirmed"
-    DISMISSED = "dismissed", "Dismissed"
-    MERGED = "merged", "Merged"
 
 
 class CatalogCurationMode(models.TextChoices):
@@ -89,7 +81,6 @@ __all__ = [
     "CatalogAutomationFrequency",
     "CatalogCurationMode",
     "CatalogCurationTrigger",
-    "DuplicateReviewStatus",
     "JobStatus",
     "JobType",
     "ResolutionStatus",

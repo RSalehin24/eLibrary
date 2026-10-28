@@ -66,7 +66,10 @@ def test_source_upload_matches_every_retained_verified_reading_chapter(
     response = send_upload(upload_book)
     assert response.status_code == 200
     assert response.json()["state"] == "published"
-    assert GeneratedAsset.objects.get(book=upload_book[1]).status == "ready"
+    assert (
+        GeneratedAsset.objects.get(book=upload_book[1], asset_type="epub").status
+        == "ready"
+    )
 
 
 @pytest.mark.parametrize("hide_in_archive", [False, True])

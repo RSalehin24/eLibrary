@@ -1,3 +1,19 @@
+from datetime import timedelta
+
+import pytest
+from apps.ingestion.models import (
+    BookSubmission,
+    JobStatus,
+    ProcessingJob,
+    ResolutionStatus,
+    SubmissionStatus,
+)
+from apps.ingestion.services.legacy_adapter import normalize_text
+from apps.ingestion.services.submissions import (
+    MAX_PROCESSING_JOB_ATTEMPTS,
+    recover_stale_processing_jobs,
+)
+from django.utils import timezone
 
 
 @pytest.mark.django_db
@@ -5,7 +21,9 @@ def test_recover_stale_processing_jobs_requeues_stale_processing_work(monkeypatc
     submission = BookSubmission.objects.create(
         input_type="url",
         original_input="https://www.example.com/books/stale-processing/",
-        normalized_input=normalize_text("https://www.example.com/books/stale-processing/"),
+        normalized_input=normalize_text(
+            "https://www.example.com/books/stale-processing/"
+        ),
         resolved_url="https://www.example.com/books/stale-processing/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,
@@ -62,7 +80,9 @@ def test_recover_stale_processing_jobs_fails_exhausted_processing_work(monkeypat
     submission = BookSubmission.objects.create(
         input_type="url",
         original_input="https://www.example.com/books/stale-processing-final/",
-        normalized_input=normalize_text("https://www.example.com/books/stale-processing-final/"),
+        normalized_input=normalize_text(
+            "https://www.example.com/books/stale-processing-final/"
+        ),
         resolved_url="https://www.example.com/books/stale-processing-final/",
         resolution_status=ResolutionStatus.RESOLVED,
         status=SubmissionStatus.PROCESSING,

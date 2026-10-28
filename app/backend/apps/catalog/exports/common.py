@@ -4,7 +4,7 @@ from pathlib import Path
 from django.conf import settings
 from django.http import HttpResponse
 
-from apps.catalog.models import BookRecordType, ContributorRole
+from apps.catalog.models import ContributorRole
 from apps.catalog.services import normalize_book_contributors
 
 COMMON_PDF_FONT_PATHS = [
@@ -94,9 +94,8 @@ def csv_value(value):
     return "'" + text if text.lstrip().startswith(("=", "+", "-", "@")) else text
 
 
-def book_export_filename(prefix, extension, *, record_type):
-    suffix = "manual" if record_type == BookRecordType.MANUAL else "books"
-    return f"{prefix}-{suffix}.{extension}"
+def book_export_filename(prefix, extension):
+    return f"{prefix}-books.{extension}"
 
 
 def resolve_pdf_font():

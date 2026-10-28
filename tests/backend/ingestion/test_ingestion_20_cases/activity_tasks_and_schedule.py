@@ -1,14 +1,8 @@
 import pytest
-from django.db import connection
-from django.db import ProgrammingError
-from django.test.utils import CaptureQueriesContext
-
 from apps.accounts.models import User
-from apps.catalog.models import Book
 from apps.ingestion.models import (
     BookSubmission,
     CatalogCurationRun,
-    DuplicateReview,
     JobStatus,
     ProcessingJob,
     SourceCatalogRefreshState,
@@ -20,7 +14,7 @@ from apps.ingestion.tasks import (
     recover_stale_processing_jobs_task,
     run_catalog_automation_schedule_task,
 )
-
+from django.db import ProgrammingError
 
 HEAVY_BOOK_COLUMNS = (
     '"catalog_book"."summary"',
@@ -34,7 +28,9 @@ HEAVY_BOOK_COLUMNS = (
 )
 
 
-def assert_queries_do_not_select_columns(captured_queries, table_name, forbidden_columns):
+def assert_queries_do_not_select_columns(
+    captured_queries, table_name, forbidden_columns
+):
     matching_queries = [
         query["sql"]
         for query in captured_queries.captured_queries
@@ -47,7 +43,9 @@ def assert_queries_do_not_select_columns(captured_queries, table_name, forbidden
 
 
 @pytest.mark.django_db
-def test_processing_activity_endpoint_limits_regular_users_to_their_visible_work(client):
+def test_processing_activity_endpoint_limits_regular_users_to_their_visible_work(
+    client,
+):
     user = User.objects.create_user(
         email="activity-reader@example.com",
         password="strong-password-123",
@@ -149,9 +147,13 @@ def test_processing_activity_endpoint_reports_shared_manager_activity(client):
 @pytest.mark.django_db
 def test_catalog_automation_schedule_task_skips_when_schema_is_not_ready(monkeypatch):
     def fail_due_schedule():
-        raise ProgrammingError('relation "ingestion_catalogautomationsettings" does not exist')
+        raise ProgrammingError(
+            'relation "ingestion_catalogautomationsettings" does not exist'
+        )
 
-    monkeypatch.setattr("apps.ingestion.tasks.run_due_catalog_automation", fail_due_schedule)
+    monkeypatch.setattr(
+        "apps.ingestion.tasks.run_due_catalog_automation", fail_due_schedule
+    )
 
     result = run_catalog_automation_schedule_task()
 
@@ -159,13 +161,22 @@ def test_catalog_automation_schedule_task_skips_when_schema_is_not_ready(monkeyp
 
 
 @pytest.mark.django_db
-def test_catalog_automation_schedule_task_reraises_unrelated_database_errors(monkeypatch):
+def test_catalog_automation_schedule_task_reraises_unrelated_database_errors(
+    monkeypatch,
+):
     def fail_due_schedule():
-        raise ProgrammingError("column ingestion_catalogautomationsettings.mode does not exist")
+        raise ProgrammingError(
+            "column ingestion_catalogautomationsettings.mode does not exist"
+        )
 
-    monkeypatch.setattr("apps.ingestion.tasks.run_due_catalog_automation", fail_due_schedule)
+    monkeypatch.setattr(
+        "apps.ingestion.tasks.run_due_catalog_automation", fail_due_schedule
+    )
 
-    with pytest.raises(ProgrammingError, match="column ingestion_catalogautomationsettings.mode does not exist"):
+    with pytest.raises(
+        ProgrammingError,
+        match="column ingestion_catalogautomationsettings.mode does not exist",
+    ):
         run_catalog_automation_schedule_task()
 
 
@@ -197,7 +208,9 @@ def test_recover_stale_processing_jobs_task_returns_recovered_count(monkeypatch)
 
 
 @pytest.mark.django_db
-def test_recover_stale_processing_jobs_task_recovers_automation_work_only_when_enabled(monkeypatch):
+def test_recover_stale_processing_jobs_task_recovers_automation_work_only_when_enabled(
+    monkeypatch,
+):
     calls = []
 
     def fake_recover_stale_processing_jobs(*, origin="", limit=100):

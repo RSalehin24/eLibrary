@@ -1,73 +1,6 @@
-from tests.backend.ingestion.scraper_fixtures import patch_scraper
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
-
-import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
-from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
-from apps.ingestion.models import (
-    CatalogAutomationFrequency,
-    BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
-    JobStatus,
-    MatchCandidate,
-    ProcessingJob,
-    ResolutionStatus,
-    SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
-    SubmissionStatus,
-    TitleResolutionAttempt,
-)
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
 from apps.ingestion.pipeline import scraper as legacy_scraper
-from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
-)
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.curation import (
-    dispatch_catalog_curation_run,
-    dispatch_source_catalog_refresh,
-)
-from apps.ingestion.services.submissions import (
-    MAX_PROCESSING_JOB_ATTEMPTS,
-    create_submission_records,
-    detect_metadata_duplicate,
-    dispatch_processing_job,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    recover_stale_processing_jobs,
-    sync_assets,
-)
-from apps.ingestion.services.curation_support.source_refresh import (
-    process_source_catalog_refresh,
-)
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
+
+from tests.backend.ingestion.scraper_fixtures import patch_scraper
 
 
 def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_path):
@@ -150,6 +83,7 @@ def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_pat
         section.get("html", "") for section in scraped.get("front_sections") or []
     )
     import unicodedata
+
     combined = unicodedata.normalize(
         "NFC", front_section_blobs + (scraped["main_content"] or "")
     )
@@ -167,7 +101,9 @@ def test_scrape_book_data_recurses_through_nested_toc_links(monkeypatch, tmp_pat
     assert "পাতার ভেতরের লেখা" in scraped["content_items"][1]["content"]
 
 
-def test_download_cover_image_uses_retry_session_and_saves_the_cover(monkeypatch, tmp_path):
+def test_download_cover_image_uses_retry_session_and_saves_the_cover(
+    monkeypatch, tmp_path
+):
     class FakeResponse:
         status_code = 200
         content = b"cover-bytes"
@@ -229,11 +165,25 @@ def test_scrape_all_lessons_waits_between_pages(monkeypatch):
     sleep_calls = []
     lesson_pages = {
         "https://www.example.com/books/example/?ld-courseinfo-lesson-page=1": {
-            "lessons": [{"title": "প্রথম পাঠ", "url": "lesson-1", "topics": [], "has_topics": False}],
+            "lessons": [
+                {
+                    "title": "প্রথম পাঠ",
+                    "url": "lesson-1",
+                    "topics": [],
+                    "has_topics": False,
+                }
+            ],
             "total_pages": 2,
         },
         "https://www.example.com/books/example/?ld-courseinfo-lesson-page=2": {
-            "lessons": [{"title": "দ্বিতীয় পাঠ", "url": "lesson-2", "topics": [], "has_topics": False}],
+            "lessons": [
+                {
+                    "title": "দ্বিতীয় পাঠ",
+                    "url": "lesson-2",
+                    "topics": [],
+                    "has_topics": False,
+                }
+            ],
             "total_pages": 2,
         },
     }

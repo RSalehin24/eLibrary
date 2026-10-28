@@ -23,7 +23,6 @@ HISTORY_FILTERS = (
     "contributor",
     "category",
     "series",
-    "record_type",
     "state",
     "from_date",
     "to_date",
@@ -37,9 +36,6 @@ class KindleHistoryParametersSerializer(
     contributor = serializers.CharField(max_length=255, allow_blank=True, default="")
     category = serializers.CharField(max_length=255, allow_blank=True, default="")
     series = serializers.CharField(max_length=255, allow_blank=True, default="")
-    record_type = serializers.ChoiceField(
-        choices=("all", "digital", "manual"), default="all"
-    )
     state = serializers.ChoiceField(
         choices=("", *BackgroundJobState.values), allow_blank=True, default=""
     )
@@ -79,7 +75,6 @@ def filter_history(queryset, parameters):
         "contributor_role": "author" if parameters["contributor"] else "",
         "category": parameters["category"],
         "series": parameters["series"],
-        "record_type": parameters["record_type"],
     }
     books = filter_public_books(Book.objects.all(), filters)
     books = search_public_books(books, parameters["q"])
@@ -98,13 +93,8 @@ def filter_history(queryset, parameters):
 
 def history_page(queryset, parameters, actor):
     context = f"kindle:{actor.pk}"
-    filtered = (
-        any(
-            parameters.get(key)
-            for key in HISTORY_FILTERS
-            if key not in ("record_type", "sort")
-        )
-        or parameters["record_type"] != "all"
+    filtered = any(
+        parameters.get(key) for key in HISTORY_FILTERS if key not in ("sort")
     )
     if not filtered and parameters["sort"] == "-sent_at":
         return ranked_page(

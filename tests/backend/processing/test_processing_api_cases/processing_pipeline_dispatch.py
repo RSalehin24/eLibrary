@@ -1,3 +1,23 @@
+import json
+import time as time_module
+from pathlib import Path
+
+import pytest
+from apps.catalog.models import Book
+from apps.ingestion.models import BookSubmission, ProcessingJob, SourceCatalogEntry
+from apps.processing.models import BookCreationRequest, BookRecord, ProcessingSyncStatus
+from apps.processing.services import get_sync_state
+from apps.processing.tasks import (
+    kickoff_book_creation_request_task,
+    run_processing_sync_task,
+)
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_pipeline,
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -43,7 +63,9 @@ def test_catalog_automation_ignores_incomplete_remote_pages_shape(client):
 
 
 @pytest.mark.django_db
-def test_processing_create_requests_and_pipeline_are_backend_owned(client, monkeypatch, tmp_path):
+def test_processing_create_requests_and_pipeline_are_backend_owned(
+    client, monkeypatch, tmp_path
+):
     login_processing_admin(client)
     record = BookRecord.objects.create(
         id="request-record",
@@ -79,23 +101,58 @@ def test_processing_create_requests_and_pipeline_are_backend_owned(client, monke
     def fake_generate_exports(book_data):
         output_dir = Path(book_data["output_folder"])
         output_dir.mkdir(parents=True, exist_ok=True)
-        (output_dir / "book.html").write_text("<html><body>book</body></html>", encoding="utf-8")
+        (output_dir / "book.html").write_text(
+            "<html><body>book</body></html>", encoding="utf-8"
+        )
         (output_dir / "Request Record.epub").write_bytes(b"epub-bytes")
         (output_dir / "book_cover.jpg").write_bytes(b"cover-bytes")
 
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.capture_source_page_metadata', lambda *_args, **_kwargs: None)
-    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.capture_source_page_metadata', lambda *_args, **_kwargs: None)
-    monkeypatch.setattr('apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
-    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url', lambda *_args, **_kwargs: None)
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.scrape_book', lambda _url: sample, raising=False)
-    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.scrape_book', lambda _url: sample, raising=False)
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_persistence.generate_exports', fake_generate_exports, raising=False)
-    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.generate_exports', fake_generate_exports, raising=False)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline.capture_source_page_metadata",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.runtime_dependencies.capture_source_page_metadata",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: None,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline.scrape_book",
+        lambda _url: sample,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.runtime_dependencies.scrape_book",
+        lambda _url: sample,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_persistence.generate_exports",
+        fake_generate_exports,
+        raising=False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.runtime_dependencies.generate_exports",
+        fake_generate_exports,
+        raising=False,
+    )
     monkeypatch.setattr(
         "apps.ingestion.services.submission_modules.book_persistence.create_submission_records",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("legacy submission flow should not be used by /api/processing")
+            AssertionError(
+                "legacy submission flow should not be used by /api/processing"
+            )
         ),
     )
 
@@ -127,7 +184,10 @@ def test_processing_create_requests_and_pipeline_are_backend_owned(client, monke
     assert ProcessingJob.objects.count() == 0
     created_book = Book.objects.get(pk=request.linked_book_id, deleted_at__isnull=True)
     assert created_book.title == "Request Record"
-    assert created_book.raw_scraped_metadata["source_url"] == "https://www.example.com/books/request-record/"
+    assert (
+        created_book.raw_scraped_metadata["source_url"]
+        == "https://www.example.com/books/request-record/"
+    )
     assert record.linked_book_id == created_book.id
 
 

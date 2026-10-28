@@ -1,6 +1,6 @@
 from io import StringIO
 
-from apps.catalog.models import BookRecordType, ContributorRole
+from apps.catalog.models import ContributorRole
 
 from .common import (
     book_export_filename,
@@ -13,7 +13,7 @@ from .common import (
 from .tabular import created_label
 
 
-def build_books_csv_response(books, *, record_type):
+def build_books_csv_response(books):
     output = StringIO()
     writer = __import__("csv").writer(output)
     writer.writerow(
@@ -27,11 +27,8 @@ def build_books_csv_response(books, *, record_type):
             "Publishers",
             "Categories",
             "Series",
-            "Type",
             "Compilation",
-            "Binding",
             "Publisher",
-            "Price",
             "Created At",
             "Language",
             "Edition",
@@ -74,18 +71,11 @@ def build_books_csv_response(books, *, record_type):
                         relation.series.name for relation in book.book_series.all()
                     )
                 ),
-                "Manual" if book.record_type == BookRecordType.MANUAL else "Digital",
-                "Yes" if book.manual_is_compilation else "No",
-                csv_value(
-                    book.get_manual_binding_display() if book.manual_binding else ""
-                ),
-                csv_value(book.manual_publisher),
-                csv_value(book.manual_price),
+                "Yes" if book.is_compilation else "No",
+                csv_value(book.publisher),
                 csv_value(created_label(book)),
-                csv_value(book.manual_language),
+                csv_value(book.language),
                 csv_value(book.edition),
             ]
         )
-    return csv_response(
-        book_export_filename("catalog", "csv", record_type=record_type), output
-    )
+    return csv_response(book_export_filename("catalog", "csv"), output)

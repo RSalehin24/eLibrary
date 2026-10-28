@@ -25,7 +25,7 @@ from .tabular import created_label, grouped_books
 
 FONT_PIXELS = 36
 IMAGE_SCALE = 4
-COLUMN_WIDTHS = (22, 53, 53, 37, 49, 18, 43)
+COLUMN_WIDTHS = (22, 58, 53, 37, 62, 43)
 
 
 def bundled_font_path():
@@ -153,20 +153,16 @@ def book_cells(book):
         relation.category.name for relation in book.book_categories.all()
     )
     details = [
-        book.manual_publisher,
-        book.get_manual_binding_display() if book.manual_binding else "",
+        book.publisher,
     ]
     details.extend(relation.series.name for relation in book.book_series.all())
-    details.extend(
-        [book.manual_language, "Compilation" if book.manual_is_compilation else ""]
-    )
+    details.extend([book.language, "Compilation" if book.is_compilation else ""])
     return (
         book.catalog_code or "",
         book.title,
         "\n".join(table_contributor_lines(book)),
         categories,
         "\n".join(filter(None, details)),
-        str(book.manual_price) if book.manual_price is not None else "",
         created_label(book),
     )
 
@@ -178,7 +174,6 @@ def book_table(books):
         "Contributors",
         "Categories",
         "Details",
-        "Price",
         "Created (Dhaka)",
     )
     rows = [
@@ -223,7 +218,7 @@ def build_grouped_pdf_response(books, grouping):
         rightMargin=10 * mm,
         topMargin=10 * mm,
         bottomMargin=10 * mm,
-        title="Physical Books" if grouping else "Book List",
+        title="Books" if grouping else "Book List",
     )
     story = []
     for label, entries in grouped_books(books, grouping):

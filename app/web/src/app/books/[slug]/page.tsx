@@ -29,9 +29,9 @@ export default async function BookDetailPage({ params }: BookParameters) {
   return <>
     <Breadcrumbs entries={[{ name: "পাঠাগার", path: "/catalog/" }, { name: book.title, path: `/books/${encodeURIComponent(book.slug)}/` }]} />
     <BookInformation book={book}>
-        <BookActions slug={book.slug} recordType={book.record_type} />
+        <BookActions slug={book.slug} />
     </BookInformation>
-    {book.record_type !== "manual" && <BookReadingSummary slug={book.slug} />}
+    <BookReadingSummary slug={book.slug} />
     <RelatedEditions slug={book.slug} />
     <StructuredData data={{ "@context": "https://schema.org", "@type": "Book", name: book.title,
       url: canonicalURL(`/books/${encodeURIComponent(book.slug)}/`), ...(book.language ? { inLanguage: book.language } : {}),

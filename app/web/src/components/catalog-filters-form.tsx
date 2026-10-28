@@ -10,12 +10,12 @@ import { SavedCatalogFilters } from "./saved-catalog-filters";
 import { Icon } from "./icon";
 import { SiteText, useSiteLanguage } from "./site-language";
 
-export function CatalogFiltersForm({ pathname, initial, hidden = {}, onChange, lockedRecordType }: { pathname: string; initial: CatalogFilters; hidden?: CatalogFilters; onChange?: (values: CatalogFilters) => void; lockedRecordType?: "manual" | "digital" }) {
+export function CatalogFiltersForm({ pathname, initial, hidden = {}, onChange }: { pathname: string; initial: CatalogFilters; hidden?: CatalogFilters; onChange?: (values: CatalogFilters) => void }) {
   const id = useId(), { t } = useSiteLanguage();
   const [values, setValues] = useState<Record<string, string>>(currentBrowseFilters(initial));
-  const active = catalogFilterKeys.filter(key => !["sort", "record_type"].includes(key) && !!values[key] && values[key] !== "all").length;
+  const active = catalogFilterKeys.filter(key => key !== "sort" && !!values[key] && values[key] !== "all").length;
   const applied = catalogHasConditions(currentBrowseFilters(initial));
-  const changeValues = (next: Record<string, string>) => { setValues(next); onChange?.({ ...next, ...(lockedRecordType ? { record_type: lockedRecordType } : {}) }); };
+  const changeValues = (next: Record<string, string>) => { setValues(next); onChange?.(next); };
   const update = (name: string, value: string) => changeValues({ ...values, [name]: value, ...(name === "contributor" && !value ? { contributor_role: "" } : {}) });
   return <div className="catalog-controls"><form action={pathname} role="search" className="catalog-filters-form filter-bar">
     {Object.entries(hidden).map(([name, value]) => <input type="hidden" name={name} value={value} key={name} />)}
@@ -31,5 +31,5 @@ export function CatalogFiltersForm({ pathname, initial, hidden = {}, onChange, l
       <button className="button filter-apply"><SiteText>ফিল্টার প্রয়োগ করুন</SiteText></button>
     </div></details>
     {(applied || catalogHasConditions(values)) && <Link className="filter-clear text-link" href={`${pathname}${hidden.view ? `?view=${encodeURIComponent(hidden.view)}` : ""}`} onNavigate={() => { if (!applied) changeValues({}); }}><Icon name="refresh" /><SiteText>ফিল্টার সরান</SiteText></Link>}
-  </form>{!lockedRecordType && <SavedCatalogFilters pathname={pathname} values={values} hidden={hidden} />}</div>;
+  </form>{<SavedCatalogFilters pathname={pathname} values={values} hidden={hidden} />}</div>;
 }

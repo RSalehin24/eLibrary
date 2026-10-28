@@ -18,13 +18,13 @@ CATALOG_SORTS = (
     "-catalog_code",
     "requested_at",
     "-requested_at",
-    "manual_publisher",
-    "-manual_publisher",
+    "publisher",
+    "-publisher",
 )
 TEXT_SORT_FIELDS = {
     "title": "normalized_title",
     "catalog_code": "catalog_code",
-    "manual_publisher": "manual_publisher",
+    "publisher": "publisher",
 }
 
 

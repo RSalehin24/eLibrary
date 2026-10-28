@@ -34,7 +34,7 @@ def available_source_bulk_actions(job):
         and not getattr(job, "other_book_work", False)
         and job.state in {"failed", "needs_attention", "succeeded", "cancelled"}
     ):
-        if job.book.record_type == "digital" and not source_defect_waits_for_code(job):
+        if not source_defect_waits_for_code(job):
             actions.append("recreate_source")
         if job.book.state != "archived":
             actions.append("archive_book")

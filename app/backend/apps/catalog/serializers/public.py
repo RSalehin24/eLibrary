@@ -11,17 +11,22 @@ from apps.catalog.models import (
 )
 from apps.catalog.serializers.editorial import (
     PUBLIC_EDITORIAL_FIELDS,
-    ReviewedEditorialSerializer,
+    PublicEditorialSerializer,
 )
 from apps.common.api_serializers import AdminPaginationSerializer
 from apps.common.collection_pagination import CollectionPaginationSerializer
 from apps.common.text import normalize_catalog_text
+from apps.common.validation import reject_unknown_fields
 
 
 class CatalogQueryParametersSerializer(serializers.Serializer):
     q = serializers.CharField(
         max_length=120, required=False, allow_blank=True, default=""
     )
+
+    def validate(self, attributes):
+        reject_unknown_fields(self)
+        return super().validate(attributes)
 
     def validate_q(self, value):
         if value and not normalize_catalog_text(value):
@@ -30,9 +35,6 @@ class CatalogQueryParametersSerializer(serializers.Serializer):
 
 
 class CatalogFilterParametersSerializer(CatalogQueryParametersSerializer):
-    record_type = serializers.ChoiceField(
-        choices=["all", "digital", "manual"], default="all"
-    )
     ownership = serializers.ChoiceField(
         choices=["", "mine"], default="", allow_blank=True
     )
@@ -123,7 +125,7 @@ class PublicBookListSerializer(serializers.ModelSerializer):
         return book_cover_url(book)
 
     slug = serializers.CharField(read_only=True)
-    language = serializers.CharField(source="manual_language")
+    language = serializers.CharField(read_only=True)
     contributors = PublicContributorSerializer(source="book_contributors", many=True)
     categories = PublicCategorySerializer(source="book_categories", many=True)
     series = PublicSeriesSerializer(source="book_series", many=True)
@@ -145,16 +147,13 @@ class PublicBookListSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class PublicBookDetailSerializer(PublicBookListSerializer, ReviewedEditorialSerializer):
+class PublicBookDetailSerializer(PublicBookListSerializer, PublicEditorialSerializer):
     class Meta(PublicBookListSerializer.Meta):
         fields = (
             *PublicBookListSerializer.Meta.fields,
             "summary",
-            "record_type",
-            "manual_publisher",
-            "manual_price",
-            "manual_binding",
-            "manual_is_compilation",
+            "publisher",
+            "is_compilation",
             *PUBLIC_EDITORIAL_FIELDS,
         )
         read_only_fields = fields
@@ -165,8 +164,6 @@ class AdminBookListSerializer(PublicBookListSerializer):
         fields = (
             *PublicBookListSerializer.Meta.fields,
             "state",
-            "review_state",
-            "record_type",
         )
         read_only_fields = fields
 

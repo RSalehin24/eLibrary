@@ -20,13 +20,11 @@ from .seed_e2e_data_methods.core_seed_records import (
 from .seed_e2e_data_methods.duplicate_review_seed_records import (
     create_automation_submissions,
     create_curation_submissions,
-    create_duplicate_review,
 )
 from .seed_e2e_data_methods.submission_seed_records import create_submissions
 
 
 class Command(BaseCommand):
-    create_duplicate_review = create_duplicate_review
     create_automation_submissions = create_automation_submissions
     create_curation_submissions = create_curation_submissions
     help = "Reset and seed deterministic local E2E data for real browser tests."

@@ -1,5 +1,5 @@
 from apps.catalog.models import Book
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 
 
 def public_books():
@@ -8,6 +8,6 @@ def public_books():
             state=LifecycleState.PUBLISHED,
             deleted_at__isnull=True,
         )
-        .exclude(review_state=ReviewState.REJECTED)
+        .exclude()
         .exclude(source_quality_state="quarantined")
     )

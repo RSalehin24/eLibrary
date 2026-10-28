@@ -22,11 +22,7 @@ def managed_book(tmp_path, settings):
         email="lifecycle-admin@library.test", is_staff=True
     )
     book = Book.objects.create(
-        title="বই পরিচালনার পরীক্ষা",
-        state="published",
-        review_state="approved",
-        editorial_reviewed_at=timezone.now(),
-        indexing_eligible=True,
+        title="বই পরিচালনার পরীক্ষা", state="published", indexing_eligible=True
     )
     asset, publication = prepared_asset(book, tmp_path)
     client = APIClient()
@@ -117,7 +113,7 @@ def test_stale_or_unknown_removal_fields_leave_the_book_unchanged(managed_book):
     assert book.deleted_at is None
 
 
-def test_metadata_scope_allows_removal_only_for_the_granted_book(managed_book):
+def test_metadata_scope_cannot_remove_any_book(managed_book):
     _, book, client, _, _ = managed_book
     editor = User.objects.create_user(email="lifecycle-editor@library.test")
     other = Book.objects.create(title="Unrelated book")
@@ -125,7 +121,7 @@ def test_metadata_scope_allows_removal_only_for_the_granted_book(managed_book):
         user=editor, book=book, scope=PermissionScope.METADATA_EDIT
     )
     client.force_authenticate(editor)
-    assert client.get(book_url(book) + "controls/").json()["can_remove"]
+    assert client.get(book_url(book) + "controls/").status_code == 404
     assert (
         client.delete(
             book_url(other),
@@ -140,7 +136,7 @@ def test_metadata_scope_allows_removal_only_for_the_granted_book(managed_book):
             {"expected_updated_at": book.updated_at.isoformat()},
             format="json",
         ).status_code
-        == 204
+        == 404
     )
 
 
@@ -161,16 +157,18 @@ def test_removal_requires_csrf_and_rejects_disabled_accounts(managed_book):
     assert client.get(book_url(book) + "controls/").status_code == 403
 
 
-def test_paper_and_uploaded_books_have_explanatory_regeneration_states(managed_book):
+def test_uploaded_books_without_source_have_explanatory_regeneration_state(
+    managed_book,
+):
     _, book, client, _, _ = managed_book
     controls = client.get(book_url(book) + "controls/").json()
     assert (
         not controls["can_regenerate"]
         and controls["regeneration_problem"] == "source_unavailable"
     )
-    book.record_type = "manual"
+
     book.save()
     assert (
         client.get(book_url(book) + "controls/").json()["regeneration_problem"]
-        == "paper_book"
+        == "source_unavailable"
     )

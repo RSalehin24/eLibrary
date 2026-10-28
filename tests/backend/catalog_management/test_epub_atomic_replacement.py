@@ -111,7 +111,12 @@ def test_replacement_retains_reader_sessions_personal_data_and_protected_history
         prepared_publication=old_publication,
     )
     UserBook.objects.create(user=actor, book=book)
-    write_epub(path, {"OEBPS/chapter-1.xhtml": "<p>A revised chapter.</p>"})
+    write_epub(
+        path,
+        {
+            "OEBPS/chapter-1.xhtml": "<html><body><p>A revised chapter.</p></body></html>"
+        },
+    )
     assert send_upload(upload_book).status_code == 200
     asset.refresh_from_db()
     history = MetadataVersion.objects.get(source="before_epub_upload")
@@ -138,8 +143,8 @@ def test_new_manual_upload_is_ready_without_a_review_gate(upload_book):
     book.save()
     response = send_upload(upload_book)
     assert response.status_code == 200
-    assert response.json()["state"] == "ready"
-    assert response.json()["review_state"] == "approved"
+    assert response.json()["state"] == "published"
+    assert "review_state" not in response.json()
 
 
 def test_database_failure_rolls_back_the_entire_asset_switch(upload_book, monkeypatch):

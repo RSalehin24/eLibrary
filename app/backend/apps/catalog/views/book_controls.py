@@ -20,7 +20,6 @@ class BookControlsSerializer(serializers.Serializer):
     can_regenerate = serializers.BooleanField()
     regeneration_problem = serializers.ChoiceField(
         choices=[
-            "paper_book",
             "processing_access_required",
             "unfinished_work",
             "source_unavailable",

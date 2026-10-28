@@ -5,7 +5,7 @@ from pathlib import Path
 from uuid import uuid4
 
 import django
-from seed_reader import create_reading_book
+from seed_reader import create_reading_book, create_upload_book
 
 
 def create_session(user):
@@ -50,8 +50,7 @@ def create_books(identity):
         Contributor,
     )
     from apps.catalog.services import sync_book_catalog_code
-    from apps.common.models import LifecycleState, ReviewState
-    from django.utils import timezone
+    from apps.common.models import LifecycleState
 
     author = Contributor.objects.create(name=f"পরীক্ষার লেখক {identity}")
     category = Category.objects.create(name=f"পরীক্ষার গল্প {identity}")
@@ -61,10 +60,8 @@ def create_books(identity):
             title=f"পরীক্ষার বই {identity} {number + 1}",
             summary="এটি স্থানীয় পরীক্ষার জন্য তৈরি বইয়ের পরিচিতি।",
             editorial_description="এটি স্থানীয় পরীক্ষার জন্য পর্যালোচিত সম্পাদকীয় পরিচিতি।",
-            editorial_reviewed_at=timezone.now(),
             indexing_eligible=True,
             state=LifecycleState.PUBLISHED,
-            review_state=ReviewState.APPROVED,
         )
         BookContributor.objects.create(book=book, contributor=author, role="author")
         BookCategory.objects.create(book=book, category=category)
@@ -75,13 +72,11 @@ def create_books(identity):
 
 def create_collection(identity, books):
     from apps.catalog.models import CollectionBook, CuratedCollection
-    from django.utils import timezone
 
     collection = CuratedCollection.objects.create(
         name=f"পরীক্ষার নির্বাচন {identity}",
         state="published",
         editorial_description="এটি স্থানীয় পরীক্ষার জন্য পর্যালোচিত তিন বইয়ের নির্বাচিত সংগ্রহ।",
-        editorial_reviewed_at=timezone.now(),
         indexing_eligible=True,
     )
     for position, book in enumerate(books[:3]):
@@ -155,6 +150,7 @@ def seed_fixture():
         )
         reading_user, reading_reader = create_account(uuid4().hex[:8], "reading-reader")
         reading_book = create_reading_book(reading_user)
+        upload_book = create_upload_book(administrator_user)
         from seed_legacy_reader import create_legacy_reader_fixture
 
         legacy_user, legacy_reader = create_account(uuid4().hex[:8], "legacy-reader")
@@ -222,6 +218,7 @@ def seed_fixture():
         "reading_reader": reading_reader,
         "kindle_reader": kindle_reader,
         "reading_book": reading_book,
+        "upload_book": upload_book,
         "legacy_reader": legacy_reader,
         "legacy_reading": legacy_reading,
         "preparation_job": preparation_job,

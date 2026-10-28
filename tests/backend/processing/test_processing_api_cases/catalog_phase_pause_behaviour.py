@@ -1,3 +1,13 @@
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import BookRecord, ProcessingSyncStatus
+from apps.processing.services import PROCESSING_SYNC_KEY_INCOMPLETE, get_sync_state
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -92,29 +102,29 @@ def test_processing_sync_serialization_normalizes_dual_active_catalog_phase_stat
         ]
     )
 
-    payload = processing_services.serialize_sync_state(sync_state, include_remote_pages=False)
+    payload = processing_services.serialize_sync_state(
+        sync_state, include_remote_pages=False
+    )
 
     assert payload["progress"]["phaseStates"]["sync"]["status"] == expected_sync_status
     assert (
         payload["progress"]["phaseStates"]["request_creation"]["status"]
         == expected_request_creation_status
     )
-    assert (
-        payload["progress"]["phaseStatuses"]["sync"]
-        == ("running" if expected_sync_status == "pausing" else expected_sync_status)
+    assert payload["progress"]["phaseStatuses"]["sync"] == (
+        "running" if expected_sync_status == "pausing" else expected_sync_status
     )
-    assert (
-        payload["progress"]["phaseStatuses"]["request_creation"]
-        == (
-            "running"
-            if expected_request_creation_status == "pausing"
-            else expected_request_creation_status
-        )
+    assert payload["progress"]["phaseStatuses"]["request_creation"] == (
+        "running"
+        if expected_request_creation_status == "pausing"
+        else expected_request_creation_status
     )
 
 
 @pytest.mark.django_db
-def test_processing_sync_honors_pause_requested_during_page_advance(client, monkeypatch):
+def test_processing_sync_honors_pause_requested_during_page_advance(
+    client, monkeypatch
+):
     login_processing_admin(client)
 
     response = client.post(
@@ -138,7 +148,10 @@ def test_processing_sync_honors_pause_requested_during_page_advance(client, monk
         processing_services.pause_sync()
         return result
 
-    monkeypatch.setattr('apps.processing.service_modules.catalog_record_sync.upsert_remote_records', pause_after_upsert)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.catalog_record_sync.upsert_remote_records",
+        pause_after_upsert,
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -152,7 +165,9 @@ def test_processing_sync_honors_pause_requested_during_page_advance(client, monk
 
 
 @pytest.mark.django_db
-def test_incomplete_sync_honors_pause_requested_during_batch_advance(client, monkeypatch):
+def test_incomplete_sync_honors_pause_requested_during_batch_advance(
+    client, monkeypatch
+):
     login_processing_admin(client)
     BookRecord.objects.create(
         id="mid-incomplete-a",
@@ -194,7 +209,10 @@ def test_incomplete_sync_honors_pause_requested_during_batch_advance(client, mon
         processing_services.pause_sync()
         return resolved
 
-    monkeypatch.setattr('apps.processing.service_modules.incomplete_resolution.resolve_incomplete_records', pause_after_resolve)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.incomplete_resolution.resolve_incomplete_records",
+        pause_after_resolve,
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -204,5 +222,9 @@ def test_incomplete_sync_honors_pause_requested_during_batch_advance(client, mon
     assert payload["sync"]["runMode"] == "incomplete_automation"
     assert payload["sync"]["progress"]["savedData"]["nextPageIndex"] == 1
     assert payload["sync"]["updatedCount"] == 1
-    assert BookRecord.objects.get(pk="mid-incomplete-a").resolved_from_incomplete is True
-    assert BookRecord.objects.get(pk="mid-incomplete-b").resolved_from_incomplete is False
+    assert (
+        BookRecord.objects.get(pk="mid-incomplete-a").resolved_from_incomplete is True
+    )
+    assert (
+        BookRecord.objects.get(pk="mid-incomplete-b").resolved_from_incomplete is False
+    )

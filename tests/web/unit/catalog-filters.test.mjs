@@ -18,10 +18,10 @@ test("previous saved author filters retain author scope without mutating persist
 });
 
 test("saved filters reject unsupported fields, values and unsafe sort expressions", () => {
-  for (const parameters of [{ state: "published" }, { sort: "title;drop table" }, { ownership: "someone-else" }, { record_type: "unknown" }, { contributor_role: "invented" }, { q: "q".repeat(121) }, { category: "c".repeat(256) }, { category: ["poems"] }]) {
+  for (const parameters of [{ state: "published" }, { sort: "title;drop table" }, { ownership: "someone-else" }, { contributor_role: "invented" }, { q: "q".repeat(121) }, { category: "c".repeat(256) }, { category: ["poems"] }]) {
     assert.equal(savedCatalogFilter(parameters), null);
   }
-  assert.deepEqual(savedCatalogFilter({ record_type: "manual", ownership: "mine", contributor_role: "translator" }), { record_type: "manual", ownership: "mine", contributor_role: "translator" });
+  assert.deepEqual(savedCatalogFilter({ record_type: "manual", ownership: "mine", contributor_role: "translator" }), { ownership: "mine", contributor_role: "translator" });
 });
 
 test("ownership and personal collection dates require account scoped requests and caches", () => {
@@ -39,11 +39,11 @@ test("catalog links encode all selected filters and preserve Bengali names", () 
 test("an empty server filter permits clearing an unsubmitted draft without changing its view", () => {
   assert.equal(catalogHasConditions({ record_type: "all", q: "", sort: "" }), false);
   assert.equal(catalogHasConditions({ record_type: "manual" }, "manual"), false);
-  assert.equal(catalogHasConditions({ record_type: "manual" }), true);
+  assert.equal(catalogHasConditions({ record_type: "manual" }), false);
 });
 
-test("submitted and physical filters keep their URL navigation and cached form state", () => {
-  for (const condition of [{ q: "বই" }, { sort: "title" }, { contributor: "লেখক" }, { binding: "hard_cover", record_type: "manual" }]) {
+test("submitted bibliographic filters keep their URL navigation and cached form state", () => {
+  for (const condition of [{ q: "বই" }, { sort: "title" }, { contributor: "লেখক" }, { series: "সিরিজ" }]) {
     assert.equal(catalogHasConditions(condition, "manual"), true);
   }
 });

@@ -61,7 +61,7 @@
 .personal-notes .annotation-note-preview { white-space:pre-wrap; color:var(--muted); font-size:.875rem; }
 .personal-notes .annotation-card>.text-link { font-size:.8125rem; }
 .personal-notes .annotation-list>div>.text-link,.personal-notes .annotation-list>div>a { margin:0 16px 12px; align-self:start; }
-.kindle-filter-bar { margin:8px 0 24px !important; grid-template-columns:minmax(12rem,2fr) minmax(8rem,1fr) minmax(10rem,1fr) auto !important; }
+.kindle-filter-bar { margin:8px 0 24px !important; grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) auto !important; }
 .kindle-filter-bar .catalog-filter-details>summary { grid-column:4; }
 .directory-toolbar { display:flex; gap:12px; align-items:center; margin:16px 0 20px; }
 .directory-toolbar>.filter-search { flex:1; }

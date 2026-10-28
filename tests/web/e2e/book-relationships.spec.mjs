@@ -1,17 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, fixture, useAccount } from "./fixtures.mjs";
 
-async function chooseReference(page, label, name) {
+async function chooseReference(page, label, reference) {
+  const name = reference.name ?? reference.title;
   await page.getByLabel(`${label}: নাম খুঁজুন`, { exact: true }).fill(name);
   const selector = page.getByLabel(`${label}: যোগ করুন`, { exact: true });
   await expect(selector).toBeEnabled();
-  await expect(selector.getByRole("option", { name, exact: true })).toHaveCount(1);
-  await selector.selectOption({ label: name });
+  await expect(selector.locator(`option[value="${reference.id}"]`)).toHaveCount(1);
+  await selector.selectOption(reference.id);
 }
 
 async function createBook(page, title) {
   const token = (await (await page.request.get("/api/v1/auth/session/")).json()).csrf_token;
-  const response = await page.request.post("/api/v1/manage/books/", { headers: { "X-CSRFToken": token }, data: { operation_id: randomUUID(), title, record_type: "manual" } });
+  const response = await page.request.post("/api/v1/manage/books/", { headers: { "X-CSRFToken": token }, data: { operation_id: randomUUID(), title } });
   expect(response.status()).toBe(201); return response.json();
 }
 
@@ -30,11 +31,11 @@ test("book relationships preserve contributor roles and link explicit editions",
   await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/`);
   await page.getByRole("link", { name: "লেখক, বিভাগ ও সংস্করণ সম্পাদনা করুন", exact: true }).click();
   await page.addStyleTag({ content: "html { font-size: 200%; }" });
-  await chooseReference(page, "সহযোগী", contributor.name);
+  await chooseReference(page, "সহযোগী", contributor);
   await page.getByLabel("ভূমিকা", { exact: true }).selectOption("translator");
-  await chooseReference(page, "সহযোগী", contributor.name);
-  await chooseReference(page, "বিভাগ", category.name);
-  await chooseReference(page, "অন্য সংস্করণ", sibling.title);
+  await chooseReference(page, "সহযোগী", contributor);
+  await chooseReference(page, "বিভাগ", category);
+  await chooseReference(page, "অন্য সংস্করণ", sibling);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await page.screenshot({ path: "test-artifacts/foundation/book-relationships-320.png", fullPage: true });
   await page.getByRole("button", { name: "তথ্য সংরক্ষণ করুন", exact: true }).click();
@@ -74,6 +75,34 @@ test("a newly created contributor refreshes cached relationship search results",
   await page.getByRole("link", { name: "সব বই", exact: true }).click();
   await page.getByRole("link", { name: book.title, exact: true }).click();
   await page.getByRole("link", { name: "লেখক, বিভাগ ও সংস্করণ সম্পাদনা করুন", exact: true }).click();
-  await chooseReference(page, "সহযোগী", name);
-  await expect(page.locator(".reference-selection").getByText(`${name} · লেখক`, { exact: true })).toBeVisible();
+  const result = await (await page.request.get(`/api/v1/manage/catalog-references/?kind=contributors&q=${encodeURIComponent(name)}`)).json();
+  const reference = result.entries.find(entry => entry.name === name);
+  expect(reference).toBeTruthy();
+  await chooseReference(page, "সহযোগী", reference);
+  await expect(page.locator(".reference-selection").getByText(`${name} · ${reference.catalog_code} · লেখক`, { exact: true })).toBeVisible();
+});
+
+test("equal contributor names remain separate and catalog numbers identify the chosen record", async ({ page }) => {
+  await useAccount(page, "catalog_administrator");
+  const book = await createBook(page, `পরিচয়ের বই ${randomUUID()}`), name = `একই নাম ${randomUUID()}`;
+  const first = await createReference(page, "contributors", name), second = await createReference(page, "contributors", name);
+  expect(first.id).not.toBe(second.id);
+  await page.goto(`/manage/books/${encodeURIComponent(book.slug)}/relationships/`);
+  await page.getByLabel("সহযোগী: নাম খুঁজুন", { exact: true }).fill(name);
+  const selection = page.getByLabel("সহযোগী: যোগ করুন", { exact: true });
+  await expect(selection).toBeEnabled();
+  const result = await (await page.request.get(`/api/v1/manage/catalog-references/?kind=contributors&q=${encodeURIComponent(name)}`)).json();
+  expect(result.entries.map(entry => entry.id).sort()).toEqual([first.id, second.id].sort());
+  for (const reference of result.entries) {
+    await expect(selection.locator(`option[value="${reference.id}"]`)).toHaveText(`${name} · ${reference.catalog_code}`);
+  }
+  await selection.selectOption(second.id);
+  const selected = result.entries.find(entry => entry.id === second.id);
+  await expect(page.locator(".reference-selection")).toContainText(selected.catalog_code);
+  await page.getByRole("button", { name: "তথ্য সংরক্ষণ করুন", exact: true }).click();
+  await expect(page.getByRole("status").filter({ hasText: "তথ্য সংরক্ষিত হয়েছে" })).toBeVisible();
+  const relationships = await (await page.request.get(`/api/v1/manage/books/${encodeURIComponent(book.slug)}/relationships/`)).json();
+  expect(relationships.contributors.map(entry => entry.id)).toEqual([second.id]);
+  await page.reload();
+  await expect(page.locator(".reference-selection")).toContainText(selected.catalog_code);
 });

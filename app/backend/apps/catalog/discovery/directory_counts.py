@@ -46,8 +46,8 @@ class DirectorySortPagination(CatalogSortPagination):
 def with_directory_counts(queryset, kind, parameters):
     model, field = ENTITY_RELATIONS[kind]
     books = public_books()
-    if parameters.get("record_type", "all") != "all":
-        books = books.filter(record_type=parameters["record_type"])
+    if parameters.get("all") != "all":
+        books = books.filter()
     role = parameters.get("role") if kind == "contributors" else ""
     links = model.objects.filter(
         Q(role=role) if role else Q(), **{field: OuterRef("pk")}, book_id__in=books

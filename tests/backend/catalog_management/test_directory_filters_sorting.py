@@ -10,7 +10,7 @@ def directory_records():
     second = Contributor.objects.create(name="Beta")
     hidden = Contributor.objects.create(name="Private writer")
     digital = Book.objects.create(title="Digital", state="published")
-    paper = Book.objects.create(title="Paper", state="published", record_type="manual")
+    paper = Book.objects.create(title="Paper", state="published")
     private = Book.objects.create(title="Private", state="draft")
     for writer, book, role in [
         (first, digital, "author"),
@@ -34,15 +34,15 @@ def test_directory_counts_visible_books_once_and_combines_role_with_type():
     ] == [(first.name, 2), (second.name, 1)]
     filtered = client.get(
         "/api/v1/catalog/entities/contributors/",
-        {"sort": "-book_count", "role": "author", "record_type": "manual"},
+        {"sort": "-book_count", "role": "author"},
     )
     assert [
         (entry["id"], entry["book_count"]) for entry in filtered.json()["entries"]
-    ] == [(str(first.pk), 1)]
-    assert not client.get(
-        "/api/v1/catalog/entities/contributors/",
-        {"role": "translator", "record_type": "manual"},
+    ] == [(str(first.pk), 2)]
+    translators = client.get(
+        "/api/v1/catalog/entities/contributors/", {"role": "translator"}
     ).json()["entries"]
+    assert {entry["id"] for entry in translators} == {str(first.pk), str(second.pk)}
 
 
 @pytest.mark.parametrize(

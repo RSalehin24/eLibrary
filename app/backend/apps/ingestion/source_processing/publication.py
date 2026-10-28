@@ -2,7 +2,7 @@ from django.db import transaction
 
 from apps.catalog.content_quality import mark_source_verified
 from apps.catalog.editorial.source_publication import source_publication_problem
-from apps.common.models import AuditLog, LifecycleState, ReviewState
+from apps.common.models import AuditLog, LifecycleState
 from apps.ingestion.source_discovery.updates import save_published_probe
 from apps.ingestion.source_workspace.update_probe import cached_source_probe
 from apps.processing.jobs.attempts import checkpoint_attempt
@@ -32,16 +32,13 @@ def publish_verified_source(ownership):
         raise ExecutionFailure(FailureKind.TRANSIENT, "source_publication_not_ready")
     if not checkpoint_attempt(ownership, job.checkpoint, "publishing_source"):
         return False
-    book.state, book.review_state = LifecycleState.PUBLISHED, ReviewState.APPROVED
-    book.editorial_reviewed_at = None
+    book.state = LifecycleState.PUBLISHED
     mark_source_verified(book, verification)
     book.save(
         update_fields=[
             "state",
-            "review_state",
             "raw_scraped_metadata",
             "source_quality_state",
-            "editorial_reviewed_at",
             "updated_at",
         ]
     )

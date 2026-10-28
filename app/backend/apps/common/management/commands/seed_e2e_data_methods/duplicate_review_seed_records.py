@@ -2,40 +2,18 @@ from ..seed_e2e_data_config import (
     BOOK_DEFINITIONS,
     PROCESSING_SUBMISSION_TITLES,
     Book,
-    DuplicateReview,
-    DuplicateReviewStatus,
     JobStatus,
     ResolutionStatus,
-    ReviewState,
     SubmissionOrigin,
     SubmissionStatus,
     User,
 )
 
 
-def create_duplicate_review(self, admin: User, books: dict[str, Book]):
-    duplicate_submission = self.create_submission_record(
-        submitter=admin,
-        title=PROCESSING_SUBMISSION_TITLES["duplicate_review"],
-        origin=SubmissionOrigin.USER,
-        status=SubmissionStatus.DUPLICATE,
-        review_state=ReviewState.NEEDS_REVIEW,
-        linked_book=None,
-        resolved_url=BOOK_DEFINITIONS["preview"].source_url,
-    )
-    DuplicateReview.objects.create(
-        submission=duplicate_submission,
-        existing_book=books["home_secondary"],
-        status=DuplicateReviewStatus.PENDING,
-        notes="Seeded duplicate review for live-browser coverage.",
-    )
-
-
 def create_automation_submissions(self, admin: User, books: dict[str, Book]):
     for (
         title,
         status,
-        review_state,
         book_key,
         resolved_book_key,
         job_status,
@@ -44,7 +22,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_pending"],
             SubmissionStatus.PENDING_RESOLUTION,
-            ReviewState.PENDING,
             None,
             None,
             "",
@@ -53,7 +30,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_ready"],
             SubmissionStatus.READY,
-            ReviewState.APPROVED,
             "preview",
             "preview",
             JobStatus.SUCCEEDED,
@@ -62,7 +38,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_processing"],
             SubmissionStatus.PROCESSING,
-            ReviewState.PENDING,
             "preview",
             "preview",
             JobStatus.PROCESSING,
@@ -71,7 +46,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_queued"],
             SubmissionStatus.QUEUED,
-            ReviewState.PENDING,
             "preview",
             "preview",
             JobStatus.QUEUED,
@@ -80,7 +54,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_stopped"],
             SubmissionStatus.CANCELLED,
-            ReviewState.PENDING,
             None,
             "preview",
             JobStatus.CANCELLED,
@@ -89,7 +62,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["automation_deleted"],
             SubmissionStatus.DELETED,
-            ReviewState.PENDING,
             None,
             "preview",
             JobStatus.CANCELLED,
@@ -101,7 +73,6 @@ def create_automation_submissions(self, admin: User, books: dict[str, Book]):
             title=title,
             origin=SubmissionOrigin.AUTOMATION,
             status=status,
-            review_state=review_state,
             linked_book=books[book_key] if book_key else None,
             resolution_status=(
                 ResolutionStatus.UNRESOLVED
@@ -135,7 +106,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
     for (
         title,
         status,
-        review_state,
         book_key,
         resolved_book_key,
         job_status,
@@ -144,7 +114,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["curation_ready"],
             SubmissionStatus.READY,
-            ReviewState.APPROVED,
             "access",
             "access",
             JobStatus.SUCCEEDED,
@@ -153,7 +122,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["curation_processing"],
             SubmissionStatus.PROCESSING,
-            ReviewState.PENDING,
             "access",
             "access",
             JobStatus.PROCESSING,
@@ -162,7 +130,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["curation_queued"],
             SubmissionStatus.QUEUED,
-            ReviewState.PENDING,
             "access",
             "access",
             JobStatus.QUEUED,
@@ -171,7 +138,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["curation_stopped"],
             SubmissionStatus.CANCELLED,
-            ReviewState.PENDING,
             None,
             "access",
             JobStatus.CANCELLED,
@@ -180,7 +146,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
         (
             PROCESSING_SUBMISSION_TITLES["curation_deleted"],
             SubmissionStatus.DELETED,
-            ReviewState.PENDING,
             None,
             "access",
             JobStatus.CANCELLED,
@@ -192,7 +157,6 @@ def create_curation_submissions(self, admin: User, books: dict[str, Book]):
             title=title,
             origin=SubmissionOrigin.CURATION,
             status=status,
-            review_state=review_state,
             linked_book=books[book_key] if book_key else None,
             resolved_url=BOOK_DEFINITIONS[resolved_book_key].source_url,
             error_message="Stopped by user."

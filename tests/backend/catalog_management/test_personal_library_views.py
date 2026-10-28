@@ -15,9 +15,7 @@ def personal_fixture():
     actor = User.objects.create_user(email="personal-reader@library.test")
     client = APIClient()
     client.force_authenticate(actor)
-    book = Book.objects.create(
-        title="পাঠকের অনুমোদিত বই", state="published", review_state="approved"
-    )
+    book = Book.objects.create(title="পাঠকের অনুমোদিত বই", state="published")
     return actor, client, book
 
 
@@ -61,9 +59,7 @@ def test_saved_records_cannot_reveal_a_withdrawn_or_ungranted_draft():
 
 def test_recent_books_sort_by_own_reading_time_and_bind_cursors_to_view():
     actor, client, first = personal_fixture()
-    second = Book.objects.create(
-        title="পরে তৈরি আগে পড়া", state="published", review_state="approved"
-    )
+    second = Book.objects.create(title="পরে তৈরি আগে পড়া", state="published")
     for book in [first, second]:
         ReadingSession.objects.create(user=actor, book=book)
     ReadingSession.objects.filter(user=actor, book=second).update(
@@ -88,9 +84,7 @@ def test_granted_view_filters_expired_grants_and_respects_category_scopes():
     actor, client, book = personal_fixture()
     category = Category.objects.create(name="অনুমোদিত বিভাগ")
     BookCategory.objects.create(book=book, category=category)
-    other = Book.objects.create(
-        title="মেয়াদ শেষ", state="published", review_state="approved"
-    )
+    other = Book.objects.create(title="মেয়াদ শেষ", state="published")
     PermissionGrant.objects.create(
         user=actor, scope=PermissionScope.READ_DURABLE, category=category
     )

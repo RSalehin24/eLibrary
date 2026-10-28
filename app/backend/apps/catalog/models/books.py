@@ -4,7 +4,6 @@ from django.db import models, transaction
 
 from apps.common.models import (
     LifecycleState,
-    ReviewState,
     SoftDeleteModel,
     TimeStampedModel,
     UUIDPrimaryKeyModel,
@@ -17,14 +16,12 @@ from .catalog_codes import (
     is_book_catalog_code,
 )
 from .choices import (
-    BookRecordType,
     ContributorRole,
     CuratedDocumentStatus,
     CuratedEntityType,
     CuratedSectionType,
     GeneratedAssetStatus,
     GeneratedAssetType,
-    ManualBindingType,
 )
 from .editorial import EditorialMetadata
 from .entities import Category, Contributor, Series
@@ -57,15 +54,20 @@ class BookGroup(UUIDPrimaryKeyModel, TimeStampedModel):
 
 class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMetadata):
     title = models.CharField(max_length=255)
-    normalized_title = models.CharField(max_length=255, db_index=True, editable=False, blank=True, default="")
+    normalized_title = models.CharField(
+        max_length=255, db_index=True, editable=False, blank=True, default=""
+    )
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
-    catalog_code = models.CharField(max_length=CATALOG_CODE_LENGTH, unique=True, db_index=True, blank=True, null=True)
-    record_type = models.CharField(max_length=16, choices=BookRecordType.choices, default=BookRecordType.DIGITAL, db_index=True)
-    manual_is_compilation = models.BooleanField(default=False)
-    manual_binding = models.CharField(max_length=32, choices=ManualBindingType.choices, blank=True)
-    manual_publisher = models.CharField(max_length=255, blank=True)
-    manual_price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True)
-    manual_language = models.CharField(max_length=16, default="bn", blank=True)
+    catalog_code = models.CharField(
+        max_length=CATALOG_CODE_LENGTH,
+        unique=True,
+        db_index=True,
+        blank=True,
+        null=True,
+    )
+    is_compilation = models.BooleanField(default=False)
+    publisher = models.CharField(max_length=255, blank=True)
+    language = models.CharField(max_length=16, default="bn", blank=True)
     edition = models.CharField(max_length=120, blank=True)
     normalized_edition = models.CharField(
         max_length=120, db_index=True, editable=False, blank=True, default=""
@@ -78,9 +80,16 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMeta
         related_name="books",
     )
     summary = models.TextField(blank=True)
-    state = models.CharField(max_length=32, choices=LifecycleState.choices, default=LifecycleState.DRAFT, db_index=True)
-    review_state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING, db_index=True)
-    source_quality_state = models.CharField(max_length=16, default="unchecked", db_index=True)
+    metadata_overrides = models.JSONField(default=dict, blank=True)
+    state = models.CharField(
+        max_length=32,
+        choices=LifecycleState.choices,
+        default=LifecycleState.DRAFT,
+        db_index=True,
+    )
+    source_quality_state = models.CharField(
+        max_length=16, default="unchecked", db_index=True
+    )
     source_site = models.CharField(max_length=100, default="")
     raw_scraped_metadata = models.JSONField(default=dict, blank=True)
     raw_scrape_payload = models.JSONField(default=dict, blank=True)
@@ -91,10 +100,15 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMeta
     content_items = models.JSONField(default=list, blank=True)
     empty_chapters_count = models.IntegerField(default=0)
     cover_source_url = models.URLField(max_length=1000, blank=True)
-    metadata_last_reviewed_at = models.DateTimeField(blank=True, null=True)
-    contributors = models.ManyToManyField(Contributor, through="BookContributor", related_name="books")
-    series_entries = models.ManyToManyField(Series, through="BookSeries", related_name="books")
-    categories = models.ManyToManyField(Category, through="BookCategory", related_name="books")
+    contributors = models.ManyToManyField(
+        Contributor, through="BookContributor", related_name="books"
+    )
+    series_entries = models.ManyToManyField(
+        Series, through="BookSeries", related_name="books"
+    )
+    categories = models.ManyToManyField(
+        Category, through="BookCategory", related_name="books"
+    )
 
     class Meta:
         ordering: ClassVar[list[str]] = ["-created_at", "title"]
@@ -103,7 +117,9 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMeta
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
             return True
-        previous = Book.objects.filter(pk=self.pk).values_list("title", flat=True).first()
+        previous = (
+            Book.objects.filter(pk=self.pk).values_list("title", flat=True).first()
+        )
         return clean_display_text(previous) != self.title
 
     @transaction.atomic
@@ -128,9 +144,15 @@ class Book(UUIDPrimaryKeyModel, TimeStampedModel, SoftDeleteModel, EditorialMeta
 
 
 class BookContributor(UUIDPrimaryKeyModel, TimeStampedModel):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="book_contributors")
-    contributor = models.ForeignKey(Contributor, on_delete=models.CASCADE, related_name="book_contributions")
-    role = models.CharField(max_length=32, choices=ContributorRole.choices, default=ContributorRole.AUTHOR)
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="book_contributors"
+    )
+    contributor = models.ForeignKey(
+        Contributor, on_delete=models.CASCADE, related_name="book_contributions"
+    )
+    role = models.CharField(
+        max_length=32, choices=ContributorRole.choices, default=ContributorRole.AUTHOR
+    )
     raw_value = models.CharField(max_length=255, blank=True)
     sort_order = models.PositiveIntegerField(default=0)
 
@@ -144,7 +166,9 @@ class BookContributor(UUIDPrimaryKeyModel, TimeStampedModel):
 
 class BookSeries(UUIDPrimaryKeyModel, TimeStampedModel):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="book_series")
-    series = models.ForeignKey(Series, on_delete=models.CASCADE, related_name="series_books")
+    series = models.ForeignKey(
+        Series, on_delete=models.CASCADE, related_name="series_books"
+    )
     sort_order = models.PositiveIntegerField(default=0)
     raw_value = models.CharField(max_length=255, blank=True)
 
@@ -157,8 +181,12 @@ class BookSeries(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class BookCategory(UUIDPrimaryKeyModel, TimeStampedModel):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="book_categories")
-    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name="category_books")
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="book_categories"
+    )
+    category = models.ForeignKey(
+        Category, on_delete=models.CASCADE, related_name="category_books"
+    )
     raw_value = models.CharField(max_length=255, blank=True)
 
     class Meta:
@@ -170,7 +198,9 @@ class BookCategory(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class UserBook(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="my_books")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="my_books"
+    )
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="user_books")
 
     class Meta:
@@ -182,8 +212,12 @@ class UserBook(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class UserBookKindleSend(UUIDPrimaryKeyModel, TimeStampedModel):
-    user = models.ForeignKey("accounts.User", on_delete=models.CASCADE, related_name="kindle_sends")
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="kindle_sends")
+    user = models.ForeignKey(
+        "accounts.User", on_delete=models.CASCADE, related_name="kindle_sends"
+    )
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="kindle_sends"
+    )
 
     class Meta:
         ordering: ClassVar[list[str]] = ["-created_at"]
@@ -211,17 +245,31 @@ class BookSource(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class GeneratedAsset(UUIDPrimaryKeyModel, TimeStampedModel):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="generated_assets")
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="generated_assets"
+    )
     asset_type = models.CharField(max_length=16, choices=GeneratedAssetType.choices)
-    status = models.CharField(max_length=16, choices=GeneratedAssetStatus.choices, default=GeneratedAssetStatus.PENDING)
-    file = models.FileField(upload_to=generated_asset_upload_to, blank=True, max_length=500)
+    status = models.CharField(
+        max_length=16,
+        choices=GeneratedAssetStatus.choices,
+        default=GeneratedAssetStatus.PENDING,
+    )
+    file = models.FileField(
+        upload_to=generated_asset_upload_to, blank=True, max_length=500
+    )
     storage_path = models.CharField(max_length=500, blank=True)
     legacy_path = models.CharField(max_length=500, blank=True)
     content_type = models.CharField(max_length=100, blank=True)
     file_size = models.BigIntegerField(default=0)
     checksum = models.CharField(max_length=128, blank=True)
     is_protected = models.BooleanField(default=True)
-    source_job = models.ForeignKey("ingestion.ProcessingJob", on_delete=models.SET_NULL, blank=True, null=True, related_name="generated_assets")
+    source_job = models.ForeignKey(
+        "ingestion.ProcessingJob",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="generated_assets",
+    )
 
     class Meta:
         ordering: ClassVar[list[str]] = ["asset_type", "-created_at"]
@@ -231,23 +279,20 @@ class GeneratedAsset(UUIDPrimaryKeyModel, TimeStampedModel):
         return f"{self.book} / {self.asset_type}"
 
 
-class MetadataReview(UUIDPrimaryKeyModel, TimeStampedModel):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="metadata_reviews")
-    state = models.CharField(max_length=32, choices=ReviewState.choices, default=ReviewState.PENDING)
-    requested_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, blank=True, null=True, related_name="requested_metadata_reviews")
-    reviewer = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, blank=True, null=True, related_name="completed_metadata_reviews")
-    notes = models.TextField(blank=True)
-
-    class Meta:
-        ordering: ClassVar[list[str]] = ["-created_at"]
-
-
 class MetadataVersion(UUIDPrimaryKeyModel, TimeStampedModel):
-    book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="metadata_versions")
+    book = models.ForeignKey(
+        Book, on_delete=models.CASCADE, related_name="metadata_versions"
+    )
     snapshot = models.JSONField(default=dict, blank=True)
     source = models.CharField(max_length=50, default="scrape")
     notes = models.TextField(blank=True)
-    created_by = models.ForeignKey("accounts.User", on_delete=models.SET_NULL, blank=True, null=True, related_name="metadata_versions_created")
+    created_by = models.ForeignKey(
+        "accounts.User",
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True,
+        related_name="metadata_versions_created",
+    )
 
     class Meta:
         ordering: ClassVar[list[str]] = ["-created_at"]
@@ -292,7 +337,9 @@ class CuratedBookDocument(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class CuratedEntity(UUIDPrimaryKeyModel, TimeStampedModel):
-    document = models.ForeignKey(CuratedBookDocument, on_delete=models.CASCADE, related_name="entities")
+    document = models.ForeignKey(
+        CuratedBookDocument, on_delete=models.CASCADE, related_name="entities"
+    )
     entity_type = models.CharField(max_length=32, choices=CuratedEntityType.choices)
     role = models.CharField(max_length=64, blank=True)
     value = models.CharField(max_length=500)
@@ -311,7 +358,9 @@ class CuratedEntity(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class CuratedSection(UUIDPrimaryKeyModel, TimeStampedModel):
-    document = models.ForeignKey(CuratedBookDocument, on_delete=models.CASCADE, related_name="sections")
+    document = models.ForeignKey(
+        CuratedBookDocument, on_delete=models.CASCADE, related_name="sections"
+    )
     section_id = models.CharField(max_length=160)
     section_type = models.CharField(max_length=32, choices=CuratedSectionType.choices)
     title = models.CharField(max_length=500, blank=True)
@@ -332,9 +381,23 @@ class CuratedSection(UUIDPrimaryKeyModel, TimeStampedModel):
 
 
 class CuratedEvidence(UUIDPrimaryKeyModel, TimeStampedModel):
-    document = models.ForeignKey(CuratedBookDocument, on_delete=models.CASCADE, related_name="evidence")
-    entity = models.ForeignKey(CuratedEntity, on_delete=models.CASCADE, blank=True, null=True, related_name="evidence")
-    section = models.ForeignKey(CuratedSection, on_delete=models.CASCADE, blank=True, null=True, related_name="evidence")
+    document = models.ForeignKey(
+        CuratedBookDocument, on_delete=models.CASCADE, related_name="evidence"
+    )
+    entity = models.ForeignKey(
+        CuratedEntity,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="evidence",
+    )
+    section = models.ForeignKey(
+        CuratedSection,
+        on_delete=models.CASCADE,
+        blank=True,
+        null=True,
+        related_name="evidence",
+    )
     value = models.CharField(max_length=500, blank=True)
     entity_type = models.CharField(max_length=32, blank=True)
     role = models.CharField(max_length=64, blank=True)

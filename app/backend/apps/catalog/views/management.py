@@ -14,7 +14,6 @@ from apps.catalog.serializers.public import (
     AdminBookListSerializer,
     AdminBookParametersSerializer,
 )
-from apps.catalog.views.editorial import managed_book_by_slug
 from apps.common.api import VersionedAPIView
 from apps.common.api_serializers import APIErrorSerializer
 from apps.common.pagination import BoundedAdminPagination
@@ -38,9 +37,7 @@ class ManagedBookListView(VersionedAPIView):
         parameters.is_valid(raise_exception=True)
         book = create_catalog_book(request.user, parameters.validated_data)
         return Response(
-            ManagedBookDetailSerializer(
-                managed_book_by_slug(request.user, book.slug)
-            ).data,
+            ManagedBookDetailSerializer(book).data,
             status=201,
         )
 

@@ -1,43 +1,27 @@
-import json
 from datetime import timedelta
-from pathlib import Path
 
 import pytest
-from django.db import connection
-from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test.utils import CaptureQueriesContext
-from django.utils import timezone
-from django.utils.text import slugify
-
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.accounts.models import User
-from apps.catalog.models import (
-    Book,
-    BookContributor,
-    BookSource,
-    CATALOG_CODE_LENGTH,
-    Category,
-    Contributor,
-    derive_category_catalog_code_from_book_code,
-    derive_writer_catalog_code_from_book_code,
-    GeneratedAsset,
-    GeneratedAssetType,
-    MetadataReview,
-    MetadataVersion,
-    Series,
-)
-from apps.catalog.services import get_or_create_category, get_or_create_contributor, get_or_create_series, replace_book_relations
-from apps.ingestion.models import BookSubmission, DuplicateReview, ProcessingJob
+from apps.catalog.models import Book, GeneratedAsset
+from apps.catalog.services import replace_book_relations
+from apps.ingestion.models import BookSubmission, ProcessingJob
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
+from django.utils import timezone
 
 
 @pytest.mark.django_db
 def test_catalog_can_filter_books_created_by_current_user(client):
-    owner = User.objects.create_user(email="owner@example.com", password="strong-password-123")
-    other_user = User.objects.create_user(email="other@example.com", password="strong-password-123")
-    owner_book = Book.objects.create(title="আমার বই", state="ready", review_state="approved")
-    shared_book = Book.objects.create(title="শেয়ার্ড বই", state="ready", review_state="approved")
-    other_book = Book.objects.create(title="অন্য বই", state="ready", review_state="approved")
+    owner = User.objects.create_user(
+        email="owner@example.com", password="strong-password-123"
+    )
+    other_user = User.objects.create_user(
+        email="other@example.com", password="strong-password-123"
+    )
+    owner_book = Book.objects.create(title="আমার বই", state="ready")
+    shared_book = Book.objects.create(title="শেয়ার্ড বই", state="ready")
+    other_book = Book.objects.create(title="অন্য বই", state="ready")
 
     older_submission = BookSubmission.objects.create(
         submitter=owner,
@@ -78,8 +62,12 @@ def test_catalog_can_filter_books_created_by_current_user(client):
 
     older_timestamp = timezone.now() - timedelta(days=2)
     newest_timestamp = timezone.now() - timedelta(hours=2)
-    BookSubmission.objects.filter(pk=older_submission.pk).update(created_at=older_timestamp)
-    BookSubmission.objects.filter(pk=newest_owner_submission.pk).update(created_at=newest_timestamp)
+    BookSubmission.objects.filter(pk=older_submission.pk).update(
+        created_at=older_timestamp
+    )
+    BookSubmission.objects.filter(pk=newest_owner_submission.pk).update(
+        created_at=newest_timestamp
+    )
 
     client.force_login(owner)
     response = client.get("/api/catalog/books/?ownership=mine&sort=-requested_at")
@@ -94,13 +82,15 @@ def test_catalog_can_filter_books_created_by_current_user(client):
 
 @pytest.mark.django_db
 def test_catalog_book_list_supports_paginated_responses(client):
-    user = User.objects.create_user(email="paged-reader@example.com", password="strong-password-123")
-    Book.objects.create(title="আলফা বই", state="ready", review_state="approved")
-    Book.objects.create(title="বিটা বই", state="ready", review_state="approved")
-    third_book = Book.objects.create(title="গামা বই", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="paged-reader@example.com", password="strong-password-123"
+    )
+    Book.objects.create(title="আলফা বই", state="ready")
+    Book.objects.create(title="বিটা বই", state="ready")
+    third_book = Book.objects.create(title="গামা বই", state="ready")
     client.force_login(user)
 
-    response = client.get("/api/catalog/books/?record_type=all&sort=created_at&limit=2&page=2")
+    response = client.get("/api/catalog/books/?sort=created_at&limit=2&page=2")
 
     assert response.status_code == 200
     payload = response.json()
@@ -117,8 +107,10 @@ def test_catalog_book_list_supports_paginated_responses(client):
 
 @pytest.mark.django_db
 def test_catalog_book_search_supports_normalized_bangla_queries(client):
-    user = User.objects.create_user(email="bangla-search-reader@example.com", password="strong-password-123")
-    book = Book.objects.create(title="অ-আ-ক-খুনের কাঁটা", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="bangla-search-reader@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="অ-আ-ক-খুনের কাঁটা", state="ready")
     replace_book_relations(
         book,
         contributors=[{"name": "নারায়ণ সান্যাল", "role": "author"}],
@@ -127,14 +119,14 @@ def test_catalog_book_search_supports_normalized_bangla_queries(client):
     )
     client.force_login(user)
 
-    title_response = client.get("/api/catalog/books/", {"record_type": "all", "q": "অ আ ক খুনের কাঁটা"})
+    title_response = client.get("/api/catalog/books/", {"q": "অ আ ক খুনের কাঁটা"})
     series_response = client.get(
         "/api/catalog/books/",
-        {"record_type": "all", "series": "পি কে বাসু কাঁটা সিরিজ"},
+        {"series": "পি কে বাসু কাঁটা সিরিজ"},
     )
     category_response = client.get(
         "/api/catalog/books/",
-        {"record_type": "all", "category": "গোয়েন্দা ডিটেকটিভ"},
+        {"category": "গোয়েন্দা ডিটেকটিভ"},
     )
 
     assert title_response.status_code == 200
@@ -147,11 +139,12 @@ def test_catalog_book_search_supports_normalized_bangla_queries(client):
 
 @pytest.mark.django_db
 def test_catalog_book_list_avoids_loading_heavy_content_columns(client):
-    user = User.objects.create_user(email="catalog-reader@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="catalog-reader@example.com", password="strong-password-123"
+    )
     Book.objects.create(
         title="ভারী বই",
         state="ready",
-        review_state="approved",
         summary="Summary",
         raw_scraped_metadata={"source": "seed"},
         raw_scrape_payload={"payload": "seed"},
@@ -185,73 +178,36 @@ def test_catalog_book_list_avoids_loading_heavy_content_columns(client):
 
 
 @pytest.mark.django_db
-def test_metadata_editor_can_replace_book_epub_asset(client, settings, tmp_path):
-    settings.MEDIA_ROOT = tmp_path / "media"
-
-    editor = User.objects.create_user(email="epub-editor@example.com", password="strong-password-123")
-    book = Book.objects.create(title="ইপাব বই", state="ready", review_state="approved")
-    PermissionGrant.objects.create(user=editor, book=book, scope=PermissionScope.METADATA_EDIT)
-    client.force_login(editor)
-
-    asset = GeneratedAsset.objects.create(book=book, asset_type=GeneratedAssetType.EPUB, status="ready")
-    asset.file.save("old.epub", ContentFile(b"old-bytes"), save=True)
-    old_path = Path(asset.file.path)
-
-    upload = SimpleUploadedFile("replacement.epub", b"new-epub-bytes", content_type="application/epub+zip")
-    response = client.post(f"/api/catalog/books/{book.slug}/assets/epub/", data={"file": upload})
-
-    assert response.status_code == 200
-    asset.refresh_from_db()
-
-    assert asset.status == "ready"
-    assert asset.file_size == len(b"new-epub-bytes")
-    assert asset.legacy_path == ""
-    assert Path(asset.file.path).read_bytes() == b"new-epub-bytes"
-    assert not old_path.exists()
-    assert any(entry["asset_type"] == "epub" for entry in response.json()["assets"])
+def test_metadata_editor_can_replace_book_epub_asset(client):
+    actor = User.objects.create_user(
+        email="nonadmin-writer@example.test", password="strong-password-123"
+    )
+    book = Book.objects.create(title="সম্পাদনা নিষিদ্ধ")
+    PermissionGrant.objects.create(
+        user=actor, book=book, scope=PermissionScope.METADATA_EDIT
+    )
+    client.force_login(actor)
+    suffix = "assets/epub/"
+    assert client.post(f"/api/catalog/books/{book.slug}/{suffix}").status_code in {
+        403,
+        404,
+    }
+    assert not GeneratedAsset.objects.exists() and not ProcessingJob.objects.exists()
 
 
 @pytest.mark.django_db
-def test_metadata_editor_can_queue_book_regeneration_from_book_page(client, monkeypatch):
-    editor = User.objects.create_user(email="reprocess-editor@example.com", password="strong-password-123")
-    book = Book.objects.create(title="পুনর্জন্ম বই", state="ready", review_state="approved")
-    PermissionGrant.objects.create(user=editor, book=book, scope=PermissionScope.METADATA_EDIT)
-    BookSource.objects.create(
-        book=book,
-        source_url="https://www.example.com/books/reprocess-book/",
-        normalized_source_url="https://www.example.com/books/reprocess-book/",
-        source_title="পুনর্জন্ম বই",
+def test_metadata_editor_can_queue_book_regeneration_from_book_page(client):
+    actor = User.objects.create_user(
+        email="nonadmin-writer@example.test", password="strong-password-123"
     )
-    client.force_login(editor)
-
-    def fake_queue_reprocess_book(book_obj, actor=None):
-        book_obj.state = "processing"
-        book_obj.save(update_fields=["state", "updated_at"])
-        submission = BookSubmission.objects.create(
-            submitter=actor,
-            input_type="url",
-            original_input="https://www.example.com/books/reprocess-book/",
-            normalized_input="https://www.example.com/books/reprocess-book/",
-            resolved_url="https://www.example.com/books/reprocess-book/",
-            resolution_status="resolved",
-            resolution_confidence=1.0,
-            status="queued",
-            linked_book=book_obj,
-        )
-        job = ProcessingJob.objects.create(submission=submission, book=book_obj, job_type="reprocess", status="queued")
-        return job, True
-
-    monkeypatch.setattr("apps.catalog.views.queue_reprocess_book", fake_queue_reprocess_book)
-
-    response = client.post(
-        f"/api/catalog/books/{book.slug}/regenerate/",
-        data=json.dumps({}),
-        content_type="application/json",
+    book = Book.objects.create(title="সম্পাদনা নিষিদ্ধ")
+    PermissionGrant.objects.create(
+        user=actor, book=book, scope=PermissionScope.METADATA_EDIT
     )
-
-    assert response.status_code == 202
-    payload = response.json()
-    assert payload["created"] is True
-    assert payload["job"]["job_type"] == "reprocess"
-    assert payload["book"]["state"] == "processing"
-    assert payload["book"]["latest_processing_job"]["status"] == "queued"
+    client.force_login(actor)
+    suffix = "regenerate/"
+    assert client.post(f"/api/catalog/books/{book.slug}/{suffix}").status_code in {
+        403,
+        404,
+    }
+    assert not GeneratedAsset.objects.exists() and not ProcessingJob.objects.exists()

@@ -96,9 +96,7 @@ def test_list_controls_omit_private_books_and_disable_unavailable_kindle_files(
 ):
     client, user, book = controls_reader
     private = Book.objects.create(title="Unpublished private record")
-    paper = Book.objects.create(
-        title="Paper record", state="published", record_type="manual"
-    )
+    paper = Book.objects.create(title="Paper record", state="published")
     UserBook.objects.create(user=user, book=book)
     GeneratedAsset.objects.filter(book=book).update(legacy_path="/missing.epub")
     data = client.get(PATH, {"slugs": [book.slug, private.slug, paper.slug]}).json()[
@@ -131,8 +129,8 @@ def test_list_controls_query_count_is_bounded(controls_reader):
     with CaptureQueriesContext(connection) as several:
         result = book_list_controls(user, [book.slug, *(entry.slug for entry in other)])
     assert len(result) == 9
-    # Three existing scope checks, then one book query and one asset prefetch.
-    assert len(one) == len(several) == 5
+    # Two reader scope checks, then one book query and one asset prefetch.
+    assert len(one) == len(several) == 4
 
 
 def test_list_controls_blocks_anonymous_and_required_totp_accounts(controls_reader):

@@ -5,7 +5,7 @@ from uuid import uuid4
 
 import pytest
 from apps.accounts.models import User
-from apps.catalog.models import Book, GeneratedAsset, MetadataReview
+from apps.catalog.models import Book, GeneratedAsset
 from apps.processing.job_models import (
     BackgroundJob,
     JobAttempt,
@@ -73,11 +73,13 @@ def test_dispatchers_cannot_lease_the_same_records(command):
     assert len(identifiers) == len(set(identifiers)) == 2
 
 
-def record_related_review(command):
+def record_related_metadata(command):
     close_old_connections()
     try:
-        return MetadataReview.objects.create(
-            book=command.asset.book, requested_by=command.actor
+        from apps.catalog.models import MetadataVersion
+
+        return MetadataVersion.objects.create(
+            book=command.asset.book, created_by=command.actor, source="editorial"
         ).pk
     finally:
         connections.close_all()
@@ -88,5 +90,5 @@ def test_command_serialization_does_not_block_an_independent_foreign_key_writer(
 ):
     with ThreadPoolExecutor(max_workers=1) as executor, transaction.atomic():
         enqueue_job(command)
-        future = executor.submit(record_related_review, command)
+        future = executor.submit(record_related_metadata, command)
         assert future.result(timeout=5)

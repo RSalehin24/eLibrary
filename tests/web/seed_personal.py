@@ -15,13 +15,9 @@ def create_personal_fixture(identity, books, create_account):
     reader, account = create_account(identity, "personal-reader")
     paper = Book.objects.create(
         title=f"কাগজের বই {identity}",
-        record_type="manual",
-        manual_publisher="পরীক্ষার প্রকাশক",
-        manual_price="0.00",
-        manual_binding="hard_cover",
-        manual_is_compilation=True,
+        publisher="পরীক্ষার প্রকাশক",
+        is_compilation=True,
         state="published",
-        review_state="approved",
     )
     UserBook.objects.create(user=reader, book=paper)
     private = Book.objects.create(title=f"অনুমতি পাওয়া ব্যক্তিগত বই {identity}")
@@ -42,7 +38,6 @@ def create_personal_fixture(identity, books, create_account):
         group=group,
         edition="দ্বিতীয়",
         state="published",
-        review_state="approved",
     )
     Book.objects.create(title=f"গোপন সংস্করণ {identity}", group=group)
     return {

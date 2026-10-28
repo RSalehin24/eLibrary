@@ -19,7 +19,7 @@ export function SourceWorkspace({ initial }: { initial: SourceEntry }) {
   return <div className="source-workspace"><Link className="text-link" href="/manage/sources/">{t("← উৎসের তালিকায় ফিরুন")}</Link>
     <SourceSummary entry={entry} />
     <SourceUpdateStatus entry={entry} />
-    <div className="source-result-actions">{book && entry.can_edit_book && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(book.slug)}/`}>{t("সম্পাদনা, পর্যালোচনা ও প্রকাশ")}</Link>}
+    <div className="source-result-actions">{book && entry.can_edit_book && <Link className="button button-quiet" href={`/manage/books/${encodeURIComponent(book.slug)}/`}>{t("বইয়ের তথ্য সম্পাদনা করুন")}</Link>}
       {book && operation && <Link className="button button-quiet" href={`/manage/jobs/${operation}/`}>{t(entry.active_operation_id ? "চলমান কাজ ও করণীয় দেখুন →" : "কাজের বিস্তারিত")}</Link>}</div>
     {source.isError && <p className="field-error" role="alert">{t("হালনাগাদ অবস্থা পাওয়া যায়নি।")} <button className="button button-quiet" onClick={() => void source.refetch()}>{t("আবার দেখুন")}</button></p>}
     {entry.content_summary && <section className="source-content-summary"><p className="muted">{t("পাওয়া অধ্যায়")}: {number(entry.content_summary.chapter_count)} · {t("লেখার অক্ষর")}: {number(entry.content_summary.body_character_count)}</p>

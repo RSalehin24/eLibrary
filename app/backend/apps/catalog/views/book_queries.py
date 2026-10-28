@@ -2,20 +2,28 @@ from django.db.models import Exists, OuterRef, Subquery
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.generics import GenericAPIView
 
-from apps.catalog.models import Book, BookRecordType, UserBook, UserBookKindleSend
+from apps.catalog.models import Book, UserBook, UserBookKindleSend
 from apps.ingestion.models import BookSubmission
 
 
 class BookQueryMixin(GenericAPIView):
-    default_record_type = BookRecordType.DIGITAL
-
     def base_queryset(self):
         identity = self.request.user.pk
         if identity is None:
             raise PermissionDenied("Sign in is required.")
-        owned = UserBook.objects.filter(book=OuterRef("pk"), user_id=identity).order_by("-created_at")
-        kindle_sent = UserBookKindleSend.objects.filter(book=OuterRef("pk"), user_id=identity).order_by("-created_at")
-        latest_submission = BookSubmission.objects.filter(linked_book=OuterRef("pk"), submitter_id=identity).order_by("-created_at").values("created_at")[:1]
+        owned = UserBook.objects.filter(book=OuterRef("pk"), user_id=identity).order_by(
+            "-created_at"
+        )
+        kindle_sent = UserBookKindleSend.objects.filter(
+            book=OuterRef("pk"), user_id=identity
+        ).order_by("-created_at")
+        latest_submission = (
+            BookSubmission.objects.filter(
+                linked_book=OuterRef("pk"), submitter_id=identity
+            )
+            .order_by("-created_at")
+            .values("created_at")[:1]
+        )
         return (
             Book.objects.prefetch_related(
                 "book_contributors__contributor",
@@ -48,4 +56,4 @@ class BookQueryMixin(GenericAPIView):
     def get_queryset(self):
         from .shared import filtered_book_queryset
 
-        return filtered_book_queryset(self.base_queryset(), self.request, default_record_type=self.default_record_type)
+        return filtered_book_queryset(self.base_queryset(), self.request)

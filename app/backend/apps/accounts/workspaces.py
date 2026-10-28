@@ -1,5 +1,9 @@
 from apps.access.models import PermissionGrant, PermissionScope
-from apps.common.permissions import user_can_create_catalog_book, user_has_scope
+from apps.common.permissions import (
+    is_book_administrator,
+    user_can_create_catalog_book,
+    user_has_scope,
+)
 
 MANAGEMENT_SECTIONS = (
     ("sources", PermissionScope.PROCESSING_MANAGE),
@@ -36,4 +40,5 @@ def available_workspaces(user):
         "manage": bool(sections),
         "management_sections": sections,
         "can_create_books": user_can_create_catalog_book(user),
+        "can_edit_books": is_book_administrator(user),
     }

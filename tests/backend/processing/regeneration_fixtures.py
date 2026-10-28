@@ -2,7 +2,6 @@ from uuid import uuid4
 
 from apps.catalog.models import Book, BookContributor, BookSource, Contributor
 from apps.ingestion.source_processing.regeneration import request_book_regeneration
-from django.utils import timezone
 
 from tests.backend.access.reader_fixtures import prepared_asset
 
@@ -13,8 +12,6 @@ def create_regeneration_fixture(source_job, folder):
         summary="সম্পাদিত পরিচিতি",
         seo_title="Edited SEO",
         state="published",
-        review_state="approved",
-        editorial_reviewed_at=timezone.now(),
         main_content_html="<p>Previous text</p>",
     )
     author = Contributor.objects.create(name="সম্পাদিত লেখক")

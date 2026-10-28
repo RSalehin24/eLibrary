@@ -1,3 +1,17 @@
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import BookCreationRequest, BookRecord, ProcessingSyncStatus
+from apps.processing.services import (
+    PROCESSING_SYNC_KEY_CATALOG,
+    PROCESSING_SYNC_KEY_INCOMPLETE,
+    get_sync_state,
+)
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    rebuild_processing_ui_state,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -17,14 +31,21 @@ def test_save_sync_state_refreshes_catalog_automation_projection_without_bumping
     current_versions = processing_services.processing_ui_versions_map(
         domains=["catalog-sync", "catalog-automation"]
     )
-    catalog_automation_projection = processing_services.processing_ui_shared_projection_payload(
-        "catalog-automation"
+    catalog_automation_projection = (
+        processing_services.processing_ui_shared_projection_payload(
+            "catalog-automation"
+        )
     )
 
     assert current_versions["catalog-sync"] == previous_versions["catalog-sync"] + 1
-    assert current_versions["catalog-automation"] == previous_versions["catalog-automation"]
+    assert (
+        current_versions["catalog-automation"]
+        == previous_versions["catalog-automation"]
+    )
     assert catalog_automation_projection["sync"]["status"] == "syncing"
-    assert catalog_automation_projection["sync"]["message"] == "Catalog sync is running."
+    assert (
+        catalog_automation_projection["sync"]["message"] == "Catalog sync is running."
+    )
 
 
 @pytest.mark.django_db
@@ -38,9 +59,11 @@ def test_collect_processing_ui_version_updates_tracks_committed_versions(
 
     state.status = ProcessingSyncStatus.SYNCING
     state.message = "Catalog sync is running."
-    with processing_services.collect_processing_ui_version_updates() as versions:
-        with django_capture_on_commit_callbacks(execute=True):
-            processing_services.save_sync_state(state)
+    with (
+        processing_services.collect_processing_ui_version_updates() as versions,
+        django_capture_on_commit_callbacks(execute=True),
+    ):
+        processing_services.save_sync_state(state)
 
     assert versions == {
         "catalog-sync": previous_versions["catalog-sync"] + 1,
@@ -104,7 +127,10 @@ def test_processing_request_action_response_excludes_unrelated_version_bumps(
         version_row.save(update_fields=["version", "updated_at"])
         return changed
 
-    monkeypatch.setattr('apps.processing.view_modules.sync_action_and_automation_views.apply_request_action', apply_action_with_unrelated_bump)
+    monkeypatch.setattr(
+        "apps.processing.view_modules.sync_action_and_automation_views.apply_request_action",
+        apply_action_with_unrelated_bump,
+    )
 
     response = client.post(
         "/api/processing/requests/action/",
@@ -165,14 +191,15 @@ def test_catalog_record_upsert_bumps_only_catalog_domains(
         == previous_versions["catalog-overview"] + 1
     )
     assert (
-        current_versions["catalog-records"]
-        == previous_versions["catalog-records"] + 1
+        current_versions["catalog-records"] == previous_versions["catalog-records"] + 1
     )
     assert current_versions["create-requests"] == previous_versions["create-requests"]
 
 
 @pytest.mark.django_db
-def test_processing_state_returns_weekly_automation_defaults_without_placeholder(client):
+def test_processing_state_returns_weekly_automation_defaults_without_placeholder(
+    client,
+):
     login_processing_admin(client)
 
     response = client.get("/api/processing/state/")
@@ -211,8 +238,5 @@ def test_processing_state_exposes_decoded_bangla_display_urls(client):
     payload = response.json()
     entry = next(item for item in payload["records"] if item["id"] == record.id)
     assert entry["url"] == encoded_url
-    assert (
-        entry["displayUrl"]
-        == "https://www.example.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/"
-    )
+    assert entry["displayUrl"] == "https://www.example.com/books/অগ্নিপরীক্ষা-আশাপূর্ণা/"
     assert entry["displayPath"] == "books/অগ্নিপরীক্ষা-আশাপূর্ণা"

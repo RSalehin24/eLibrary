@@ -4,35 +4,10 @@ import { typescriptModule } from "./typescript-module.mjs";
 
 const { legacyRouteTarget } = await typescriptModule(new URL("../../../app/web/src/lib/legacy-routes.ts", import.meta.url));
 
-test("legacy catalog links retain combined filters and default to their original digital type", () => {
-  const destination = new URL(legacyRouteTarget("library", { q: "বাংলা", author: "লেখক", category: "বিভাগ", sort: "title", page: "2", next: "https://attacker.test" }), "https://library.test");
-  assert.equal(destination.pathname, "/catalog/");
-  assert.equal(destination.searchParams.get("contributor"), "লেখক");
-  assert.equal(destination.searchParams.get("contributor_role"), "author");
-  assert.equal(destination.searchParams.get("record_type"), "digital");
-  assert.equal(destination.searchParams.get("q"), "বাংলা");
-  assert.equal(destination.searchParams.get("page"), "2");
-  assert.equal(destination.searchParams.has("next"), false);
-});
-
-test("legacy directories retain role and physical inventory retains its filters", () => {
-  assert.equal(legacyRouteTarget("translators", { q: "Translator" }), "/contributors/?q=Translator&role=translator");
-  const destination = new URL(legacyRouteTarget("manual-books", { publisher: "প্রকাশক", binding: "hard_cover" }), "https://library.test");
-  assert.equal(destination.pathname, "/physical-books/");
-  assert.equal(destination.searchParams.get("record_type"), "manual");
-  assert.equal(destination.searchParams.get("binding"), "hard_cover");
-});
-
-test("legacy processing aliases target filtered current workspaces", () => {
-  assert.equal(legacyRouteTarget("on-hold", {}), "/manage/jobs/?view=recovery");
-  assert.equal(legacyRouteTarget("processing-failed-requests", {}), "/manage/jobs/?view=recovery");
-  assert.equal(legacyRouteTarget("create", {}), "/manage/sources/?status=unlinked");
-  assert.equal(legacyRouteTarget("processing-automation", {}), "/manage/automations/");
-  assert.equal(legacyRouteTarget("processing-incomplete-check", {}), "/manage/unfinished/");
-  for (const route of ["multipage-toc", "processing-multi-page-toc"]) {
-    assert.equal(legacyRouteTarget(route, {}), "/manage/jobs/?kind=process_source&layout=multi_page");
+test("removed development aliases do not recreate retired surfaces or filters", () => {
+  for (const route of ["library", "manual-books", "writers", "translators", "on-hold", "create", "processing-automation", "access"]) {
+    assert.equal(legacyRouteTarget(route, { record_type: "manual", binding: "hard_cover", next: "//attacker.test" }), null);
   }
-  assert.equal(legacyRouteTarget("access", { next: "//attacker.test" }), "/manage/users-access/");
 });
 
 test("legacy reader never accepts an external manifest or bypasses the book access workflow", () => {

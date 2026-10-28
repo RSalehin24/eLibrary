@@ -15,8 +15,8 @@ from apps.catalog.models import (
     MetadataVersion,
     Series,
 )
+from django.http import Http404
 from django.utils import timezone
-from rest_framework.exceptions import PermissionDenied
 from rest_framework.test import APIClient
 
 from .entity_fixtures import entity_client, entity_revision
@@ -26,12 +26,7 @@ pytestmark = pytest.mark.django_db
 
 def relationship_fixture():
     _, client = entity_client()
-    book = Book.objects.create(
-        title="সম্পর্কের বই",
-        state="published",
-        review_state="approved",
-        editorial_reviewed_at=timezone.now(),
-    )
+    book = Book.objects.create(title="সম্পর্কের বই", state="published")
     path = f"/api/v1/manage/books/{book.slug}/relationships/"
     contributor = Contributor.objects.create(name="দুই ভূমিকার সহযোগী")
     category = Category.objects.create(name="নির্বাচিত বিভাগ")
@@ -70,7 +65,9 @@ def test_relationship_edits_preserve_roles_snapshot_and_require_new_review():
         "group_id": None,
     }
     book.refresh_from_db()
-    assert book.editorial_reviewed_at is None and book.review_state == "pending"
+    assert not hasattr(book, "editorial_reviewed_at") and (
+        not hasattr(book, "review_state")
+    )
     assert (
         client.patch(path, entity_revision(data, **values), format="json").status_code
         == 409
@@ -124,16 +121,12 @@ def test_invalid_relationships_roll_back_every_change(invalid):
     assert client.get(path).json() == data
     assert not MetadataVersion.objects.exists() and not BookContributor.objects.exists()
     book.refresh_from_db()
-    assert book.review_state == "approved"
+    assert not hasattr(book, "review_state")
 
 
 def test_explicit_edition_selection_joins_moves_and_detaches_one_book():
     client, _, path, _ = relationship_fixture()
-    sibling = Book.objects.create(
-        title="আগের সংস্করণ",
-        editorial_reviewed_at=timezone.now(),
-        review_state="approved",
-    )
+    sibling = Book.objects.create(title="আগের সংস্করণ")
     initial = client.get(path).json()
     joined = client.patch(
         path, entity_revision(initial, edition_of=str(sibling.pk)), format="json"
@@ -142,9 +135,15 @@ def test_explicit_edition_selection_joins_moves_and_detaches_one_book():
     sibling.refresh_from_db()
     assert joined.json()["group_id"] == str(sibling.group_id)
     assert joined.json()["related_editions"] == [
-        {"id": str(sibling.pk), "name": sibling.title}
+        {
+            "id": str(sibling.pk),
+            "name": sibling.title,
+            "catalog_code": sibling.catalog_code,
+        }
     ]
-    assert sibling.review_state == "pending" and sibling.editorial_reviewed_at is None
+    assert not hasattr(sibling, "review_state") and (
+        not hasattr(sibling, "editorial_reviewed_at")
+    )
     assert MetadataVersion.objects.count() == 2
     different = Book.objects.create(title="অন্য কাজের সংস্করণ")
     moved = client.patch(
@@ -213,7 +212,7 @@ def test_relationship_mutations_reload_actor_authority_and_enforce_csrf():
     )
     stale = User.objects.get(pk=actor.pk)
     User.objects.filter(pk=actor.pk).update(is_staff=False)
-    with pytest.raises(PermissionDenied):
+    with pytest.raises(Http404):
         update_relationships(
             stale, book.pk, {"expected_updated_at": book.updated_at, "category_ids": []}
         )

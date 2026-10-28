@@ -25,7 +25,7 @@ class BookDetailPreviewView(VersionedAPIView):
     )
     def get(self, request, slug):
         book = catalog_object_by_slug(
-            Book.objects.filter(deleted_at__isnull=True, record_type="digital"), slug
+            Book.objects.filter(deleted_at__isnull=True), slug
         )
         if not user_can_launch_reader(request.user, book):
             raise PermissionDenied("You do not have reading access for this book.")

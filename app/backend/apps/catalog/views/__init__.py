@@ -1,8 +1,9 @@
-from .assets import BookEpubReplaceView, BookRegenerateView
-from .books import BookExportView, BookListView, BookMyBooksView, BookTicketExportView, ManualBookListCreateView
-from .details import BookDetailView, BookMetadataUpdateView, MetadataReviewListCreateView, MetadataReviewUpdateView, MetadataVersionListView
-from .references import CategoryListView, ContributorListView, SeriesListView
 from apps.ingestion.services.submissions import queue_reprocess_book
+
+from .assets import BookEpubReplaceView, BookRegenerateView
+from .books import BookExportView, BookListView, BookMyBooksView, BookTicketExportView
+from .details import BookDetailView, BookMetadataUpdateView, MetadataVersionListView
+from .references import CategoryListView, ContributorListView, SeriesListView
 
 __all__ = [
     "BookDetailView",
@@ -15,10 +16,7 @@ __all__ = [
     "BookTicketExportView",
     "CategoryListView",
     "ContributorListView",
-    "ManualBookListCreateView",
-    "MetadataReviewListCreateView",
-    "MetadataReviewUpdateView",
     "MetadataVersionListView",
-    "queue_reprocess_book",
     "SeriesListView",
+    "queue_reprocess_book",
 ]

@@ -21,9 +21,6 @@ from apps.common.collection_pagination import collection_pagination, counted_col
 
 
 class EntityDirectoryParametersSerializer(CollectionParametersSerializer):
-    record_type = serializers.ChoiceField(
-        choices=["all", "digital", "manual"], default="all"
-    )
     sort = serializers.ChoiceField(
         choices=DIRECTORY_SORTS, allow_blank=True, default=""
     )
@@ -68,7 +65,7 @@ class PublicEntityListView(VersionedAPIView):
         parameters = EntityDirectoryParametersSerializer(data=request.query_params)
         parameters.is_valid(raise_exception=True)
         values = parameters.validated_data
-        values["scope"] = f"entities:{kind}:{values['role']}:{values['record_type']}"
+        values["scope"] = f"entities:{kind}:{values['role']}"
         if values.get("created_after") or values.get("created_before"):
             values["scope"] += (
                 f":{values.get('created_after')}:{values.get('created_before')}"

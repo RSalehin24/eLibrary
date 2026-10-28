@@ -32,7 +32,6 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   if (q.length > 120) notFound();
   const filters = Object.fromEntries(catalogFilterKeys.map((name) => [name, queryValue(queryParameters, name)]));
   if (Object.values(filters).some((value) => value.length > 255)) notFound();
-  if (!filters.record_type) filters.record_type = "all";
   const parameters = new URLSearchParams({ ...filters, q, page: String(pageNumber) });
   let books: BookCollection;
   try { books = await (catalogNeedsAccount(filters) ? sessionRequest<BookCollection> : publicRequest<BookCollection>)(`catalog/books/?${parameters}`); }

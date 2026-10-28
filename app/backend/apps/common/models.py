@@ -1,4 +1,5 @@
 import uuid
+from typing import ClassVar
 
 from django.conf import settings
 from django.db import models
@@ -41,18 +42,11 @@ class SoftDeleteModel(models.Model):
 class LifecycleState(models.TextChoices):
     DRAFT = "draft", "Draft"
     PROCESSING = "processing", "Processing"
-    NEEDS_REVIEW = "needs_review", "Needs review"
+    FAILED = "failed", "Failed"
     READY = "ready", "Ready"
     PUBLISHED = "published", "Published"
     ARCHIVED = "archived", "Archived"
     SOFT_DELETED = "soft_deleted", "Soft deleted"
-
-
-class ReviewState(models.TextChoices):
-    PENDING = "pending", "Pending"
-    NEEDS_REVIEW = "needs_review", "Needs review"
-    APPROVED = "approved", "Approved"
-    REJECTED = "rejected", "Rejected"
 
 
 class AuditLog(UUIDPrimaryKeyModel, TimeStampedModel):
@@ -72,7 +66,7 @@ class AuditLog(UUIDPrimaryKeyModel, TimeStampedModel):
     payload = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["-created_at"]
+        ordering: ClassVar = ["-created_at"]
 
     def __str__(self):
         return f"{self.verb} {self.target_type}:{self.target_id}"
@@ -94,7 +88,7 @@ class SavedFilter(UUIDPrimaryKeyModel, TimeStampedModel):
     params = models.JSONField(default=dict, blank=True)
 
     class Meta:
-        ordering = ["target", "name"]
+        ordering: ClassVar = ["target", "name"]
         unique_together = ("owner", "target", "name")
 
     def __str__(self):

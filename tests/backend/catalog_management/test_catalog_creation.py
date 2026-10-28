@@ -23,13 +23,10 @@ def creation_values():
     return {
         "operation_id": str(uuid4()),
         "title": "নতুন বইয়ের নথি",
-        "record_type": "manual",
         "edition": "দ্বিতীয় সংস্করণ",
-        "manual_language": "bn",
-        "manual_price": "125.50",
-        "manual_publisher": "পরীক্ষার প্রকাশক",
-        "manual_binding": "paper_back",
-        "manual_is_compilation": True,
+        "language": "bn",
+        "publisher": "পরীক্ষার প্রকাশক",
+        "is_compilation": True,
     }
 
 
@@ -40,20 +37,19 @@ def test_creation_starts_unpublished_and_never_creates_ownership(catalog_creator
     assert response.status_code == 201
     data = response.json()
     assert data["id"] == values["operation_id"]
-    assert data["state"] == data["review_state"] == "needs_review"
-    assert data["editorial_reviewed_at"] is None and not data["indexing_eligible"]
+    assert data["state"] == "draft"
+    assert "review_state" not in data and "record_type" not in data
+    assert "editorial_reviewed_at" not in data and (not data["indexing_eligible"])
     for field in (
         "edition",
-        "manual_price",
-        "manual_language",
-        "manual_publisher",
-        "manual_binding",
-        "manual_is_compilation",
+        "language",
+        "publisher",
+        "is_compilation",
     ):
         assert data[field] == values[field]
     assert not UserBook.objects.exists()
     audit = AuditLog.objects.get(pk=values["operation_id"])
-    assert audit.actor == user and audit.payload["manual_price"] == "125.50"
+    assert audit.actor == user and audit.payload["publisher"] == "পরীক্ষার প্রকাশক"
     assert client.get(f"/api/v1/catalog/books/{data['slug']}/").status_code == 404
 
 
@@ -112,7 +108,7 @@ def test_creation_requires_global_metadata_authority(scope):
     [
         ({"title": "!!!"}, "title"),
         ({"manual_price": "-1.00"}, "manual_price"),
-        ({"manual_language": "not a language"}, "manual_language"),
+        ({"language": "not a language"}, "language"),
         ({"manual_binding": "unknown"}, "manual_binding"),
         ({"record_type": "unknown"}, "record_type"),
         ({"state": "published"}, "state"),
@@ -126,7 +122,7 @@ def test_invalid_creation_is_atomic_and_reports_fields(catalog_creator, values, 
     assert not Book.objects.exists() and not AuditLog.objects.exists()
 
 
-def test_format_edits_keep_revision_control_and_snapshot_decimal_values(
+def test_bibliographic_edits_keep_revision_control_and_original_values(
     catalog_creator,
 ):
     _, client = catalog_creator
@@ -135,13 +131,16 @@ def test_format_edits_keep_revision_control_and_snapshot_decimal_values(
     values = {
         "expected_updated_at": created["updated_at"],
         "edition": "তৃতীয় সংস্করণ",
-        "manual_price": "0.00",
+        "publisher": "সংশোধিত প্রকাশক",
     }
     response = client.patch(path, values, format="json")
-    assert response.status_code == 200 and response.json()["manual_price"] == "0.00"
+    assert (
+        response.status_code == 200 and response.json()["publisher"] == "সংশোধিত প্রকাশক"
+    )
     snapshot = MetadataVersion.objects.get().snapshot
     assert (
-        snapshot["manual_price"] == "125.50" and snapshot["edition"] == "দ্বিতীয় সংস্করণ"
+        snapshot["publisher"] == "পরীক্ষার প্রকাশক"
+        and snapshot["edition"] == "দ্বিতীয় সংস্করণ"
     )
     assert client.patch(path, values, format="json").status_code == 409
     assert MetadataVersion.objects.count() == 1

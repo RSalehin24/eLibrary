@@ -64,14 +64,14 @@ for (const name of ["public", "authentication", "personal", "kindle", "admin-cat
         expect.soft(response.status(), `${key}: HTTP response`).toBe(group.status ?? 200);
         await page.locator("main").waitFor(); await page.evaluate(() => document.fonts.ready);
         await expect.soft(page.locator("html"), `${key}: persistent language`).toHaveAttribute("lang", language);
-        for (const width of [320, 820, 1366]) {
+        for (const width of [320, 390, 820, 1366, 1920]) {
           await page.setViewportSize({ width, height: 900 });
           await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
           const problems = await inspectLayout(page, `${key}: ${language}, ${width}px`);
           results.push({ key, language, width, scale: 1, problems });
           if (language === "bn" && width !== 820) await page.screenshot({ path: info.outputPath(`${key}-${language}-${width}.png`), fullPage: true });
         }
-        for (const width of [320, 1366]) {
+        for (const width of [320, 390, 820, 1366, 1920]) {
           await page.setViewportSize({ width, height: 900 });
           const style = await page.addStyleTag({ content: "html { font-size:200%; }" });
           await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

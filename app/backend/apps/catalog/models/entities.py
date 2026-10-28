@@ -25,10 +25,18 @@ from .utils import build_unique_slug
 
 
 class Contributor(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
-    name = models.CharField(max_length=255, unique=True)
-    normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
+    name = models.CharField(max_length=255)
+    normalized_name = models.CharField(
+        max_length=255, db_index=True, editable=False, blank=True, default=""
+    )
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
-    catalog_code = models.CharField(max_length=CATALOG_CODE_LENGTH, unique=True, db_index=True, blank=True, null=True)
+    catalog_code = models.CharField(
+        max_length=CATALOG_CODE_LENGTH,
+        unique=True,
+        db_index=True,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         ordering: ClassVar[list[str]] = ["name"]
@@ -36,7 +44,11 @@ class Contributor(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
             return True
-        previous = Contributor.objects.filter(pk=self.pk).values_list("name", flat=True).first()
+        previous = (
+            Contributor.objects.filter(pk=self.pk)
+            .values_list("name", flat=True)
+            .first()
+        )
         return clean_display_text(previous) != self.name
 
     @transaction.atomic
@@ -46,10 +58,19 @@ class Contributor(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
         if self._should_refresh_slug():
             self.slug = build_unique_slug(Contributor, self.name, self)
         current_code = (self.catalog_code or "").strip().upper()
-        if current_code and is_entity_catalog_code(current_code, entity_tag=WRITER_ENTITY_TAG):
+        if current_code and is_entity_catalog_code(
+            current_code, entity_tag=WRITER_ENTITY_TAG
+        ):
             self.catalog_code = current_code
         else:
-            self.catalog_code = build_writer_catalog_code(next_entity_sequence(Contributor, "catalog_code", entity_tag=WRITER_ENTITY_TAG, exclude_pk=self.pk))
+            self.catalog_code = build_writer_catalog_code(
+                next_entity_sequence(
+                    Contributor,
+                    "catalog_code",
+                    entity_tag=WRITER_ENTITY_TAG,
+                    exclude_pk=self.pk,
+                )
+            )
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -57,10 +78,18 @@ class Contributor(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
 
 
 class Series(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
-    name = models.CharField(max_length=255, unique=True)
-    normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
+    name = models.CharField(max_length=255)
+    normalized_name = models.CharField(
+        max_length=255, db_index=True, editable=False, blank=True, default=""
+    )
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
-    catalog_code = models.CharField(max_length=CATALOG_CODE_LENGTH, unique=True, db_index=True, blank=True, null=True)
+    catalog_code = models.CharField(
+        max_length=CATALOG_CODE_LENGTH,
+        unique=True,
+        db_index=True,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name_plural = "series"
@@ -69,7 +98,9 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
             return True
-        previous = Series.objects.filter(pk=self.pk).values_list("name", flat=True).first()
+        previous = (
+            Series.objects.filter(pk=self.pk).values_list("name", flat=True).first()
+        )
         return clean_display_text(previous) != self.name
 
     @transaction.atomic
@@ -79,10 +110,19 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
         if self._should_refresh_slug():
             self.slug = build_unique_slug(Series, self.name, self)
         current_code = (self.catalog_code or "").strip().upper()
-        if current_code and is_entity_catalog_code(current_code, entity_tag=SERIES_ENTITY_TAG):
+        if current_code and is_entity_catalog_code(
+            current_code, entity_tag=SERIES_ENTITY_TAG
+        ):
             self.catalog_code = current_code
         else:
-            self.catalog_code = build_series_catalog_code(next_entity_sequence(Series, "catalog_code", entity_tag=SERIES_ENTITY_TAG, exclude_pk=self.pk))
+            self.catalog_code = build_series_catalog_code(
+                next_entity_sequence(
+                    Series,
+                    "catalog_code",
+                    entity_tag=SERIES_ENTITY_TAG,
+                    exclude_pk=self.pk,
+                )
+            )
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -91,9 +131,22 @@ class Series(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
 
 class Category(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     name = models.CharField(max_length=255, unique=True)
-    normalized_name = models.CharField(max_length=255, unique=True, db_index=True, editable=False, blank=True, default="")
+    normalized_name = models.CharField(
+        max_length=255,
+        unique=True,
+        db_index=True,
+        editable=False,
+        blank=True,
+        default="",
+    )
     slug = models.SlugField(max_length=255, unique=True, allow_unicode=True, blank=True)
-    catalog_code = models.CharField(max_length=CATALOG_CODE_LENGTH, unique=True, db_index=True, blank=True, null=True)
+    catalog_code = models.CharField(
+        max_length=CATALOG_CODE_LENGTH,
+        unique=True,
+        db_index=True,
+        blank=True,
+        null=True,
+    )
 
     class Meta:
         verbose_name_plural = "categories"
@@ -102,7 +155,9 @@ class Category(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
     def _should_refresh_slug(self):
         if not self.slug or not self.pk:
             return True
-        previous = Category.objects.filter(pk=self.pk).values_list("name", flat=True).first()
+        previous = (
+            Category.objects.filter(pk=self.pk).values_list("name", flat=True).first()
+        )
         return clean_display_text(previous) != self.name
 
     @transaction.atomic
@@ -112,10 +167,19 @@ class Category(UUIDPrimaryKeyModel, TimeStampedModel, EditorialMetadata):
         if self._should_refresh_slug():
             self.slug = build_unique_slug(Category, self.name, self)
         current_code = (self.catalog_code or "").strip().upper()
-        if current_code and is_entity_catalog_code(current_code, entity_tag=CATEGORY_ENTITY_TAG):
+        if current_code and is_entity_catalog_code(
+            current_code, entity_tag=CATEGORY_ENTITY_TAG
+        ):
             self.catalog_code = current_code
         else:
-            self.catalog_code = build_category_catalog_code(next_entity_sequence(Category, "catalog_code", entity_tag=CATEGORY_ENTITY_TAG, exclude_pk=self.pk))
+            self.catalog_code = build_category_catalog_code(
+                next_entity_sequence(
+                    Category,
+                    "catalog_code",
+                    entity_tag=CATEGORY_ENTITY_TAG,
+                    exclude_pk=self.pk,
+                )
+            )
         super().save(*args, **kwargs)
 
     def __str__(self):

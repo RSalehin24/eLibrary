@@ -22,7 +22,7 @@ class ReaderNotReady(APIException):
 def authorized_reader_book(user, slug):
     book = catalog_object_by_slug(
         Book.objects.filter(deleted_at__isnull=True).only(
-            "id", "title", "slug", "source_quality_state"
+            "id", "title", "slug", "state", "deleted_at", "source_quality_state"
         ),
         slug,
     )
@@ -92,6 +92,8 @@ def account_reader_session(user, identifier):
             "book__title",
             "book__slug",
             "book__source_quality_state",
+            "book__state",
+            "book__deleted_at",
             "prepared_publication__id",
             "prepared_publication__manifest",
             "prepared_publication__storage_reference",

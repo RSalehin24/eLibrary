@@ -13,7 +13,8 @@ test("reader home and navigation expose reading tools and keep secondary pages i
   await page.setViewportSize({ width: 390, height: 844 });
   const box = await navigation.boundingBox(); expect(box.y + box.height).toBeLessThanOrEqual(844); expect(box.y).toBeGreaterThan(740);
   await page.locator(".account-menu > summary").click();
-  for (const name of ["প্রোফাইল", "কাগজের বই", "নিজের EPUB পড়ুন", "সহায়তা"]) await expect(page.locator(".account-menu").getByRole("link", { name, exact: true })).toBeVisible();
+  for (const name of ["প্রোফাইল", "নিজের EPUB পড়ুন", "সহায়তা"]) await expect(page.locator(".account-menu").getByRole("link", { name, exact: true })).toBeVisible();
+  await expect(page.locator('.account-menu a[href="/physical-books/"]')).toHaveCount(0);
   await page.keyboard.press("Escape"); await expect(page.locator(".account-menu")).not.toHaveAttribute("open");
 });
 

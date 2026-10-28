@@ -118,7 +118,9 @@ def test_source_status_filters_apply_in_the_database(client, processor):
     assert len(client.get(SOURCES, {"q": "বাংলা লেখক"}).json()["entries"]) == 3
 
 
-def test_source_book_editing_uses_scoped_metadata_authorization(client, processor):
+def test_source_book_editing_requires_current_administrator_authority(
+    client, processor
+):
     entry = source_entry(1)
     book = link_book(entry)
     endpoint = SOURCES + f"{entry.pk}/"
@@ -127,6 +129,9 @@ def test_source_book_editing_uses_scoped_metadata_authorization(client, processo
     PermissionGrant.objects.create(
         user=processor, book=book, scope=PermissionScope.METADATA_EDIT
     )
+    assert client.get(endpoint).json()["can_edit_book"] is False
+    processor.is_staff = True
+    processor.save()
     assert client.get(endpoint).json()["can_edit_book"] is True
     book.soft_delete()
     assert client.get(endpoint).json()["can_edit_book"] is False

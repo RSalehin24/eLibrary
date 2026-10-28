@@ -12,7 +12,11 @@ def normalized_role_names(normalized_scraped, role):
 
 
 def normalized_value_set(values):
-    return {normalize_catalog_text(value) for value in values if normalize_catalog_text(value)}
+    return {
+        normalize_catalog_text(value)
+        for value in values
+        if normalize_catalog_text(value)
+    }
 
 
 def related_role_names(book, role):
@@ -39,12 +43,20 @@ def related_series_names(book):
     }
 
 
-def detect_metadata_duplicate(scraped_data, *, normalize_scraped_book_fn, texts_are_similar_fn):
+def detect_metadata_duplicate(
+    scraped_data, *, normalize_scraped_book_fn, texts_are_similar_fn
+):
     target_title = scraped_data.get("book_title", "")
     normalized_scraped = normalize_scraped_book_fn(scraped_data)
-    target_author_names = normalized_role_names(normalized_scraped, ContributorRole.AUTHOR)
-    target_translator_names = normalized_role_names(normalized_scraped, ContributorRole.TRANSLATOR)
-    target_category_names = normalized_value_set(normalized_scraped.get("categories", []))
+    target_author_names = normalized_role_names(
+        normalized_scraped, ContributorRole.AUTHOR
+    )
+    target_translator_names = normalized_role_names(
+        normalized_scraped, ContributorRole.TRANSLATOR
+    )
+    target_category_names = normalized_value_set(
+        normalized_scraped.get("categories", [])
+    )
     target_series_names = normalized_value_set(normalized_scraped.get("series", []))
 
     if not target_title:
@@ -72,7 +84,9 @@ def detect_metadata_duplicate(scraped_data, *, normalize_scraped_book_fn, texts_
             continue
         if target_series_names and not (target_series_names & existing_series_names):
             continue
-        if target_translator_names and not (target_translator_names & existing_translator_names):
+        if target_translator_names and not (
+            target_translator_names & existing_translator_names
+        ):
             continue
         if target_author_names & existing_author_names:
             return book
@@ -101,9 +115,15 @@ def find_exact_existing_book(scraped_data, *, normalize_scraped_book_fn):
     )
 
     normalized_scraped = normalize_scraped_book_fn(scraped_data)
-    target_author_names = normalized_role_names(normalized_scraped, ContributorRole.AUTHOR)
-    target_translator_names = normalized_role_names(normalized_scraped, ContributorRole.TRANSLATOR)
-    target_category_names = normalized_value_set(normalized_scraped.get("categories", []))
+    target_author_names = normalized_role_names(
+        normalized_scraped, ContributorRole.AUTHOR
+    )
+    target_translator_names = normalized_role_names(
+        normalized_scraped, ContributorRole.TRANSLATOR
+    )
+    target_category_names = normalized_value_set(
+        normalized_scraped.get("categories", [])
+    )
     target_series_names = normalized_value_set(normalized_scraped.get("series", []))
 
     if not target_author_names or not target_category_names:
@@ -121,7 +141,9 @@ def find_exact_existing_book(scraped_data, *, normalize_scraped_book_fn):
             continue
         if target_series_names and not (target_series_names & existing_series_names):
             continue
-        if target_translator_names and not (target_translator_names & existing_translator_names):
+        if target_translator_names and not (
+            target_translator_names & existing_translator_names
+        ):
             continue
         if target_author_names & existing_author_names:
             return book
@@ -147,12 +169,16 @@ def find_existing_matching_book(book_title, normalized_scraped):
     if not normalized_title:
         return None
 
-    target_author_names = normalized_role_names(normalized_scraped, ContributorRole.AUTHOR)
+    target_author_names = normalized_role_names(
+        normalized_scraped, ContributorRole.AUTHOR
+    )
     if not target_author_names:
         # Cannot determine authorship — refuse to merge to avoid false positives.
         return None
 
-    target_translator_names = normalized_role_names(normalized_scraped, ContributorRole.TRANSLATOR)
+    target_translator_names = normalized_role_names(
+        normalized_scraped, ContributorRole.TRANSLATOR
+    )
 
     source_site = get_source_site_domain()
     candidates = (
@@ -182,9 +208,12 @@ def find_existing_matching_book(book_title, normalized_scraped):
             continue
 
         # Both sides have translator info but no overlap → different edition.
-        if target_translator_names and existing_translator_names:
-            if not (target_translator_names & existing_translator_names):
-                continue
+        if (
+            target_translator_names
+            and existing_translator_names
+            and not (target_translator_names & existing_translator_names)
+        ):
+            continue
 
         return book
 
@@ -202,11 +231,13 @@ CLASSIFY_NEEDS_REVIEW = "needs_review"
 
 
 def _publisher_value(book):
-    return normalize_catalog_text(getattr(book, "manual_publisher", "") or "")
+    return normalize_catalog_text(getattr(book, "publisher", "") or "")
 
 
 def _edition_value(book):
-    return normalize_catalog_text(getattr(book, "normalized_edition", "") or getattr(book, "edition", "") or "")
+    return normalize_catalog_text(
+        getattr(book, "normalized_edition", "") or getattr(book, "edition", "") or ""
+    )
 
 
 def classify_incoming_book(scraped_data, *, normalize_scraped_book_fn):
@@ -244,11 +275,13 @@ def classify_incoming_book(scraped_data, *, normalize_scraped_book_fn):
         }
 
     target_authors = normalized_role_names(normalized_scraped, ContributorRole.AUTHOR)
-    target_translators = normalized_role_names(normalized_scraped, ContributorRole.TRANSLATOR)
+    target_translators = normalized_role_names(
+        normalized_scraped, ContributorRole.TRANSLATOR
+    )
     target_publisher = normalize_catalog_text(
-        (normalized_scraped.get("raw_strings") or {}).get("manual_publisher")
+        (normalized_scraped.get("raw_strings") or {}).get("publisher")
         or scraped_data.get("publisher", "")
-        or scraped_data.get("manual_publisher", "")
+        or scraped_data.get("publisher", "")
     )
     target_edition = normalize_catalog_text(
         scraped_data.get("edition", "")
@@ -285,7 +318,11 @@ def classify_incoming_book(scraped_data, *, normalize_scraped_book_fn):
             continue
 
         # Both sides have authors but no overlap → different work.
-        if target_authors and existing_authors and not (target_authors & existing_authors):
+        if (
+            target_authors
+            and existing_authors
+            and not (target_authors & existing_authors)
+        ):
             continue
 
         # At this point either both sides are author-empty or they share
@@ -301,9 +338,12 @@ def classify_incoming_book(scraped_data, *, normalize_scraped_book_fn):
         )
 
         if translator_differs or publisher_differs or edition_differs:
-            suggested_group = book.group or BookGroup.objects.filter(
-                normalized_canonical_title=normalized_title
-            ).first()
+            suggested_group = (
+                book.group
+                or BookGroup.objects.filter(
+                    normalized_canonical_title=normalized_title
+                ).first()
+            )
             return {
                 "verdict": CLASSIFY_NEW_EDITION,
                 "matched_book": book,

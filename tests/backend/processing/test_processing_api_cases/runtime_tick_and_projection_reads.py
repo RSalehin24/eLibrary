@@ -1,3 +1,18 @@
+import json
+from datetime import timedelta
+
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import BookCreationRequest, BookRecord, ProcessingSyncStatus
+from apps.processing.services import PROCESSING_SYNC_KEY_CATALOG, get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    post_processing_mutation,
+    rebuild_processing_ui_state,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -17,7 +32,10 @@ def test_processing_stream_emits_versions_without_advancing_sync(client, monkeyp
 
     assert start_response.status_code == 200
 
-    monkeypatch.setattr('apps.processing.view_modules.read_stream_and_sync_start_views.time.sleep', lambda _seconds: None)
+    monkeypatch.setattr(
+        "apps.processing.view_modules.read_stream_and_sync_start_views.time.sleep",
+        lambda _seconds: None,
+    )
     diff_calls = {"count": 0}
 
     def fake_versions_diff(previous_versions, *, domains=None):
@@ -28,7 +46,10 @@ def test_processing_stream_emits_versions_without_advancing_sync(client, monkeyp
             return {"catalog-sync": 1}, next_versions
         raise GeneratorExit
 
-    monkeypatch.setattr('apps.processing.view_modules.read_stream_and_sync_start_views.processing_ui_versions_diff', fake_versions_diff)
+    monkeypatch.setattr(
+        "apps.processing.view_modules.read_stream_and_sync_start_views.processing_ui_versions_diff",
+        fake_versions_diff,
+    )
 
     response = client.get("/api/processing/stream/?page=catalog")
 
@@ -47,7 +68,9 @@ def test_processing_stream_emits_versions_without_advancing_sync(client, monkeyp
 
 
 @pytest.mark.django_db
-def test_processing_runtime_tick_advances_sync_and_pipeline_without_browser(client, monkeypatch):
+def test_processing_runtime_tick_advances_sync_and_pipeline_without_browser(
+    client, monkeypatch
+):
     login_processing_admin(client)
     record = BookRecord.objects.create(
         id="runtime-tick-request-record",
@@ -75,8 +98,14 @@ def test_processing_runtime_tick_advances_sync_and_pipeline_without_browser(clie
     )
     assert payload["sync"]["status"] == "syncing"
 
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: False)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline",
+        lambda: False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available",
+        lambda *_args, **_kwargs: False,
+    )
 
     result = processing_services.run_processing_runtime_tick()
 
@@ -110,7 +139,10 @@ def test_processing_state_does_not_advance_processing_pipeline(client, monkeypat
     )
     run_calls = {"count": 0}
 
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline._run_processing_request', lambda request: run_calls.__setitem__('count', run_calls['count'] + 1))
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline._run_processing_request",
+        lambda request: run_calls.__setitem__("count", run_calls["count"] + 1),
+    )
 
     response = client.get("/api/processing/state/?includeLists=0")
 
@@ -141,7 +173,10 @@ def test_processing_table_does_not_advance_processing_pipeline(client, monkeypat
     )
     run_calls = {"count": 0}
 
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline._run_processing_request', lambda request: run_calls.__setitem__('count', run_calls['count'] + 1))
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline._run_processing_request",
+        lambda request: run_calls.__setitem__("count", run_calls["count"] + 1),
+    )
 
     response = client.get("/api/processing/table/?card=create-processing")
 
@@ -189,7 +224,12 @@ def test_processing_state_reads_primary_sync_from_projection_rows_only(monkeypat
         pk=incomplete_projection.pk
     ).update(payload=incomplete_payload, updated_at=now - timedelta(minutes=1))
 
-    monkeypatch.setattr('apps.processing.service_modules.ui_projection_queries.processing_shared_projection_payloads', lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('processing state should not rebuild shared projections')))
+    monkeypatch.setattr(
+        "apps.processing.service_modules.ui_projection_queries.processing_shared_projection_payloads",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("processing state should not rebuild shared projections")
+        ),
+    )
 
     payload = processing_services.processing_state_payload(include_lists=False)
     assert payload["sync"]["scope"] == "incomplete"
@@ -214,4 +254,7 @@ def test_save_sync_state_catalog_publishes_only_catalog_sync_domain(
         domains=["catalog-sync", "catalog-automation"]
     )
     assert current_versions["catalog-sync"] == previous_versions["catalog-sync"] + 1
-    assert current_versions["catalog-automation"] == previous_versions["catalog-automation"]
+    assert (
+        current_versions["catalog-automation"]
+        == previous_versions["catalog-automation"]
+    )

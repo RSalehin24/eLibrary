@@ -368,7 +368,7 @@ def _process_request_once(processing_request):
         and not scraped_data.get("book_title")
     ):
         raise ValueError(
-            "Curated document requires review before a book can be created."
+            "Curated document failed automatic validation; no book was created."
         )
 
     book = _persistence._persist_processing_book(
@@ -381,9 +381,8 @@ def _process_request_once(processing_request):
     if (
         not legacy_scrape_overridden
         and curated_result.get("status") != CuratedDocumentStatus.VALIDATED
-        and not processing_request.force_generate
     ):
-        return _mark_request_review_required(processing_request, book, curated_result)
+        return _mark_request_validation_failed(processing_request, book, curated_result)
     return _persistence._finalize_processing_request(
         processing_request, book, scraped_data
     )
@@ -413,7 +412,7 @@ def _fail_processing_request(processing_request, error):
     return processing_request
 
 
-def _mark_request_review_required(processing_request, book, curated_result):
+def _mark_request_validation_failed(processing_request, book, curated_result):
     processing_request = _persistence._reload_processing_request(processing_request.id)
     previous_state = processing_request.state
     if processing_request.state in {
@@ -426,7 +425,7 @@ def _mark_request_review_required(processing_request, book, curated_result):
     processing_request.state = BookCreationRequestState.FAILED
     processing_request.linked_book = book
     processing_request.error_message = (
-        "Curated document requires review before asset generation."
+        "Curated document failed automatic validation; no files were generated."
     )
     processing_request.progress = {
         "curatedValidation": curated_result.get("validation", {}),

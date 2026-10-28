@@ -21,7 +21,7 @@ from apps.access.models import (
 from apps.access.reading.launch import active_reader_session
 from apps.access.storage import asset_file_exists, asset_is_available, open_asset_stream
 from apps.catalog.models import GeneratedAssetStatus
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.common.permissions import user_has_scope
 
 logger = logging.getLogger(__name__)
@@ -158,12 +158,9 @@ def missing_asset_response(book, asset, actor=None):
         )
 
     book_update_fields = []
-    if book.state != LifecycleState.NEEDS_REVIEW:
-        book.state = LifecycleState.NEEDS_REVIEW
+    if book.state != LifecycleState.FAILED:
+        book.state = LifecycleState.FAILED
         book_update_fields.append("state")
-    if book.review_state != ReviewState.NEEDS_REVIEW:
-        book.review_state = ReviewState.NEEDS_REVIEW
-        book_update_fields.append("review_state")
     if book_update_fields:
         book.save(update_fields=[*book_update_fields, "updated_at"])
 

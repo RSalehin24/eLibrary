@@ -1,7 +1,7 @@
 import { apiMutation } from "./mutation";
 import type { BookEditorialUpdate, ManagedBookDetail } from "./types";
 
-export type EditorialCommand = "review" | "publish" | "withdraw";
+export type EditorialCommand = "withdraw";
 
 export async function updateEditorial(book: ManagedBookDetail, fields: Omit<BookEditorialUpdate, "expected_updated_at">) {
   return editorialRequest(`manage/books/${encodeURIComponent(book.slug)}/`, "PATCH", {

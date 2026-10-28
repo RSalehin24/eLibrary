@@ -1,6 +1,5 @@
 import pytest
 from apps.catalog.models import Book, BookContributor, Contributor
-from django.utils import timezone
 
 pytestmark = pytest.mark.django_db
 
@@ -9,9 +8,7 @@ def eligible_book(**fields):
     values = {
         "title": "সূচিভুক্ত বই",
         "state": "published",
-        "review_state": "approved",
         "indexing_eligible": True,
-        "editorial_reviewed_at": timezone.now(),
         "editorial_description": "পর্যালোচিত পরিচিতি",
     }
     return Book.objects.create(**(values | fields))
@@ -24,7 +21,8 @@ def test_sitemap_contains_only_canonical_indexable_public_records(client):
     book.save()
     excluded = [eligible_book() for _ in range(4)]
     excluded[0].indexing_eligible = False
-    excluded[1].review_state = "rejected"
+    excluded[1].source_quality_state = "quarantined"
+
     excluded[2].editorial_description = " \n\t "
     excluded[3].state = "draft"
     for entry in excluded:
@@ -43,7 +41,6 @@ def test_entity_sitemap_requires_reviewed_introduction_and_public_books(client):
         name="পর্যালোচিত লেখক",
         editorial_description="যাচাইকৃত জীবনী",
         indexing_eligible=True,
-        editorial_reviewed_at=timezone.now(),
     )
     path = "/api/v1/catalog/sitemaps/contributors/1/"
     assert client.get(path).status_code == 404

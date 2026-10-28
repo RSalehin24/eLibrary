@@ -47,7 +47,6 @@ class EditorialMetadata(models.Model):
         max_length=1000, blank=True, validators=[validate_social_image]
     )
     indexing_eligible = models.BooleanField(default=False)
-    editorial_reviewed_at = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         abstract = True

@@ -1,67 +1,32 @@
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
-
 import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
 from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
+from apps.catalog.models import (
+    Book,
+    BookSource,
+    GeneratedAsset,
+    GeneratedAssetStatus,
+    GeneratedAssetType,
+)
+from apps.common.models import LifecycleState
 from apps.ingestion.models import (
-    CatalogAutomationFrequency,
     BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
     JobStatus,
-    MatchCandidate,
     ProcessingJob,
-    ResolutionStatus,
     SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
     SubmissionOrigin,
     SubmissionStatus,
-    TitleResolutionAttempt,
 )
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
-from apps.ingestion.pipeline import scraper as legacy_scraper
 from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
-)
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.submissions import (
-    create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    sync_assets,
-)
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
+from django.utils import timezone
 
 
 @pytest.mark.django_db
-def test_source_catalog_entries_apply_status_filter_before_pagination_and_return_counts(client):
-    admin = User.objects.create_superuser(email="catalog-filter@example.com", password="strong-password-123")
+def test_source_catalog_entries_apply_status_filter_before_pagination_and_return_counts(
+    client,
+):
+    admin = User.objects.create_superuser(
+        email="catalog-filter@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     ready_book = Book.objects.create(title="A Ready Book", state=LifecycleState.READY)
@@ -70,8 +35,16 @@ def test_source_catalog_entries_apply_status_filter_before_pagination_and_return
         source_url="https://www.example.com/books/ready-book/",
         normalized_source_url="https://www.example.com/books/ready-book/",
     )
-    GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.HTML, status=GeneratedAssetStatus.READY)
-    GeneratedAsset.objects.create(book=ready_book, asset_type=GeneratedAssetType.EPUB, status=GeneratedAssetStatus.READY)
+    GeneratedAsset.objects.create(
+        book=ready_book,
+        asset_type=GeneratedAssetType.HTML,
+        status=GeneratedAssetStatus.READY,
+    )
+    GeneratedAsset.objects.create(
+        book=ready_book,
+        asset_type=GeneratedAssetType.EPUB,
+        status=GeneratedAssetStatus.READY,
+    )
 
     SourceCatalogEntry.objects.create(
         source_url="https://www.example.com/books/ready-book/",
@@ -102,10 +75,14 @@ def test_source_catalog_entries_apply_status_filter_before_pagination_and_return
 
 @pytest.mark.django_db
 def test_source_catalog_entries_can_filter_deleted_books(client):
-    admin = User.objects.create_superuser(email="catalog-deleted-filter@example.com", password="strong-password-123")
+    admin = User.objects.create_superuser(
+        email="catalog-deleted-filter@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
-    deleted_book = Book.objects.create(title="Deleted Book", state=LifecycleState.SOFT_DELETED)
+    deleted_book = Book.objects.create(
+        title="Deleted Book", state=LifecycleState.SOFT_DELETED
+    )
     Book.objects.filter(pk=deleted_book.pk).update(deleted_at=timezone.now())
     deleted_book.refresh_from_db()
     BookSource.objects.create(
@@ -142,8 +119,12 @@ def test_source_catalog_entries_can_filter_deleted_books(client):
 
 
 @pytest.mark.django_db
-def test_source_catalog_entries_summary_reports_queued_and_processing_separately(client):
-    admin = User.objects.create_superuser(email="catalog-summary@example.com", password="strong-password-123")
+def test_source_catalog_entries_summary_reports_queued_and_processing_separately(
+    client,
+):
+    admin = User.objects.create_superuser(
+        email="catalog-summary@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     queued_book = Book.objects.create(title="Queued Book")
@@ -214,8 +195,12 @@ def test_source_catalog_entries_summary_reports_queued_and_processing_separately
 
 
 @pytest.mark.django_db
-def test_source_catalog_entries_support_lightweight_browse_without_summary_or_sync_state(client):
-    admin = User.objects.create_superuser(email="catalog-lightweight@example.com", password="strong-password-123")
+def test_source_catalog_entries_support_lightweight_browse_without_summary_or_sync_state(
+    client,
+):
+    admin = User.objects.create_superuser(
+        email="catalog-lightweight@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     SourceCatalogEntry.objects.create(

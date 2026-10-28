@@ -1,11 +1,16 @@
 import re
+from typing import ClassVar
 
 from django.db.models import Count, Q
 from rest_framework import generics
 from rest_framework.permissions import IsAuthenticated
 
-from apps.catalog.models import BookRecordType, Category, Contributor, ContributorRole, Series
-from apps.catalog.serializers import CategoryListSerializer, ContributorListSerializer, SeriesListSerializer
+from apps.catalog.models import Category, Contributor, ContributorRole, Series
+from apps.catalog.serializers import (
+    CategoryListSerializer,
+    ContributorListSerializer,
+    SeriesListSerializer,
+)
 from apps.common.text import normalize_catalog_text
 from apps.ingestion.services.normalization_support.metadata import (
     ENGLISH_PROSE_FRAGMENT_WORDS,
@@ -16,7 +21,6 @@ from .shared import (
     OptionalPaginationListMixin,
     apply_created_at_filters,
     normalized_text_search_clause,
-    requested_record_type,
 )
 
 PROSE_FRAGMENT_PATTERN = r"(^| )({})($| )".format(
@@ -24,52 +28,41 @@ PROSE_FRAGMENT_PATTERN = r"(^| )({})($| )".format(
 )
 
 
-def annotate_reference_counts(queryset, relation, *, record_type, contributor_roles=None, author=None, series=None, category=None):
-    base_filter: dict[str, object] = {f"{relation}__deleted_at__isnull": True}
-    if contributor_roles:
-        if len(contributor_roles) == 1:
-            base_filter["book_contributions__role"] = contributor_roles[0]
-        else:
-            base_filter["book_contributions__role__in"] = contributor_roles
-
-    if author:
-        base_filter[f"{relation}__book_contributors__contributor__name"] = author
-        base_filter[f"{relation}__book_contributors__role"] = ContributorRole.AUTHOR
-    if series:
-        base_filter[f"{relation}__book_series__series__name"] = series
-    if category:
-        base_filter[f"{relation}__book_categories__category__name"] = category
-
-    def count_filter(target_record_type=None):
-        filters = dict(base_filter)
-        if target_record_type:
-            filters[f"{relation}__record_type"] = target_record_type
-        return Q(**filters)
-
-    queryset = queryset.annotate(
-        digital_book_count=Count(relation, filter=count_filter(BookRecordType.DIGITAL), distinct=True),
-        manual_book_count=Count(relation, filter=count_filter(BookRecordType.MANUAL), distinct=True),
+def annotate_reference_counts(queryset, relation, **selection):
+    filters = {f"{relation}__deleted_at__isnull": True}
+    if roles := selection.get("contributor_roles"):
+        filters["book_contributions__role__in"] = roles
+    if author := selection.get("author"):
+        filters[f"{relation}__book_contributors__contributor__name"] = author
+        filters[f"{relation}__book_contributors__role"] = ContributorRole.AUTHOR
+    for kind in ("series", "category"):
+        if value := selection.get(kind):
+            field = (
+                "book_series__series__name"
+                if kind == "series"
+                else "book_categories__category__name"
+            )
+            filters[f"{relation}__{field}"] = value
+    return queryset.annotate(
+        book_count=Count(relation, filter=Q(**filters), distinct=True)
     )
-    if record_type == "manual":
-        return queryset.annotate(book_count=Count(relation, filter=count_filter(BookRecordType.MANUAL), distinct=True))
-    if record_type == "all":
-        return queryset.annotate(book_count=Count(relation, filter=count_filter(), distinct=True))
-    return queryset.annotate(book_count=Count(relation, filter=count_filter(BookRecordType.DIGITAL), distinct=True))
 
 
 class CategoryListView(OptionalPaginationListMixin, generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes: ClassVar = [IsAuthenticated]
     serializer_class = CategoryListSerializer
     pagination_default_limit = 60
     pagination_max_limit = 100
 
     def get_queryset(self):
-        author = self.request.query_params.get("author", "").strip() or self.request.query_params.get("writer", "").strip()
+        author = (
+            self.request.query_params.get("author", "").strip()
+            or self.request.query_params.get("writer", "").strip()
+        )
         series = self.request.query_params.get("series", "").strip()
         queryset = annotate_reference_counts(
             Category.objects.all(),
             "books",
-            record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
             author=author,
             series=series,
         )
@@ -84,24 +77,41 @@ class CategoryListView(OptionalPaginationListMixin, generics.ListAPIView):
                 )
                 | Q(catalog_code__icontains=query)
             )
-        queryset = apply_created_at_filters(queryset, self.request).filter(book_count__gt=0)
-        sort_field = {"catalog_code": "catalog_code", "-catalog_code": "-catalog_code", "name": "name", "-name": "-name", "created_at": "created_at", "-created_at": "-created_at", "book_count": "book_count", "-book_count": "-book_count"}.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
-        return queryset.order_by(sort_field) if sort_field in {"created_at", "-created_at"} else queryset.order_by(sort_field, "name")
+        queryset = apply_created_at_filters(queryset, self.request).filter(
+            book_count__gt=0
+        )
+        sort_field = {
+            "catalog_code": "catalog_code",
+            "-catalog_code": "-catalog_code",
+            "name": "name",
+            "-name": "-name",
+            "created_at": "created_at",
+            "-created_at": "-created_at",
+            "book_count": "book_count",
+            "-book_count": "-book_count",
+        }.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
+        return (
+            queryset.order_by(sort_field)
+            if sort_field in {"created_at", "-created_at"}
+            else queryset.order_by(sort_field, "name")
+        )
 
 
 class SeriesListView(OptionalPaginationListMixin, generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes: ClassVar = [IsAuthenticated]
     serializer_class = SeriesListSerializer
     pagination_default_limit = 60
     pagination_max_limit = 100
 
     def get_queryset(self):
-        author = self.request.query_params.get("author", "").strip() or self.request.query_params.get("writer", "").strip()
+        author = (
+            self.request.query_params.get("author", "").strip()
+            or self.request.query_params.get("writer", "").strip()
+        )
         category = self.request.query_params.get("category", "").strip()
         queryset = annotate_reference_counts(
             Series.objects.all(),
             "books",
-            record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
             author=author,
             category=category,
         )
@@ -116,13 +126,28 @@ class SeriesListView(OptionalPaginationListMixin, generics.ListAPIView):
                 )
                 | Q(catalog_code__icontains=query)
             )
-        queryset = apply_created_at_filters(queryset, self.request).filter(book_count__gt=0)
-        sort_field = {"catalog_code": "catalog_code", "-catalog_code": "-catalog_code", "name": "name", "-name": "-name", "created_at": "created_at", "-created_at": "-created_at", "book_count": "book_count", "-book_count": "-book_count"}.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
-        return queryset.order_by(sort_field) if sort_field in {"created_at", "-created_at"} else queryset.order_by(sort_field, "name")
+        queryset = apply_created_at_filters(queryset, self.request).filter(
+            book_count__gt=0
+        )
+        sort_field = {
+            "catalog_code": "catalog_code",
+            "-catalog_code": "-catalog_code",
+            "name": "name",
+            "-name": "-name",
+            "created_at": "created_at",
+            "-created_at": "-created_at",
+            "book_count": "book_count",
+            "-book_count": "-book_count",
+        }.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
+        return (
+            queryset.order_by(sort_field)
+            if sort_field in {"created_at", "-created_at"}
+            else queryset.order_by(sort_field, "name")
+        )
 
 
 class ContributorListView(OptionalPaginationListMixin, generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes: ClassVar = [IsAuthenticated]
     serializer_class = ContributorListSerializer
     role_slug = "writers"
     pagination_default_limit = 60
@@ -136,13 +161,14 @@ class ContributorListView(OptionalPaginationListMixin, generics.ListAPIView):
         roles = self.get_contributor_roles()
         contributors = Contributor.objects.filter(book_contributions__role__in=roles)
         if ContributorRole.PUBLISHER not in roles:
-            contributors = contributors.exclude(normalized_name__iregex=PROSE_FRAGMENT_PATTERN)
+            contributors = contributors.exclude(
+                normalized_name__iregex=PROSE_FRAGMENT_PATTERN
+            )
         series = self.request.query_params.get("series", "").strip()
         category = self.request.query_params.get("category", "").strip()
         queryset = annotate_reference_counts(
             contributors.distinct(),
             "book_contributions__book",
-            record_type=requested_record_type(self.request, BookRecordType.DIGITAL),
             contributor_roles=roles,
             series=series,
             category=category,
@@ -158,6 +184,21 @@ class ContributorListView(OptionalPaginationListMixin, generics.ListAPIView):
                 )
                 | Q(catalog_code__icontains=query)
             )
-        queryset = apply_created_at_filters(queryset, self.request).filter(book_count__gt=0)
-        sort_field = {"catalog_code": "catalog_code", "-catalog_code": "-catalog_code", "name": "name", "-name": "-name", "created_at": "created_at", "-created_at": "-created_at", "book_count": "book_count", "-book_count": "-book_count"}.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
-        return queryset.order_by(sort_field) if sort_field in {"created_at", "-created_at"} else queryset.order_by(sort_field, "name")
+        queryset = apply_created_at_filters(queryset, self.request).filter(
+            book_count__gt=0
+        )
+        sort_field = {
+            "catalog_code": "catalog_code",
+            "-catalog_code": "-catalog_code",
+            "name": "name",
+            "-name": "-name",
+            "created_at": "created_at",
+            "-created_at": "-created_at",
+            "book_count": "book_count",
+            "-book_count": "-book_count",
+        }.get(self.request.query_params.get("sort", "-book_count"), "-book_count")
+        return (
+            queryset.order_by(sort_field)
+            if sort_field in {"created_at", "-created_at"}
+            else queryset.order_by(sort_field, "name")
+        )

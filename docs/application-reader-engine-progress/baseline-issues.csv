@@ -1,0 +1,36 @@
+id,requirement,baseline,implementation_task,verification
+WEB-01,"Different pages use competing control, typography, spacing, and alignment rules.",Confirmed styling structure; repeatedly reported visually.,W04-W08,Open; no historical pass carried forward
+WEB-02,Header wraps or breaks; admin and general navigation are not consistently distinguished.,Reported; existing changes need fresh acceptance.,W04-W08,Open; no historical pass carried forward
+WEB-03,Important admin actions and destinations are hard to discover.,Reported.,W04-W08,Open; no historical pass carried forward
+WEB-04,Cards have unequal heights and inconsistent metadata/action placement.,Confirmed wrapper/stretch problem; attempted fix remains unverified.,W04-W08,Open; no historical pass carried forward
+WEB-05,"Search, sort, and Filter controls have different heights and font metrics.",Confirmed rendered measurements.,W04-W08,Open; no historical pass carried forward
+WEB-06,"Export headings, buttons, and instructions occupy disproportionate space.",Confirmed component structure; compact disclosure needs acceptance.,W04-W08,Open; no historical pass carried forward
+WEB-07,Filters include unwanted book-type and added/request-date fields or excessive empty space.,Reported; search saved filters and old URLs too.,W04-W08,Open; no historical pass carried forward
+WEB-08,"Notes has broken alignment, spacing, or card layouts.",Reported; previous repairs require current-state verification.,W04-W08,Open; no historical pass carried forward
+WEB-09,Automation and Users & Access lack coherent layout and clear workflows.,Reported; previous repairs require current-state verification.,W04-W08,Open; no historical pass carried forward
+WEB-10,Unfinished Books misses the compact source-page container and has a confusing hierarchy.,Confirmed container mismatch; attempted fix remains unverified.,W04-W08,Open; no historical pass carried forward
+WEB-11,"Book details do not reliably expose covers, Read, Save, Kindle, HTML, and EPUB actions.","Reported; test ready, unavailable, and denied states independently.",W04-W08,Open; no historical pass carried forward
+WEB-12,Pagination lacks usable numbers or loses filter/page context.,Reported; prior URL-cleanup defect requires regression coverage.,W04-W08,Open; no historical pass carried forward
+WEB-13,Bengali wording is unnatural or mixed with English interface text; time formatting is inconsistent.,Reported.,W04-W08,Open; no historical pass carried forward
+WEB-14,"Authors, categories, series, and reading lists lack useful lists or related-book links.",Reported; include public and personal visibility rules.,W04-W08,Open; no historical pass carried forward
+WEB-15,Physical-book features and the physical/digital type distinction remain in the application.,"User requires full removal, including records, logs, schema fields, APIs, filters, and labels.",W01-W03,Open; no historical pass carried forward
+WEB-16,Review/check/approve workflows and labels remain or are implied.,User requires their removal; automatic preparation must not become an admin checking task.,W01-W03,Open; no historical pass carried forward
+WEB-17,Cover/metadata editing can be exposed or granted to non-admin users.,Required authorization audit.,W01-W03,Open; no historical pass carried forward
+READ-01,Text is confined to a narrow central column instead of using available screen space.,Confirmed former 800px default; full-width change needs acceptance.,R01-R05,Open; no historical pass carried forward
+READ-02,Font-size actions are hidden inside Settings.,Confirmed; toolbar changes need acceptance.,R01-R05,Open; no historical pass carried forward
+READ-03,"Excessive header, toolbar, and pagination content takes space from the book.",Reported and evident in the layout structure.,R01-R05,Open; no historical pass carried forward
+READ-04,Fullscreen shows unwanted persistent controls or lacks intuitive access to tools.,Reported; test idle and deliberately revealed states.,R01-R05,Open; no historical pass carried forward
+READ-05,"Settings and actions lack a complete, discoverable shortcut system.",Confirmed limited command coverage.,R01-R05,Open; no historical pass carried forward
+READ-06,Rich EPUB behavior may differ from the previous reader.,Requires feature-by-feature comparison.,R01-R05,Open; no historical pass carried forward
+READ-07,Reflow and chapter navigation can lose the current reading passage.,Required regression area for the new application; no historical position migration is required.,R01-R05,Open; no historical pass carried forward
+ENG-01,A valid file can still be poorly chaptered or semantically misstructured.,Confirmed gap between text integrity and structural understanding.,E01-E08,Open; no historical pass carried forward
+ENG-02,Canonical export deliberately skips late chapter inference.,Confirmed code path; structural inference must happen earlier.,E01-E08,Open; no historical pass carried forward
+ENG-03,Export verification checks text occurrence without fully proving EPUB spine order.,Confirmed verifier behavior.,E01-E08,Open; no historical pass carried forward
+ENG-04,"Contributor extraction relies on heuristics, fixed confidence values, and a few specific corrections.",Confirmed implementation.,E01-E08,Open; no historical pass carried forward
+ENG-05,"Source headings, numbering, typography, and contextual boundaries may remain inside one body section.",Corpus investigation candidates; not all single-flow works require splitting.,E01-E08,Open; no historical pass carried forward
+ENG-06,"Collection failures, unavailable source content, and application defects are hard to distinguish.",Reported; retain real causes and recovery paths.,E01-E08,Open; no historical pass carried forward
+ENG-07,Administrators cannot easily identify which unfinished works actually changed.,"Reported; compare body, structure, and metadata changes.",E01-E08,Open; no historical pass carried forward
+ENG-08,"“Prepared” can be shown without proving usable HTML, EPUB, and reader resources.",Reported; enforce end-to-end readiness.,E01-E08,Open; no historical pass carried forward
+QA-01,Earlier reports and passing layout tests overstate visual or functional acceptance.,Confirmed mismatch between recorded claims and unresolved feedback.,all gates,Open; no historical pass carried forward
+QA-02,"Unreported defects may exist in pages, dialogs, forms, and failure states.",Explicit investigation requirement.,all gates,Open; no historical pass carried forward
+QA-03,Preservation and migration obligations distract from a clean development application.,User explicitly removes these obligations and permits rebuilding development state.,all gates,Open; no historical pass carried forward

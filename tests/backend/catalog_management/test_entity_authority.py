@@ -134,6 +134,7 @@ def test_entity_lists_and_reference_searches_have_bounded_queries(
     PermissionGrant.objects.create(
         user=actor, scope=PermissionScope.METADATA_EDIT, book=permitted
     )
-    assert client.get("/api/v1/manage/catalog-references/?kind=books").json()[
-        "entries"
-    ] == [{"id": str(permitted.pk), "name": permitted.title}]
+    assert (
+        client.get("/api/v1/manage/catalog-references/?kind=books").json()["entries"]
+        == []
+    )

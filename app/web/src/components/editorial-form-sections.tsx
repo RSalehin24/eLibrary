@@ -25,7 +25,6 @@ type ActionProps = { book: ManagedBookDetail; pending: boolean; dirty: boolean; 
 
 export function EditorialActions({ book, pending, dirty, onCommand }: ActionProps) {
   return <SiteDiv className="editorial-actions" aria-label="প্রকাশনা">
-    <button className="button" disabled={pending || dirty || book.state === "published"} onClick={() => onCommand("publish")}><Icon name="upload" /><AdminText>{"প্রকাশ করুন"}</AdminText></button>
     <button className="button button-quiet" disabled={pending || dirty || book.state !== "published"} onClick={() => onCommand("withdraw")}><Icon name="logout" /><AdminText>{"প্রকাশনা প্রত্যাহার করুন"}</AdminText></button>
     {book.state === "published" && <Link className="text-link" href={`/books/${encodeURIComponent(book.slug)}/`}><Icon name="external" /><AdminText>{"প্রকাশিত পরিচিতি দেখুন →"}</AdminText></Link>}
   </SiteDiv>;

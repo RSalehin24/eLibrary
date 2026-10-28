@@ -9,5 +9,5 @@ export async function generateMetadata() { return localizeMetadata({ title: "ব
 export default async function NewCatalogBookPage() {
   const session = await requireManagement("books", "/manage/books/new/");
   if (!session.workspaces.can_create_books) notFound();
-  return <><h1><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></h1><p className="muted"><AdminText>{"ডিজিটাল বইয়ের নথি তৈরির পরে EPUB আপলোড করতে পারবেন। ফাইল প্রস্তুত হলে প্রকাশ করতে পারবেন। পাঠকের মালিকানা ও পড়ার অনুমতি আলাদাভাবে পরিচালনা করা হয়।"}</AdminText></p><BookCreateForm /></>;
+  return <><h1><AdminText>{"বইয়ের নথি তৈরি করুন"}</AdminText></h1><p className="muted"><AdminText>{"বইয়ের নথি তৈরি করে EPUB আপলোড করুন। প্রস্তুতি সফল হলে বইটি স্বয়ংক্রিয়ভাবে প্রকাশিত হবে।"}</AdminText></p><BookCreateForm canEdit={session.workspaces.can_edit_books} /></>;
 }

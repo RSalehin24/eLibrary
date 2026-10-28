@@ -16,13 +16,15 @@ from apps.catalog.services import (
     find_existing_book_by_source_url,
     replace_book_relations,
 )
-from apps.ingestion.services.submissions_support.detection import find_existing_matching_book
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.common.text import normalize_catalog_text
 from apps.ingestion.pipeline.scraper_support.network import normalize_source_url
 from apps.ingestion.services.normalization import (
     clean_extracted_dedication_html,
     normalize_scraped_book,
+)
+from apps.ingestion.services.submissions_support.detection import (
+    find_existing_matching_book,
 )
 
 PROJECTION_HEAVY_KEYS = {
@@ -38,10 +40,12 @@ PROJECTION_HEAVY_KEYS = {
 def _count_empty_toc_chapters(toc_nodes):
     """Recursively count non-section TOC nodes where has_content is not True."""
     count = 0
-    for node in (toc_nodes or []):
-        if node.get("type", "lesson") != "section":
-            if node.get("has_content") is not True:
-                count += 1
+    for node in toc_nodes or []:
+        if (
+            node.get("type", "lesson") != "section"
+            and node.get("has_content") is not True
+        ):
+            count += 1
         count += _count_empty_toc_chapters(node.get("children", []))
     return count
 
@@ -89,7 +93,11 @@ def projection_content_summary(projection):
         "back_section_count": len(back_sections),
         "back_sections": summarize_structured_sections(back_sections),
         "content_item_count": len(content_items),
-        "content_html_chars": sum(html_char_count(item.get("content", "")) for item in content_items if isinstance(item, dict)),
+        "content_html_chars": sum(
+            html_char_count(item.get("content", ""))
+            for item in content_items
+            if isinstance(item, dict)
+        ),
         "content_items": summarize_content_items(content_items),
     }
 
@@ -122,7 +130,9 @@ def slim_manifest(manifest):
     if "projection" in manifest:
         slimmed["projection"] = slim_projection(manifest.get("projection") or {})
     if "sections" in manifest:
-        slimmed["sections"] = [slim_section_payload(section) for section in manifest.get("sections") or []]
+        slimmed["sections"] = [
+            slim_section_payload(section) for section in manifest.get("sections") or []
+        ]
     return slimmed
 
 
@@ -135,7 +145,9 @@ def slim_source_snapshot(snapshot):
         if key not in {"raw_scrape_payload", "manifest"}
     }
     if "raw_scrape_payload" in snapshot:
-        slimmed["raw_scrape_payload"] = slim_projection(snapshot.get("raw_scrape_payload") or {})
+        slimmed["raw_scrape_payload"] = slim_projection(
+            snapshot.get("raw_scrape_payload") or {}
+        )
     if "manifest" in snapshot:
         slimmed["manifest"] = slim_manifest(snapshot.get("manifest") or {})
     return slimmed
@@ -154,7 +166,9 @@ def slim_document_payload(document):
     if "manifest" in document:
         slimmed["manifest"] = slim_manifest(document.get("manifest") or {})
     if "sections" in document:
-        slimmed["sections"] = [slim_section_payload(section) for section in document.get("sections") or []]
+        slimmed["sections"] = [
+            slim_section_payload(section) for section in document.get("sections") or []
+        ]
     return slimmed
 
 
@@ -169,11 +183,16 @@ def next_document_version(source_url):
 
 def persist_curated_document(curated_result, *, book=None, job=None):
     document_payload = curated_result["document"]
-    source_url = document_payload.get("source_url") or document_payload.get("canonical_url", "")
+    source_url = document_payload.get("source_url") or document_payload.get(
+        "canonical_url", ""
+    )
     curated_document = None
     for _attempt in range(5):
         version = next_document_version(source_url)
-        stored_document = {**slim_document_payload(document_payload), "model_version": version}
+        stored_document = {
+            **slim_document_payload(document_payload),
+            "model_version": version,
+        }
         try:
             with transaction.atomic():
                 curated_document = CuratedBookDocument.objects.create(
@@ -186,7 +205,9 @@ def persist_curated_document(curated_result, *, book=None, job=None):
                     structure_type=document_payload.get("structure_type", ""),
                     title=document_payload.get("book", {}).get("clean_title", ""),
                     validation_summary=document_payload.get("validation", {}),
-                    source_snapshot=slim_source_snapshot(curated_result.get("source_snapshot") or {}),
+                    source_snapshot=slim_source_snapshot(
+                        curated_result.get("source_snapshot") or {}
+                    ),
                     document=stored_document,
                 )
             break
@@ -205,14 +226,20 @@ def persist_curated_document(curated_result, *, book=None, job=None):
             entity_type=item.get("entity_type", ""),
             role=item.get("role", ""),
             value=item.get("value", ""),
-            normalized_value=item.get("normalized_value") or normalize_catalog_text(item.get("value", "")),
+            normalized_value=item.get("normalized_value")
+            or normalize_catalog_text(item.get("value", "")),
             source_url=item.get("source_url", ""),
             source_location=item.get("source_location", ""),
             evidence_text=item.get("evidence_text", ""),
             confidence=item.get("confidence", 0),
             payload=item.get("payload", {}),
         )
-        key = (entity.entity_type, entity.role, entity.normalized_value, entity.source_location)
+        key = (
+            entity.entity_type,
+            entity.role,
+            entity.normalized_value,
+            entity.source_location,
+        )
         entity_map[key] = entity
 
     section_map = {}
@@ -234,7 +261,12 @@ def persist_curated_document(curated_result, *, book=None, job=None):
 
     for item in document_payload.get("evidence", []):
         normalized = normalize_catalog_text(item.get("value", ""))
-        entity_key = (item.get("entity_type", ""), item.get("role", ""), normalized, item.get("source_location", ""))
+        entity_key = (
+            item.get("entity_type", ""),
+            item.get("role", ""),
+            normalized,
+            item.get("source_location", ""),
+        )
         CuratedEvidence.objects.create(
             document=curated_document,
             entity=entity_map.get(entity_key),
@@ -286,22 +318,21 @@ def persist_curated_book_with_hooks(
         else projection.get("book_type", ""),
     }
     normalized = normalize_scraped_book(normalization_payload)
-    cleaned_dedication_html = clean_extracted_dedication_html(projection.get("dedication", ""))
+    cleaned_dedication_html = clean_extracted_dedication_html(
+        projection.get("dedication", "")
+    )
     raw_scraped_metadata = {
         **normalized["raw_strings"],
         "source_url": normalized_url,
         "curated_document_status": document_payload.get("status", ""),
     }
     lifecycle_state = LifecycleState.READY
-    review_state = ReviewState.PENDING
     if document_payload.get("status") != CuratedDocumentStatus.VALIDATED:
-        lifecycle_state = LifecycleState.NEEDS_REVIEW
-        review_state = ReviewState.NEEDS_REVIEW
+        lifecycle_state = LifecycleState.FAILED
 
     def apply_fields(book):
         book.deleted_at = None
         book.state = lifecycle_state
-        book.review_state = review_state
         book.raw_scraped_metadata = raw_scraped_metadata
         book.raw_scrape_payload = {
             **slim_projection(projection),
@@ -323,27 +354,36 @@ def persist_curated_book_with_hooks(
             or ""
         )
 
-    existing_book = (
-        target_book
-        or find_deleted_book_by_title_fn(projection["book_title"])
-        or find_existing_matching_book_fn(projection["book_title"], normalized)
-    )
+    existing_book = target_book or find_existing_book_by_source_url_fn(normalized_url)
     if existing_book:
         book = existing_book
         apply_fields(book)
-        book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "empty_chapters_count", "cover_source_url", "updated_at"])
+        book.save(
+            update_fields=[
+                "deleted_at",
+                "state",
+                "raw_scraped_metadata",
+                "raw_scrape_payload",
+                "main_content_html",
+                "book_info_html",
+                "dedication_html",
+                "toc",
+                "content_items",
+                "empty_chapters_count",
+                "cover_source_url",
+                "updated_at",
+            ]
+        )
     else:
         create_kwargs = {
             "title": projection["book_title"],
             "state": lifecycle_state,
-            "review_state": review_state,
         }
         book = Book(**create_kwargs)
         apply_fields(book)
         create_kwargs = {
             "title": book.title,
             "state": book.state,
-            "review_state": book.review_state,
             "raw_scraped_metadata": book.raw_scraped_metadata,
             "raw_scrape_payload": book.raw_scrape_payload,
             "main_content_html": book.main_content_html,
@@ -358,14 +398,26 @@ def persist_curated_book_with_hooks(
             with transaction.atomic():
                 book = Book.objects.create(**create_kwargs)
         except IntegrityError:
-            book = (
-                find_existing_book_by_source_url_fn(normalized_url)
-                or find_existing_matching_book_fn(projection["book_title"], normalized)
-            )
+            book = find_existing_book_by_source_url_fn(normalized_url)
             if book is None:
                 raise
             apply_fields(book)
-            book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "empty_chapters_count", "cover_source_url", "updated_at"])
+            book.save(
+                update_fields=[
+                    "deleted_at",
+                    "state",
+                    "raw_scraped_metadata",
+                    "raw_scrape_payload",
+                    "main_content_html",
+                    "book_info_html",
+                    "dedication_html",
+                    "toc",
+                    "content_items",
+                    "empty_chapters_count",
+                    "cover_source_url",
+                    "updated_at",
+                ]
+            )
 
     replace_book_relations_fn(
         book,
@@ -400,6 +452,7 @@ def persist_curated_book_with_hooks(
         group_hint = (submission.raw_payload or {}).get("target_book_group_id")
     if group_hint and not book.group_id:
         from apps.catalog.models import BookGroup as _BookGroup
+
         try:
             group = _BookGroup.objects.filter(pk=group_hint).first()
         except (ValueError, TypeError):
@@ -407,5 +460,7 @@ def persist_curated_book_with_hooks(
         if group is not None:
             book.group = group
             book.save(update_fields=["group", "updated_at"])
-    MetadataVersion.objects.create(book=book, snapshot=curated_document.document, source="curated")
+    MetadataVersion.objects.create(
+        book=book, snapshot=curated_document.document, source="curated"
+    )
     return book, curated_document

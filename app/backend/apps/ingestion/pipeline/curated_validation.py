@@ -258,22 +258,9 @@ def validate_document(document, snapshot):
     if low_confidence:
         warnings.append(f"Low-confidence sections: {', '.join(low_confidence)}.")
 
-    hard_missing = any(
-        error
-        in {
-            "Missing required title.",
-            "Missing canonical URL.",
-            "Missing body content.",
-        }
-        for error in errors
+    status = (
+        CuratedDocumentStatus.INVALID if errors else CuratedDocumentStatus.VALIDATED
     )
-    status = CuratedDocumentStatus.VALIDATED
-    if errors:
-        status = (
-            CuratedDocumentStatus.INVALID
-            if hard_missing
-            else CuratedDocumentStatus.REVIEW_REQUIRED
-        )
 
     return {
         "is_valid": not errors,

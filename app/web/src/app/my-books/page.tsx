@@ -30,7 +30,6 @@ export default async function MyBooksPage({ searchParams }: { searchParams: Prom
   if (!Object.hasOwn(views, view) || query.length > 120) notFound();
   const selectedFilters = Object.fromEntries(catalogFilterKeys.map((name) => [name, queryValue(parameters, name)]));
   if (Object.values(selectedFilters).some((value) => value.length > 255)) notFound();
-  if (!selectedFilters.record_type) selectedFilters.record_type = "all";
   const filtered = !!query || Object.entries(selectedFilters).some(([name, value]) => name !== "sort" && !!value && value !== "all");
   const filters = new URLSearchParams({ ...selectedFilters, view, q: query });
   let books: LibraryCollection | null = null;

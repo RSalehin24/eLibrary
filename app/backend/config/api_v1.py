@@ -39,12 +39,7 @@ from apps.accounts.security_api_v1 import (
     AccountTOTPStatusView,
 )
 from apps.catalog.views.collections import PublicCollectionsView
-from apps.catalog.views.editorial import (
-    ManagedBookDetailView,
-    PublishBookView,
-    ReviewBookEditorialView,
-    WithdrawBookView,
-)
+from apps.catalog.views.editorial import ManagedBookDetailView, WithdrawBookView
 from apps.catalog.views.entities import PublicEntityDetailView
 from apps.catalog.views.library import MyBookDetailView, MyBooksView
 from apps.catalog.views.management import ManagedBookListView
@@ -215,17 +210,7 @@ urlpatterns = [
         ManagedBookDetailView.as_view(),
         name="managed-book-detail",
     ),
-    path(
-        "manage/books/<str:slug>/review/",
-        ReviewBookEditorialView.as_view(),
-        name="managed-book-review",
-    ),
     *book_control_routes,
-    path(
-        "manage/books/<str:slug>/publish/",
-        PublishBookView.as_view(),
-        name="managed-book-publish",
-    ),
     path(
         "manage/books/<str:slug>/withdraw/",
         WithdrawBookView.as_view(),

@@ -1,3 +1,18 @@
+import pytest
+from apps.ingestion.models import (
+    CatalogCurationRun,
+    JobStatus,
+    SourceCatalogRefreshState,
+    SourceCatalogRefreshStatus,
+)
+from apps.ingestion.services.curation import (
+    dispatch_catalog_curation_run,
+    dispatch_source_catalog_refresh,
+)
+from apps.ingestion.services.curation_support.source_refresh import (
+    process_source_catalog_refresh,
+)
+from django.utils import timezone
 
 
 @pytest.mark.django_db
@@ -40,7 +55,16 @@ def test_source_catalog_refresh_ignores_completion_after_stop(monkeypatch):
         state.queue_name = ""
         state.last_error = "Stopped by user."
         state.finished_at = timezone.now()
-        state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
+        state.save(
+            update_fields=[
+                "status",
+                "task_id",
+                "queue_name",
+                "last_error",
+                "finished_at",
+                "updated_at",
+            ]
+        )
         return {"total": 1}
 
     monkeypatch.setattr(
@@ -74,7 +98,16 @@ def test_source_catalog_refresh_ignores_completion_after_replacement(monkeypatch
         state.queue_name = "celery"
         state.last_error = ""
         state.finished_at = None
-        state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
+        state.save(
+            update_fields=[
+                "status",
+                "task_id",
+                "queue_name",
+                "last_error",
+                "finished_at",
+                "updated_at",
+            ]
+        )
         return {"total": 1}
 
     monkeypatch.setattr(
@@ -108,7 +141,16 @@ def test_source_catalog_refresh_ignores_failure_after_replacement(monkeypatch):
         state.queue_name = "celery"
         state.last_error = ""
         state.finished_at = None
-        state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
+        state.save(
+            update_fields=[
+                "status",
+                "task_id",
+                "queue_name",
+                "last_error",
+                "finished_at",
+                "updated_at",
+            ]
+        )
         raise RuntimeError("old refresh failed after replacement")
 
     monkeypatch.setattr(
@@ -127,51 +169,9 @@ def test_source_catalog_refresh_ignores_failure_after_replacement(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_dispatch_processing_job_returns_failed_job_after_engine_execution_error(monkeypatch, settings):
-    settings.CELERY_TASK_ALWAYS_EAGER = True
-    submission = BookSubmission.objects.create(
-        input_type="url",
-        original_input="https://www.example.com/books/eager-job/",
-        normalized_input=normalize_text("https://www.example.com/books/eager-job/"),
-        resolved_url="https://www.example.com/books/eager-job/",
-        resolution_status=ResolutionStatus.RESOLVED,
-        status=SubmissionStatus.QUEUED,
-    )
-    job = ProcessingJob.objects.create(submission=submission, status=JobStatus.QUEUED)
-
-    def fake_apply_async(job_id, **_kwargs):
-        task_id = ProcessingJob.objects.get(pk=job_id).task_id
-        eager_job = ProcessingJob.objects.get(pk=job_id)
-        eager_job.status = JobStatus.FAILED
-        eager_job.task_id = task_id
-        eager_job.queue_name = "celery"
-        eager_job.last_error = "eager-job-failure"
-        eager_job.finished_at = timezone.now()
-        eager_job.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
-        eager_job.submission.status = SubmissionStatus.FAILED
-        eager_job.submission.error_message = "eager-job-failure"
-        eager_job.submission.save(update_fields=["status", "error_message", "updated_at"])
-        raise RuntimeError("eager-job-failure")
-
-    monkeypatch.setattr("apps.ingestion.engine.dispatch.dispatch_job", fake_apply_async)
-    monkeypatch.setattr(
-        "apps.ingestion.services.submission_modules.processing_job_runner.process_submission_job",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("inline fallback should not rerun eager job failures")),
-    )
-
-    result = dispatch_processing_job(job)
-
-    job.refresh_from_db()
-    submission.refresh_from_db()
-    assert result.id == job.id
-    assert job.status == JobStatus.FAILED
-    assert job.queue_name == "celery"
-    assert job.task_id
-    assert submission.status == SubmissionStatus.FAILED
-
-
-@pytest.mark.django_db
-def test_dispatch_source_catalog_refresh_returns_failed_state_after_eager_execution_error(monkeypatch, settings):
+def test_dispatch_source_catalog_refresh_returns_failed_state_after_eager_execution_error(
+    monkeypatch, settings
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     state = SourceCatalogRefreshState.objects.create(
         singleton_key="default",
@@ -187,11 +187,27 @@ def test_dispatch_source_catalog_refresh_returns_failed_state_after_eager_execut
         refresh_state.queue_name = "celery"
         refresh_state.last_error = "eager-refresh-failure"
         refresh_state.finished_at = timezone.now()
-        refresh_state.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
+        refresh_state.save(
+            update_fields=[
+                "status",
+                "task_id",
+                "queue_name",
+                "last_error",
+                "finished_at",
+                "updated_at",
+            ]
+        )
         raise RuntimeError("eager-refresh-failure")
 
-    monkeypatch.setattr("apps.ingestion.tasks.refresh_source_catalog_task.apply_async", fake_apply_async)
-    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.process_source_catalog_refresh', lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('inline fallback should not rerun eager refresh failures')))
+    monkeypatch.setattr(
+        "apps.ingestion.tasks.refresh_source_catalog_task.apply_async", fake_apply_async
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.curation_modules.source_refresh_and_settings.process_source_catalog_refresh",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("inline fallback should not rerun eager refresh failures")
+        ),
+    )
 
     result = dispatch_source_catalog_refresh(state)
 
@@ -203,7 +219,9 @@ def test_dispatch_source_catalog_refresh_returns_failed_state_after_eager_execut
 
 
 @pytest.mark.django_db
-def test_dispatch_catalog_curation_run_returns_failed_run_after_eager_execution_error(monkeypatch, settings):
+def test_dispatch_catalog_curation_run_returns_failed_run_after_eager_execution_error(
+    monkeypatch, settings
+):
     settings.CELERY_TASK_ALWAYS_EAGER = True
     run = CatalogCurationRun.objects.create(status=JobStatus.QUEUED)
 
@@ -214,11 +232,28 @@ def test_dispatch_catalog_curation_run_returns_failed_run_after_eager_execution_
         eager_run.queue_name = "celery"
         eager_run.last_error = "eager-run-failure"
         eager_run.finished_at = timezone.now()
-        eager_run.save(update_fields=["status", "task_id", "queue_name", "last_error", "finished_at", "updated_at"])
+        eager_run.save(
+            update_fields=[
+                "status",
+                "task_id",
+                "queue_name",
+                "last_error",
+                "finished_at",
+                "updated_at",
+            ]
+        )
         raise RuntimeError("eager-run-failure")
 
-    monkeypatch.setattr("apps.ingestion.tasks.process_catalog_curation_run_task.apply_async", fake_apply_async)
-    monkeypatch.setattr('apps.ingestion.services.curation_modules.catalog_automation_runs.process_catalog_curation_run', lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError('inline fallback should not rerun eager curation failures')))
+    monkeypatch.setattr(
+        "apps.ingestion.tasks.process_catalog_curation_run_task.apply_async",
+        fake_apply_async,
+    )
+    monkeypatch.setattr(
+        "apps.ingestion.services.curation_modules.catalog_automation_runs.process_catalog_curation_run",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("inline fallback should not rerun eager curation failures")
+        ),
+    )
 
     result = dispatch_catalog_curation_run(run)
 

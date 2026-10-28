@@ -13,11 +13,11 @@ from apps.catalog.models import (
     CuratedEvidence,
     CuratedSection,
     GeneratedAsset,
-    MetadataReview,
     MetadataVersion,
     Series,
     UserBook,
 )
+
 
 @admin.register(Contributor)
 class ContributorAdmin(admin.ModelAdmin):
@@ -36,8 +36,8 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Book)
 class BookAdmin(admin.ModelAdmin):
-    list_display = ("title", "catalog_code", "record_type", "state", "review_state", "created_at")
-    list_filter = ("record_type", "state", "review_state")
+    list_display = ("title", "catalog_code", "state", "created_at")
+    list_filter = ("state",)
     search_fields = ("title", "catalog_code", "slug")
 
 
@@ -50,7 +50,6 @@ admin.site.register(CuratedEntity)
 admin.site.register(CuratedSection)
 admin.site.register(CuratedEvidence)
 admin.site.register(GeneratedAsset)
-admin.site.register(MetadataReview)
 admin.site.register(MetadataVersion)
 admin.site.register(UserBook)
 

@@ -1,3 +1,15 @@
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import ProcessingSyncStatus
+from apps.processing.services import get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+    set_catalog_runtime_state,
+)
 
 
 @pytest.mark.django_db
@@ -37,7 +49,9 @@ def test_manual_and_automation_can_resume_different_paused_catalog_phases(client
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["phase"] == "sync"
     assert payload["sync"]["runMode"] == "manual"
-    assert payload["sync"]["message"] == "Continuing catalog sync from the saved endpoint."
+    assert (
+        payload["sync"]["message"] == "Continuing catalog sync from the saved endpoint."
+    )
     assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == "running"
     assert payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "paused"
     assert payload["sync"]["progress"]["requestCreation"] == paused_request_creation
@@ -58,7 +72,10 @@ def test_manual_and_automation_can_resume_different_paused_catalog_phases(client
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["phase"] == "request_creation"
     assert payload["sync"]["runMode"] == "catalog_automation"
-    assert payload["sync"]["message"] == "Resuming automated request creation from saved progress."
+    assert (
+        payload["sync"]["message"]
+        == "Resuming automated request creation from saved progress."
+    )
     assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == "paused"
     assert payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "running"
 
@@ -101,15 +118,20 @@ def test_processing_sync_serialization_normalizes_legacy_catalog_progress_into_p
         ]
     )
 
-    payload = processing_services.serialize_sync_state(sync_state, include_remote_pages=False)
+    payload = processing_services.serialize_sync_state(
+        sync_state, include_remote_pages=False
+    )
 
     assert payload["progress"]["phaseStatuses"]["sync"] == "completed"
     assert payload["progress"]["phaseStatuses"]["request_creation"] == "paused"
     assert payload["progress"]["phaseStates"]["sync"]["status"] == "completed"
     assert payload["progress"]["phaseStates"]["request_creation"]["status"] == "paused"
-    assert payload["progress"]["phaseStates"]["request_creation"][
-        "baseSyncCheckpointToken"
-    ] == "legacy-catalog-session:0:1:1"
+    assert (
+        payload["progress"]["phaseStates"]["request_creation"][
+            "baseSyncCheckpointToken"
+        ]
+        == "legacy-catalog-session:0:1:1"
+    )
 
 
 @pytest.mark.django_db
@@ -155,7 +177,9 @@ def test_processing_sync_serialization_normalizes_legacy_catalog_pausing_progres
         ]
     )
 
-    payload = processing_services.serialize_sync_state(sync_state, include_remote_pages=False)
+    payload = processing_services.serialize_sync_state(
+        sync_state, include_remote_pages=False
+    )
 
     assert payload["status"] == "pausing"
     assert payload["progress"]["phaseStatuses"]["sync"] == "running"
@@ -163,6 +187,9 @@ def test_processing_sync_serialization_normalizes_legacy_catalog_pausing_progres
     assert payload["progress"]["phaseStates"]["sync"]["status"] == "pausing"
     assert payload["progress"]["phaseStates"]["sync"]["savedAt"] == saved_at
     assert payload["progress"]["phaseStates"]["request_creation"]["status"] == "paused"
-    assert payload["progress"]["phaseStates"]["request_creation"][
-        "baseSyncCheckpointToken"
-    ] == "legacy-catalog-pausing:0:1:4"
+    assert (
+        payload["progress"]["phaseStates"]["request_creation"][
+            "baseSyncCheckpointToken"
+        ]
+        == "legacy-catalog-pausing:0:1:4"
+    )

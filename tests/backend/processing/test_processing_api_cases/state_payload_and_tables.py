@@ -1,3 +1,20 @@
+from datetime import time
+
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import (
+    BookCreationRequest,
+    BookRecord,
+    ProcessingAutomationKind,
+    ProcessingAutomationSettings,
+)
+from django.db import IntegrityError
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    login_processing_admin,
+    rebuild_processing_ui_state,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
@@ -125,7 +142,9 @@ def test_processing_table_paginates_catalog_rows_and_applies_filters(client):
     assert "not_created" in payload["filters"]["statusOptions"]
     assert {row["status"] for row in payload["rows"]} == {"not_created"}
 
-    response = client.get("/api/processing/table/?card=catalog-records&offset=60&limit=60")
+    response = client.get(
+        "/api/processing/table/?card=catalog-records&offset=60&limit=60"
+    )
 
     assert response.status_code == 200
     payload = response.json()

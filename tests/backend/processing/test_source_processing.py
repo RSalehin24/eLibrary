@@ -49,8 +49,8 @@ def test_source_processing_automatically_publishes_verified_protected_exports(
     execute(curated_job)
     assert curated_job.state == "succeeded"
     book = curated_job.book
-    assert book.state == "published" and book.review_state == "approved"
-    assert not book.indexing_eligible and book.editorial_reviewed_at is None
+    assert book.state == "published" and (not hasattr(book, "review_state"))
+    assert not book.indexing_eligible and (not hasattr(book, "editorial_reviewed_at"))
     assert not UserBook.objects.exists()
     assets = list(GeneratedAsset.objects.filter(book=book))
     assert {asset.asset_type for asset in assets} >= {"html", "epub"}

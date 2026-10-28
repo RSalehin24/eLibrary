@@ -2,10 +2,16 @@ from apps.catalog.views.book_controls import (
     ManagedBookControlsView,
     RegenerateManagedBookView,
 )
+from apps.catalog.views.cover_editing import ManagedBookCoverView
 from apps.catalog.views.history import ManagedBookHistoryView
 from django.urls import path
 
 book_control_routes = [
+    path(
+        "manage/books/<str:slug>/cover/",
+        ManagedBookCoverView.as_view(),
+        name="managed-book-cover",
+    ),
     path(
         "manage/books/<str:slug>/history/",
         ManagedBookHistoryView.as_view(),

@@ -27,7 +27,8 @@ test("reader sees personal progress and cannot open management", async ({ page }
 test("scoped editor receives only the granted management book", async ({ page }) => {
   await useAccount(page, "editor");
   await page.goto("/manage/books/");
-  await expect(page.locator(".managed-books-table").getByRole("link", { name: fixture.book.title, exact: true })).toBeVisible();
+  await expect(page.locator(".managed-books-table").getByText(fixture.book.title, { exact: true })).toBeVisible();
+  await expect(page.locator('.managed-books-table a[href^="/manage/books/"]').filter({ hasText: "সম্পাদনা" })).toHaveCount(0);
   await expect(page.locator(".managed-books-table tbody tr")).toHaveCount(3);
   await expect(page.getByRole("link", { name: "পাঠকের ভিউ", exact: true })).toBeVisible();
 });

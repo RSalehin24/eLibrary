@@ -1,6 +1,6 @@
 import type { KindleOperation } from "../api/types";
 
-export const kindleHistoryKeys = ["q", "contributor", "category", "series", "record_type", "state", "sort", "from_date", "to_date"] as const;
+export const kindleHistoryKeys = ["q", "contributor", "category", "series", "state", "sort", "from_date", "to_date"] as const;
 export type KindleHistoryFilter = Partial<Record<typeof kindleHistoryKeys[number], string>>;
 export const kindleHistorySorts = {
   "-sent_at": "নতুন অনুরোধ আগে", sent_at: "পুরোনো অনুরোধ আগে", "-created_at": "নতুন বই আগে", created_at: "পুরোনো বই আগে", title: "বইয়ের নাম: অ–হ", "-title": "বইয়ের নাম: হ–অ",

@@ -13,7 +13,7 @@ export function SourceProcessing({ entry }: { entry: SourceEntry }) {
   const client = useQueryClient();
   const [identifier, setIdentifier] = useState<string | null>(null);
   const form = useManagedForm((values: SourceProcessingCommand) => processSource(entry.id, values), async () => { await client.invalidateQueries({ queryKey: ["private", "sources"] }); });
-  return <section className="account-section"><h2><AdminText>{"উৎস থেকে বই প্রস্তুত"}</AdminText></h2><p><AdminText>{"উৎসের লেখা সংগ্রহ, খসড়া তৈরি ও EPUB বানানোর কাজ আলাদা করে চলবে। প্রকাশের আগে সম্পাদকের পর্যালোচনা প্রয়োজন।"}</AdminText></p>
+  return <section className="account-section"><h2><AdminText>{"উৎস থেকে বই প্রস্তুত"}</AdminText></h2><p><AdminText>{"উৎসের লেখা ও পড়ার ফাইল প্রস্তুত হবে। স্বয়ংক্রিয় যাচাই সফল হলে বই প্রকাশিত হবে।"}</AdminText></p>
     {entry.active_operation_id && <Link className="text-link" href={`/manage/jobs/${entry.active_operation_id}/`}><AdminText>{"চলমান কাজ ও করণীয় দেখুন →"}</AdminText></Link>}
     {!entry.active_operation_id && entry.latest_operation_id && <p><Link className="text-link" href={`/manage/jobs/${entry.latest_operation_id}/`}><AdminText>{"সর্বশেষ কাজ ও করণীয় দেখুন →"}</AdminText></Link></p>}
     {!entry.active_operation_id && !form.saving.isSuccess && entry.can_process && <button className="button" disabled={form.blocked} onClick={() => {

@@ -13,7 +13,7 @@ def catalog_references(actor, parameters):
                 Q(normalized_title__contains=query)
                 | Q(catalog_code=parameters["q"].upper())
             )
-            .values("id", name=F("title"))
+            .values("id", "catalog_code", name=F("title"))
             .order_by("name", "id")
         )
     return (
@@ -21,6 +21,6 @@ def catalog_references(actor, parameters):
         .objects.filter(
             Q(normalized_name__contains=query) | Q(normalized_aliases__contains=query)
         )
-        .values("id", "name")
+        .values("id", "name", *(["catalog_code"] if kind != "collections" else []))
         .order_by("name", "id")
     )

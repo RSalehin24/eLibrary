@@ -58,7 +58,7 @@ From `app/web`, run `npm run generate:api`. Do not edit generated contracts.
 on port 55432. Its fixture generator rejects production databases and writes
 random credentials to a new, mode-0600 file outside the repository. It does not
 reset existing application data. Generate a fresh fixture for each specification
-because editorial tests intentionally save and publish their own records.
+because editorial tests intentionally change their own records.
 
 Use the approved Playwright 1.64.0 runner from this workspace:
 
@@ -69,8 +69,10 @@ FOUNDATION_FIXTURE_PATH=/private/tmp/library-preview.json app/web/node_modules/.
 `tests/web/run_isolated.py --project chromium` seeds each specification separately
 and stores private fixture/log files under a new artifact directory. It requires
 the same reference database and runtime environment as `seed_preview.py`.
-Use explicit specification filenames for mobile projects; their configured
-journeys are a selected subset. Run specifications that control the single
+All five projects select the complete specification set, including mobile
+intake, cover and entity workflows. `--project firefox` uses the approved pinned
+Linux container, with source mounted read-only and private artifacts writable.
+Run specifications that control the single
 provider's discovery operation sequentially, including saved automation runs.
 
 Run this from the repository root with both servers available. For a production
@@ -96,7 +98,7 @@ Admin home opens Book Creation or the first authorized section. Six sidebar
 sections become a labelled drawer on phones; the former overview remains at
 `/manage/overview/`. Reader View uses the same account with My Books, Browse,
 Notes and Kindle, including labelled bottom navigation on phones. Secondary
-settings, paper books, local EPUB and help are in the account menu.
+settings, local EPUB and help are in the account menu.
 
 Search/sort controls stay compact. Optional metadata conditions use inline panels;
 book-type and added/request-date browsing filters are retired. Old website and

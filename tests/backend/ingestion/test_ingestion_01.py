@@ -1,62 +1,18 @@
 import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
 
 import pytest
 import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
 from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
 from apps.ingestion.models import (
-    CatalogAutomationFrequency,
     BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
-    JobStatus,
-    MatchCandidate,
-    ProcessingJob,
-    ResolutionStatus,
     SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
     SubmissionStatus,
-    TitleResolutionAttempt,
 )
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
-from apps.ingestion.pipeline import scraper as legacy_scraper
 from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
+from apps.ingestion.services.resolution import (
+    TitleResolver,
+    get_with_host_fallback,
 )
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.submissions import (
-    create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    sync_assets,
-)
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
 
 
 def test_legacy_normalize_text_preserves_bengali_combining_marks():
@@ -120,17 +76,27 @@ def test_get_with_host_fallback_does_not_mask_non_dns_connection_errors(monkeypa
 
     monkeypatch.setattr(
         "apps.ingestion.services.resolution.get_via_direct_ip_https",
-        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("direct IP fallback should not run")),
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(
+            AssertionError("direct IP fallback should not run")
+        ),
     )
 
-    with pytest.raises(requests.exceptions.ConnectionError, match="Connection reset by peer"):
-        get_with_host_fallback(FakeSession(), "https://www.example.com/books/", timeout=30)
+    with pytest.raises(
+        requests.exceptions.ConnectionError, match="Connection reset by peer"
+    ):
+        get_with_host_fallback(
+            FakeSession(), "https://www.example.com/books/", timeout=30
+        )
 
 
 @pytest.mark.django_db
-def test_title_submission_surfaces_exact_match_without_guessing(client, settings, monkeypatch):
+def test_title_submission_surfaces_exact_match_without_guessing(
+    client, settings, monkeypatch
+):
     settings.CELERY_TASK_ALWAYS_EAGER = False
-    user = User.objects.create_user(email="submitter@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="submitter@example.com", password="strong-password-123"
+    )
     client.force_login(user)
 
     SourceCatalogEntry.objects.create(
@@ -162,8 +128,12 @@ def test_title_submission_surfaces_exact_match_without_guessing(client, settings
 
 @pytest.mark.django_db
 def test_submission_bulk_status_returns_requested_visible_submissions_in_order(client):
-    user = User.objects.create_user(email="bulk-status@example.com", password="strong-password-123")
-    other_user = User.objects.create_user(email="bulk-status-other@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="bulk-status@example.com", password="strong-password-123"
+    )
+    other_user = User.objects.create_user(
+        email="bulk-status-other@example.com", password="strong-password-123"
+    )
     first = BookSubmission.objects.create(
         submitter=user,
         input_type="title",
@@ -249,8 +219,13 @@ def test_title_resolver_crawls_archive_bucket_pages_and_splits_author_from_displ
 
     assert result.status == "exact_match"
     assert result.resolved_url == "https://www.example.com/books/malice/"
-    entry = SourceCatalogEntry.objects.get(source_url="https://www.example.com/books/malice/")
+    entry = SourceCatalogEntry.objects.get(
+        source_url="https://www.example.com/books/malice/"
+    )
     assert entry.title == "ম্যালিস"
     assert entry.author_line == "সৈকত মুখোপাধ্যায়"
     assert ("https://www.example.com/books/", {"_a_z": "ম"}) in session.calls
-    assert ("https://www.example.com/books/", {"_a_z": "ম", "_paged": 2}) in session.calls
+    assert (
+        "https://www.example.com/books/",
+        {"_a_z": "ম", "_paged": 2},
+    ) in session.calls

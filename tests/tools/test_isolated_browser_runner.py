@@ -56,3 +56,25 @@ def test_each_specification_gets_distinct_private_fixtures_and_both_processes_sh
     assert not re.search(pattern, "/tests/web/e2e/loginXspecYmjs")
     for path in tmp_path.rglob("*.log"):
         assert os.stat(path).st_mode & 0o777 == 0o600
+
+
+def test_firefox_uses_pinned_container_with_private_fixture_and_readonly_source(
+    monkeypatch, tmp_path
+):
+    monkeypatch.setenv("FOUNDATION_WEB_URL", "http://127.0.0.1:3001")
+    monkeypatch.setenv("FOUNDATION_API_URL", "http://127.0.0.1:8002")
+    monkeypatch.setenv("FOUNDATION_CANONICAL_ORIGIN", "https://library.example.test")
+    command = runner.firefox_command(tmp_path, "example.spec.mjs$")
+    assert command[:4] == ["docker", "run", "--rm", "--init"]
+    assert runner.FIREFOX_IMAGE in command
+    assert f"type=bind,source={ROOT},target=/workspace,readonly" in command
+    assert f"type=bind,source={tmp_path},target=/browser-artifacts" in command
+    assert "FOUNDATION_FIXTURE_PATH=/browser-artifacts/fixture.json" in command
+    assert "FOUNDATION_WEB_URL=http://127.0.0.1:3001" in command
+    assert "FOUNDATION_READER_API_URL=http://127.0.0.1:8002" in command
+    assert "FOUNDATION_CANONICAL_ORIGIN=https://library.example.test" in command
+    assert command[-3:] == [
+        "example.spec.mjs$",
+        "--project=firefox",
+        "--output=/browser-artifacts/browser",
+    ]

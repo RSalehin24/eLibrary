@@ -1,17 +1,13 @@
 from unittest.mock import Mock
 
 import pytest
-from apps.catalog.editorial.service import (
-    EditorialConflict,
-    publish_book,
-    review_book_editorial,
-)
 from apps.catalog.models import Book, BookSource, GeneratedAsset
 from apps.ingestion.source_processing.exports import generated_source_assets
 from apps.ingestion.source_processing.issues import source_issue
 from apps.ingestion.source_processing.resolution import resolve_source_job
 from apps.processing.jobs.controls import request_stop, resume_job
 from apps.processing.jobs.requests import JobStateConflict
+from rest_framework.test import APIClient
 from source_processing_fixtures import TITLE, historical_duplicate
 from source_processing_fixtures import execute_source_job as execute
 
@@ -145,22 +141,22 @@ def test_failed_draft_cannot_be_retried_as_a_second_book_or_resumed_after_edits(
     assert Book.objects.count() == 1
 
 
-def test_reviewed_source_draft_cannot_be_published_with_unfinished_exports(
+def test_unfinished_exports_remain_unavailable_before_and_after_cancellation(
     curated_job, monkeypatch
 ):
     failed_export(curated_job, monkeypatch)
-    book = review_book_editorial(
-        curated_job.requested_by, curated_job.book_id, curated_job.book.updated_at
-    )
-    with pytest.raises(EditorialConflict):
-        publish_book(curated_job.requested_by, book.pk, book.updated_at)
+    book = curated_job.book
+    assert book.state != "published"
+    assert APIClient().get(f"/api/v1/catalog/books/{book.slug}/").status_code == 404
     resolve_source_job(
         curated_job.requested_by,
         curated_job.pk,
         {"choice": "cancel", "expected_updated_at": curated_job.updated_at},
     )
-    with pytest.raises(EditorialConflict):
-        publish_book(curated_job.requested_by, book.pk, book.updated_at)
+    book.refresh_from_db()
+    assert book.state != "published"
+    assert APIClient().get(f"/api/v1/catalog/books/{book.slug}/").status_code == 404
+    assert not book.generated_assets.exists()
 
 
 def test_duplicate_link_checks_the_selected_book_revision(curated_job):

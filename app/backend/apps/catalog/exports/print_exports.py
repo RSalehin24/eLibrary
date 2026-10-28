@@ -14,7 +14,6 @@ def build_print_response(books, grouping):
         "Contributors / লেখক ও সহযোগী",
         "Categories / বিভাগ",
         "Details / তথ্য",
-        "Price / মূল্য",
         "Created (Dhaka) / যোগ হয়েছে (ঢাকা)",
     )
     table_header = "".join(

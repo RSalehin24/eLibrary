@@ -2,16 +2,12 @@ from pathlib import Path
 from urllib.parse import quote
 
 import pytest
-from bs4 import BeautifulSoup
-from django.core.files.base import ContentFile
-
 from apps.access.models import PermissionGrant, PermissionScope, PreviewAccessSession
 from apps.accounts.models import User
 from apps.catalog.models import (
     Book,
     BookCategory,
     BookContributor,
-    BookSource,
     Category,
     Contributor,
     ContributorRole,
@@ -20,8 +16,8 @@ from apps.catalog.models import (
     GeneratedAssetType,
 )
 from apps.common.permissions import user_has_scope
-from apps.ingestion.models import BookSubmission, ResolutionStatus, SubmissionStatus
-from apps.access.views import normalize_preview_book_sections
+
+from .model_constraints import assert_access_model_constraints
 
 
 def assert_content_disposition_filename(header_value, expected_filename):
@@ -33,8 +29,10 @@ def assert_content_disposition_filename(header_value, expected_filename):
 
 @pytest.mark.django_db
 def test_reader_state_requires_reader_access(tmp_path, client):
-    user = User.objects.create_user(email="reader-state@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Reader State Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="reader-state@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Reader State Book", state="ready")
     client.force_login(user)
 
     denied_session = client.get(f"/api/access/books/{book.slug}/reading-session/")
@@ -42,7 +40,9 @@ def test_reader_state_requires_reader_access(tmp_path, client):
     assert denied_session.status_code == 403
     assert denied_bookmarks.status_code == 403
 
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.READ_DURABLE)
+    PermissionGrant.objects.create(
+        user=user, book=book, scope=PermissionScope.READ_DURABLE
+    )
 
     allowed_session = client.post(
         f"/api/access/books/{book.slug}/reading-session/",
@@ -59,7 +59,7 @@ def test_reader_state_requires_reader_access(tmp_path, client):
 
 @pytest.mark.django_db
 def test_reader_html_preview_inlines_stale_relative_cover_references(tmp_path, client):
-    book = Book.objects.create(title="HTML Preview Book", state="ready", review_state="approved")
+    book = Book.objects.create(title="HTML Preview Book", state="ready")
     html_path = Path(tmp_path) / "book.html"
     cover_path = Path(tmp_path) / "book_cover.jpg"
     html_path.write_text(
@@ -95,8 +95,10 @@ def test_reader_html_preview_inlines_stale_relative_cover_references(tmp_path, c
 
 
 @pytest.mark.django_db
-def test_reader_html_preview_promotes_leading_front_matter_from_main_content(tmp_path, client):
-    book = Book.objects.create(title="HTML Front Matter Book", state="ready", review_state="approved")
+def test_reader_html_preview_promotes_leading_front_matter_from_main_content(
+    tmp_path, client
+):
+    book = Book.objects.create(title="HTML Front Matter Book", state="ready")
     html_path = Path(tmp_path) / "book.html"
     html_path.write_text(
         """
@@ -142,10 +144,16 @@ def test_reader_html_preview_promotes_leading_front_matter_from_main_content(tmp
 
 @pytest.mark.django_db
 def test_only_superadmin_can_manage_grants(client):
-    superadmin = User.objects.create_superuser(email="superadmin@example.com", password="strong-password-123")
-    manager = User.objects.create_user(email="grant-manager@example.com", password="strong-password-123")
-    target = User.objects.create_user(email="target@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Grant Scope Book", state="ready", review_state="approved")
+    superadmin = User.objects.create_superuser(
+        email="superadmin@example.com", password="strong-password-123"
+    )
+    manager = User.objects.create_user(
+        email="grant-manager@example.com", password="strong-password-123"
+    )
+    target = User.objects.create_user(
+        email="target@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Grant Scope Book", state="ready")
     client.force_login(manager)
 
     denied = client.get("/api/access/references/")
@@ -157,8 +165,12 @@ def test_only_superadmin_can_manage_grants(client):
     reference_payload = references.json()
     assert "account_scopes" in reference_payload
     assert "scoped_scopes" in reference_payload
-    assert "admin:full_control" not in {scope["value"] for scope in reference_payload["account_scopes"]}
-    assert "access:manage" not in {scope["value"] for scope in reference_payload["scoped_scopes"]}
+    assert "admin:full_control" not in {
+        scope["value"] for scope in reference_payload["account_scopes"]
+    }
+    assert "access:manage" not in {
+        scope["value"] for scope in reference_payload["scoped_scopes"]
+    }
 
     created = client.post(
         "/api/access/grants/",
@@ -177,9 +189,13 @@ def test_only_superadmin_can_manage_grants(client):
 
 @pytest.mark.django_db
 def test_superadmin_cannot_create_or_delete_own_scoped_access_grants(client):
-    superadmin = User.objects.create_superuser(email="self-grant-block@example.com", password="strong-password-123")
-    other_user = User.objects.create_user(email="self-grant-other@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Self Grant Scope Book", state="ready", review_state="approved")
+    superadmin = User.objects.create_superuser(
+        email="self-grant-block@example.com", password="strong-password-123"
+    )
+    other_user = User.objects.create_user(
+        email="self-grant-other@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Self Grant Scope Book", state="ready")
     client.force_login(superadmin)
 
     create_self = client.post(
@@ -215,28 +231,46 @@ def test_superadmin_cannot_create_or_delete_own_scoped_access_grants(client):
 
 @pytest.mark.django_db
 def test_category_and_writer_scoped_permissions_apply_to_matching_books():
-    user = User.objects.create_user(email="scoped@example.com", password="strong-password-123")
+    user = User.objects.create_user(
+        email="scoped@example.com", password="strong-password-123"
+    )
     category = Category.objects.create(name="Thriller")
     writer = Contributor.objects.create(name="Writer One")
-    category_book = Book.objects.create(title="Category Book", state="ready", review_state="approved")
-    writer_book = Book.objects.create(title="Writer Book", state="ready", review_state="approved")
-    other_book = Book.objects.create(title="Other Book", state="ready", review_state="approved")
+    category_book = Book.objects.create(title="Category Book", state="ready")
+    writer_book = Book.objects.create(title="Writer Book", state="ready")
+    other_book = Book.objects.create(title="Other Book", state="ready")
 
     BookCategory.objects.create(book=category_book, category=category)
-    BookContributor.objects.create(book=writer_book, contributor=writer, role=ContributorRole.AUTHOR)
+    BookContributor.objects.create(
+        book=writer_book, contributor=writer, role=ContributorRole.AUTHOR
+    )
 
-    PermissionGrant.objects.create(user=user, category=category, scope=PermissionScope.DOWNLOAD_FILE)
-    PermissionGrant.objects.create(user=user, contributor=writer, scope=PermissionScope.READ_DURABLE)
+    PermissionGrant.objects.create(
+        user=user, category=category, scope=PermissionScope.DOWNLOAD_FILE
+    )
+    PermissionGrant.objects.create(
+        user=user, contributor=writer, scope=PermissionScope.READ_DURABLE
+    )
 
-    assert user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=category_book) is True
-    assert user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=other_book) is False
-    assert user_has_scope(user, [PermissionScope.READ_DURABLE], book=writer_book) is True
-    assert user_has_scope(user, [PermissionScope.READ_DURABLE], book=category_book) is False
+    assert (
+        user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=category_book)
+        is True
+    )
+    assert (
+        user_has_scope(user, [PermissionScope.DOWNLOAD_FILE], book=other_book) is False
+    )
+    assert (
+        user_has_scope(user, [PermissionScope.READ_DURABLE], book=writer_book) is True
+    )
+    assert (
+        user_has_scope(user, [PermissionScope.READ_DURABLE], book=category_book)
+        is False
+    )
 
 
 @pytest.mark.django_db
 def test_catalog_endpoints_require_authentication(client):
-    book = Book.objects.create(title="Private Catalog Book", state="ready", review_state="approved")
+    book = Book.objects.create(title="Private Catalog Book", state="ready")
 
     list_response = client.get("/api/catalog/books/")
     detail_response = client.get(f"/api/catalog/books/{book.slug}/")
@@ -247,43 +281,4 @@ def test_catalog_endpoints_require_authentication(client):
 
 @pytest.mark.django_db
 def test_book_source_visibility_and_uniqueness(client):
-    from django.db.utils import IntegrityError
-    # 1. Test uniqueness of BookSource
-    book = Book.objects.create(title="Source Book", state="ready", review_state="approved")
-    source1 = BookSource.objects.create(book=book, source_url="https://example.com/1", normalized_source_url="https://example.com/1")
-    from django.db import transaction
-    with pytest.raises(IntegrityError):
-        with transaction.atomic():
-            BookSource.objects.create(book=book, source_url="https://example.com/2", normalized_source_url="https://example.com/2")
-
-    # 2. Setup user and test visibility
-    user = User.objects.create_user(email="reader@example.com", password="strong-password-123")
-    client.force_login(user)
-
-    # Without permission, source_urls and source_records should be empty
-    response = client.get(f"/api/catalog/books/{book.slug}/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data["source_urls"] == []
-    assert data["source_records"] == []
-
-    # Grant VIEW_SOURCE_RECORDS permission
-    PermissionGrant.objects.create(user=user, book=book, scope=PermissionScope.VIEW_SOURCE_RECORDS)
-    
-    # With permission, they should be visible
-    response = client.get(f"/api/catalog/books/{book.slug}/")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["source_urls"]) == 1
-    assert data["source_urls"][0] == "https://example.com/1"
-    assert len(data["source_records"]) == 1
-    assert data["source_records"][0]["url"] == "https://example.com/1"
-
-    # Super admin should see it automatically
-    superadmin = User.objects.create_superuser(email="super@example.com", password="strong-password-123")
-    client.force_login(superadmin)
-    response = client.get(f"/api/catalog/books/{book.slug}/")
-    assert response.status_code == 200
-    data = response.json()
-    assert len(data["source_urls"]) == 1
-
+    assert_access_model_constraints(client)

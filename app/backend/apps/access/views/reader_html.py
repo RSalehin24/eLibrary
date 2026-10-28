@@ -36,7 +36,7 @@ class ReaderHTMLView(VersionedAPIView):
         response["Content-Disposition"] = content_disposition_header(False, filename)
         response["Content-Security-Policy"] = (
             "default-src 'none'; style-src 'unsafe-inline'; img-src data:; "
-            "font-src data:; base-uri 'none'; form-action 'none'; sandbox"
+            "font-src data:; media-src data:; base-uri 'none'; form-action 'none'; sandbox"
         )
         response["X-Content-Type-Options"] = "nosniff"
         response["Referrer-Policy"] = "no-referrer"

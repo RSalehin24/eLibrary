@@ -1,3 +1,11 @@
+import pytest
+from apps.processing.models import BookCreationRequest, BookRecord
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_sync,
+    login_processing_admin,
+    post_processing_mutation,
+)
 
 
 @pytest.mark.django_db
@@ -44,9 +52,13 @@ def test_automation_and_incomplete_resolution_are_persisted(client):
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["runMode"] == "catalog_automation"
 
-    response = advance_processing_sync(client, count=2)
-    assert BookCreationRequest.objects.filter(book_record_id="auto-new", state="initial").exists()
-    assert not BookCreationRequest.objects.filter(book_record_id="auto-created", state="initial").exists()
+    advance_processing_sync(client, count=2)
+    assert BookCreationRequest.objects.filter(
+        book_record_id="auto-new", state="initial"
+    ).exists()
+    assert not BookCreationRequest.objects.filter(
+        book_record_id="auto-created", state="initial"
+    ).exists()
 
     _mutation, _payload = post_processing_mutation(
         client,

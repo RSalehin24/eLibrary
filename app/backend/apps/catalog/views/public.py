@@ -67,11 +67,8 @@ class PublicBookDetailView(VersionedAPIView):
             published_books().only(
                 *PUBLIC_BOOK_FIELDS,
                 "summary",
-                "record_type",
-                "manual_publisher",
-                "manual_price",
-                "manual_binding",
-                "manual_is_compilation",
+                "publisher",
+                "is_compilation",
                 *EDITORIAL_DETAIL_FIELDS,
             )
         )

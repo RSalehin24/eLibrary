@@ -5,7 +5,7 @@ from django.conf import settings
 from django.core.files import File
 
 from apps.catalog.models import GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.ingestion.pipeline.epub_properties.epub_builder import safe_epub_filename
 
 
@@ -35,7 +35,11 @@ def content_type_for_suffix(path):
 def resolve_generated_cover_path(output_folder, requested_cover):
     if requested_cover:
         requested_path = Path(str(requested_cover))
-        direct_path = requested_path if requested_path.is_absolute() else output_folder / requested_path
+        direct_path = (
+            requested_path
+            if requested_path.is_absolute()
+            else output_folder / requested_path
+        )
         if direct_path.exists():
             return direct_path
 
@@ -64,7 +68,9 @@ def candidate_asset_paths(scraped_data):
         epub_candidates = sorted(output_folder.glob("*.epub"))
         epub_path = epub_candidates[0] if epub_candidates else None
 
-    cover_path = resolve_generated_cover_path(output_folder, scraped_data.get("cover", ""))
+    cover_path = resolve_generated_cover_path(
+        output_folder, scraped_data.get("cover", "")
+    )
     return {
         GeneratedAssetType.HTML: output_folder / "book.html",
         GeneratedAssetType.EPUB: epub_path,
@@ -102,11 +108,15 @@ def cleanup_staged_asset_files(output_folder, synced_paths):
         pass
 
 
-def sync_assets(book, job, scraped_data, *, generated_asset_labels, required_asset_types):
+def sync_assets(
+    book, job, scraped_data, *, generated_asset_labels, required_asset_types
+):
     synced_paths = []
     ready_asset_types = set()
     for asset_type, path in candidate_asset_paths(scraped_data).items():
-        asset, _ = GeneratedAsset.objects.get_or_create(book=book, asset_type=asset_type)
+        asset, _ = GeneratedAsset.objects.get_or_create(
+            book=book, asset_type=asset_type
+        )
         if not path or not Path(path).exists():
             asset.status = GeneratedAssetStatus.FAILED
             asset.save(update_fields=["status", "updated_at"])
@@ -125,7 +135,19 @@ def sync_assets(book, job, scraped_data, *, generated_asset_labels, required_ass
             asset.file.save(path.name, File(handle), save=False)
         asset.storage_path = asset.file.name or ""
         asset.legacy_path = ""
-        asset.save(update_fields=["status", "legacy_path", "file_size", "content_type", "checksum", "source_job", "file", "storage_path", "updated_at"])
+        asset.save(
+            update_fields=[
+                "status",
+                "legacy_path",
+                "file_size",
+                "content_type",
+                "checksum",
+                "source_job",
+                "file",
+                "storage_path",
+                "updated_at",
+            ]
+        )
         synced_paths.append(path)
         ready_asset_types.add(asset_type)
 
@@ -137,7 +159,8 @@ def sync_assets(book, job, scraped_data, *, generated_asset_labels, required_ass
         if asset_type not in ready_asset_types
     ]
     if missing_required_assets:
-        book.state = LifecycleState.NEEDS_REVIEW
-        book.review_state = ReviewState.NEEDS_REVIEW
-        book.save(update_fields=["state", "review_state", "updated_at"])
-        raise ValueError(f"Missing generated assets: {', '.join(missing_required_assets)}.")
+        book.state = LifecycleState.FAILED
+        book.save(update_fields=["state", "updated_at"])
+        raise ValueError(
+            f"Missing generated assets: {', '.join(missing_required_assets)}."
+        )

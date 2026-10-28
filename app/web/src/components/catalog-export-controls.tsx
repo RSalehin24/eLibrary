@@ -1,31 +1,27 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useState } from "react";
 import { readJSON } from "@/api/http";
 import { catalogFilterKeys } from "@/lib/catalog-filters";
 import { Icon } from "./icon";
 import { useSiteLanguage } from "./site-language";
 
-type ExportScope = "catalog" | "library" | "managed" | "physical";
+type ExportScope = "catalog" | "library" | "managed";
 const endpoints: Record<ExportScope, string> = {
   catalog: "catalog/exports/", library: "me/books/export/",
-  managed: "manage/book-exports/", physical: "catalog/physical-books/export/",
+  managed: "manage/book-exports/",
 };
-const groupLabels = { "": ["একসঙ্গে", "No grouping"], category: ["বিভাগ অনুযায়ী", "By category"], publisher: ["প্রকাশক অনুযায়ী", "By publisher"], binding: ["বাঁধাই অনুযায়ী", "By binding"], language: ["ভাষা অনুযায়ী", "By language"], contributor: ["লেখক ও সহযোগী অনুযায়ী", "By contributor"] };
 
 export function CatalogExportControls({ filters, scope = "catalog" }: { filters: Readonly<Record<string, string>>; scope?: ExportScope }) {
   const { language } = useSiteLanguage();
-  const groupingId = useId();
   const text = (bn: string, en: string) => language === "bn" ? bn : en;
-  const [grouping, setGrouping] = useState("");
   const [busy, setBusy] = useState("");
   const [message, setMessage] = useState("");
   const [failed, setFailed] = useState(false);
   function exportURL(format: string) {
-    const allowed = [...catalogFilterKeys, "q", "view", "writer", "translator", "editor", "publisher", "binding", "language", "state", "quality"];
+    const allowed = [...catalogFilterKeys, "q", "view"];
     const parameters = new URLSearchParams(Object.entries(filters).filter(([key, value]) => allowed.includes(key) && value));
     parameters.set("export_format", format);
-    if (scope === "physical") parameters.set("group_by", grouping);
     return `/api/v1/${endpoints[scope]}?${parameters}`;
   }
   async function download(format: string) {
@@ -35,7 +31,7 @@ export function CatalogExportControls({ filters, scope = "catalog" }: { filters:
       if (!response.ok) await readJSON(response);
       const url = URL.createObjectURL(await response.blob());
       const anchor = document.createElement("a");
-      anchor.href = url; anchor.download = `${scope === "physical" ? "physical-books" : "books"}.${format}`;
+      anchor.href = url; anchor.download = `books.${format}`;
       document.body.append(anchor); anchor.click(); anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
       setMessage(text("ফাইল ডাউনলোড হয়েছে।", "File downloaded."));
@@ -47,10 +43,7 @@ export function CatalogExportControls({ filters, scope = "catalog" }: { filters:
     <details className="catalog-export-menu" onKeyDown={event => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
       <summary className="button button-quiet"><Icon name="download" />{text("তালিকা ডাউনলোড", "Download list")}<Icon name="chevron" /></summary>
       <div className="catalog-export-panel"><p className="muted">{text("বর্তমান ফিল্টারের সব বই থাকবে। শুধু এই পাতার বই নয়।", "Includes every book matching these filters, across all pages.")}</p>
-      {scope === "physical" && <div className="catalog-filter-field"><label htmlFor={groupingId}>{text("ভাগ করুন", "Group by")}</label><select id={groupingId} value={grouping} onChange={(event) => setGrouping(event.target.value)} disabled={!!busy}>
-        {Object.entries(groupLabels).map(([value, labels]) => <option key={value} value={value}>{labels[language === "bn" ? 0 : 1]}</option>)}
-      </select></div>}
-      <div className="catalog-export-options">{(scope === "physical" ? ["csv", "pdf", "xlsx"] : ["csv", "pdf"]).map(format => <button className="button button-quiet" type="button" key={format} onClick={() => void download(format)} disabled={!!busy} aria-busy={busy === format}>
+      <div className="catalog-export-options">{["csv", "pdf"].map(format => <button className="button button-quiet" type="button" key={format} onClick={() => void download(format)} disabled={!!busy} aria-busy={busy === format}>
         <Icon name="download" />{format.toUpperCase()}{busy === format ? text(" তৈরি হচ্ছে…", " generating…") : ""}
       </button>)}
       <a className="button button-quiet" href={exportURL("print")} target="_blank" rel="noopener" aria-label={text("প্রিন্ট / PDF হিসেবে সংরক্ষণ", "Print / Save as PDF")}><Icon name="external" />{text("প্রিন্ট", "Print")}</a></div>

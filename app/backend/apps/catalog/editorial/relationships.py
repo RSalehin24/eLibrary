@@ -1,7 +1,8 @@
+import json
+
 from apps.accounts.models import User
-from apps.catalog.editorial.creation import require_catalog_creator
-from apps.catalog.editorial.service import EditorialConflict
-from apps.catalog.locking import lock_title
+from apps.catalog.editorial.service import EditorialConflict, revision_checked_book
+from apps.catalog.locking import lock_entity_kind, lock_title
 from apps.catalog.models import (
     Book,
     BookCategory,
@@ -13,7 +14,7 @@ from apps.catalog.models import (
     MetadataVersion,
     Series,
 )
-from apps.common.models import ReviewState
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
 from django.db.models import F
 from django.shortcuts import get_object_or_404
@@ -26,7 +27,7 @@ def related_editions(book):
     return list(
         Book.objects.filter(group_id=book.group_id, deleted_at__isnull=True)
         .exclude(pk=book.pk)
-        .values("id", name=F("title"))
+        .values("id", "catalog_code", name=F("title"))
         .order_by("name", "id")[:101]
     )
 
@@ -46,10 +47,15 @@ def relationship_details(book):
 def relationship_selection(book):
     return {
         "contributors": [
-            {"id": identifier, "name": name, "role": role}
-            for identifier, name, role in book.book_contributors.order_by(
+            {"id": identifier, "name": name, "catalog_code": code, "role": role}
+            for identifier, name, code, role in book.book_contributors.order_by(
                 "sort_order", "id"
-            ).values_list("contributor_id", "contributor__name", "role")
+            ).values_list(
+                "contributor_id",
+                "contributor__name",
+                "contributor__catalog_code",
+                "role",
+            )
         ],
         "categories": related_references(book.book_categories.all(), "category"),
         "series": related_references(
@@ -60,8 +66,10 @@ def relationship_selection(book):
 
 def related_references(links, field):
     return [
-        {"id": identifier, "name": name}
-        for identifier, name in links.values_list(f"{field}_id", f"{field}__name")
+        {"id": identifier, "name": name, "catalog_code": code}
+        for identifier, name, code in links.values_list(
+            f"{field}_id", f"{field}__name", f"{field}__catalog_code"
+        )
     ]
 
 
@@ -85,11 +93,7 @@ def record_relationship_version(actor, book, edit_note=""):
 
 
 def save_relationship_revision(book):
-    book.editorial_reviewed_at = None
-    book.review_state = ReviewState.PENDING
-    book.save(
-        update_fields=["group", "editorial_reviewed_at", "review_state", "updated_at"]
-    )
+    book.save(update_fields=["group", "metadata_overrides", "updated_at"])
 
 
 def require_available_references(model, identifiers, field):
@@ -155,16 +159,24 @@ def assign_edition(actor, book, identifier):
 @transaction.atomic
 def update_relationships(actor, book_id, attributes):
     actor = User.objects.select_for_update(no_key=True).get(pk=actor.pk)
-    require_catalog_creator(actor)
     # Edition commands can touch two books; serialize them before taking row locks.
     lock_title("catalog-book-relationships")
-    book = get_object_or_404(
-        Book.objects.select_for_update(), pk=book_id, deleted_at__isnull=True
-    )
+    for kind in ("categories", "contributors", "series"):
+        lock_entity_kind(kind)
+    book = revision_checked_book(actor, book_id, attributes["expected_updated_at"])
     if book.updated_at != attributes["expected_updated_at"]:
         raise EditorialConflict()
     record_relationship_version(actor, book, attributes.get("edit_note", ""))
     apply_relationships(actor, book, attributes)
+    override_fields = {
+        key: value
+        for key, value in attributes.items()
+        if key not in {"expected_updated_at", "edit_note"}
+    }
+    book.metadata_overrides = {
+        **book.metadata_overrides,
+        **json.loads(json.dumps(override_fields, cls=DjangoJSONEncoder)),
+    }
     save_relationship_revision(book)
     return book
 

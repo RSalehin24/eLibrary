@@ -1,7 +1,7 @@
 from django.db import IntegrityError, transaction
 
 from apps.catalog.models import Book, BookSource, ContributorRole, MetadataVersion
-from apps.common.models import AuditLog, LifecycleState, ReviewState
+from apps.common.models import AuditLog, LifecycleState
 from apps.ingestion.models import ResolutionStatus, SubmissionStatus
 
 
@@ -20,7 +20,6 @@ def complete_processed_submission(
     submission.resolution_status = ResolutionStatus.RESOLVED
     submission.resolution_confidence = max(submission.resolution_confidence, 1.0)
     submission.status = SubmissionStatus.READY
-    submission.review_state = book.review_state
     submission.error_message = ""
     submission.raw_payload = {
         **submission.raw_payload,
@@ -29,7 +28,19 @@ def complete_processed_submission(
         "processing_source": source,
         "served_from_database": False,
     }
-    submission.save(update_fields=["linked_book", "duplicate_of_book", "resolved_url", "resolution_status", "resolution_confidence", "status", "review_state", "error_message", "raw_payload", "updated_at"])
+    submission.save(
+        update_fields=[
+            "linked_book",
+            "duplicate_of_book",
+            "resolved_url",
+            "resolution_status",
+            "resolution_confidence",
+            "status",
+            "error_message",
+            "raw_payload",
+            "updated_at",
+        ]
+    )
     sync_deduplicated_submissions_fn(submission)
 
     if submission.submitter_id:
@@ -67,7 +78,9 @@ def persist_scraped_book(
     target_book=None,
 ):
     normalized = normalize_scraped_book_fn(scraped_data)
-    cleaned_dedication_html = clean_extracted_dedication_html_fn(scraped_data.get("dedication", ""))
+    cleaned_dedication_html = clean_extracted_dedication_html_fn(
+        scraped_data.get("dedication", "")
+    )
     cover_source_url = scraped_data.get("cover") or ""
     normalized_submission_source_url = normalize_source_url_fn(submission.resolved_url)
     raw_scraped_metadata = {
@@ -78,7 +91,6 @@ def persist_scraped_book(
     def apply_scraped_fields(book):
         book.deleted_at = None
         book.state = LifecycleState.READY
-        book.review_state = ReviewState.PENDING
         book.raw_scraped_metadata = raw_scraped_metadata
         book.raw_scrape_payload = scraped_data
         book.main_content_html = scraped_data.get("main_content", "")
@@ -88,16 +100,31 @@ def persist_scraped_book(
         book.content_items = scraped_data.get("content_items", [])
         book.cover_source_url = cover_source_url
 
-    existing_book = target_book or find_deleted_book_by_title_fn(scraped_data["book_title"])
+    existing_book = target_book or find_deleted_book_by_title_fn(
+        scraped_data["book_title"]
+    )
     if existing_book:
         book = existing_book
         apply_scraped_fields(book)
-        book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "cover_source_url", "updated_at"])
+        book.save(
+            update_fields=[
+                "deleted_at",
+                "state",
+                "raw_scraped_metadata",
+                "raw_scrape_payload",
+                "main_content_html",
+                "book_info_html",
+                "dedication_html",
+                "toc",
+                "content_items",
+                "cover_source_url",
+                "updated_at",
+            ]
+        )
     else:
         create_kwargs = {
             "title": scraped_data["book_title"],
             "state": LifecycleState.READY,
-            "review_state": ReviewState.PENDING,
             "raw_scraped_metadata": raw_scraped_metadata,
             "raw_scrape_payload": scraped_data,
             "main_content_html": scraped_data.get("main_content", ""),
@@ -117,7 +144,21 @@ def persist_scraped_book(
             if book is None:
                 raise
             apply_scraped_fields(book)
-            book.save(update_fields=["deleted_at", "state", "review_state", "raw_scraped_metadata", "raw_scrape_payload", "main_content_html", "book_info_html", "dedication_html", "toc", "content_items", "cover_source_url", "updated_at"])
+            book.save(
+                update_fields=[
+                    "deleted_at",
+                    "state",
+                    "raw_scraped_metadata",
+                    "raw_scrape_payload",
+                    "main_content_html",
+                    "book_info_html",
+                    "dedication_html",
+                    "toc",
+                    "content_items",
+                    "cover_source_url",
+                    "updated_at",
+                ]
+            )
 
     sync_metadata_relations_fn(book, normalized)
     BookSource.objects.update_or_create(
@@ -148,16 +189,25 @@ def export_payload_from_book(book, scraped_data):
         "series": series_names or scraped_data.get("series", ""),
         "book_type": category_names or scraped_data.get("book_type", ""),
         "cover": scraped_data.get("cover") or book.cover_source_url or "",
-        "cover_source_url": book.cover_source_url or scraped_data.get("cover_source_url", ""),
+        "cover_source_url": book.cover_source_url
+        or scraped_data.get("cover_source_url", ""),
         "main_content": book.main_content_html or "",
         "book_info": book.book_info_html or "",
         "dedication": book.dedication_html or "",
         "front_sections": (
-            (book.raw_scrape_payload.get("front_sections") if isinstance(book.raw_scrape_payload, dict) else None)
+            (
+                book.raw_scrape_payload.get("front_sections")
+                if isinstance(book.raw_scrape_payload, dict)
+                else None
+            )
             or scraped_data.get("front_sections", [])
         ),
         "back_sections": (
-            (book.raw_scrape_payload.get("back_sections") if isinstance(book.raw_scrape_payload, dict) else None)
+            (
+                book.raw_scrape_payload.get("back_sections")
+                if isinstance(book.raw_scrape_payload, dict)
+                else None
+            )
             or scraped_data.get("back_sections", [])
         ),
         "toc": book.toc or [],

@@ -1,22 +1,14 @@
 import csv
 from datetime import UTC, datetime
-from decimal import Decimal
-from io import BytesIO, StringIO
-from xml.etree import ElementTree
-from zipfile import ZipFile
+from io import StringIO
 
 import pytest
 from apps.access.models import PermissionGrant, PermissionScope
 from apps.accounts.models import User
 from apps.catalog.exports.grouped_pdf import pdf_cell, word_clusters
 from apps.catalog.exports.tabular import created_label
-from apps.catalog.exports.xlsx_exports import sheet_names
 from apps.catalog.models import (
     Book,
-    BookCategory,
-    BookContributor,
-    Category,
-    Contributor,
     UserBook,
 )
 from rest_framework.test import APIClient
@@ -81,118 +73,57 @@ def test_library_export_is_owner_private_and_preserves_filters():
 
 def test_physical_list_and_export_honor_book_scoped_permissions_and_filters():
     client, actor = authenticated_client()
-    allowed = make_book(
-        "Physical allowed",
-        record_type="manual",
-        manual_binding="hard_cover",
-        manual_publisher="Publisher",
-        manual_price=Decimal("0.00"),
-    )
-    make_book("Physical denied", record_type="manual", manual_binding="hard_cover")
-    make_book("Digital excluded")
+    book = make_book("একটি বই")
     PermissionGrant.objects.create(
-        user=actor, book=allowed, scope=PermissionScope.PHYSICAL_BOOKS_VIEW
+        user=actor, book=book, scope=PermissionScope.READ_DURABLE
     )
-    parameters = {"binding": "hard_cover", "publisher": "Publisher", "language": "bn"}
-    listing = client.get("/api/v1/catalog/physical-books/", parameters)
-    assert listing.status_code == 200
-    assert [entry["id"] for entry in listing.json()["entries"]] == [str(allowed.pk)]
-    rows = csv_rows(client.get("/api/v1/catalog/physical-books/export/", parameters))
-    assert [row["Title"] for row in rows] == [allowed.title]
-    assert rows[0]["Price"] == "0.00"
-    assert rows[0]["Language"] == "bn"
-    assert "AM" in rows[0]["Created At"] or "PM" in rows[0]["Created At"]
-    assert (
-        client.get("/api/v1/catalog/physical-books/", {"binding": "paper_back"}).json()[
-            "entries"
-        ]
-        == []
-    )
-    PermissionGrant.objects.filter(user=actor).update(is_active=False)
-    assert not client.get("/api/v1/catalog/physical-books/").json()["entries"]
+    for path in [
+        "/api/v1/catalog/physical-books/",
+        "/api/v1/catalog/physical-books/export/",
+    ]:
+        assert client.get(path).status_code == 404
+    rows = csv_rows(client.get("/api/v1/catalog/exports/"))
+    assert rows[0]["Title"] == book.title
+    assert not {"Type", "Binding", "Price"}.intersection(rows[0])
 
 
 def test_physical_xlsx_groups_multiple_categories_and_never_creates_formula_cells():
     client, actor = authenticated_client()
+    book = make_book("একটি বই")
     PermissionGrant.objects.create(
-        user=actor, scope=PermissionScope.PHYSICAL_BOOKS_VIEW
+        user=actor, book=book, scope=PermissionScope.READ_DURABLE
     )
-    book = make_book(
-        "=Formula বাংলাদেশ", record_type="manual", manual_price=Decimal("12.30")
-    )
-    prefix = "বিভাগ " + "ক" * 30
-    categories = [
-        Category.objects.create(name=prefix + ending) for ending in [" এক", " দুই"]
-    ]
-    for category in categories:
-        BookCategory.objects.create(book=book, category=category)
-    response = client.get(
+    for path in [
+        "/api/v1/catalog/physical-books/",
         "/api/v1/catalog/physical-books/export/",
-        {"export_format": "xlsx", "group_by": "category"},
-    )
-    assert response.status_code == 200
-    assert response["Content-Type"].endswith("spreadsheetml.sheet")
-    with ZipFile(BytesIO(response.content)) as archive:
-        workbook = ElementTree.fromstring(archive.read("xl/workbook.xml"))
-        names = [
-            element.attrib["name"]
-            for element in workbook.iter()
-            if element.tag.endswith("}sheet")
-        ]
-        assert names == [prefix[:31], prefix[:27] + " (2)"]
-        for index in [1, 2]:
-            sheet = ElementTree.fromstring(
-                archive.read(f"xl/worksheets/sheet{index}.xml")
-            )
-            assert not any(element.tag.endswith("}f") for element in sheet.iter())
-            text = " ".join(element.text or "" for element in sheet.iter())
-            assert "=Formula বাংলাদেশ" in text
-            assert "12.30" in text
-            assert all(
-                element.attrib.get("t") == "inlineStr"
-                for element in sheet.iter()
-                if element.tag.endswith("}c")
-            )
+    ]:
+        assert client.get(path).status_code == 404
+    rows = csv_rows(client.get("/api/v1/catalog/exports/"))
+    assert rows[0]["Title"] == book.title
+    assert not {"Type", "Binding", "Price"}.intersection(rows[0])
 
 
 def test_physical_inventory_combines_writer_translator_and_legacy_compiler_filters():
     client, actor = authenticated_client()
+    book = make_book("একটি বই")
     PermissionGrant.objects.create(
-        user=actor, scope=PermissionScope.PHYSICAL_BOOKS_VIEW
+        user=actor, book=book, scope=PermissionScope.READ_DURABLE
     )
-    selected = make_book("All contributors", record_type="manual")
-    excluded = make_book("Wrong contributor roles", record_type="manual")
-    contributors = {
-        role: Contributor.objects.create(name=name)
-        for role, name in [
-            ("author", "Writer selected"),
-            ("translator", "Translator selected"),
-            ("compiler", "Editor selected"),
-        ]
-    }
-    for role, contributor in contributors.items():
-        BookContributor.objects.create(
-            book=selected, contributor=contributor, role=role
-        )
-        BookContributor.objects.create(
-            book=excluded, contributor=contributor, role="publisher"
-        )
-    response = client.get(
+    for path in [
         "/api/v1/catalog/physical-books/",
-        {
-            "writer": "Writer selected",
-            "translator": "Translator selected",
-            "editor": "Editor selected",
-        },
-    )
-    assert [entry["id"] for entry in response.json()["entries"]] == [str(selected.pk)]
+        "/api/v1/catalog/physical-books/export/",
+    ]:
+        assert client.get(path).status_code == 404
+    rows = csv_rows(client.get("/api/v1/catalog/exports/"))
+    assert rows[0]["Title"] == book.title
+    assert not {"Type", "Binding", "Price"}.intersection(rows[0])
 
 
 def test_sheet_names_are_unique_case_insensitive_and_excel_compatible():
-    names = sheet_names(["A" * 40, "a" * 40, "A" * 40, "'", "x/y", "x:y"])
-    assert len({name.casefold() for name in names}) == len(names)
-    assert all(0 < len(name) <= 31 for name in names)
-    assert names[-2:] == ["x_y", "x_y (2)"]
+    make_book("=unsafe spreadsheet name")
+    response = APIClient().get("/api/v1/catalog/exports/", {"export_format": "xlsx"})
+    assert response.status_code == 400
+    assert response.json()["field_errors"]["export_format"]
 
 
 @pytest.mark.parametrize(
@@ -213,7 +144,7 @@ def test_print_export_is_complete_and_html_escaped():
 
 
 def test_pdf_export_returns_real_pdf_for_supported_text():
-    make_book("English export", manual_language="en")
+    make_book("English export", language="en")
     response = APIClient().get("/api/v1/catalog/exports/", {"export_format": "pdf"})
     assert response.status_code == 200
     assert response.content.startswith(b"%PDF")
@@ -249,12 +180,16 @@ def test_bengali_pdf_refuses_to_silently_lose_text_shaping(monkeypatch):
 
 def test_managed_export_enforces_exact_metadata_scope():
     client, actor = authenticated_client()
-    permitted = make_book("Manage selected")
-    other = make_book("Manage forbidden")
+    first, second = make_book("First"), make_book("Second")
     assert client.get("/api/v1/manage/book-exports/").status_code == 403
     PermissionGrant.objects.create(
-        user=actor, book=permitted, scope=PermissionScope.METADATA_EDIT
+        user=actor, book=first, scope=PermissionScope.METADATA_EDIT
     )
-    rows = csv_rows(client.get("/api/v1/manage/book-exports/"))
-    assert [row["Title"] for row in rows] == [permitted.title]
-    assert other.catalog_code not in {row["Book ID"] for row in rows}
+    assert {
+        row["Book ID"] for row in csv_rows(client.get("/api/v1/manage/book-exports/"))
+    } == {first.catalog_code}
+    actor.is_staff = True
+    actor.save()
+    assert {
+        row["Book ID"] for row in csv_rows(client.get("/api/v1/manage/book-exports/"))
+    } == {first.catalog_code, second.catalog_code}

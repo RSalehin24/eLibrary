@@ -5,8 +5,6 @@ import { notFound } from "next/navigation";
 import { sessionRequest } from "@/api/server";
 import { APIError } from "@/api/http";
 import type { PersonalBookDetail } from "@/api/types";
-import type { PhysicalReadingLog } from "@/api/types";
-import { PhysicalReadingForm } from "@/components/physical-reading-form";
 import { BookInformation } from "@/components/book-information";
 import { BookActions } from "@/components/book-actions";
 import { requireReader } from "@/lib/workspace-session";
@@ -28,7 +26,6 @@ export default async function PrivateBookPage({ params, searchParams }: { params
   const view = requestedView || book.library_view;
   const returnPath = view === "all" ? "/my-books/" : `/my-books/?${new URLSearchParams({ view })}`;
   return <><Link className="text-link" href={returnPath}><SiteText>{"← আমার বইয়ে ফিরুন"}</SiteText></Link>
-    <BookInformation book={book} personal personalView={view}><BookActions slug={book.slug} recordType={book.record_type} /></BookInformation>
-    {book.record_type !== "manual" && <BookReadingSummary slug={book.slug} />}
-    {book.record_type === "manual" && <PhysicalReadingForm slug={book.slug} initialLog={await sessionRequest<PhysicalReadingLog>(`me/books/${encodeURIComponent(book.slug)}/physical-log/`)} />}</>;
+    <BookInformation book={book} personal personalView={view}><BookActions slug={book.slug} /></BookInformation>
+    <BookReadingSummary slug={book.slug} /></>;
 }

@@ -11,7 +11,7 @@ from apps.catalog.discovery.publication import public_books
 from apps.catalog.discovery.slugs import catalog_object_by_slug
 from apps.catalog.models import Book
 from apps.common.api import VersionedAPIView
-from apps.common.permissions import user_can_view_book_cover
+from apps.common.permissions import is_book_administrator, user_can_view_book_cover
 
 
 class BookCoverView(VersionedAPIView):
@@ -28,7 +28,7 @@ class BookCoverView(VersionedAPIView):
             actor.is_authenticated
             and actor.is_active
             and not actor.requires_totp_setup
-            and user_can_view_book_cover(actor, book)
+            and (is_book_administrator(actor) or user_can_view_book_cover(actor, book))
         ):
             raise PermissionDenied("You do not have cover access for this book.")
         asset = book.generated_assets.filter(asset_type="cover", status="ready").first()

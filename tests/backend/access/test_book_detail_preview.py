@@ -21,10 +21,14 @@ def test_owner_gets_plain_metadata_dedication_and_nested_contents(reader):
     client, _, book, _, _ = reader
     book.book_info_html = "<p>প্রকাশকাল: ২০২০</p>"
     book.dedication_html = "<p>প্রিয় পাঠককে</p><script>private-script</script>"
-    book.toc = [{
-        "title": "প্রথম খণ্ড", "source_url": "https://private.invalid/chapter/",
-        "content": "private-chapter-body", "children": [{"title": "প্রথম অধ্যায়"}],
-    }]
+    book.toc = [
+        {
+            "title": "প্রথম খণ্ড",
+            "source_url": "https://private.invalid/chapter/",
+            "content": "private-chapter-body",
+            "children": [{"title": "প্রথম অধ্যায়"}],
+        }
+    ]
     book.save()
     response = client.get(details_path(book))
     assert response.status_code == 200
@@ -63,27 +67,33 @@ def test_preview_requires_current_read_access_and_never_consumes_an_opening(read
 
 def test_other_account_cannot_see_protected_preview(reader):
     client, _, book, _, _ = reader
-    client.force_authenticate(User.objects.create_user(email="preview-other@test.invalid"))
+    client.force_authenticate(
+        User.objects.create_user(email="preview-other@test.invalid")
+    )
     assert client.get(details_path(book)).status_code == 403
 
 
-@pytest.mark.parametrize("unavailable", ["deleted", "manual", "quarantined"])
+@pytest.mark.parametrize("unavailable", ["deleted", "archived", "quarantined"])
 def test_unavailable_book_preview_is_denied_even_to_owner(reader, unavailable):
     client, _, book, _, _ = reader
     if unavailable == "deleted":
         book.deleted_at = timezone.now()
-    elif unavailable == "manual":
-        book.record_type = "manual"
+    elif unavailable == "archived":
+        book.state = "archived"
     else:
         book.source_quality_state = "quarantined"
     book.save()
-    assert client.get(details_path(book)).status_code == (403 if unavailable == "quarantined" else 404)
+    assert client.get(details_path(book)).status_code == (
+        404 if unavailable == "deleted" else 403
+    )
 
 
 def test_preview_bounds_text_and_contents_and_reports_shortening(reader):
     client, _, book, _, _ = reader
     book.dedication_html = "x" * (MAX_TEXT_CHARACTERS + 1)
-    book.toc = [{"title": f"অধ্যায় {number}"} for number in range(MAX_CONTENTS_ENTRIES + 1)]
+    book.toc = [
+        {"title": f"অধ্যায় {number}"} for number in range(MAX_CONTENTS_ENTRIES + 1)
+    ]
     book.save()
     data = client.get(details_path(book)).json()
     assert len(data["dedication"]) == MAX_TEXT_CHARACTERS
@@ -99,8 +109,13 @@ def test_nested_and_malformed_contents_are_bounded_without_raw_locators():
     assert len(entries) == 9
     assert max(entry["depth"] for entry in entries) == 8
     assert truncated is True
-    assert contents_preview([None, False, "invalid", {"title": "<script>secret</script>"}]) == ([], False)
-    assert contents_preview([None, {"label": "অধ্যায়"}]) == ([{"label": "অধ্যায়", "depth": 0}], False)
+    assert contents_preview(
+        [None, False, "invalid", {"title": "<script>secret</script>"}]
+    ) == ([], False)
+    assert contents_preview([None, {"label": "অধ্যায়"}]) == (
+        [{"label": "অধ্যায়", "depth": 0}],
+        False,
+    )
 
 
 def test_anonymous_catalog_metadata_does_not_include_source_preview(reader):

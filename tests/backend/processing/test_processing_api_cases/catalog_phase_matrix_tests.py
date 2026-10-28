@@ -1,3 +1,25 @@
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import BookRecord, ProcessingSyncStatus
+from apps.processing.services import get_sync_state
+
+from tests.backend.processing.test_processing_api_cases.catalog_automation_matrix_cases import (
+    CATALOG_AUTOMATION_MATRIX_CASES,
+)
+from tests.backend.processing.test_processing_api_cases.catalog_manual_matrix_cases import (
+    CATALOG_MANUAL_MATRIX_CASES,
+)
+from tests.backend.processing.test_processing_api_cases.catalog_matrix_helpers import (
+    assert_catalog_matrix_payload,
+    catalog_matrix_request_creation_payload,
+)
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_sync,
+    login_processing_admin,
+    post_processing_mutation,
+    record_payload,
+    set_catalog_runtime_state,
+)
 
 
 @pytest.mark.django_db
@@ -24,7 +46,9 @@ def test_catalog_automation_rerun_after_completion_starts_from_beginning(client)
     payload = advance_processing_sync(client)
     assert payload["sync"]["status"] == "idle"
     assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == "completed"
-    assert payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "completed"
+    assert (
+        payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "completed"
+    )
 
     _mutation, payload = post_processing_mutation(
         client,
@@ -36,7 +60,10 @@ def test_catalog_automation_rerun_after_completion_starts_from_beginning(client)
     assert payload["sync"]["fetchedCount"] == 0
     assert payload["sync"]["message"] == "Automated catalog sync is running."
     assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == "running"
-    assert payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "not_started"
+    assert (
+        payload["sync"]["progress"]["phaseStatuses"]["request_creation"]
+        == "not_started"
+    )
     assert "requestCreation" not in payload["sync"]["progress"]
 
 
@@ -174,7 +201,9 @@ def test_catalog_phase_states_preserve_pausing_phase_one_and_paused_phase_two_ch
     assert payload["progress"]["phaseStatuses"]["sync"] == "running"
     assert payload["progress"]["phaseStatuses"]["request_creation"] == "paused"
     assert payload["progress"]["phaseStates"]["sync"]["status"] == "pausing"
-    assert payload["progress"]["phaseStates"]["sync"]["savedData"]["checkpointToken"] == (
+    assert payload["progress"]["phaseStates"]["sync"]["savedData"][
+        "checkpointToken"
+    ] == (
         processing_services.catalog_sync_checkpoint_token(
             "catalog-matrix-session",
             next_page_index=4,
@@ -182,14 +211,19 @@ def test_catalog_phase_states_preserve_pausing_phase_one_and_paused_phase_two_ch
         )
     )
     assert payload["progress"]["phaseStates"]["request_creation"]["status"] == "paused"
-    assert payload["progress"]["phaseStates"]["request_creation"][
-        "baseSyncCheckpointToken"
-    ] == paused_request_creation["baseCheckpointToken"]
+    assert (
+        payload["progress"]["phaseStates"]["request_creation"][
+            "baseSyncCheckpointToken"
+        ]
+        == paused_request_creation["baseCheckpointToken"]
+    )
     assert payload["progress"]["requestCreation"] == paused_request_creation
 
 
 @pytest.mark.django_db
-def test_catalog_automation_run_starts_request_creation_from_completed_sync_checkpoint(client):
+def test_catalog_automation_run_starts_request_creation_from_completed_sync_checkpoint(
+    client,
+):
     login_processing_admin(client)
     BookRecord.objects.create(
         id="matrix-phase-two-a",
@@ -216,9 +250,23 @@ def test_catalog_automation_run_starts_request_creation_from_completed_sync_chec
 
     assert payload["sync"]["status"] == "syncing"
     assert payload["sync"]["phase"] == "request_creation"
-    assert payload["sync"]["message"] == "Creating book requests from the synced catalog records."
+    assert (
+        payload["sync"]["message"]
+        == "Creating book requests from the synced catalog records."
+    )
     assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == "completed"
     assert payload["sync"]["progress"]["phaseStatuses"]["request_creation"] == "running"
-    assert payload["sync"]["progress"]["phaseStates"]["request_creation"][
-        "baseSyncCheckpointToken"
-    ] == payload["sync"]["progress"]["requestCreation"]["baseCheckpointToken"]
+    assert (
+        payload["sync"]["progress"]["phaseStates"]["request_creation"][
+            "baseSyncCheckpointToken"
+        ]
+        == payload["sync"]["progress"]["requestCreation"]["baseCheckpointToken"]
+    )
+
+
+from tests.backend.processing.test_processing_api_cases.catalog_automation_matrix_cases import (
+    CATALOG_AUTOMATION_MATRIX_CASES,
+)
+from tests.backend.processing.test_processing_api_cases.catalog_manual_matrix_cases import (
+    CATALOG_MANUAL_MATRIX_CASES,
+)

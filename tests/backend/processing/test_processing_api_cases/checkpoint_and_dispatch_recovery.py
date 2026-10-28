@@ -1,9 +1,27 @@
+import json
+from types import SimpleNamespace
+
+import pytest
+from apps.processing import services as processing_services
+from apps.processing.models import BookCreationRequest, BookRecord, ProcessingSyncStatus
+from apps.processing.services import get_sync_state
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    FakeProcessingCheckpointRedis,
+    advance_processing_pipeline,
+    login_processing_admin,
+    record_payload,
+)
 
 
 @pytest.mark.django_db
 def test_processing_sync_serialization_repairs_stale_checkpoint_mirror(monkeypatch):
     fake_redis = FakeProcessingCheckpointRedis()
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_redis)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client",
+        lambda: fake_redis,
+    )
 
     sync_state = get_sync_state()
     sync_state.status = ProcessingSyncStatus.PAUSED
@@ -62,9 +80,14 @@ def test_processing_sync_serialization_repairs_stale_checkpoint_mirror(monkeypat
 
 
 @pytest.mark.django_db
-def test_processing_sync_checkpoint_mirror_clears_when_runtime_returns_to_idle(monkeypatch):
+def test_processing_sync_checkpoint_mirror_clears_when_runtime_returns_to_idle(
+    monkeypatch,
+):
     fake_redis = FakeProcessingCheckpointRedis()
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client', lambda: fake_redis)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_checkpoint_client",
+        lambda: fake_redis,
+    )
 
     processing_services.run_manual_catalog_sync(
         [[record_payload("mirror-stop-record")], []]
@@ -97,8 +120,14 @@ def test_processing_pipeline_does_not_reenqueue_queued_request_while_dispatch_is
         dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id=f"task-{len(dispatch_calls)}")
 
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline",
+        lambda: False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available",
+        lambda *_args, **_kwargs: True,
+    )
     monkeypatch.setattr(
         "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,
@@ -180,8 +209,14 @@ def test_processing_pipeline_dispatches_queued_request_even_with_initial_backlog
         dispatch_calls.append({"job_id": job_id, **kwargs})
         return SimpleNamespace(id=f"task-{len(dispatch_calls)}")
 
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline', lambda: False)
-    monkeypatch.setattr('apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available', lambda *_args, **_kwargs: True)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.should_run_processing_jobs_inline",
+        lambda: False,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.checkpoint_and_runtime_adapters.processing_workers_available",
+        lambda *_args, **_kwargs: True,
+    )
     monkeypatch.setattr(
         "apps.ingestion.engine.dispatch.dispatch_job",
         fake_apply_async,

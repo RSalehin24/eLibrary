@@ -17,6 +17,7 @@ import { EntityFields } from "./entity-fields";
 export function EntityEditor({ kind, initialEntity }: { kind: EntityKind; initialEntity: ManagedEntity }) {
   const editor = useEntityEditor(kind, initialEntity);
   const { entity, blocked, dirty } = editor;
+  if (!entity.can_edit) return <p className="notice" role="status"><AdminText>{"এই পরিচিতি বইয়ের সঙ্গে যুক্ত। পরিবর্তন করতে প্রশাসকের অনুমতি প্রয়োজন।"}</AdminText></p>;
   return <section className="editorial-workspace">
     {kind === "collections" && <p className="notice"><AdminText>{"অবস্থা: "}</AdminText><AdminText>{catalogStateLabel(entity.state)}</AdminText></p>}
     {dirty && <p role="status"><AdminText>{"আপনার কিছু পরিবর্তন এখনো সংরক্ষিত হয়নি।"}</AdminText></p>}

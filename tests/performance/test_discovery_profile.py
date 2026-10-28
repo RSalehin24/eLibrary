@@ -26,7 +26,6 @@ def seed_profile_corpus():
                 slug=f"profile-book-{index}",
                 catalog_code=catalog_code_from_int(index),
                 state="published",
-                review_state="approved",
             )
             for index in range(CATALOG_SIZE)
         ]

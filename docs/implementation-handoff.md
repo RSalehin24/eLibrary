@@ -1,5 +1,11 @@
 # Implementation handoff — 21 October 2026
 
+> Historical checkpoints below are superseded for the application-reader-engine
+> work by the [28 October machine handover](application-reader-engine-progress/handover/README.md).
+> Read that document first: current changes are uncommitted, website verification
+> has open failures, and prior process IDs, preview counts and acceptance results
+> must not be treated as current runtime evidence.
+
 ## Approved interface redesign — current checkpoint
 
 The separate admin/reader plan is implemented and under final browser verification.

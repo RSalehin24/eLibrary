@@ -1,62 +1,19 @@
 import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
 
 import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
 from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
 from apps.ingestion.models import (
-    CatalogAutomationFrequency,
-    BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
-    JobStatus,
-    MatchCandidate,
-    ProcessingJob,
-    ResolutionStatus,
     SourceCatalogEntry,
     SourceCatalogRefreshState,
     SourceCatalogRefreshStatus,
-    SubmissionOrigin,
-    SubmissionStatus,
-    TitleResolutionAttempt,
 )
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
-from apps.ingestion.pipeline import scraper as legacy_scraper
 from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
-from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
-    extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
-    split_leading_front_sections,
+from apps.ingestion.services.resolution import (
+    TitleResolver,
 )
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
 from apps.ingestion.services.submissions import (
     create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    sync_assets,
 )
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
 
 
 @pytest.mark.django_db
@@ -158,7 +115,9 @@ def test_title_resolver_enriches_candidates_from_book_page_metadata():
 
     assert result.status == "exact_match"
     assert result.resolved_url == "https://www.example.com/books/malice/"
-    entry = SourceCatalogEntry.objects.get(source_url="https://www.example.com/books/malice/")
+    entry = SourceCatalogEntry.objects.get(
+        source_url="https://www.example.com/books/malice/"
+    )
     assert entry.title == "ম্যালিস"
     assert entry.raw_data["metadata_source"] == "book_page"
 
@@ -185,7 +144,9 @@ def test_direct_url_submission_stores_source_page_metadata(monkeypatch):
 
     submissions = create_submission_records(
         submitter=None,
-        parsed_entries=[{"kind": "url", "value": "https://www.example.com/books/source-book/"}],
+        parsed_entries=[
+            {"kind": "url", "value": "https://www.example.com/books/source-book/"}
+        ],
         auto_process=False,
     )
 
@@ -193,11 +154,18 @@ def test_direct_url_submission_stores_source_page_metadata(monkeypatch):
 
 
 @pytest.mark.django_db
-def test_source_catalog_refresh_starts_background_sync_and_returns_state(client, monkeypatch):
-    admin = User.objects.create_superuser(email="catalog-refresh@example.com", password="strong-password-123")
+def test_source_catalog_refresh_starts_background_sync_and_returns_state(
+    client, monkeypatch
+):
+    admin = User.objects.create_superuser(
+        email="catalog-refresh@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
-    monkeypatch.setattr('apps.ingestion.services.curation_modules.source_refresh_and_settings.dispatch_source_catalog_refresh', lambda state: state)
+    monkeypatch.setattr(
+        "apps.ingestion.services.curation_modules.source_refresh_and_settings.dispatch_source_catalog_refresh",
+        lambda state: state,
+    )
 
     response = client.post(
         "/api/ingestion/catalog/refresh/",
@@ -219,7 +187,9 @@ def test_source_catalog_refresh_starts_background_sync_and_returns_state(client,
 
 @pytest.mark.django_db
 def test_source_catalog_entries_include_sync_state(client):
-    admin = User.objects.create_superuser(email="catalog-sync-state@example.com", password="strong-password-123")
+    admin = User.objects.create_superuser(
+        email="catalog-sync-state@example.com", password="strong-password-123"
+    )
     client.force_login(admin)
 
     SourceCatalogRefreshState.objects.create(

@@ -1,62 +1,8 @@
-import json
-from datetime import datetime, timedelta
-from pathlib import Path
-from urllib.parse import quote
-
-import pytest
-import requests
-from django.db import IntegrityError
-from django.utils import timezone
-
-from apps.access.models import PreviewAccessSession
-from apps.accounts.models import User
-from apps.catalog.models import Book, BookContributor, BookSource, Category, Contributor, GeneratedAsset, GeneratedAssetStatus, GeneratedAssetType, Series
-from apps.common.models import LifecycleState, ReviewState
-from apps.ingestion.models import (
-    CatalogAutomationFrequency,
-    BookSubmission,
-    CatalogCurationRun,
-    DuplicateReview,
-    DuplicateReviewStatus,
-    JobStatus,
-    MatchCandidate,
-    ProcessingJob,
-    ResolutionStatus,
-    SourceCatalogEntry,
-    SourceCatalogRefreshState,
-    SourceCatalogRefreshStatus,
-    SubmissionOrigin,
-    SubmissionStatus,
-    TitleResolutionAttempt,
-)
-from apps.ingestion.services.curation import (
-    get_catalog_automation_settings,
-    next_catalog_automation_run_at,
-    run_due_catalog_automation,
-    source_catalog_entry_snapshots,
-)
 from apps.ingestion.pipeline import scraper as legacy_scraper
-from apps.ingestion.services.legacy_adapter import normalize_text
-from apps.ingestion.services.legacy_adapter import normalize_source_url
 from apps.ingestion.services.normalization import (
-    clean_extracted_dedication_html,
     extract_main_content_segments,
-    extract_front_matter_entries,
-    normalize_scraped_book,
-    promote_leading_front_matter,
     split_leading_front_sections,
 )
-from apps.ingestion.services.resolution import CATALOG_URL, TitleResolver, get_with_host_fallback
-from apps.ingestion.services.submissions import (
-    create_submission_records,
-    detect_metadata_duplicate,
-    find_exact_existing_book,
-    process_submission_job,
-    queue_submission,
-    sync_assets,
-)
-from apps.ingestion.tasks import process_submission_task
-from apps.catalog.services import find_existing_book_by_source_url
 
 
 def test_extract_main_content_segments_omits_dedication_heading_from_extracted_dedication():
@@ -122,8 +68,9 @@ def test_split_leading_front_sections_uses_multiline_strong_title_as_single_sect
 
 
 def test_inline_toc_extraction_builds_toc_and_content_from_main_content():
-    toc, content_items, cleaned_main_content = legacy_scraper.extract_inline_toc_and_content(
-        """
+    toc, content_items, cleaned_main_content = (
+        legacy_scraper.extract_inline_toc_and_content(
+            """
         <div class="ld-tab-content ld-visible entry-content">
           <h2>উপন্যাস সমগ্র – রবীন্দ্রনাথ ঠাকুর</h2>
           <p><strong>সূচীপত্র</strong></p>
@@ -137,6 +84,7 @@ def test_inline_toc_extraction_builds_toc_and_content_from_main_content():
           <p>দ্বিতীয় অংশের লেখা</p>
         </div>
         """
+        )
     )
 
     assert [entry["title"] for entry in toc] == ["প্রথম অংশ", "দ্বিতীয় অংশ"]
@@ -149,8 +97,9 @@ def test_inline_toc_extraction_builds_toc_and_content_from_main_content():
 
 
 def test_inline_toc_extraction_removes_embedded_toc_even_without_section_bodies():
-    toc, content_items, cleaned_main_content = legacy_scraper.extract_inline_toc_and_content(
-        """
+    toc, content_items, cleaned_main_content = (
+        legacy_scraper.extract_inline_toc_and_content(
+            """
         <div class="ld-tab-content ld-visible entry-content">
           <h2>উপন্যাস সমগ্র – রবীন্দ্রনাথ ঠাকুর</h2>
           <p>উপন্যাস সমগ্র – রবীন্দ্রনাথ ঠাকুর</p>
@@ -161,6 +110,7 @@ def test_inline_toc_extraction_removes_embedded_toc_even_without_section_bodies(
           </ul>
         </div>
         """
+        )
     )
 
     assert [entry["title"] for entry in toc] == [
@@ -175,8 +125,9 @@ def test_inline_toc_extraction_removes_embedded_toc_even_without_section_bodies(
 
 def test_inline_toc_extraction_handles_paragraph_style_lesson_links():
     """দুর্গরহস্য-style books: TOC heading is 'সূচী ॥' with <p><a> links (not <ul>/<ol>)."""
-    toc, content_items, cleaned_main_content = legacy_scraper.extract_inline_toc_and_content(
-        """
+    toc, content_items, cleaned_main_content = (
+        legacy_scraper.extract_inline_toc_and_content(
+            """
         <div class="entry-content">
           <p>দুর্গরহস্য। বাক-সাহিত্য। তৃতীয় প্রকাশ, চৈত্র ১৩৭১।</p>
           <p>সূচী ॥</p>
@@ -184,6 +135,7 @@ def test_inline_toc_extraction_handles_paragraph_style_lesson_links():
           <p><a href="https://www.example.com/lessons/durgahasya/">দুর্গরহস্য</a></p>
         </div>
         """
+        )
     )
 
     assert [entry["title"] for entry in toc] == ["চিত্রচোর", "দুর্গরহস্য"]

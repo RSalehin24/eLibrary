@@ -1,21 +1,21 @@
-from apps.ingestion.services.resolution_support_hosts import get_source_site_domain
+from django.db import transaction
 
 from apps.catalog.models import (
+    CATEGORY_ENTITY_TAG,
     Book,
     BookCategory,
     BookContributor,
     BookSeries,
     BookSource,
-    build_book_catalog_code,
     Category,
     Contributor,
     ContributorRole,
-    is_entity_catalog_code,
-    CATEGORY_ENTITY_TAG,
-    WRITER_ENTITY_TAG,
     Series,
+    build_book_catalog_code,
+    is_entity_catalog_code,
 )
 from apps.common.text import clean_entity_display_text, normalize_catalog_text
+from apps.ingestion.services.resolution_support_hosts import get_source_site_domain
 
 
 def canonical_display_name(value):
@@ -37,7 +37,7 @@ def normalize_book_contributors(contributors):
             contributor_info.get("role", ContributorRole.AUTHOR)
         )
         normalized_name = normalize_catalog_text(name)
-        contributor_key = (normalized_name, role)
+        contributor_key = (contributor_info.get("id") or normalized_name, role)
         if not normalized_name or contributor_key in seen:
             continue
         seen.add(contributor_key)
@@ -48,7 +48,7 @@ def normalize_book_contributors(contributors):
         }
         normalized_entries.append(normalized_entry)
         if role != ContributorRole.AUTHOR:
-            non_author_names.add(normalized_name)
+            non_author_names.add(contributor_info.get("id") or normalized_name)
 
     if not non_author_names:
         return normalized_entries
@@ -58,41 +58,22 @@ def normalize_book_contributors(contributors):
         for entry in normalized_entries
         if not (
             entry["role"] == ContributorRole.AUTHOR
-            and normalize_catalog_text(entry["name"]) in non_author_names
+            and (entry.get("id") or normalize_catalog_text(entry["name"]))
+            in non_author_names
         )
     ]
 
 
-def get_or_create_contributor(name):
-    cleaned = canonical_display_name(name)
-    normalized = normalize_catalog_text(cleaned)
-    if not normalized:
-        return None
-    contributor, _ = Contributor.objects.get_or_create(
-        normalized_name=normalized,
-        defaults={"name": cleaned},
-    )
-    if contributor.name != cleaned:
-        contributor.name = cleaned
-        contributor.save(update_fields=["name", "normalized_name", "slug", "catalog_code", "updated_at"])
-    if not contributor.catalog_code or not is_entity_catalog_code(
-        contributor.catalog_code,
-        entity_tag=WRITER_ENTITY_TAG,
-    ):
-        contributor.save()
-    return contributor
+def get_or_create_contributor(name, identity=None):
+    from apps.catalog.entity_identity import resolve_bound_entity
+
+    return resolve_bound_entity(Contributor, name, identity)
 
 
-def get_or_create_series(name):
-    cleaned = canonical_display_name(name)
-    normalized = normalize_catalog_text(cleaned)
-    if not normalized:
-        return None
-    series, _ = Series.objects.get_or_create(
-        normalized_name=normalized,
-        defaults={"name": cleaned},
-    )
-    return series
+def get_or_create_series(name, identity=None):
+    from apps.catalog.entity_identity import resolve_bound_entity
+
+    return resolve_bound_entity(Series, name, identity)
 
 
 def get_or_create_category(name):
@@ -151,7 +132,9 @@ def find_deleted_book_by_title(title):
 def find_existing_book_by_source_url(normalized_source_url):
     source = (
         BookSource.objects.select_related("book")
-        .filter(normalized_source_url=normalized_source_url, book__deleted_at__isnull=True)
+        .filter(
+            normalized_source_url=normalized_source_url, book__deleted_at__isnull=True
+        )
         .order_by("-created_at")
         .first()
     )
@@ -170,12 +153,36 @@ def sync_book_catalog_code(book):
     return book
 
 
-def replace_book_relations(book, contributors=None, series_names=None, category_names=None):
+@transaction.atomic
+def replace_book_relations(
+    book, contributors=None, series_names=None, category_names=None
+):
+    from apps.catalog.locking import lock_entity_kind
+
+    for kind in ("categories", "contributors", "series"):
+        lock_entity_kind(kind)
+
+    overrides = book.metadata_overrides
+    contributors = None if "contributors" in overrides else contributors
+    series_names = None if "series_ids" in overrides else series_names
+    category_names = None if "category_ids" in overrides else category_names
     if contributors is not None:
         book.book_contributors.all().delete()
         seen_contributors = set()
-        for index, contributor_info in enumerate(normalize_book_contributors(contributors)):
-            contributor = get_or_create_contributor(contributor_info["name"])
+        for index, contributor_info in enumerate(
+            normalize_book_contributors(contributors)
+        ):
+            contributor = (
+                Contributor.objects.get(pk=contributor_info["id"])
+                if contributor_info.get("id")
+                else get_or_create_contributor(
+                    contributor_info["name"],
+                    (
+                        f"book:{book.pk}:contributors",
+                        f"{contributor_info['role']}:{normalize_catalog_text(contributor_info['name'])}",
+                    ),
+                )
+            )
             if contributor is None:
                 continue
             contributor_key = (contributor.pk, contributor_info["role"])
@@ -187,7 +194,9 @@ def replace_book_relations(book, contributors=None, series_names=None, category_
                 contributor=contributor,
                 role=contributor_info["role"],
                 defaults={
-                    "raw_value": contributor_info.get("raw_value", contributor_info["name"]),
+                    "raw_value": contributor_info.get(
+                        "raw_value", contributor_info["name"]
+                    ),
                     "sort_order": index,
                 },
             )
@@ -200,7 +209,9 @@ def replace_book_relations(book, contributors=None, series_names=None, category_
             if not normalized_name or normalized_name in seen_series:
                 continue
             seen_series.add(normalized_name)
-            series = get_or_create_series(series_name)
+            series = get_or_create_series(
+                series_name, (f"book:{book.pk}:series", normalized_name)
+            )
             if series is None:
                 continue
             if series.pk in seen_series:

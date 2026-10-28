@@ -28,8 +28,9 @@ export default async function ManagedBooksPage({ searchParams }: { searchParams:
     if (value.length > (key === "q" ? 120 : 255)) notFound();
     if (value) filter.set(key, value);
   }
+  const apiFilter = new URLSearchParams(filter); apiFilter.delete("label");
   let books: ManagedBooks;
-  try { books = await sessionRequest<ManagedBooks>(`manage/books/?${filter}&page=${page}`); }
+  try { books = await sessionRequest<ManagedBooks>(`manage/books/?${apiFilter}&page=${page}`); }
   catch (error) { if (error instanceof APIError && [400, 404].includes(error.status)) notFound(); throw error; }
   const filtered = [...filter.keys()].some(key => key !== "q");
   return <><header className="catalog-list-heading"><div><h1>{filter.get("label") || <AdminText>{"সব বই"}</AdminText>}</h1>
@@ -39,7 +40,7 @@ export default async function ManagedBooksPage({ searchParams }: { searchParams:
     <CatalogFiltersForm key={filter.toString()} pathname="/manage/books/" initial={Object.fromEntries(filter)} />
     {filtered && <p className="catalog-filter-summary"><AdminText>{"নির্বাচিত লেখক, বিভাগ বা সংগ্রহের বই দেখানো হচ্ছে।"}</AdminText> <Link className="button button-quiet" href="/manage/books/"><Icon name="books" /><AdminText>{"সব বই দেখুন"}</AdminText></Link></p>}
     <p className="muted"><AdminText>{"মোট "}</AdminText><AdminNumber value={books.pagination.total_count} /><AdminText>{"টি বই"}</AdminText></p>
-    {books.entries.length > 0 && <section className="admin-list-results"><ManagedBooksTable books={books} /></section>}
+    {books.entries.length > 0 && <section className="admin-list-results"><ManagedBooksTable books={books} canEdit={session.workspaces.can_edit_books} /></section>}
     {!books.entries.length && <section className="empty-state"><Icon name="books" /><h2><AdminText>{filter.size ? "এই খোঁজে কোনো বই পাওয়া যায়নি।" : "এখনও কোনো বই যোগ করা হয়নি।"}</AdminText></h2>
       {filter.size ? !filtered && <Link className="button button-quiet" href="/manage/books/"><Icon name="refresh" /><AdminText>{"সব বই দেখুন"}</AdminText></Link> : <p><AdminText>{"বই তৈরি করুন অথবা নিজের EPUB যোগ করুন।"}</AdminText></p>}</section>}
     <AdminPagination pagination={books.pagination} filter={filter.toString()} label="পরিচালনার তালিকার পাতা" />

@@ -1,13 +1,13 @@
 import { test, expect, fixture, artifactPath, setLanguage } from "./fixtures.mjs";
 
-test("writer directories default to authors and clean retired constraints from legacy links", async ({ page }) => {
+test("contributor directories default to authors and clean retired query constraints", async ({ page }) => {
   const book = await (await page.request.get(`/api/v1/catalog/books/${encodeURIComponent(fixture.book.slug)}/`)).json();
   const author = book.contributors.find(person => person.role === "author");
   const response = await page.request.get(`/api/v1/catalog/entities/contributors/?q=${encodeURIComponent(author.name)}`);
   expect(response.status()).toBe(200);
   const record = (await response.json()).entries.find(entry => entry.id === author.id);
   const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(new Date(record.created_at));
-  await page.goto(`/writers/?q=${encodeURIComponent(author.name)}&sort=-catalog_code&created_after=${date}&created_before=${date}&page=2`);
+  await page.goto(`/contributors/?q=${encodeURIComponent(author.name)}&sort=-catalog_code&created_after=${date}&created_before=${date}&page=2`);
   await expect(page).toHaveURL(url => url.pathname === "/contributors/" && url.searchParams.get("sort") === "-catalog_code" && !url.searchParams.has("created_after") && !url.searchParams.has("created_before") && !url.searchParams.has("page"));
   await setLanguage(page, "en");
   await expect(page.locator('input[type="date"], select[name="record_type"]')).toHaveCount(0);

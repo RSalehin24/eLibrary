@@ -4,6 +4,7 @@ from rest_framework.parsers import MultiPartParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.catalog.editorial.epub_intake import upload_created_epub
 from apps.catalog.editorial.epub_uploads import (
     replace_managed_epub,
     validate_epub_upload,
@@ -46,3 +47,19 @@ class ManagedEpubUploadView(VersionedAPIView):
                 managed_book_by_slug(request.user, updated.slug)
             ).data
         )
+
+
+class CreatedEpubUploadView(VersionedAPIView):
+    permission_classes = (IsAuthenticated,)
+    parser_classes = (MultiPartParser,)
+
+    @extend_schema(
+        operation_id="created_book_epub_intake",
+        request=ManagedEpubUploadSerializer,
+        responses=COMMAND_RESPONSES,
+    )
+    def post(self, request, identifier):
+        parameters = ManagedEpubUploadSerializer(data=request.data)
+        parameters.is_valid(raise_exception=True)
+        book = upload_created_epub(request.user, identifier, parameters.validated_data)
+        return Response(ManagedBookDetailSerializer(book).data)

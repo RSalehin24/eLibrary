@@ -1,3 +1,17 @@
+import time as time_module
+from datetime import timedelta
+
+import pytest
+from apps.catalog.models import Book
+from apps.ingestion.models import BookSubmission, ProcessingJob
+from apps.processing import services as processing_services
+from apps.processing.models import BookCreationRequest, BookRecord
+from django.utils import timezone
+
+from tests.backend.processing.test_processing_api_cases.helpers import (
+    advance_processing_pipeline,
+    login_processing_admin,
+)
 
 
 @pytest.mark.django_db
@@ -129,13 +143,24 @@ def test_processing_duplicate_detection_is_backend_owned(client, monkeypatch):
         publisher="Example Press",
     )
 
-    monkeypatch.setattr('apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
-    monkeypatch.setattr('apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
-    monkeypatch.setattr('apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url', lambda *_args, **_kwargs: existing_book)
+    monkeypatch.setattr(
+        "apps.processing.service_modules.processing_state_queries.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: existing_book,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.request_processing_pipeline.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: existing_book,
+    )
+    monkeypatch.setattr(
+        "apps.processing.service_modules.runtime_dependencies.find_existing_book_by_source_url",
+        lambda *_args, **_kwargs: existing_book,
+    )
     monkeypatch.setattr(
         "apps.ingestion.services.submission_modules.book_persistence.create_submission_records",
         lambda *_args, **_kwargs: (_ for _ in ()).throw(
-            AssertionError("legacy submission flow should not be used by duplicate detection")
+            AssertionError(
+                "legacy submission flow should not be used by duplicate detection"
+            )
         ),
     )
 
@@ -201,7 +226,11 @@ def test_processing_actions_persist_request_state_and_book_deletion(client):
         id="paused-request",
         book_record=paused_record,
         state="paused",
-        progress={"checkpoint": "chapter-4", "savedAt": timezone.now().isoformat(), "savedData": {}},
+        progress={
+            "checkpoint": "chapter-4",
+            "savedAt": timezone.now().isoformat(),
+            "savedData": {},
+        },
     )
     failed = BookCreationRequest.objects.create(
         id="failed-request",

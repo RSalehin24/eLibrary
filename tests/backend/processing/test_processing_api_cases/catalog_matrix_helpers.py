@@ -1,3 +1,4 @@
+from apps.processing import services as processing_services
 
 
 def catalog_matrix_request_creation_payload(
@@ -35,20 +36,16 @@ def assert_catalog_matrix_payload(
     request_creation_owner=None,
     request_creation=None,
 ):
-    compatibility_status = (
-        lambda value: "running" if value == "pausing" else value
-    )
+    compatibility_status = lambda value: "running" if value == "pausing" else value
     assert payload["sync"]["status"] == status
     assert payload["sync"]["phase"] == phase
     assert payload["sync"]["runMode"] == run_mode
-    assert (
-        payload["sync"]["progress"]["phaseStatuses"]["sync"]
-        == compatibility_status(sync_status)
+    assert payload["sync"]["progress"]["phaseStatuses"]["sync"] == compatibility_status(
+        sync_status
     )
-    assert (
-        payload["sync"]["progress"]["phaseStatuses"]["request_creation"]
-        == compatibility_status(request_creation_status)
-    )
+    assert payload["sync"]["progress"]["phaseStatuses"][
+        "request_creation"
+    ] == compatibility_status(request_creation_status)
     assert payload["sync"]["progress"]["phaseStates"]["sync"]["status"] == sync_status
     assert (
         payload["sync"]["progress"]["phaseStates"]["request_creation"]["status"]

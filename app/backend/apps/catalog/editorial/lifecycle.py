@@ -31,8 +31,6 @@ def configured_book_source(book):
 
 
 def regeneration_problem(actor, book):
-    if book.record_type == "manual":
-        return "paper_book"
     if not processing_available(actor):
         return "processing_access_required"
     if unfinished_book_work(book):

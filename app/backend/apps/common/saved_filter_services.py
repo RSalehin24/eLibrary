@@ -15,7 +15,6 @@ CATALOG_FILTER_KEYS = {
     "series",
     "collection",
     "ownership",
-    "record_type",
     "sort",
 }
 QUEUE_FILTER_KEYS = {

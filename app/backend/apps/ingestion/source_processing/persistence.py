@@ -2,7 +2,7 @@ from django.db import transaction
 
 from apps.catalog.locking import lock_title
 from apps.catalog.models import Book, BookSource
-from apps.common.models import LifecycleState, ReviewState
+from apps.common.models import LifecycleState
 from apps.ingestion.pipeline.curated_persistence import persist_curated_book
 from apps.processing.jobs.execution_errors import ExecutionFailure
 from apps.processing.jobs.failures import FailureKind
@@ -25,11 +25,8 @@ def persist_source_book(ownership, result):
     book, _ = persist_curated_book(
         result, source_url=job.source_record.source_url, target_book=book
     )
-    book.state, book.review_state = (
-        LifecycleState.PROCESSING,
-        ReviewState.PENDING,
-    )
-    book.save(update_fields=["state", "review_state", "updated_at"])
+    book.state = LifecycleState.PROCESSING
+    book.save(update_fields=["state", "updated_at"])
     entry = job.source_record
     entry.catalog_book = book
     entry.save(update_fields=["catalog_book", "updated_at"])

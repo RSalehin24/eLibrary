@@ -16,13 +16,13 @@ import { useDebouncedQuery } from "@/lib/debounced-query";
 type SearchProps = { initialQuery: string; initialBooks: BookCollection; page: number; initialFilters?: CatalogFilters };
 
 export function CatalogSearch({ initialQuery, initialBooks, page, initialFilters = {} }: SearchProps) {
-  const initial = catalogFilterQuery({ record_type: "all", ...initialFilters, q: initialQuery });
+  const initial = catalogFilterQuery({ ...initialFilters, q: initialQuery });
   const [query, setQuery] = useState(initial);
   const debounced = useDebouncedQuery(query);
   const filters = Object.fromEntries(new URLSearchParams(debounced));
   const personal = catalogNeedsAccount(filters);
   const account = useQuery({ queryKey: ["private", "session"], queryFn: ({ signal }) => readSession(signal), enabled: personal });
-  const hasFilters = Object.entries(filters).some(([name, value]) => !["sort", "record_type"].includes(name) && !!value || name === "record_type" && value !== "all");
+  const hasFilters = Object.entries(filters).some(([name, value]) => name !== "sort" && !!value);
   const results = useQuery({
     queryKey: [...(personal ? ["private", "catalog-books", account.data?.user?.id] : ["public", "books"]), debounced, debounced === initial ? page : 1],
     queryFn: ({ signal }) => searchBooks({ query: filters.q ?? "", filters, page: debounced === initial ? page : 1 }, signal),

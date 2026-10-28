@@ -7,11 +7,10 @@ Exercises:
 - Reader token highlight endpoint accepts ``kind="quote"`` payloads
 - Slug-based highlight endpoint requires reader access
 """
+
 from pathlib import Path
 
 import pytest
-from django.urls import reverse
-
 from apps.access.models import (
     Bookmark,
     Highlight,
@@ -28,7 +27,6 @@ from apps.catalog.models import (
 )
 from apps.common.epub_utils import build_simple_epub
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -39,11 +37,7 @@ def _make_user(email="notes-user@example.com"):
 
 
 def _make_book(title="Notes Book", slug=None):
-    book = Book.objects.create(
-        title=title,
-        state="ready",
-        review_state="approved",
-    )
+    book = Book.objects.create(title=title, state="ready")
     if slug:
         book.slug = slug
         book.save(update_fields=["slug"])

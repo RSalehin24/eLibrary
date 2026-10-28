@@ -16,7 +16,7 @@ EDITORIAL_FIELDS = (
     "social_image_url",
     "indexing_eligible",
 )
-EDITORIAL_DETAIL_FIELDS = (*EDITORIAL_FIELDS, "editorial_reviewed_at")
+EDITORIAL_DETAIL_FIELDS = EDITORIAL_FIELDS
 PUBLIC_EDITORIAL_FIELDS = (*EDITORIAL_FIELDS[:-1], "indexable")
 
 
@@ -30,7 +30,7 @@ class VerifiedAlternativeNamesField(serializers.ListField):
         )
 
 
-class ReviewedEditorialSerializer(serializers.ModelSerializer):
+class PublicEditorialSerializer(serializers.ModelSerializer):
     indexable = serializers.BooleanField(source="is_indexable", read_only=True)
     alternative_names = VerifiedAlternativeNamesField(read_only=True)
 

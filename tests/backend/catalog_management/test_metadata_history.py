@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def editor():
     actor = User.objects.create_user(
-        email="history-editor@library.test", full_name="History Editor"
+        email="history-editor@library.test", full_name="History Editor", is_staff=True
     )
     book = Book.objects.create(title="আগের নাম")
     PermissionGrant.objects.create(
@@ -79,6 +79,8 @@ def test_history_is_paginated_stable_and_excludes_private_snapshot_fields(editor
 
 def test_history_requires_matching_active_metadata_permission(editor):
     client, actor, book = editor
+    actor.is_staff = False
+    actor.save()
     unrelated = Book.objects.create(title="অন্য বই")
     MetadataVersion.objects.create(book=unrelated, notes="UNRELATED PRIVATE HISTORY")
     assert client.get(history_path(unrelated)).status_code == 404

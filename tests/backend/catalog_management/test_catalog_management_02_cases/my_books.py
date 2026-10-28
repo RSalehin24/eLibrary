@@ -1,5 +1,4 @@
 import pytest
-
 from apps.accounts.models import User
 from apps.catalog.models import Book, UserBook
 from apps.ingestion.models import BookSubmission
@@ -7,8 +6,10 @@ from apps.ingestion.models import BookSubmission
 
 @pytest.mark.django_db
 def test_my_books_add_remove_is_idempotent_and_serialized(client):
-    user = User.objects.create_user(email="my-books@example.com", password="strong-password-123")
-    book = Book.objects.create(title="My Books Candidate", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="my-books@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="My Books Candidate", state="ready")
     client.force_login(user)
 
     list_response = client.get("/api/catalog/books/")
@@ -44,8 +45,10 @@ def test_my_books_add_remove_is_idempotent_and_serialized(client):
 
 @pytest.mark.django_db
 def test_linked_submission_creates_my_books_ownership(client):
-    user = User.objects.create_user(email="submission-owner@example.com", password="strong-password-123")
-    book = Book.objects.create(title="Submission Owned Book", state="ready", review_state="approved")
+    user = User.objects.create_user(
+        email="submission-owner@example.com", password="strong-password-123"
+    )
+    book = Book.objects.create(title="Submission Owned Book", state="ready")
 
     BookSubmission.objects.create(
         submitter=user,

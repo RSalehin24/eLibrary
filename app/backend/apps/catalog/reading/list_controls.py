@@ -18,7 +18,7 @@ def list_control_books(actor, slugs):
     return (
         visible_personal_books(actor)
         .filter(slug__in=slugs)
-        .only("id", "slug", "record_type", "source_quality_state")
+        .only("id", "slug", "source_quality_state")
         .annotate(
             saved=Exists(SavedBook.objects.filter(user=actor, book_id=OuterRef("pk"))),
             owned=Exists(UserBook.objects.filter(user=actor, book_id=OuterRef("pk"))),
@@ -36,8 +36,7 @@ def book_list_controls(actor, slugs):
             "slug": book.slug,
             "saved": book.saved,
             "can_send_kindle": bool(
-                book.record_type == "digital"
-                and not book_is_quarantined(book)
+                not book_is_quarantined(book)
                 and (book.owned or book.kindle_granted)
                 and any(asset_is_available(asset) for asset in book.list_assets)
             ),

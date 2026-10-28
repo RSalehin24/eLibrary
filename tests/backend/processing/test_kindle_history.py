@@ -38,7 +38,7 @@ def delivery(user, book, **options):
     return job
 
 
-def test_combined_filters_match_writer_category_series_type_and_title(kindle_reader):
+def test_combined_filters_match_writer_category_series_and_title(kindle_reader):
     client, user, asset_job = kindle_reader
     book = asset_job.book
     writer = Contributor.objects.create(name="কিন্ডল লেখক")
@@ -56,7 +56,6 @@ def test_combined_filters_match_writer_category_series_type_and_title(kindle_rea
         "contributor": writer.name,
         "category": category.slug,
         "series": series.name,
-        "record_type": "digital",
         "state": "succeeded",
         "sort": "title",
     }
@@ -70,8 +69,7 @@ def test_combined_filters_match_writer_category_series_type_and_title(kindle_rea
         == []
     )
     assert (
-        client.get(HISTORY, {**parameters, "record_type": "manual"}).data["entries"]
-        == []
+        client.get(HISTORY, {**parameters, "record_type": "manual"}).status_code == 400
     )
 
 

@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { APIError } from "@/api/http";
 import { commandManagedEntity, updateManagedEntity } from "@/api/entities";
 import type { EntityUpdate, ManagedEntity } from "@/api/types";
-import type { EditorialCommand } from "@/api/editorial";
+import type { EntityCommand } from "@/api/entities";
 import type { EntityKind } from "./catalog-entity";
 import { useUnsavedChanges } from "./unsaved-changes";
 
@@ -22,7 +22,7 @@ export function useEntityEditor(kind: EntityKind, initialEntity: ManagedEntity) 
     router.refresh();
   }
   const save = useMutation({ mutationFn: (values: Omit<EntityUpdate, "expected_updated_at">) => updateManagedEntity(kind, entity, values), onSuccess: accept, retry: false });
-  const command = useMutation({ mutationFn: (action: EditorialCommand) => commandManagedEntity(kind, entity, action), onSuccess: accept, retry: false });
+  const command = useMutation({ mutationFn: (action: EntityCommand) => commandManagedEntity(kind, entity, action), onSuccess: accept, retry: false });
   const error = save.error ?? command.error;
   const pending = save.isPending || command.isPending;
   const blocked = pending || !!error && (!(error instanceof APIError) || error.status !== 400);

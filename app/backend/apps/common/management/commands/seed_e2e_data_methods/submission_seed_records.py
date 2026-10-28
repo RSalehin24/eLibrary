@@ -8,7 +8,6 @@ from ..seed_e2e_data_config import (
     JobStatus,
     ProcessingLog,
     ResolutionStatus,
-    ReviewState,
     SubmissionOrigin,
     SubmissionStatus,
     User,
@@ -21,7 +20,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=SUBMISSION_TITLES[0],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.READY,
-        review_state=ReviewState.APPROVED,
         linked_book=books["detail"],
         resolved_url=f"{E2E_SOURCE_PREFIX}alpha-submission/",
         resolution_confidence=0.97,
@@ -31,7 +29,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=SUBMISSION_TITLES[1],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.QUEUED,
-        review_state=ReviewState.PENDING,
         linked_book=books["home_primary"],
         resolved_url=f"{E2E_SOURCE_PREFIX}beta-submission/",
         resolution_confidence=0.91,
@@ -54,7 +51,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=PROCESSING_SUBMISSION_TITLES["user_pending"],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.PENDING_RESOLUTION,
-        review_state=ReviewState.PENDING,
         resolution_status=ResolutionStatus.UNRESOLVED,
         resolution_confidence=0.0,
         resolved_url="",
@@ -65,7 +61,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=PROCESSING_SUBMISSION_TITLES["user_processing"],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.PROCESSING,
-        review_state=ReviewState.PENDING,
         linked_book=books["home_secondary"],
         resolved_url=BOOK_DEFINITIONS["home_secondary"].source_url,
     )
@@ -82,7 +77,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=PROCESSING_SUBMISSION_TITLES["user_stopped"],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.CANCELLED,
-        review_state=ReviewState.PENDING,
         resolved_url=BOOK_DEFINITIONS["detail"].source_url,
         error_message="Stopped by user.",
     )
@@ -97,7 +91,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=PROCESSING_SUBMISSION_TITLES["user_deleted"],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.DELETED,
-        review_state=ReviewState.PENDING,
         resolved_url=BOOK_DEFINITIONS["preview"].source_url,
     )
     self.create_processing_job_record(
@@ -111,7 +104,6 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         title=PROCESSING_SUBMISSION_TITLES["user_failed"],
         origin=SubmissionOrigin.USER,
         status=SubmissionStatus.FAILED,
-        review_state=ReviewState.NEEDS_REVIEW,
         error_message="Seeded failure for live-browser coverage.",
     )
     failed_job = self.create_processing_job_record(
@@ -126,6 +118,5 @@ def create_submissions(self, admin: User, books: dict[str, Book]):
         details={"seed": "e2e"},
     )
 
-    self.create_duplicate_review(admin, books)
     self.create_automation_submissions(admin, books)
     self.create_curation_submissions(admin, books)

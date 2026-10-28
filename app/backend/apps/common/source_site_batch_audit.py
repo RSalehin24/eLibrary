@@ -130,31 +130,51 @@ def compare_contributors(source_contributors, production_contributors):
 
 
 def compare_toc_and_content(source_report, production_detail):
-    source_toc_paths = set(flatten_toc_paths(source_report.get("toc", []), require_content=True))
-    source_content_paths = set(flatten_content_paths(source_report.get("content_items", [])))
-    production_toc = production_detail.get("toc", []) if isinstance(production_detail, dict) else []
+    source_toc_paths = set(
+        flatten_toc_paths(source_report.get("toc", []), require_content=True)
+    )
+    source_content_paths = set(
+        flatten_content_paths(source_report.get("content_items", []))
+    )
+    production_toc = (
+        production_detail.get("toc", []) if isinstance(production_detail, dict) else []
+    )
     production_raw_payload = (
         ((production_detail.get("raw_provenance") or {}).get("raw_scrape_payload"))
         if isinstance(production_detail, dict)
         else {}
     ) or {}
-    production_content_items = production_raw_payload.get("content_items", []) if isinstance(production_raw_payload, dict) else []
+    production_content_items = (
+        production_raw_payload.get("content_items", [])
+        if isinstance(production_raw_payload, dict)
+        else []
+    )
     production_toc_paths = set(flatten_toc_paths(production_toc, require_content=True))
     production_content_paths = set(flatten_content_paths(production_content_items))
     production_dead_toc = sorted(
-        list(set(flatten_toc_leaf_paths(production_toc)) - production_content_paths)
+        set(flatten_toc_leaf_paths(production_toc)) - production_content_paths
     )
 
     return {
-        "missing_toc_paths": sorted(list(source_toc_paths - production_toc_paths)),
-        "missing_content_paths": sorted(list(source_content_paths - production_content_paths)),
+        "missing_toc_paths": sorted(source_toc_paths - production_toc_paths),
+        "missing_content_paths": sorted(
+            source_content_paths - production_content_paths
+        ),
         "production_dead_toc_paths": production_dead_toc,
-        "production_raw_provenance_present": bool(production_detail.get("raw_provenance")) if isinstance(production_detail, dict) else False,
+        "production_raw_provenance_present": bool(
+            production_detail.get("raw_provenance")
+        )
+        if isinstance(production_detail, dict)
+        else False,
     }
 
 
 def compare_assets(source_report, production_detail):
-    production_assets = production_detail.get("assets", []) if isinstance(production_detail, dict) else []
+    production_assets = (
+        production_detail.get("assets", [])
+        if isinstance(production_detail, dict)
+        else []
+    )
     ready_assets = {
         asset.get("asset_type")
         for asset in production_assets
@@ -164,15 +184,17 @@ def compare_assets(source_report, production_detail):
     if source_report.get("cover_expected"):
         expected_assets.add(GeneratedAssetType.COVER)
     return {
-        "missing_ready_assets": sorted(list(expected_assets - ready_assets)),
+        "missing_ready_assets": sorted(expected_assets - ready_assets),
     }
 
 
 def build_source_report(source_entry, *, source_page_metadata=None):
-    metadata = source_page_metadata or fetch_source_page_metadata(source_entry.source_url)
+    metadata = source_page_metadata or fetch_source_page_metadata(
+        source_entry.source_url
+    )
     scraped_data = scrape_book_high_fidelity(source_entry.source_url)
     if not isinstance(scraped_data, dict):
-        raise ValueError(f"High-fidelity scrape failed for {source_entry.source_url}")
+        raise TypeError(f"High-fidelity scrape failed for {source_entry.source_url}")
 
     promoted_book_info, cleaned_main_content = promote_leading_front_matter(
         scraped_data.get("book_info", ""),
@@ -189,7 +211,9 @@ def build_source_report(source_entry, *, source_page_metadata=None):
     return {
         "source_url": source_entry.source_url,
         "source_entry_id": str(source_entry.id),
-        "catalog_metadata": source_entry.raw_data if isinstance(source_entry.raw_data, dict) else {},
+        "catalog_metadata": source_entry.raw_data
+        if isinstance(source_entry.raw_data, dict)
+        else {},
         "page_metadata": metadata.get("raw_data", {}),
         "book_title": scraped_data.get("book_title", ""),
         "raw_author": scraped_data.get("author", ""),
@@ -200,8 +224,16 @@ def build_source_report(source_entry, *, source_page_metadata=None):
         "contributors": normalized.get("contributors", []),
         "toc": scraped_data.get("toc", []),
         "content_items": scraped_data.get("content_items", []),
-        "toc_paths": [list(path) for path in flatten_toc_paths(scraped_data.get("toc", []), require_content=True)],
-        "content_paths": [list(path) for path in flatten_content_paths(scraped_data.get("content_items", []))],
+        "toc_paths": [
+            list(path)
+            for path in flatten_toc_paths(
+                scraped_data.get("toc", []), require_content=True
+            )
+        ],
+        "content_paths": [
+            list(path)
+            for path in flatten_content_paths(scraped_data.get("content_items", []))
+        ],
     }
 
 
@@ -222,7 +254,6 @@ def fetch_production_book_index(base_url, session, *, page_limit=100):
         response = session.get(
             urljoin(base_url, "/api/catalog/books/"),
             params={
-                "record_type": "all",
                 "limit": page_limit,
                 "page": page,
                 "sort": "title",

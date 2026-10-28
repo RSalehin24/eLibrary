@@ -2,7 +2,6 @@ from copy import deepcopy
 
 import pytest
 from apps.accounts.models import User
-from apps.catalog.editorial.service import EditorialConflict, publish_book
 from apps.catalog.models import Book, BookSource
 from apps.common.models import AuditLog
 from apps.ingestion.source_processing.export_verification import (
@@ -31,7 +30,7 @@ def test_verified_source_publishes_automatically_without_editorial_review(curate
     assert curated_job.checkpoint["auto_published"]
     assert curated_job.checkpoint["source_summary"]["verification"]["verified"]
     book = curated_job.book
-    assert book.state == "published" and book.editorial_reviewed_at is None
+    assert book.state == "published" and (not hasattr(book, "editorial_reviewed_at"))
     assert APIClient().get(f"/api/v1/catalog/books/{book.slug}/").status_code == 200
     audit = AuditLog.objects.get(verb="catalog.book.auto_publish")
     assert audit.payload["operation_id"] == str(curated_job.pk)
@@ -186,7 +185,7 @@ def test_a_stop_after_preparation_prevents_automatic_publication(
     assert not AuditLog.objects.filter(verb="catalog.book.auto_publish").exists()
 
 
-def test_legacy_source_without_verification_cannot_bypass_checks_with_manual_publish():
+def test_source_without_verification_cannot_bypass_checks_with_manual_publish():
     actor = User.objects.create_user(
         email="legacy-publisher@example.test", is_staff=True
     )
@@ -196,16 +195,22 @@ def test_legacy_source_without_verification_cannot_bypass_checks_with_manual_pub
         source_url="https://source.test/books/legacy/",
         normalized_source_url="https://source.test/books/legacy/",
     )
-    with pytest.raises(EditorialConflict, match="Regenerate"):
-        publish_book(actor, book.pk, book.updated_at)
+    client = APIClient()
+    client.force_authenticate(actor)
+    assert client.post(f"/api/v1/manage/books/{book.slug}/publish/").status_code == 404
+    assert APIClient().get(f"/api/v1/catalog/books/{book.slug}/").status_code == 404
     book.refresh_from_db()
     assert book.state == "draft"
 
 
-def test_a_manually_added_book_without_a_source_keeps_direct_publication():
+def test_a_manually_added_empty_book_requires_preparation():
     actor = User.objects.create_user(
         email="manual-publisher@example.test", is_staff=True
     )
-    book = Book.objects.create(title="নিজের যোগ করা বই", record_type="manual")
-    published = publish_book(actor, book.pk, book.updated_at)
-    assert published.state == "published"
+    book = Book.objects.create(title="নিজের যোগ করা বই")
+    client = APIClient()
+    client.force_authenticate(actor)
+    assert client.post(f"/api/v1/manage/books/{book.slug}/publish/").status_code == 404
+    assert APIClient().get(f"/api/v1/catalog/books/{book.slug}/").status_code == 404
+    book.refresh_from_db()
+    assert book.state == "draft"

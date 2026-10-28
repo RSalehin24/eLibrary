@@ -18,6 +18,7 @@ from apps.common.validation import reject_unknown_fields
 class CatalogReferenceSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField()
+    catalog_code = serializers.CharField(allow_null=True, required=False)
 
 
 class ManagedEntityListSerializer(serializers.ModelSerializer):
@@ -25,11 +26,12 @@ class ManagedEntityListSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Contributor
-        fields = ("id", "name", "slug", "state", "updated_at", "editorial_reviewed_at")
+        fields = ("id", "name", "slug", "state", "updated_at")
         read_only_fields = fields
 
 
 class ManagedEntitySerializer(ManagedEntityListSerializer):
+    can_edit = serializers.BooleanField(read_only=True)
     alternative_names = VerifiedAlternativeNamesField(read_only=True)
     book_ids = serializers.SerializerMethodField()
     selected_books = serializers.SerializerMethodField()
@@ -48,6 +50,7 @@ class ManagedEntitySerializer(ManagedEntityListSerializer):
         model = Contributor
         fields = (
             "id",
+            "can_edit",
             "name",
             "slug",
             "state",
@@ -106,7 +109,7 @@ class EntityCreateSerializer(EntityUpdateSerializer):
 
 class EntityCommandSerializer(serializers.Serializer):
     expected_updated_at = serializers.DateTimeField()
-    action = serializers.ChoiceField(choices=["review", "publish", "withdraw"])
+    action = serializers.ChoiceField(choices=["publish", "withdraw"])
 
     def validate(self, attributes):
         reject_unknown_fields(self)
