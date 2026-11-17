@@ -1,11 +1,11 @@
 # ADR-0016 — Reader consumes chapters, not the EPUB file
 
-Status: DRAFT
+Status: ACCEPTED
 
 ## Context
 "Read requires an account" is unenforceable once the whole EPUB is delivered to the browser. The legacy reader parses EPUB client-side.
 
-## Decision (pending D-06)
+## Decision (owner decision D-06, 2026-11-17)
 `content` serves sanitized chapter HTML and a section index under short-lived capabilities; the reader renders chapters and never receives the EPUB unless the account has a Download grant. Pagination is layout-time in the browser. Offline reading is out of v1.
 
 ## Consequences

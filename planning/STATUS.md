@@ -10,8 +10,8 @@ Resume here. Do not re-derive earlier decisions; read [DECISIONS](DECISIONS.md) 
 
 ## Next action (owner)
 
-1. Answer the remaining open decisions in [open-decisions](04-architecture/open-decisions.md): D-05…D-10 and D-17…D-21 (asked as selectable questions with a recommendation). Already decided: D-01 (defer physical books), D-02/D-16 (Angular + Material 3), D-03 (permission + GET-only; obtain the source's written permission), D-04 (every active account reads).
-2. Approve or adjust the proposed adaptations I-01…I-04 and I-10 in [INCONSISTENCIES](INCONSISTENCIES.md).
+1. All planning decisions D-01…D-21 are answered ([DECISIONS](DECISIONS.md)). The one outstanding action for the owner: **obtain the source site's written permission** (D-03); ingestion go-live (G6) stays blocked until then.
+2. Approve the tooling installs when ready (each needs your OK): Java (TLC/Alloy/epubcheck, spike S-04), Rust toolchain (P1), Node/npm (spike S-02).
 3. Start P0: gold-corpus labeling tool and sampling ([gold corpus](06-data/gold-corpus/README.md)), spikes S-01…S-07 ([spikes](12-roadmap/spikes.md)).
 
 ## Blockers
