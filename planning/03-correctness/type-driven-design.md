@@ -65,11 +65,15 @@ No `anyhow` in library crates; no stringly-typed errors across boundaries.
 
 ```
 deny: unwrap_used, expect_used, panic, indexing_slicing, todo, unimplemented,
-      wildcard_enum_match_arm, integer_arithmetic (use checked/saturating),
+      wildcard_enum_match_arm, arithmetic_side_effects (use checked/saturating),
       unsafe_code (forbid except in explicitly listed crates)
 shape (owner rules): too_many_arguments (3), too_many_lines (~20, cap 30), nesting ≤ 2
 ```
 Exact lint names, config keys and workspace-lint syntax are **verified against the installed toolchain at gate G1** before being relied on; the full list and rationale are in [coding standards](coding-standards.md).
+
+## T-11 The web UI gets the same guarantees in TypeScript
+
+Generated wire types (no hand-written DTOs); `PageState<T>` as a discriminated union with `assertNever` exhaustiveness; branded types for ids (`BookId`, `SectionId`) so ids cannot be mixed; `Result<T, ErrorCode>` instead of thrown strings; no `any`/`!`/casts outside the generated boundary ([coding standards §16](coding-standards.md)).
 
 ## T-10 Clock and randomness are dependencies
 

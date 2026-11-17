@@ -6,6 +6,7 @@ Checklist for INV-WEB-004 / REQ-WEB-004, verified on a fixed sample set (conjunc
 
 | Topic | Rule |
 |---|---|
+| Material 3 mapping | Bengali sizes/line heights are set on the M3 type-scale tokens (display…label) for the `bn` locale; Angular Material components inherit them; do not rely on Material's default Latin-oriented ratios |
 | Fonts | Reading: Noto Serif Bengali (variable) with fallback list; UI: Noto Sans Bengali; self-hosted WOFF2 subsets with `unicode-range` (Bengali block U+0980–09FF, ZWJ/ZWNJ U+200C–200D, punctuation, Latin), `font-display: swap`, preload the primary weight |
 | Shaping | Never disable ligatures/conjunct features: `font-feature-settings` untouched; `font-variant-ligatures: normal`; `text-rendering: optimizeLegibility` |
 | Letter-spacing | **0** for Bengali; never positive tracking (breaks conjuncts) |

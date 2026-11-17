@@ -36,7 +36,7 @@ Admin invites → mail → link → set password → (optional TOTP setup) → l
 
 ## F7 — Send to Kindle
 
-Book page / reader menu → choose address (or add) → preflight message (size/format) → sent confirmation + history `/sent`; failure shows reason code text.
+First use: profile shows our sender address and the Amazon approved-sender step with a "I added it" confirmation. Then: book page / reader menu → choose address (or add) → preflight message (size/format) → sent confirmation + history `/sent`; failure shows reason code text.
 
 ## F8 — Curate catalog
 

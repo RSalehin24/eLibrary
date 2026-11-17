@@ -6,7 +6,7 @@ Source: the owner's mandatory coding rules (`AGENTS.md` in the owner's PC Setup 
 
 ## Language
 
-**Rust** (stable, pinned) for all backend and shared code — [ADR-0001](../04-architecture/adr/0001-rust.md). Frontend language is open ([D-02](../04-architecture/open-decisions.md)). SQL for persistence, TLA+/Alloy for models. No other language enters the codebase without an ADR.
+**Rust** (stable, pinned) for all backend and shared code — [ADR-0001](../04-architecture/adr/0001-rust.md). **TypeScript (strict) with Angular and Angular Material (Material Design 3)** for the web UI — [ADR-0014](../04-architecture/adr/0014-frontend-technology.md), decision D-02/D-16. SQL for persistence, TLA+/Alloy for models. No other language enters the codebase without an ADR. The same philosophy below applies to both languages; [coding standards](../03-correctness/coding-standards.md) give the Rust (§1–15) and TypeScript/Angular (§16) forms.
 
 ## Precedence
 

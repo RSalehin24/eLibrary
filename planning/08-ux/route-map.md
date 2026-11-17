@@ -48,7 +48,7 @@ Status: DRAFT
 | `/admin/access` | Grants, default policy | ManageAccess |
 | `/admin/mail` | Mail/Kindle logs, templates | ManageAccess |
 | `/admin/audit` | Audit | ManageAccess |
-| `/admin/inventory` | Physical books | ViewInventory — **only if D-01 keeps it** |
+| `/admin/inventory` | Physical books | ViewInventory — **deferred to v1.1 (D-01); route not built in v1** |
 
 ## System
 

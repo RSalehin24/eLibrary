@@ -3,7 +3,7 @@
 Status: DRAFT · Service: [access](../05-services/access/README.md)
 
 - **REQ-ACC-001** · MUST · inv: INV-ACC-001 · verify: model, prop · Anonymous subjects may Search, view catalog metadata and view Preview. They can never Read full text, Download, SendToKindle, or perform any management action.
-- **REQ-ACC-002** · MUST · inv: INV-ACC-002 · verify: model, prop · Reading full text requires an authenticated, Active account and an applicable grant (global, category, author or book scope), or the book is owned by the account. Default grants for new accounts are configuration, not code (decision D-04).
+- **REQ-ACC-002** · MUST · inv: INV-ACC-002 · verify: model, prop · Reading full text requires an authenticated, Active account and an applicable grant (global, category, author or book scope), or the book is owned by the account. Decided (D-04): by default every Active, non-demo account holds a durable Read grant over published books via the default policy; the default policy is configuration, not code.
 - **REQ-ACC-003** · MUST · inv: INV-ACC-003 · verify: model, type · Authorization is deny-by-default. `decide` is total and returns `Allow` or `Deny(reason)`; there is no code path that authorizes without calling it.
 - **REQ-ACC-004** · MUST · inv: INV-ACC-004 · verify: model, prop · Expired or revoked grants have no effect, evaluated against an injected clock.
 - **REQ-ACC-005** · MUST · inv: INV-ACC-005 · verify: model, prop · Adding a grant never removes an existing permission (monotonicity). The only non-monotonic rule is read-once consumption.

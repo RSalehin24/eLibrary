@@ -17,7 +17,7 @@ Every invariant whose mechanism includes `model` must appear here with its model
 | INV-ACC-009 | alloy/access.als | `ManagementNeedsAuthority` (MfaOk clause) | unchecked |
 | INV-ACC-012 | alloy/access.als | `UnpublishedHidden` | unchecked |
 | INV-LIB-008 | tla/ReadOnce.tla | `AtMostOneLiveSession` | unchecked |
-| INV-ING-006 | tla/JobLifecycle.tla | `PublishedImpliesComplete` | unchecked |
+| INV-ING-006 | tla/JobLifecycle.tla | `PublishedImpliesComplete`, `PublishedImpliesCurrentRunComplete` | unchecked by TLC; logic confirmed in Python mirror |
 | INV-ING-010 | tla/JobLifecycle.tla | `AtMostOneActivePerUrl`, `AttemptsBounded`, `EventuallySettled` | unchecked |
 | INV-ING-016 | tla/Outbox.tla + JobLifecycle.tla | `AppliedAtMostOnce`, `PublishAtMostOnce` | unchecked |
 | INV-NTF-001 | tla/Outbox.tla | `AppliedAtMostOnce`, `NoLoss` | unchecked |
@@ -26,6 +26,7 @@ Every invariant whose mechanism includes `model` must appear here with its model
 | INV-IDN-001 | planned: AccountLifecycle | `ActiveRequiresCredential` | planned |
 | INV-IDN-002 | planned: AccountLifecycle | `LinkConsumedAtMostOnce`, `SupersededLinkDead` | planned |
 | INV-IDN-004 | planned: AccountLifecycle | `AuthenticatedImpliesMfaWhenRequired` | planned |
+| INV-IDN-009 | planned: AccountLifecycle | `TotpStepSingleUse` | planned |
 | INV-IDN-005 | planned: AccountLifecycle | `RevokedSessionAuthenticatesNothing` | planned |
 | INV-IDN-008 | planned: AccountLifecycle | `StatusTransitionsOnlyAlongGraph` | planned |
 | INV-CAT-001 | planned: BookLifecycle | `StateTransitionsOnlyAlongGraph` | planned |

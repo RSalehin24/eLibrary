@@ -12,7 +12,8 @@ Likelihood/Impact: L/M/H. Owner is the user unless stated.
 | R-04 | Rust rewrite of 20k lines of heuristics takes too long | H | H | Port by stage with the Python pipeline as oracle; pure library crates; scope stage-by-stage | Stage > 2× estimate |
 | R-05 | Formal models diverge from code | M | M | Model-based tests; invariant register ties code to model; review on change | Model-based test failures |
 | R-06 | Search relevance for Bengali insufficient | M | M | Spike S-01; judged query set; fallback to Postgres trigram | MRR < 0.85 |
-| R-07 | Frontend choice (Rust vs TS) blocks reader quality | M | H | Spike S-02; reader isolated behind a narrow interface | Reader spike fails a11y/perf |
+| R-07 | Angular Material lacks needed M3 components / Angular churn / second toolchain burden | M | M | Spike S-02 component audit; compose from CDK + tokens; pin one Angular major and upgrade deliberately; reader behind `ReaderHost`; generated client keeps types in sync | S-02 gaps; upgrade breaks visual snapshots |
+| R-15 | npm dependency tree conflicts with "minimal dependencies" rule | M | M | register + approval; lockfile discipline; `npm audit` nightly; prefer Angular/CDK built-ins over extra packages | register growth beyond approved set |
 | R-08 | Operational complexity of many services for one developer | M | M | Single-binary dev mode; shared platform kit; same deploy script; consolidate services if toil > threshold | Deploy > 30 min or on-call load |
 | R-09 | Data migration loses/corrupts data | L | H | Idempotent steps, reconciliation, rehearsals, rollback | Any unexplained diff |
 | R-10 | Scope creep (repeat of the rewrite branch) | H | H | Gates, non-goals, one deliverable per phase, user sign-off | Phase exceeds budget by 50% |

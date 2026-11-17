@@ -2,14 +2,18 @@
 
 Resume work from `planning/STATUS.md` (current stage, next action, blockers). Read it first; do not re-derive earlier decisions (`planning/DECISIONS.md`).
 
+## DECISION REQUESTS — MANDATORY, NEVER VIOLATE
+Whenever a decision/approval/choice is needed from the user, ask it with the `AskUserQuestion` tool (selectable in Claude Code): one decision per question, 2–4 concrete options each with a one-line consequence, the recommended option listed first and labeled `(Recommended)` with the reason. Never ask decisions as plain text or hide them in a plan; never proceed on an unanswered decision; record answers in `planning/DECISIONS.md`. If the tool is unavailable, state question, options and recommendation explicitly and wait.
+
 ## Coding rules (mandatory)
 @AGENTS.md
 @crates/AGENTS.md
+@web/AGENTS.md
 
 Precedence: the owner's explicit instruction, then the nearest `AGENTS.md` to the edited file, then the root `AGENTS.md`. The rules below apply on top.
 
 ## Project facts
-- Rust workspace of independent services (identity, access, catalog, content, library, ingestion, notify) + gateway + web. Contracts are Rust crates; services depend only on `contracts-*`, `platform-*`, `domain-*` (never on each other).
+- Rust workspace of independent services (identity, access, catalog, content, library, ingestion, notify) + gateway; web UI in TypeScript/Angular with Angular Material (Material Design 3), types generated from the Rust contracts. Contracts are Rust crates; services depend only on `contracts-*`, `platform-*`, `domain-*` (never on each other).
 - Plan = design docs: `planning/` (requirements → invariants → mechanisms). Run `python3 planning/tools/check_plan.py` after any plan change.
 - Legacy Django app and the `reyan-new-version` branch are read-only reference.
 

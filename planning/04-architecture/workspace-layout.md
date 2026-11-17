@@ -31,9 +31,10 @@ elibrary/                       (new repository or new top-level directory; lega
 │   └── svc-*/                  one binary per service
 │       ├── svc-identity  svc-access  svc-catalog  svc-content  svc-library
 │       ├── svc-ingestion (+ acquisition adapters)  svc-notify
-│       ├── svc-gateway
-│       └── svc-web         (if Rust UI, see ADR-0014)
-├── xtask/                      codegen, schema diff, plan check, model trace export
+│       └── svc-gateway
+├── web/                        Angular + Angular Material app (TypeScript, ADR-0014); separate package manager workspace
+│   └── src/app/core/api/generated/   generated from the Rust contract schema (read-only)
+├── xtask/                      codegen (Rust schema → TS client), schema diff, plan check, model trace export
 ├── models/                     TLA+/Alloy (mirrors planning/03-correctness/formal-models)
 ├── corpus/                     gold corpus (git-lfs or separate repo), query set
 └── deploy/                     compose/systemd, nginx, backup scripts

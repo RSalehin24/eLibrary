@@ -5,7 +5,7 @@ Status: DRAFT
 ## Notify — [service](../05-services/notify/README.md)
 
 - **REQ-NTF-001** · MUST · inv: INV-NTF-001 · verify: model, prop · Invitation and reset emails are sent once per issued link (idempotent by event id); transient failures retry with backoff; failures never block account creation.
-- **REQ-NTF-002** · MUST · inv: INV-NTF-002 · verify: prop, e2e · A Kindle send requires an Allow decision for `SendToKindle`, a verified Kindle address on the account, a passing size/format preflight, and records one history entry per attempt.
+- **REQ-NTF-002** · MUST · inv: INV-NTF-002 · verify: prop, e2e · A Kindle send requires an Allow decision for `SendToKindle`, a Kindle address on the account whose owner confirms that our sender address is on their Amazon "Approved Personal Document E-mail List" (Amazon rejects mail from other senders), a passing size/format preflight (total ≤ 50 MB per email; EPUB is accepted and converted by Amazon; DRM-free), and records one history entry per attempt.
 - **REQ-NTF-003** · SHOULD · inv: INV-NTF-003 · verify: unit · Templates exist in Bengali and English and are selected by account language.
 - **REQ-NTF-004** · MUST · inv: INV-NTF-004 · verify: type, unit · Links, tokens and addresses never appear in logs or error messages.
 
@@ -28,3 +28,5 @@ Status: DRAFT
 - **REQ-WEB-007** · MUST · inv: INV-WEB-007 · verify: e2e · Public pages are server-rendered, with sitemap, canonical URLs, Open Graph and structured data.
 - **REQ-WEB-008** · MUST · inv: INV-WEB-008 · verify: review · Administration has exactly three ingestion workspaces — Sources, Jobs, Review — plus Catalog, Accounts & Access, Audit.
 - **REQ-WEB-009** · SHOULD · inv: INV-WEB-009 · verify: unit · UI strings come from catalogs for `bn` and `en`; missing keys fail the build.
+- **REQ-WEB-010** · MUST · inv: INV-WEB-010 · verify: review, e2e · The UI follows Google Material Design 3 through Angular Material and CDK: components come from the library or from CDK primitives in `shared/`, themes are generated M3 schemes (light, dark, sepia), and no second UI component library is used without owner approval ([design system](../08-ux/design-system.md)).
+- **REQ-WEB-011** · MUST · inv: INV-WEB-011 · verify: type, e2e · The web app is strict TypeScript; all wire types and the API client are generated from the Rust contract schema; `any`, non-null assertions and unchecked casts do not appear outside the documented generated boundary ([coding standards §16](../03-correctness/coding-standards.md)).

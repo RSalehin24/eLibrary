@@ -9,7 +9,7 @@ requirement is unambiguous before the model is written.
 
 - Variables: `status[acct]`, `linkState[link]` (Issued|Consumed|Superseded|Expired), `linkOf[acct]` (current link), `session[s]` (None|PasswordOk|Authenticated|Revoked), `totpRequired[acct]`, `totpOk[s]`.
 - Actions: Invite, IssueLink (supersedes previous), ConsumeLink (→ Active, sets credential), Login, VerifyTotp, Logout, Suspend, Reactivate, Disable, ExpireLink.
-- Properties: `ActiveRequiresCredential`; `LinkConsumedAtMostOnce`; `SupersededLinkDead` (a superseded/expired link never leads to Active); `AuthenticatedImpliesMfaWhenRequired`; `RevokedSessionAuthenticatesNothing`; `SuspendRevokesAllSessions`; `StatusTransitionsOnlyAlongGraph`.
+- Properties: `ActiveRequiresCredential`; `LinkConsumedAtMostOnce`; `SupersededLinkDead` (a superseded/expired link never leads to Active); `AuthenticatedImpliesMfaWhenRequired`; `RevokedSessionAuthenticatesNothing`; `SuspendRevokesAllSessions`; `TotpStepSingleUse` (variable `lastAcceptedStep[acct]`; a verify action succeeds only for a step greater than it, and replaying a captured code at any later time fails); `StatusTransitionsOnlyAlongGraph`.
 
 ## BookLifecycle (catalog)
 

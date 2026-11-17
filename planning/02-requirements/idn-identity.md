@@ -12,4 +12,5 @@ Line format: `REQ-ID · priority · inv: <invariants> · verify: <methods> · st
 - **REQ-IDN-006** · MUST · inv: INV-IDN-006 · verify: prop, e2e · Login and reset endpoints are throttled per account and per address and return indistinguishable responses for unknown and known accounts (no enumeration).
 - **REQ-IDN-007** · MUST · inv: INV-ACC-007 · verify: model, e2e · The demo link signs in a dedicated demo account whose sessions can never perform a mutating action (including profile and password changes).
 - **REQ-IDN-008** · SHOULD · inv: INV-IDN-007 · verify: type, unit · Accounts may hold up to 5 Kindle addresses; each is a validated `KindleEmail` newtype; only the owner can change them.
+- **REQ-IDN-010** · MUST · inv: INV-IDN-009 · verify: model, prop, unit · A TOTP code is single-use: once a time step has been accepted for an account, the same step (and earlier ones) is rejected, so a captured code cannot be replayed (RFC 6238 requirement).
 - **REQ-IDN-009** · MUST · inv: INV-IDN-008 · verify: model, unit · Account status transitions follow Invited → Active ⇄ Suspended → Disabled; no other transition exists; every transition emits an event.

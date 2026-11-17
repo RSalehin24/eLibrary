@@ -15,7 +15,7 @@ Status: DRAFT
 | `ManageIngestion` | Sources/Jobs/Review | `processing:manage` |
 | `ViewSourceRecords` | See source URLs/raw records | `source_records:view` |
 | `ManageAccess` | Grants and accounts | `access:manage` |
-| `ViewInventory` | Physical list (only if D-01 keeps it) | `physical_books:view` |
+| `ViewInventory` | Physical list (deferred to v1.1, D-01; action reserved) | `physical_books:view` |
 | `Admin` | All of the above | `admin:full_control` |
 
 `Read` carries a mode: `Durable` or `Once`. `Once` grants are limited by openings.

@@ -6,11 +6,11 @@ Complements [type-driven design](type-driven-design.md) (error elimination) and 
 
 ## 1. Function and module shape
 
-| Rule | Limit | Enforcement (candidate, verify at G1) |
+| Rule | Limit | Enforcement (config keys **verified** in the clippy docs 2026-11-17; defaults in brackets) |
 |---|---|---|
-| Function length | ~20 lines (hard cap 30) | clippy `too_many_lines` + `too-many-lines-threshold` in `clippy.toml` |
-| Parameters | ≤ 3 | clippy `too_many_arguments` + `too-many-arguments-threshold = 3` |
-| Nesting | ≤ 2 levels of control flow | clippy `excessive_nesting` (+ `excessive-nesting-threshold`) and `cognitive_complexity`; review |
+| Function length | ~20 lines (hard cap 30) | `too-many-lines-threshold = 30` [default 100] configures `too_many_lines` (the ~20 target is a review rule) |
+| Parameters | ≤ 3 | `too-many-arguments-threshold = 3` [default 7] configures `too_many_arguments` |
+| Nesting | ≤ 2 levels of control flow | `excessive-nesting-threshold = 2` [default 0] configures `excessive_nesting` (the config key exists; the lint's group and exact behavior are **still to verify** at G1); `cognitive-complexity-threshold` [default 25] for `cognitive_complexity`; review |
 | Module size | ≤ ~300 lines; one concept per module | review; size check script |
 | File per crate responsibility | `lib.rs` re-exports only | review |
 
@@ -20,7 +20,9 @@ Techniques: early return, `?`, `let … else`, iterator chains, small helper fun
 
 Rust API Guidelines naming (RFC 430): `snake_case` fns/vars, `CamelCase` types, `SCREAMING_SNAKE_CASE` consts; conversions `as_`/`to_`/`into_`; getters without `get_`; no abbreviations (`account`, not `acct`); booleans read as predicates (`is_active`). Format with `rustfmt` (default config, checked in CI). Lint with `clippy` (`-D warnings`) with the deny set below.
 
-## 3. Lints (workspace `Cargo.toml` `[workspace.lints]` — verify syntax at G1)
+## 3. Lints (workspace `Cargo.toml`)
+
+Syntax **verified** (Cargo reference): `[workspace.lints.rust]` / `[workspace.lints.clippy]` in the root manifest, each member opts in with `[lints]` + `workspace = true` (Rust ≥ 1.74); `priority` orders lint groups; Cargo applies lints only to workspace members, not dependencies. `integer_arithmetic` no longer exists (renamed past name of `arithmetic_side_effects`, group *restriction*). Group membership of the other named lints is still **to verify** at G1 (docs.rs/clippy index read only partially).
 
 - deny: `unsafe_code` (forbid outside listed crates), `unwrap_used`, `expect_used`, `panic`, `indexing_slicing`, `todo`, `unimplemented`, `dbg_macro`, `print_stdout/stderr` (use tracing), `wildcard_enum_match_arm`, `missing_docs` on `contracts-*` and `domain-*`.
 - warn → deny in CI: a curated subset of `clippy::pedantic` (`must_use_candidate`, `needless_pass_by_value`, `module_name_repetitions` allowed explicitly with a reason).
@@ -76,4 +78,29 @@ Small, single-purpose commits, imperative subject (`Add X`, `Fix Y`); short-live
 
 ## 15. Definition of Done (code)
 
-Build, `rustfmt`, `clippy -D warnings`, tests (unit, property, integration), contract diff, `cargo deny`, plan check all green; self-review against section 14; summary states verified vs unverified.
+Build, `rustfmt`, `clippy -D warnings`, tests (unit, property, integration), contract diff, `cargo deny`, plan check all green; self-review against section 14; summary states verified vs unverified. For the web app add: TypeScript compile (strict), ESLint, template type-check, unit tests, Playwright journeys, axe scan, generated-client diff (§16).
+
+## 16. TypeScript and Angular (web UI)
+
+The owner's rules apply unchanged (20 lines, ≤ 3 parameters, ≤ 2 nesting, no magic numbers, no flags, comments say *why*). Tool names below are the usual ones; **verify exact rule names and config keys against the installed versions at gate G1/S-02** before relying on them.
+
+| Topic | Rule | Enforcement |
+|---|---|---|
+| Compiler | `strict` plus `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noImplicitOverride`, `noFallthroughCasesInSwitch`, `noImplicitReturns` (all **verified** to exist); Angular `strictTemplates` (exists; default `true`) and `strictInjectionParameters` (exists; default `false`, recommended `true`) | `tsconfig`, Angular compiler |
+| No escape hatches | no `any` (`no-explicit-any`, in the *recommended* preset), no non-null `!` (`no-non-null-assertion`, in the *strict* preset), no `as` casts except in the generated-client boundary and parsers with a `// why:` note (`consistent-type-assertions` with `assertionStyle: 'never'`, a *stylistic*-preset rule), no `any` flowing in (`no-unsafe-assignment`, *recommended-type-checked*), `ban-ts-comment` (*recommended*; `@ts-expect-error` only with a description) — presets **verified** in typescript-eslint docs 2026-11-17 | typescript-eslint rules (enable the `strict-type-checked` + `stylistic-type-checked` configs; names to confirm at S-02) |
+| Magic numbers | the core `no-magic-numbers` rule is *frozen*; use typescript-eslint's `no-magic-numbers` extension and turn the core rule off | ESLint |
+| Shape | `max-params` `{max: 3}` [default 3], `max-lines-per-function` `{max: 30, skipBlankLines: true, skipComments: true}` [default 50], `max-depth` `{max: 2}` [default 4], `complexity` `{max: 10}` [default 20] (option names **verified** in the ESLint docs 2026-11-17) | ESLint core rules |
+| Exhaustiveness | discriminated unions for states, results and errors; `switch` ends with an `assertNever(x: never)`; `@typescript-eslint/switch-exhaustiveness-check` (needs type information and is **not** in any preset — enable explicitly) | compiler + ESLint |
+| Immutability | `readonly` by default, `ReadonlyArray`, no mutation of inputs; Angular signals for state, derived state via `computed` | review + lint |
+| Wire types | only from `core/api/generated`; runtime-validate untrusted JSON at the boundary if the generator does not | Q3 diff |
+| Components | standalone, `OnPush`, small (template + class ≲ 150 lines), presentational vs container split, no logic in templates beyond trivial expressions, inputs/outputs typed, no direct DOM access except through CDK/renderer services | review + lint |
+| Subscriptions | prefer signals / `async` pipe / `takeUntilDestroyed`; no manual subscribe without teardown | lint + review |
+| HTTP | only in `core/`; every call has a typed result, timeout and error mapping to `ErrorCode` | review + tests |
+| Security | no `innerHTML` except through the approved sanitizing component for chapter HTML; strict CSP (no inline scripts); no secrets in the bundle; never log personal data | lint rule + e2e CSP check |
+| Accessibility | Angular Material/CDK a11y primitives (focus trap, live announcer, key manager); every interactive element labeled; axe in CI | e2e |
+| i18n | all strings through the i18n catalog (`bn`, `en`); key parity test (INV-WEB-009) | unit |
+| Style | tokens only; no hard-coded colors/px for theme-able values; no `!important`; no deep `::ng-deep` | stylelint (to verify) |
+| Naming | `kebab-case` files, `PascalCase` classes, intention-revealing names, no abbreviations | lint |
+| Performance | lazy-loaded feature routes, `@defer`/image `loading=lazy` where appropriate, budgets in [performance](../09-testing/performance.md); measure before optimizing | CI budgets |
+| Testing | unit tests for logic (pure functions first), component tests for states, Playwright for journeys, no sleeps; deterministic via fake timers/clock | CI |
+| Dependencies | each npm package approved and registered; lockfile managed only by the package manager; `npm audit` (or equivalent) in nightly | Q10 |

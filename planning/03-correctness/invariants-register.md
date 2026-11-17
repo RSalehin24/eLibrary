@@ -21,6 +21,8 @@ Line format: `INV-ID · owner · by: <mechanisms> · statement`
 - **INV-IDN-007** · identity · by: type · A `KindleEmail` is a syntactically valid address; an account holds at most 5.
 - **INV-IDN-008** · identity · by: model, type · Account status changes only along Invited→Active⇄Suspended→Disabled.
 
+- **INV-IDN-009** · identity · by: model, prop · For an account, accepted TOTP time steps are strictly increasing: a code is accepted only if its step > `last_accepted_step`.
+
 ## Access
 
 - **INV-ACC-001** · access · by: model, prop · For Anonymous, `decide` returns Allow only for {Search, ViewMetadata, ViewPreview}.
@@ -118,6 +120,9 @@ Line format: `INV-ID · owner · by: <mechanisms> · statement`
 - **INV-WEB-007** · web · by: e2e · Public page HTML contains title, canonical, OG tags and meaningful content without JS.
 - **INV-WEB-008** · web · by: review · Admin navigation matches the workspace list.
 - **INV-WEB-009** · web · by: unit · `bn` and `en` catalogs have identical key sets.
+
+- **INV-WEB-010** · web · by: review, e2e · Every UI component resolves to an Angular Material/CDK component or a documented `shared/` composition; visual snapshots match the approved Material 3 themes.
+- **INV-WEB-011** · web · by: type, e2e · Regenerating the TypeScript client from the Rust schema produces no diff; compilation with strict flags passes; lint rules forbidding `any`/`!`/casts pass.
 
 ## Platform & Migration
 

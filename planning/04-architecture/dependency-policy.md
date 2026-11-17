@@ -40,7 +40,13 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | ZIP/EPUB | `zip` | no archive in std | P1(6a) | reproducible writer |
 | Image/SVG/text shaping | `resvg`, `tiny-skia`, `rustybuzz`, an image codec crate | covers need shaping | P6 (spike S-03) | pending spike |
 | Search engine | `tantivy` | no FTS in std | P4 (spike S-01) | pending spike; fallback Postgres |
-| Frontend | `leptos` (or other) | | P4 (spike S-02, D-02) | pending decision |
+| Frontend framework | `typescript`, `@angular/core`, `@angular/common`, `@angular/router`, `@angular/forms`, `@angular/platform-browser`, `@angular/ssr` (+ Angular CLI, build tooling) | UI framework and SSR; decision D-02 | P4 (verify versions in S-02) | one Angular major, pinned |
+| Frontend design | `@angular/material`, `@angular/cdk` | Material Design 3 components and accessibility primitives; decision D-16 | P4 | the only UI component library; no second library without approval |
+| Frontend reactive | `rxjs` | peer requirement of Angular HTTP/router | P4 | prefer signals in app code |
+| Frontend lint/format | `eslint`, `typescript-eslint`, Angular ESLint plugin, `prettier` or Angular formatting | | P4 | dev-dependencies |
+| Frontend tests | `vitest` + `jsdom` (the Angular CLI default for new projects — **verified** on angular.dev/guide/testing; Karma is still supported), `@playwright/test`, `axe-core` / Playwright axe integration | | P4 | dev-dependencies |
+| Frontend codegen | an OpenAPI→TypeScript generator (candidate chosen in S-02) or a small in-repo generator driven by `xtask` | typed client from Rust contract schema | P4 | prefer the smallest option |
+| Frontend fonts | Noto Serif/Sans Bengali (self-hosted WOFF2) | typography guide | P4 | font files, license OFL (verify) |
 | Property testing | `proptest` | std has no generators | P1 | dev-dependency |
 | Snapshot tests | `insta` | | P1 | dev-dependency |
 | Compile-fail tests | `trybuild` | | P1 | dev-dependency |
@@ -49,6 +55,25 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Tools (not linked into binaries) | `cargo-deny`, `cargo-audit`, `cargo-mutants`, `kani`, TLC (Java), Alloy (Java), `epubcheck` (Java), Playwright, k6 | | P1–P8 | system packages need approval and a stated reason before install |
 
 Counts and versions are recorded when approved, not guessed here.
+
+## Verification of the register (2026-11-17, docs.rs pages; crates.io and lib.rs were unreadable, downloads unknown)
+
+All 46 listed crates/tools exist and none is yanked or deprecated at its latest version. Items needing attention before approval:
+
+| Crate | Finding | Action |
+|---|---|---|
+| `rustybuzz` 0.20.1 | last release 2024-11-12 (~2 years old) | S-03 must check shaping quality and for a maintained successor before approving |
+| `subtle` 2.6.1 | last release 2024-06-24 | acceptable for a small stable crate; review at approval |
+| `proptest` 1.12.0 | page says it "mainly sees passive maintenance" | acceptable for dev-dependency; note |
+| `tracing-subscriber` 0.3.23 | badge "maintenance-experimental" | review at approval |
+| `jiff` 1.0.0 | first 1.0 release 2026-11-15 | prefer `time` 0.3.55 unless jiff features are needed; decide at approval |
+| `pasetors` 0.8.1 | "has not undergone any third-party security audit" (supports v4.public and v4.local) | alternative `rusty_paseto` 0.10.1 (v4 public/local via feature flags); compare at approval |
+| `uuid` 1.29.3 | features `v7`, `v5` confirmed | enable only needed features |
+| `icu_collator` 2.4.0 | CLDR has `bn.xml`; baked locale list not shown | S-01 builds a `bn` collator and checks it does not fall back to root |
+| `utoipa` 6.0.0, `sqlx` 0.9.0, `axum` 0.8.9, `reqwest` 0.13.5, `tantivy` 0.27.0, `ed25519-dalek` 3.0.0 | current latest per docs.rs | pin exact versions on approval |
+| `totp-rs` 6.0.0 | exists | hand-rolled TOTP on `hmac`+`sha2` remains the preferred minimal option |
+
+Full evidence: [verification log](../03-correctness/verification-log.md).
 
 ## Decline-by-default examples
 

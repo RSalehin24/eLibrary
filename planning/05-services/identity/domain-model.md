@@ -8,7 +8,7 @@ Status: DRAFT
 |---|---|---|
 | `Account` | `id` UUIDv7, `email` (unique, case-folded), `display_name`, `status` enum, `language`, `totp_required`, `is_demo`, `kindle_emails[≤5]`, `revision` | `UNIQUE(lower(email))`; status graph per [state machines](state-machines.md) |
 | `Credential` | `account_id`, `password_hash`, `hash_alg` (`argon2id`\|`legacy_pbkdf2`), `changed_at` | 1:1 with Active accounts; absent while Invited |
-| `TotpEnrolment` | `account_id`, `secret_enc`, `state` (Pending\|Enabled), `confirmed_at` | secret encrypted with key from secret store |
+| `TotpEnrolment` | `account_id`, `secret_enc`, `state` (Pending\|Enabled), `confirmed_at`, `last_accepted_step` (u64) | secret encrypted with key from secret store |
 | `PasswordLink` | `id`, `account_id`, `purpose` (Setup\|Reset), `token_hash`, `expires_at`, `state` (Issued\|Consumed\|Superseded\|Expired), `nonce` | partial unique index: one `Issued` per (account, purpose) |
 | `Session` | `id`, `token_hash`, `account_id`, `created_at`, `last_seen_at`, `expires_at`, `mfa_ok`, `revoked_at`, `ua_hash`, `ip_prefix` | revoked or expired sessions authenticate nothing |
 | `LoginAttempt` | `key` (account or IP), `window_start`, `count` | for throttling |

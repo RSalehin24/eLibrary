@@ -40,9 +40,10 @@ send:kindle admin:full_control`. Resolution = global, book, category, or author-
 
 ## Frontend
 
-React SPA, ~72k lines of which ≈ 40k are a vendored third-party EPUB reader runtime
-(`embedded-reader`, `public/epub-reader` v1.1). 21 pages, 9 feature folders, 3 CSS
-bundles (largest: 1.8k-line `dark-mode.css`).
+React SPA, 72,496 lines in `src/`, of which 35,032 are the embedded EPUB reader runtime
+(`src/embedded-reader`); a further 32,899 lines of a vendored third-party reader (v1.1) sit in
+`public/epub-reader`. 20 pages, 10 feature folders, 64 CSS files (largest: 1.8k-line
+`dark-mode.css`). (Re-measured 2026-11-17.)
 
 ## Hygiene findings
 

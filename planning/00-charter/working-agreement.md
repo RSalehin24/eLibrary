@@ -6,6 +6,7 @@ Adapted from the owner's `CLAUDE.md` working style. Applies to every contributor
 
 ## Asking and deciding
 
+0. **Decision requests are asked as selectable questions — never plain text, never violated.** Use the `AskUserQuestion` tool: the question, 2–4 options with one-line consequences, the recommended option first and labeled `(Recommended)` with the reason. No proceeding on an unanswered decision. The rule is enforced in the root `CLAUDE.md` and remembered in the assistant's memory; [open decisions](../04-architecture/open-decisions.md) hold the written record and the plan check requires options and a recommendation on every row.
 1. **Ask at decision points; recommend one option, do not survey all options.** Every open question has a recommendation in [open decisions](../04-architecture/open-decisions.md).
 2. **Ambiguous requirement or rule conflict → ask before coding.** Record the answer in [DECISIONS](../DECISIONS.md) the same day.
 3. **Flag deviations from earlier decisions** in [INCONSISTENCIES](../INCONSISTENCIES.md) when they happen, not later.

@@ -14,4 +14,5 @@ Status: DRAFT
 | TST-IDN-008 | unit | Kindle address validation and limit 5 | INV-IDN-007 |
 | TST-IDN-009 | unit | Legacy PBKDF2 hash verifies; rehash to Argon2id; wrong password rejected | INV-MIG-003 |
 | TST-IDN-010 | fuzz | Token and email parsers; no panic | INV-PLT-004 |
+| TST-IDN-012 | prop+unit | TOTP replay: the same valid code verified twice (and an earlier step after a later one) is rejected; concurrent verifications of one code accept exactly once (row lock on `last_accepted_step`) | INV-IDN-009 |
 | TST-IDN-011 | e2e | Demo session cannot change profile/password (403 `forbidden_demo`) | INV-ACC-007 |

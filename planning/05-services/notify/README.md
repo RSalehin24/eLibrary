@@ -16,7 +16,7 @@ Sends things to the outside world — mail and Kindle — exactly once in effect
 ## Kindle flow
 
 1. Library verifies `Allow(SendToKindle)` and the chosen address belongs to the account; it emits `KindleRequested{owner, book, address_id, request_id}`.
-2. Notify preflight: address verified, EPUB size ≤ provider limit (50 MB), format supported; a failed preflight records `Rejected(reason)` and emits `KindleFailed` (user-visible reason).
+2. Notify preflight: address verified; the account has confirmed our sender address is on their Amazon approved-sender list (the profile page shows the sender address and instructions; Amazon allows a limited number of approved addresses and rejects other senders); EPUB size ≤ 50 MB total per email (limits reported by third-party guides — Amazon's own help page returned 503 when checked, re-verify before P7); EPUB is converted by Amazon, DRM-free; a failed preflight records `Rejected(reason)` and emits `KindleFailed` (user-visible reason).
 3. Claim-before-send row `(request_id)`; fetch EPUB; send; record result; emit `KindleSent`.
 
 ## Safety

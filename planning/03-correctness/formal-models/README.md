@@ -18,12 +18,26 @@ specifications, not evidence.
 ## How to run (Linux)
 
 ```
-# TLC (needs Java 17+): download tla2tools.jar once
-java -cp tla2tools.jar tlc2.TLC -config JobLifecycle.cfg JobLifecycle.tla -workers auto
-# Alloy 6 (CLI): java -jar alloy.jar exec -f -o out access.als
+# TLC: options -config <file>, -workers <num|auto>, -deadlock are VERIFIED in Lamport's official
+# "current-tools" PDF. The documented entry point is `java tlc2.TLC <switches> <Spec>.tla`
+# (standalone-tools page); with a jar on the classpath use: java -cp tla2tools.jar tlc2.TLC ...
+# (the -cp form and the minimum Java version were NOT in the pages read: confirm in spike S-04).
+java -cp tla2tools.jar tlc2.TLC -config JobLifecycle.cfg -workers auto JobLifecycle.tla
+# Alloy 6.2.0 needs Java 17+ (verified). CLI: `java -jar org.alloytools.alloy.dist.jar exec ...`
+# Documented options seen: -c/--command, -o/--output, -t <type>. The `-f` flag I wrote earlier is UNVERIFIED
+# and removed; run `exec --help` in spike S-04 to confirm the options.
+java -jar org.alloytools.alloy.dist.jar exec -o out access.als
 ```
 
+Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models intentionally reach terminal states, so run with `-deadlock` or add a `Terminating` stuttering disjunct to `Next` (to decide in S-04).
+
+## Interim evidence
+
+`planning/tools/model_mirror.py` re-implements the three TLA+ models and the Alloy policy in Python and checks their properties by explicit-state search (jobs up to 4 jobs × 2 attempts = 1,016,064 states). All properties hold; every deliberately broken variant is detected, including removed fencing (finding F-1, fixed with a ghost per-run outcome). Details: [verification log](../verification-log.md). This validates the *logic* only; TLC/Alloy remain required at G2.
+
 ## Rules
+
+0. **Sensitivity:** every model must come with at least one deliberately broken variant that its properties detect (mirror or TLC); a property that no mutation can break is vacuous and must be strengthened.
 
 1. A model change and its invariant-register entry change in the same pull request.
 2. Bounds (constants in `.cfg`) are documented here; raising them is allowed, lowering is not.
