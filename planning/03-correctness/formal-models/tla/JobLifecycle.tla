@@ -3,6 +3,9 @@
    Covers INV-ING-006 (publish only when all leaves fetched),
    INV-ING-010 (state machine, <=1 active job per URL, lease expiry),
    INV-ING-016 (a job publishes at most once).
+   Design mapping (ADR-0021): a claim (`FOR UPDATE SKIP LOCKED`) is the epoch increment; the
+   heartbeat lease and visibility timeout are lease expiry; the fencing epoch is the (job, attempt) key.
+   The model itself is unchanged by the five-service redesign.
    STATUS: written, NOT YET MODEL-CHECKED (no Java/TLC on the authoring machine).
    Must pass TLC with JobLifecycle.cfg at gate G2. *)
 EXTENDS Naturals, FiniteSets

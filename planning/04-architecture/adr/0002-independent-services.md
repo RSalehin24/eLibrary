@@ -1,12 +1,14 @@
 # ADR-0002 — Independent services, modular deployment
 
-Status: REVIEW
+Status: SUPERSEDED
+
+Superseded by [ADR-0020](0020-five-services-no-gateway.md) (five services, no gateway). The seven-service-plus-gateway split below is historical.
 
 ## Context
 Complexity and thinking scope per feature must shrink. The legacy monolith had import cycles and a shared database. The rewrite branch kept a monolith and added more frameworks.
 
 ## Decision
-Seven domain services plus gateway and web ([catalog](../service-catalog.md)). Each is its own crate/binary and database. Services depend only on contracts. For local development, `xtask dev` runs all services in one process; production runs them as separate processes on one host initially.
+Seven domain services plus gateway and web ([catalog](../service-catalog.md)). Each is its own crate/binary, its own Docker container (ADR-0019) and its own database. Services depend only on contracts. For local development, `xtask dev` runs all services in one process; production runs them as separate processes on one host initially.
 
 ## Consequences
 + A feature touches one service; others are mocked through contracts.

@@ -6,58 +6,61 @@ Status: DRAFT
 
 | Use | Style | Why |
 |---|---|---|
-| User-facing reads/writes | Synchronous HTTP/JSON via gateway | Simple, cacheable |
-| Authorization checks | Synchronous `decide`, fail-closed, cache ≤ 5 s | Needs current grants |
-| Byte access (chapters, EPUB) | Signed capability, verified offline | No runtime dependency on access |
-| State propagation | Asynchronous events via transactional outbox | Loose coupling, replay, rebuildable projections |
-| Multi-service workflows (publish) | Orchestrated saga in ingestion with idempotency keys | Explicit steps and compensation |
+| Browser to services | HTTP/JSON through Caddy, authenticated by forward-auth to identity | One authentication point, no gateway code |
+| Authorization checks between services | Synchronous `identity /internal/check`, fail closed, cache at most 5 s | Needs current grants |
+| Bytes (EPUB, covers, reading copy) | Streamed over internal HTTP by the owning service after a check | Files are never served by Caddy or shared volumes |
+| State propagation | Pull-based outbox events ([ADR-0022](adr/0022-pull-based-outbox-events.md)) | No broker, replayable, simple |
+| Long-running work | `jobs` table in ingestion ([ADR-0021](adr/0021-postgres-job-queue-no-redis.md)) | No work inside HTTP requests |
 
-## Allowed synchronous calls (everything else is forbidden and CI-checked, Q6)
+## Allowed synchronous calls (everything else is forbidden and CI-checked)
 
 | Caller | Callee | Purpose | Failure behavior |
 |---|---|---|---|
-| gateway | identity | resolve session → subject assertion | anonymous only |
-| gateway | any | route | 502 typed error |
-| catalog, library, ingestion | access | `decide` | fail closed |
-| access | identity | subject facts (active, mfa) | use last projection; if stale > 5 min deny |
-| ingestion | catalog | upsert draft book, resolve agents, duplicate query, publish | retry with idempotency key |
-| ingestion | content | put canonical document, request build | retry; build is idempotent by doc hash |
-| library | content | section index for re-anchoring | retry later |
-| notify | content | fetch EPUB for Kindle with service capability | retry/backoff |
+| Caddy | identity `/internal/authorize` | verify session, return user id and scopes as headers | request rejected (401/503), never anonymous fallthrough |
+| catalog, reader, ingestion | identity `/internal/check` | scope or grant decision for a user and book | fail closed |
+| reader | catalog | stream EPUB of a published version | retry with back-off; copy stays absent |
+| ingestion | catalog `POST /internal/books/{id}/versions` | submit candidate version and artifacts | idempotent; retry |
+| notify | catalog | stream EPUB for Kindle delivery | retry |
+| any service | any service | calls carry an internal service token verified by the callee | 401 |
 
-## Event envelope (all events)
+Services trust identity headers only from Caddy; see [service authentication](cross-cutting/service-auth.md).
+
+## Events (no broker)
+
+Each producer keeps an `events` outbox table written in the same transaction as the change and exposes `GET /internal/events?after=<cursor>`. Consumers pull with a stored cursor, are idempotent, and tolerate duplicates and restarts.
+
+| Event | Producer | Consumers |
+|---|---|---|
+| `book.published`, `book.unpublished`, `book.version_changed` | catalog | reader, ingestion |
+| `user.disabled`, `grant.changed` | identity | reader, catalog (cache invalidation) |
+| `email.requested` | identity | notify |
+| `kindle.requested` | catalog | notify |
+| `build.finished` | ingestion | ingestion (internal) |
+
+### Envelope
 
 ```json
-{ "id": "uuid7", "type": "BookPublished", "version": 1, "occurred_at": "RFC3339 UTC",
-  "producer": "catalog", "subject_id": "…", "causation_id": "…", "correlation_id": "request id",
-  "payload": { … } }
+{ "cursor": 1234, "id": "uuid7", "type": "book.published", "version": 1,
+  "occurred_at": "RFC3339 UTC", "subject_id": "…", "request_id": "…", "payload": { … } }
 ```
 
-Rules: `id` unique and stable across redelivery; consumers dedupe on `(consumer, id)`;
-events are facts in the past tense; payloads reference IDs plus the minimum data needed
-(no full documents); schema changes are additive within a `version`, breaking changes
-publish `version + 1` alongside the old for one release.
+`cursor` is monotonic per producer; `id` is stable across redelivery. Payloads carry ids plus the minimum data needed (no documents). Schema changes are additive within a `version`; a breaking change publishes `version + 1` alongside the old one for one release.
 
-## Delivery
+### Delivery rules
 
-Producer writes the state change and an `outbox` row in one transaction. A relay claims
-rows with `FOR UPDATE SKIP LOCKED`, delivers to subscribers' inbox endpoints (HTTP POST,
-authenticated, idempotent), and marks sent on 2xx. Consumers write the effect and the
-`(consumer, event id)` dedupe row in one transaction ([Outbox model](../03-correctness/formal-models/tla/Outbox.tla)).
-Ordering is per aggregate (`subject_id`) only; consumers must tolerate reordering across aggregates.
+- The consumer applies the effect and advances its cursor in one transaction; duplicates are harmless (idempotent effects).
+- Ordering is by cursor within one producer; no ordering is assumed across producers.
+- A consumer that loses its cursor resynchronizes from the owner's listing endpoint.
+- Pruning waits until all known consumers have passed a cursor ([limits](cross-cutting/limits.md)).
+- Models: [Outbox](../03-correctness/formal-models/tla/Outbox.tla) (to be adapted to pull), [JobLifecycle](../03-correctness/formal-models/tla/JobLifecycle.tla), [ReadOnce](../03-correctness/formal-models/tla/ReadOnce.tla).
 
-## Publish saga (ingestion orchestrates)
+## Publish flow (ingestion to reader)
 
-1. `catalog.upsert_draft(book_key, metadata, credits)` → `book_id` (idempotent by `book_key` = source URL hash).
-2. `content.put_document(book_id, doc_hash, document)` → `build_id`; content builds deterministically → `ArtifactSetSealed`.
-3. `catalog.publish(book_id, artifact_set_id, expected_revision)`; catalog emits `BookPublished`.
-4. `content.activate(book_id, artifact_set_id)` (pointer swap) — also driven by `BookPublished`.
-5. Compensation: if any step fails permanently, book stays Draft; job goes to Review with the failing step; nothing half-visible because visibility = (catalog Published ∧ content active).
-
-Each step has an idempotency key `(job_id, step, epoch)`; the saga's persisted step cursor is part of the
-[job state machine](../05-services/ingestion/state-machines.md).
+1. Ingestion builds an EPUB candidate (`build.finished`) and calls catalog `POST /internal/books/{id}/versions` with the artifacts (idempotent by book key and document hash).
+2. Catalog stores the version as `in_review`; approval makes it `published` and emits `book.published`.
+3. Reader sees `book.published`, fetches the EPUB from catalog, builds the reading copy keyed by `(book_id, version)`.
+4. A failed build or a failed reader copy never leaves a visible book: visibility is catalog `published`; opening additionally requires an existing reading copy and returns a typed "not ready" error otherwise.
 
 ## Contract versions
 
-Each service publishes `GET /internal/contract` → `{service, contract_crate_version, supported_event_versions}`.
-Startup handshake (INV-PLT-001) refuses to serve when a required peer's contract is incompatible.
+Each service serves `GET /internal/contract` with its contract crate version and supported event versions. The startup handshake (INV-PLT-001) refuses to serve when a required peer is incompatible.

@@ -6,6 +6,8 @@ Resume here. Do not re-derive earlier decisions; read [DECISIONS](DECISIONS.md) 
 
 ## Current stage
 
+*2026-11-18:* legacy files moved to `archive/` (new project from scratch); deployment is now **Docker Compose, one container per component** (ADR-0019, D-22…D-25); responsive mobile/tablet/desktop requirement added (REQ-WEB-012). Docker/Compose install needs owner approval (P1).
+
 **Planning (pre-P0).** The plan structure, requirements (105), invariants (105), architecture, service designs, UX, roadmap and rules are drafted. No product code exists. The plan check passes; the TLA+/Alloy models are written but **unchecked**.
 
 ## Next action (owner)
@@ -20,6 +22,7 @@ Resume here. Do not re-derive earlier decisions; read [DECISIONS](DECISIONS.md) 
 |---|---|---|
 | D-03 source rights unanswered | ingestion go-live (G6), spike S-05 | owner |
 | Java not installed on this machine | running TLA+/Alloy/epubcheck (spike S-04, gate G2) — installing needs approval | owner |
+| Docker Engine + Compose not verified/approved on this machine | local stack, image builds (P1) — installing needs approval | owner |
 | Rust toolchain not installed on this machine | any Rust code, spikes S-03/S-07 — installing needs approval | owner |
 | Node/npm and Angular tooling not installed or approved | spike S-02, the web app — installing needs approval | owner |
 

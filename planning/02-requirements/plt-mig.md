@@ -18,6 +18,7 @@ Status: DRAFT
 - **REQ-PLT-011** · MUST · inv: INV-PLT-011 · verify: type, review · Code obeys the owner's size and shape rules: functions ~20 lines (cap 30), at most 3 parameters (group inputs in a struct), at most 2 nesting levels, no boolean flag parameters, no magic numbers; thresholds are lint-enforced where the tool supports it and checked in review otherwise ([coding standards](../03-correctness/coding-standards.md)).
 - **REQ-PLT-012** · MUST · inv: INV-PLT-012 · verify: review, drill · No dependency (crate, tool or system package) is added without the owner's recorded approval; the standard library is preferred; the approved register matches the lockfile ([dependency policy](../04-architecture/dependency-policy.md)).
 - **REQ-PLT-013** · SHOULD · inv: INV-PLT-013 · verify: type · Public items of `contracts-*` and `domain-*` crates are documented (lint-enforced) and doctests run in CI.
+- **REQ-PLT-014** · MUST · inv: INV-PLT-014 · verify: e2e, review · The whole system is built, run and deployed with Docker Compose, one container per component ([topology](../04-architecture/deployment-topology.md)); the same images run in dev, CI, staging and production; only `edge` publishes host ports; each service reaches only its own database.
 
 ## Migration
 

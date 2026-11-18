@@ -7,7 +7,7 @@ Estimates are for one person, part-time (~20 h/week), **planning figures re-base
 | Phase | Deliverable | Contents | Est. weeks | Gate |
 |---|---|---|---|---|
 | **P0 Foundations** | Decisions, gold corpus, spikes | answer open decisions; build labeling tool; label 200 books; judged queries (≥ 300); duplicate pairs (≥ 150); spikes S-01…S-07; capacity inventory of the legacy data | 6 | G0 |
-| **P1 Platform kit** | Empty but real workspace | cargo workspace, lints, CI, contracts codegen, `platform-*`, `domain-text` (normalizer, keys, collation), xtask, testkit, sample service with startup checks | 3 | G1 |
+| **P1 Platform kit** | Empty but real workspace | Docker Compose skeleton (compose.yaml/dev/test, Dockerfiles, Caddy, Postgres init, health-gated startup of a sample service), cargo workspace, lints, CI, contracts codegen, `platform-*`, `domain-text` (normalizer, keys, collation), xtask, testkit, sample service with startup checks | 3 | G1 |
 | **P2 Models** | Checked specifications | run and fix existing models; write AccountLifecycle, BookLifecycle, Publication, Progress; model-trace export; CI Q8 | 3 | G2 |
 | **P3 Identity & access** | Sign-in works end to end | identity, access (`decide`, capabilities), gateway, minimal admin screens for accounts/grants, demo | 5 | G3 |
 | **P4 Public discovery** | Public site with search and preview | prototypes → sign-off; catalog (read side + admin edit), search, content preview/cover, web public pages, seed from gold corpus + partial migration | 6 | G4 |

@@ -25,6 +25,14 @@ web/
 ```
 Rules: features import `shared/` and `core/` only; no feature imports another feature; no raw HTTP calls outside `core/`; no component styles using hard-coded colors or sizes (tokens only).
 
+## Responsive delivery
+
+The web app is one Angular build serving mobile, tablet and desktop through window-class adaptive layouts ([design system](../../08-ux/design-system.md), REQ-WEB-012). A `WindowClass` signal (compact | medium | expanded) from the CDK `BreakpointObserver` drives navigation (bottom bar / rail / drawer) and pane layout; components never read `window.innerWidth`. SSR renders the compact layout by default and hydrates to the actual class without layout shift.
+
+## Container
+
+The web app runs as its own `web` container (Node SSR server, non-root, read-only root filesystem) behind `edge`; it reaches the backend only through `gateway` ([topology](../../04-architecture/deployment-topology.md)). Static assets carry content hashes and are cached by `edge`.
+
 ## Rendering
 
 | Area | Rendering | Notes |

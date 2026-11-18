@@ -12,6 +12,6 @@ Status: DRAFT
 | Source session cookie | ingestion | secret store entry, never logged | on expiry/manual | revoke at source, replace |
 | Mail provider credential | notify | file | 180 d | rotate at provider |
 | Backup encryption key (age) | operator | offline copy + password manager | yearly | re-encrypt backups |
-| TLS certificates | proxy | ACME | automatic | — |
+| TLS certificates | `edge` (Caddy) container, `caddy_data` volume | ACME | automatic | — |
 
 Rules: no secret in environment of child processes or in the repository (secret scanning in CI); config files hold *paths* to secrets; `Secret<T>` wrappers; startup fails when permissions are broader than 0400; dev uses generated throwaway keys.

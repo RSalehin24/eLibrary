@@ -23,7 +23,7 @@ Precedence: the user's explicit instruction, then the nearest `AGENTS.md`/this f
 ## Project facts
 - Ground-up rebuild: Rust microservices (identity, access, catalog, content, library, ingestion, notify) + gateway; web UI TypeScript/Angular with Angular Material (Material Design 3), types generated from the Rust contracts.
 - `planning/` is the design doc set (requirements → invariants → mechanisms). Run `python3 planning/tools/check_plan.py` after any plan change; keep it at 0 errors.
-- Legacy Django app (`app/`) and branch `reyan-new-version` are read-only reference.
+- Legacy Django app and its repo files live in `archive/` (read-only reference; the rebuild is a new project from scratch). Branch `reyan-new-version` is also read-only reference.
 
 ## Hard rules
 - No new dependencies (crates, npm packages, tools, system packages) without the owner's approval; register in `planning/04-architecture/dependency-policy.md`.

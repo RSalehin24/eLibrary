@@ -2,7 +2,7 @@
 
 Status: DRAFT
 
-Every pull request runs gates Q1–Q9. A phase [exit gate](../12-roadmap/gates.md)
+Every pull request runs gates Q1–Q11. A phase [exit gate](../12-roadmap/gates.md)
 additionally requires the listed human sign-offs.
 
 | Gate | Check | Fails when |
@@ -16,6 +16,7 @@ additionally requires the listed human sign-offs.
 | Q7 | Plan check: `python3 planning/tools/check_plan.py` | any error |
 | Q8 | Model check (nightly + when `formal-models/` changes): TLC/Alloy on all models | counterexample |
 | Q10 | Dependency register check (`xtask`, once code exists): every lockfile package has an APPROVED entry in the [register](../04-architecture/dependency-policy.md); lockfile unmodified by hand | unapproved or unlisted dependency |
+| Q11 | Container checks (from P1): `docker compose config` lint, image build for every service, image scan, INV-PLT-014 assertions | any published domain/DB port, root user, missing limit, unpinned base image |
 | Q9 | Gold gates (when ingestion/search code or rulesets change): metrics ≥ thresholds; conservation and determinism on the whole corpus | any regression |
 
 Nightly only: fuzzing (30 min/target), mutation testing (`cargo-mutants`) on pure

@@ -21,6 +21,23 @@ The visual language is **Google Material Design 3** implemented by **Angular Mat
 
 Seed colors and the sepia scheme are chosen in the P4 prototype session and validated by the WCAG contrast check in CI (starting hex values previously listed are superseded by the generated schemes).
 
+## Responsive and adaptive behavior (REQ-WEB-012, INV-WEB-005/012)
+
+Material components throughout; layout adapts by window class. Mobile-first CSS (`min-width` queries on tokens, CDK `BreakpointObserver` for behavior).
+
+| Aspect | Mobile (compact, < 600) | Tablet (medium, 600–839) | Desktop (expanded ≥ 840) |
+|---|---|---|---|
+| Primary navigation | bottom navigation bar (4–5 destinations) + top app bar | navigation rail | navigation rail (large: permanent drawer) |
+| Content columns / margins | 4 columns, 16 px margins | 8 columns, 24 px margins | 12 columns, 24+ px margins, max content width (reading measure ≤ 70 characters) |
+| Book grid | 2 columns of cover cards | 3–4 columns | 5–8 columns |
+| Book page | single column, actions in a sticky bottom bar | single column + cover beside summary | supporting pane (list-detail) |
+| Search facets | modal bottom sheet | side sheet / collapsible panel | persistent side panel |
+| Reader | full-bleed; chrome auto-hides; tap zones for page/section; notes in bottom sheet | full-bleed with optional side notes sheet | centered measure; notes as supporting pane |
+| Admin (Jobs, Review, Catalog) | list → detail as separate screens; tables become cards | list-detail, compact table | list-detail with dense table, sticky bulk bar |
+| Dialogs | full-screen dialog for forms | centered dialog | centered dialog |
+
+Rules: touch targets ≥ 48 × 48 px (with spacing) at every class; no hover-only affordances; inputs use the right `inputmode`/`autocomplete`; safe-area insets respected; text reflows at 200% zoom; orientation change preserves reading position, scroll and unsaved form state; images use responsive `srcset` with intrinsic sizes (CLS budget); the layout is never chosen by user-agent sniffing. Visual-regression and Playwright runs cover 360, 768 and 1280 px (plus 1920 px for overflow) in light/dark/sepia × bn/en. PWA/offline remain out of scope ([vision](../00-charter/vision-and-scope.md)); installability is not a requirement.
+
 ## Components → Angular Material
 
 **Verified 2026-11-17** against the published package listing of `@angular/material` **21.2.6** (jsDelivr file list; the official docs site is client-rendered and was unreadable). The package contains these component folders: autocomplete, badge, bottom-sheet, button (including FAB and icon button), button-toggle, card, checkbox, chips, datepicker, dialog, divider, expansion, form-field, grid-list, icon, input, list, menu, paginator, progress-bar, progress-spinner, radio, select, sidenav, slide-toggle, slider, snack-bar, sort, stepper, table, tabs, timepicker, toolbar, tooltip, tree — with Material 3 style files (`_m3-*.scss`) for button, card, dialog, chips, badge and others. Whether every one of them is fully M3-styled is still checked by spike S-02.

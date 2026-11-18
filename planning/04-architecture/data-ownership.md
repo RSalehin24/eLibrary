@@ -5,36 +5,39 @@ Status: DRAFT
 ## Rules
 
 1. Exactly one service writes each table. Others read only through the owner's API or events.
-2. **No cross-service foreign keys, joins, or shared tables.** References are opaque typed IDs (`BookId`, `AccountId`) validated through events/APIs.
-3. Each service has its own PostgreSQL **database** and role (v1: one server, separate databases). A service role cannot connect to another service's database (checked in deployment tests).
-4. Every table has `created_at`, `updated_at` (UTC), and mutable aggregates have `revision bigint` for optimistic concurrency.
+2. **No cross-service foreign keys, joins, or shared tables, and no shared volume.** References are opaque typed IDs (`BookId`, `UserId`) validated through APIs or events.
+3. Each service has its own PostgreSQL **database** and role in the single `postgres` container (D-24). A service role cannot connect to another service's database (checked in deployment tests).
+4. Every table has `created_at`, `updated_at` (UTC); mutable aggregates have `revision bigint` for optimistic concurrency.
 5. Audit tables are INSERT-only for service roles (INV-PLT-006).
-6. Local projections of foreign data are rebuildable from events and marked `*_projection`.
+6. Local copies of foreign data (caches, reading copies) are rebuildable from the owner's API and events.
 
 ## Ownership map
 
-| Data | Owner | Replicated as projection in |
+| Data | Owner | Copy held elsewhere |
 |---|---|---|
-| Account (id, email, status, display name) | identity | access (`subject_facts`), notify (mail address cache), library (display only) |
-| Grants, default policy, openings | access | — (decisions are requested, never copied) |
-| Book, Work, Agent, Credit, Series, Category | catalog | ingestion (`catalog_refs` for duplicate checks), library (`book_refs`: id, slug, title) |
-| Search index | catalog | — |
-| Artifact sets, canonical documents (published) | content | library (`section_index` per artifact set, for anchors) |
-| Snapshots, jobs, drafts, review items, rulesets | ingestion | — |
-| Progress, annotations, shelf, saved filters | library | — |
-| Mail log, Kindle log | notify | library (`kindle_sent` view for the "sent" page) |
-| Audit log | each service writes its own; platform `audit` reader aggregates | — |
+| Users, credentials, sessions, TOTP, invites, roles, grants, demo limits, auth audit | identity | none; decisions are requested via `/internal/check`, never copied (grant caches at most 5 s) |
+| Books, versions, metadata, publication state, version history, source links | catalog | reader keeps `book_id`, `slug`, `version` with each reading copy; ingestion keeps catalog ids it published |
+| Asset files (EPUB, cover) | catalog (own volume) | reader fetches the EPUB by stream and stores only its derived reading copy |
+| Shelves ("My Books") | catalog | none; a shelf never grants access |
+| Search index (PostgreSQL FTS) | catalog | none |
+| Reading copies, reading sessions, progress, bookmarks, highlights, notes | reader (own volume + database) | none |
+| Source mirror, intake requests, jobs, curated documents, duplicate reviews, source credential, automation settings | ingestion | none |
+| Scrape cache | ingestion (files on its own volume) | none |
+| Mail outbox, templates, delivery log | notify | none |
+| Audit logs | each service writes its own | none |
 
 ## Reference integrity without foreign keys
 
-- A projection row is created by the corresponding event; if the referenced entity is later deleted, a tombstone event marks the projection and dependent UI shows "no longer available".
-- Reconciliation job (nightly, per service) compares projections with the owner's listing endpoint and emits metrics `projection_drift_total`; non-zero pages the operator.
+- A reader copy or ingestion reference to a book is created by an event or API call; when the book is unpublished or deleted, `book.unpublished` marks it and the UI shows "no longer available".
+- A nightly reconciliation per service compares its copies with the owner's listing endpoint and reports drift as a metric.
 - Deletion is soft (state) in catalog; hard deletion only through an audited retention job.
 
 ## Storage classes
 
 | Data | Store | Backup | Retention |
 |---|---|---|---|
-| Relational | PostgreSQL | continuous WAL + daily base | per table, see service domain models |
-| Artifacts, snapshots | content-addressed file store (`sha256/ab/cd/…`), path layout fixed | daily rsync/restic to offsite | artifacts: while referenced + 30 d; snapshots: forever for published books, 90 d for failed |
-| Secrets/keys | environment / secret file, not in DB | separate encrypted backup | rotation per [security](../10-security/secrets-and-keys.md) |
+| Relational | PostgreSQL (`pgdata`) | nightly `pg_dump` per database plus restore drill | per table |
+| Catalog assets | volume `catalog_files` | nightly file backup | while a version exists |
+| Reading copies | volume `reader_files` | not backed up; regenerable from catalog EPUBs | while published |
+| Scrape cache | volume `ingestion_files` | nightly file backup of curated inputs; cache itself regenerable | 90 d for failed, kept for published |
+| Secrets/keys | Compose secret files, not in DB | separate encrypted backup | [secrets](../10-security/secrets-and-keys.md) |

@@ -1,6 +1,8 @@
 # ADR-0005 — Postgres-backed outbox and job queues, no broker
 
-Status: REVIEW
+Status: SUPERSEDED
+
+Superseded by [ADR-0021](0021-postgres-job-queue-no-redis.md) (job queue) and [ADR-0022](0022-pull-based-outbox-events.md) (pull-based events). The push relay below is historical.
 
 ## Context
 Legacy used Celery + Redis; the rewrite branch added RabbitMQ and ended with hundreds of thousands of unconsumed envelopes. One developer should not operate a broker.

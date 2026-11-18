@@ -1,6 +1,6 @@
 # Structure reconstruction — making it read like a printed book
 
-Status: DRAFT
+Status: DRAFT (reconciled; pure stage, unchanged by the move to one ingestion service)
 
 Goal: a `SectionTree` whose leaf order is exactly the book's reading order and whose nesting is exactly the author's.
 
@@ -24,12 +24,12 @@ pub struct Node { pub id: SectionId, pub title: DisplayText, pub kind: SectionKi
 | `Sectioned(<shape>)` | TOC has section headings (parts/volumes) | section headings become parent nodes without own body |
 | `SinglePageHeadingSplit` | no TOC; headings in content | inference (below) |
 | `SinglePageFlow` | no TOC; no usable headings | one chapter (title = book title) + review if long |
-| `NoPublicBody` | nothing readable | job → Review `LockedSource`/`IncompleteSource` |
+| `NoPublicBody` | nothing readable | request `needs_review` with a `LockedSource`/`IncompleteSource` review item |
 
 ## Type A — source TOC authoritative (REQ-ING-004)
 
 1. Collect **all** TOC pages (paginated). Merge in source order into one tree (the "unified TOC").
-2. Only `/lessons/…` and `/topic/…`-type entries are chapters; `/books/…` links are cross-references and are excluded (recorded as `Dropped(SourceChrome)` with link evidence).
+2. Only `/lessons/...` and `/topic/...`-type entries are chapters; `/books/...` links are cross-references and are excluded (recorded as `Dropped(SourceChrome)` with link evidence).
 3. A node with both children and its own body keeps the body as the first page of that node; the node's nav/TOC entry links to that page. A node with children and **no** body links to its first descendant page but is still shown (never replaced by its children).
 4. Duplicate titles at the same level are kept distinct by source URL (`SectionId` from path); display titles may be disambiguated by a deterministic suffix only when identical (" (২)"), never merged.
 5. Plain-text TOCs inside the first content page are removed **only if** a linked TOC exists; recorded `Dropped(InlineTocSuperseded)`.
@@ -63,3 +63,7 @@ The tree is placed into the fixed page order ([builder](../builder/README.md)): 
 - Type A: tree ≅ source TOC (shape and normalized titles).
 - Every inferred node (Type B) has ≥ 1 evidence.
 - No empty leaf without a recorded reason.
+
+## Where it runs
+
+The `curate` job runs this stage as a pure function of the scrape manifest and the ruleset ([orchestration](../orchestration/README.md)); its output is part of the curated document. Titles compared with the catalog use `exact_key` only; the loose key never changes a tree.

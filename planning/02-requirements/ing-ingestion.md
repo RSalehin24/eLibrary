@@ -2,7 +2,7 @@
 
 Status: DRAFT · Service: [ingestion](../05-services/ingestion/README.md)
 
-Derived from the legacy [EPUB pipeline specification](../../docs/epub-pipeline-specification.md) and the code survey.
+Derived from the legacy [EPUB pipeline specification](../../archive/docs/epub-pipeline-specification.md) and the code survey.
 
 - **REQ-ING-001** · MUST · inv: INV-ING-001 · verify: db, prop, drill · Snapshots are immutable and content-addressed. Everything downstream is a pure function of (snapshot, ruleset version) and can be recomputed bit-for-bit.
 - **REQ-ING-002** · MUST · inv: INV-ING-002 · verify: prop, gold · Conservation: every input block ends in exactly one output location, or is recorded as dropped with a reason code. No block is lost silently.

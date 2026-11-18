@@ -16,8 +16,10 @@ The legacy UI grew by accretion (21 pages, 10+ processing screens, 1.8k-line dar
 10. **Reversible and safe.** Destructive actions use undo or an explicit confirm naming the object; admin diffs before apply.
 11. **Honest density.** Admin screens are dense but scannable (aligned columns, sticky headers, truncation with title tooltip); public screens are spacious.
 
+12. **One product, three form factors.** Mobile, tablet and desktop are first-class: each screen is designed for all three window classes, not shrunk from desktop ([responsive rules](design-system.md)); touch-first, keyboard-complete.
+
 ## Acceptance process (prevents the rewrite-branch trap)
 
 - Phase exit gates G4 (public) and G5 (reader) include **owner sign-off on clickable prototypes before back-end depth is built**.
 - Each screen has a one-paragraph purpose, the primary action, its states, and a link to its row in the [route map](route-map.md). A screen without these is not built.
-- Visual regression snapshots (light/dark/sepia × bn/en × 360/1280) are approved by the owner once per redesign, then guard against drift.
+- Visual regression snapshots (light/dark/sepia × bn/en × 360/768/1280) are approved by the owner once per redesign, then guard against drift.

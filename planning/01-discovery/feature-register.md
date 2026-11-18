@@ -10,19 +10,19 @@ behaviour is specified. Nothing is silently dropped.
 | F-01 | Email login, invite-only accounts | Keep | identity | REQ-IDN-001..006 |
 | F-02 | Password create/reset links | Keep | identity + notify | REQ-IDN-002, REQ-NTF-001 |
 | F-03 | TOTP 2FA | Keep | identity | REQ-IDN-004 |
-| F-04 | Demo auto-login | Change → explicit demo account with limits | identity/access | REQ-IDN-007, REQ-ACC-007 |
-| F-05 | 12 permission scopes + grants | Change → typed actions × targets, pure policy | access | REQ-ACC-* |
-| F-06 | Read-once / durable read | Keep | access + library | REQ-ACC-006 |
+| F-04 | Demo auto-login | Change → explicit demo account with limits | identity | REQ-IDN-007, REQ-ACC-007 |
+| F-05 | 12 permission scopes + grants | Change → scopes × optional book, pure policy | identity | REQ-ACC-* |
+| F-06 | Read-once / durable read | Keep | identity + reader | REQ-ACC-006 |
 | F-07 | Library list with filters | Change → public search + browse | catalog | REQ-DSC-*, REQ-CAT-007 |
 | F-08 | Category/Series/Writer/Translator/Editor/Publisher/Compiler pages | Keep (unified "Agents" and facets) | catalog | REQ-CAT-007 |
-| F-09 | Book detail + HTML preview | Change → public book page + build-time preview | catalog + content | REQ-CON-003 |
-| F-10 | In-browser reader | Change → chapter-based reader on canonical document | web + content | REQ-CON-004, REQ-WEB-* |
-| F-11 | EPUB download | Keep | content | REQ-CON-004 |
-| F-12 | Send to Kindle + sent history | Keep | notify + library | REQ-NTF-002 |
-| F-13 | Bookmarks, highlights, notes page | Keep, re-anchor on rebuild | library | REQ-LIB-002, REQ-LIB-005 |
-| F-14 | Reading progress | Keep | library | REQ-LIB-001 |
-| F-15 | Saved filters | Keep | library | REQ-LIB-006 |
-| F-16 | My Books (created by me) | Keep | library | REQ-LIB-004 |
+| F-09 | Book detail + HTML preview | Change → public book page + build-time preview | catalog | REQ-CON-003 |
+| F-10 | In-browser reader | Change → chapter-based reader on canonical document | web + reader | REQ-CON-004, REQ-WEB-* |
+| F-11 | EPUB download | Keep | catalog | REQ-CON-004 |
+| F-12 | Send to Kindle + sent history | Keep | notify + catalog | REQ-NTF-002 |
+| F-13 | Bookmarks, highlights, notes page | Keep, re-anchor on rebuild | reader | REQ-LIB-002, REQ-LIB-005 |
+| F-14 | Reading progress | Keep | reader | REQ-LIB-001 |
+| F-15 | Saved filters | Keep | catalog + web | REQ-LIB-006 |
+| F-16 | My Books (created by me) | Keep | catalog | REQ-LIB-004 |
 | F-17 | Submit source URL → create book | Keep | ingestion | REQ-ING-* |
 | F-18 | Catalog sync from source archive | Keep | ingestion | REQ-ING-014 |
 | F-19 | Incomplete-book checks / auto-retry | Change → completeness proof + review queue | ingestion | REQ-ING-006 |
@@ -37,5 +37,5 @@ behaviour is specified. Nothing is silently dropped.
 | F-28 | Physical books list / manual books / binding, price | **OPEN D-01** | catalog (module) | REQ-CAT-009 |
 | F-29 | Audit log | Keep, append-only | platform | REQ-PLT-006 |
 | F-30 | Dark mode | Keep, plus sepia | web | REQ-WEB-006 |
-| F-31 | Health, CSRF endpoints | Keep | gateway | REQ-GWY-002 |
+| F-31 | Health, CSRF endpoints | Keep | caddy + identity | REQ-GWY-002 |
 | F-32 | Migration / deploy / log scripts | Rebuild | operations | REQ-PLT-008 |

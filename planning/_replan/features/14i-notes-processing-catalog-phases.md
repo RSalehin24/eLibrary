@@ -1,0 +1,50 @@
+# 14i — notes: backend/processing/test_processing_api_cases part 1 (catalog sync two-phase state machine)
+
+Status: DRAFT (research evidence; read-only record)
+Files: helpers.py (246), catalog_matrix_helpers.py (67), catalog_manual_matrix_cases.py (225), catalog_automation_matrix_cases.py (234), incomplete_catalog_and_domain_versions.py (158), catalog_phase_matrix_tests.py (224), catalog_phase_pause_behaviour.py (214), catalog_phase_resume_flows.py (270).
+
+## Test harness (reveals API shape)
+- State endpoint `GET /api/processing/state/[?includeLists=0]` returns JSON with `sync` (status, phase, runMode, pageIndex, fetchedCount, updatedCount, message, progress{phaseStatuses{sync,request_creation}, phaseStates{sync|request_creation:{status, owner, savedData, baseSyncCheckpointToken}}, requestCreation{baseCheckpointToken,lastRecordId,processedCount,createdCount,unsupportedCount}, savedData{runMode,triggerSource,sessionId,checkpointToken,nextPageIndex,fetchedCount}}) and `automation.catalog.statusMessage`.
+- Mutation endpoints return `{ok:true, versions:{<domain>:<n>...}}` (UI domain version map, `PROCESSING_CARD_KEYS`) — client refetches via versions. Test harness has "advance" endpoints POST /api/processing/sync/advance/ (optional /sync/<scope>/advance/) and /api/processing/pipeline/advance/ -> {advancedCount} which tests call in place of background workers (deterministic ticking).
+- Sync endpoints seen: POST /api/processing/sync/start/ (body optional {remotePages:[[...records], ..., []]} for tests), /sync/pause/, /sync/resume/ {runMode}, /sync/catalog/pause/, /sync/catalog/resume/ {runMode: manual|catalog_automation}, /automation/catalog/run/, /automation/incomplete/run/.
+- Record payload for remote pages: {id, name, url, category, writer, translator, composer, publisher, updatedAt}.
+- Status vocabularies: top-level sync status in {idle, syncing, pausing, paused}; phase status in {not_started, running, pausing, paused, completed}; phase in {sync, request_creation}; runMode in {manual, catalog_automation, incomplete_automation}; trigger source "button"; compat: `phaseStatuses` maps "pausing"->"running"; `phaseStates` keeps real value.
+- Two phases: Phase 1 "sync" (fetch remote catalog pages -> BookRecord upserts), Phase 2 "request_creation" (create BookCreationRequest state "initial" for each record, batch size constant CATALOG_REQUEST_CREATION_BATCH_SIZE), each with owner (manual | catalog_automation), checkpoint tokens (`catalog_sync_checkpoint_token(session_id, next_page_index, fetched_count)`); request-creation is anchored to a base sync checkpoint token.
+
+## Behaviours
+- [PA1] automation rerun after completion: automation/catalog/run -> sync, advance -> request_creation, advance -> status idle with both phaseStatuses completed; running automation again restarts from page 0: status syncing phase sync, pageIndex 0, fetchedCount 0, message "Automated catalog sync is running.", sync running, request_creation not_started, no `requestCreation` key — catalog_phase_matrix_tests.py:4
+- [PA2] Manual matrix (initial -> action -> expected) from catalog_manual_matrix_cases.py (sync_status,request_creation_status):
+  1. (not_started,not_started) + POST /sync/start -> syncing/sync/manual, sync running
+  2. (running,not_started) + /sync/catalog/pause -> status pausing, sync pausing
+  3. (pausing,not_started) + /sync/start -> stays pausing (no-op)
+  4. (paused,not_started) + /sync/catalog/resume {runMode:manual} -> syncing, sync running
+  5. (completed,not_started) + /sync/start -> syncing/sync running (restart) request_creation not_started
+  6. (completed,running[owner catalog_automation]) + /sync/start -> status syncing, PHASE request_creation, runMode catalog_automation (manual start does NOT interrupt running automation request creation; it just reports it), requestCreation payload kept
+  7. (completed,pausing) + /sync/start -> pausing/request_creation/catalog_automation
+  8. (completed,paused) + /sync/start -> syncing, phase sync running, runMode manual, request_creation stays paused with its checkpoint (new sync runs while phase-2 stays paused)
+  9. (completed,completed) + /sync/start -> syncing sync running, request_creation reset to not_started, requestCreation cleared
+  10. (paused,paused) + /sync/catalog/resume {manual} -> syncing sync running, request_creation stays paused with checkpoint
+- [PA3] Automation matrix (catalog_automation_matrix_cases.py) with POST /automation/catalog/run (or resume {runMode:catalog_automation}):
+  1. (not_started,not_started) run -> syncing/sync, runMode catalog_automation, sync owner catalog_automation
+  2. (running,not_started) + /sync/catalog/pause -> pausing/sync
+  3. (pausing,not_started) + run -> stays pausing
+  4. (paused,not_started) + resume -> syncing sync running
+  5. (completed[manual],not_started) + run -> syncing PHASE request_creation (phase 1 skipped because sync completed), request_creation running owner catalog_automation, requestCreation {baseCheckpointToken, lastRecordId "", processedCount 0, createdCount 0, unsupportedCount 0}
+  6. (completed,running) + pause -> pausing/request_creation
+  7. (completed,pausing) + run -> stays pausing
+  8. (completed,paused) + resume(auto) -> syncing/request_creation running (resumes phase 2)
+  9. (completed,completed) + run -> restart: syncing/sync, sync owner catalog_automation, request_creation not_started, requestCreation None
+  10. (paused,paused) + resume(auto) -> syncing/request_creation, sync stays paused, request_creation running
+- [PA4] pausing phase 1 while phase 2 paused: pause request keeps phase-2 checkpoint (processedCount 7, createdCount 5, lastRecordId, baseSyncCheckpointToken unchanged); serialize_sync_state keeps `phaseStates.sync.status=pausing` with savedData.checkpointToken and `phaseStates.request_creation.status=paused`; phaseStatuses sync "running" (compat) — catalog_phase_matrix_tests.py:102, :148
+- [PA5] automation run from a completed sync checkpoint starts phase 2 directly: message "Creating book requests from the synced catalog records.", phaseStates.request_creation.baseSyncCheckpointToken == requestCreation.baseCheckpointToken — :192
+- [PA6] data repair: if stored progress claims BOTH phases running, serialization normalises: when progress.phase == "sync" -> sync running, request_creation paused; when phase == "request_creation" -> sync completed, request_creation running — catalog_phase_pause_behaviour.py:19
+- [PA7] pause requested during a page advance is honoured: after the current page upsert, sync status paused, savedData.nextPageIndex 1, fetchedCount 1; page 1 records persisted, page 2 not — :117
+- [PA8] same for incomplete sync batch advance: runMode "incomplete_automation", status paused, updatedCount 1, only first record resolved_from_incomplete True — :158
+- [PA9] manual sync start takes over a paused automation runtime: automation run -> pause (pausing) -> advance -> paused (runMode catalog_automation, fetchedCount 1) -> POST /sync/start -> syncing, runMode "manual", message "Continuing catalog sync from the saved endpoint.", pageIndex 1 fetchedCount 1 (resumes from saved page, does not restart); final advance -> idle; records persisted; NO BookCreationRequest created (manual sync does not create requests) — catalog_phase_resume_flows.py:4
+- [PA10] automation run takes over paused manual runtime: message "Continuing automated catalog sync from the saved endpoint.", runMode catalog_automation, pageIndex 1; subsequent advance enters request_creation then idle; BookCreationRequest rows created — :52
+- [PA11] request creation phase pause/resume: with batch size 1 and 2 existing + 1 synced record: pause -> message "Pausing automated request creation after the current batch finishes."; advance -> paused, requestCreation processedCount 1, createdCount 1; POST /sync/resume/ {runMode:"catalog_automation"} -> message "Resuming automated request creation from saved progress."; advances -> processed 2 ... finally idle; 3 BookCreationRequest rows state "initial"; `automation.catalog.statusMessage == "Created 3 requests."` — :100
+- [PA12] manual start from paused automation request creation preserves phase-2 checkpoint: new manual sync message "Syncing catalog records.", pageIndex 0 fetchedCount 0, request_creation remains paused with processedCount 1 and OLD baseSyncCheckpointToken; when manual sync completes, status paused with message starting "Sync complete.", sync phaseStatus completed (new checkpoint token differs), request_creation still paused; BookCreationRequest count remains 1; then automation run resumes phase 2 with message "Resuming automated request creation from saved progress." using the OLD base token; advancing completes -> idle, 2 requests — :172
+- [PA13] parse_incomplete_catalog_page(soup): reads `article h2.entry-title a` -> entries {source_url (made absolute https://www.example.com/books/...), title "Sample Incomplete Book", author_line "Sample Author" (split on " - "), raw_data.metadata_source "incomplete_archive_page"} — incomplete_catalog_and_domain_versions.py:3
+- [PA14] fetch_live_incomplete_page(...) returns [] when a paginated page HTTP 404s (end of archive) — :35
+- [PA15] UI domain invalidation rules: `processing_domains_for_request_change(old_state,new_state,record=)`: regular request change -> includes "create-requests" and "create-queue", excludes incomplete domains (PROCESSING_CARD_INCOMPLETE_OVERVIEW, "incomplete-records", "incomplete-completed"); request progression also includes "catalog-overview", "catalog-records"; `processing_domains_for_record_change(before,after,current_request_state=)`: when an incomplete record becomes resolved (category replaced, resolved_from_incomplete True, state created) includes incomplete overview, "incomplete-records", "incomplete-completed"; during hydration (before None) includes overview and records but NOT "incomplete-completed" — :62-158
+- Domain keys seen: create-requests, create-queue, catalog-overview, catalog-records, incomplete-records, incomplete-completed, PROCESSING_CARD_INCOMPLETE_OVERVIEW.

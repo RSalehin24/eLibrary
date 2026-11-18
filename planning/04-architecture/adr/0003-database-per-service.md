@@ -6,7 +6,7 @@ Status: REVIEW
 Shared tables and foreign keys across apps created the legacy coupling.
 
 ## Decision
-One PostgreSQL server (v1), one database and one login role per service. No cross-database access. `sqlx` compile-time query checking against each service's migrated schema. Forward-only migrations with expand/contract.
+One PostgreSQL server (v1; a single container, ADR-0019/D-24), one database and one login role per service. No cross-database access. `sqlx` compile-time query checking against each service's migrated schema. Forward-only migrations with expand/contract.
 
 ## Consequences
 + Ownership enforced by credentials, not by convention.

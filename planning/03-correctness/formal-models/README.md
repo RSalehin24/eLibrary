@@ -5,9 +5,9 @@ Status: DRAFT
 | Model | Tool | Covers | State |
 |---|---|---|---|
 | [tla/JobLifecycle.tla](tla/JobLifecycle.tla) | TLC | ingestion job lifecycle, leases, fencing, publish-once | written, **unchecked** |
-| [tla/ReadOnce.tla](tla/ReadOnce.tla) | TLC | read-once consumption across devices | written, **unchecked** |
-| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox, at-least-once relay, idempotent consumer | written, **unchecked** |
-| [alloy/access.als](alloy/access.als) | Alloy 6 | authorization policy properties | written, **unchecked** |
+| [tla/ReadOnce.tla](tla/ReadOnce.tla) | TLC | read-once consumed on ticket redemption, multi-device race | edited for tickets, **not re-checked** |
+| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox with pull cursor, idempotent consumer, crash and cursor reset | rewritten for pull, **not re-checked** |
+| [alloy/access.als](alloy/access.als) | Alloy 6 | scope-based deny-by-default policy (ownership grants nothing, no wildcard) | edited, **not re-checked** |
 | planned | TLC | account/link/session lifecycle, book lifecycle, artifact publication, progress revisions | see [planned-models](planned-models.md) |
 
 **Honesty note.** These files were written on a machine without Java, so none has
@@ -33,7 +33,7 @@ Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models
 
 ## Interim evidence
 
-`planning/tools/model_mirror.py` re-implements the three TLA+ models and the Alloy policy in Python and checks their properties by explicit-state search (jobs up to 4 jobs × 2 attempts = 1,016,064 states). All properties hold; every deliberately broken variant is detected, including removed fencing (finding F-1, fixed with a ghost per-run outcome). Details: [verification log](../verification-log.md). This validates the *logic* only; TLC/Alloy remain required at G2.
+`planning/tools/model_mirror.py` re-implemented the three earlier TLA+ models and the Alloy policy (it still mirrors the pre-redesign push outbox, session and access models and is out of date for the edited ones) in Python and checks their properties by explicit-state search (jobs up to 4 jobs × 2 attempts = 1,016,064 states). All properties hold; every deliberately broken variant is detected, including removed fencing (finding F-1, fixed with a ghost per-run outcome). Details: [verification log](../verification-log.md). This validates the *logic* only; TLC/Alloy remain required at G2.
 
 ## Rules
 
@@ -49,6 +49,6 @@ Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models
 | Model | Bounds | Rationale |
 |---|---|---|
 | JobLifecycle | 3 jobs, 2 URLs (two jobs share one), MaxAttempts 2 | smallest scope showing URL exclusion, expiry, zombie holders |
-| ReadOnce | 2 accounts, 3 devices | smallest scope with a multi-device race |
-| Outbox | 3 events | duplicates, redelivery, ordering |
+| ReadOnce | 2 accounts, 3 devices | smallest scope with a multi-device ticket-redeem race |
+| Outbox | 3 events | duplicate pulls, crash, ordering by cursor |
 | access | 6 atoms per signature | small-scope hypothesis |

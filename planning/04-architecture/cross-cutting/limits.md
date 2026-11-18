@@ -20,21 +20,22 @@ through this table.
 | Lists | admin page size | 200 | 400 |
 | Exports | rows | 50,000 | 422 `export_too_large` |
 | Accounts | Kindle addresses | 5 | 422 |
-| Library | highlights per book per account | 5,000 | 422 |
-| Library | note length | 10,000 chars | 422 |
+| Reader | highlights per book per account | 5,000 | 422 |
+| Reader | note length | 10,000 chars | 422 |
 | Sessions | idle / absolute | 12 h / 30 d | expiry |
-| Capability | TTL | 300 s | expiry |
+| Reading ticket | TTL | 15 min (900 s) | expiry; reopen |
+| Reader | opens per user | 30 / hour | 429 |
 | Links | password link TTL | 24 h (setup 7 d) | expiry |
 | Acquisition | concurrent requests per source host | 2 | queued |
 | Acquisition | request rate per host | 1 req/s sustained | delay |
 | Acquisition | per-page bytes / per-book pages | 5 MiB / 5,000 | job → Review |
 | Acquisition | fetch retries (per URL) | 4, exponential 2 s→60 s, jitter | mark failed |
 | Ingestion | job attempts | 3 | Failed |
-| Ingestion | job lease | 120 s, renewed every 30 s | lease expiry |
+| Ingestion | job lease / heartbeat | 120 s visibility timeout, heartbeat every 30 s | lease expiry, job re-queued |
 | Ingestion | concurrent jobs (global / per source) | 4 / 2 | queued |
 | Ingestion | block count per document | 200,000 | job → Review |
 | Builders | EPUB size | 100 MiB | build fails typed |
-| Outbox | relay batch / retry horizon | 100 / 7 d then dead-letter | alert |
+| Events | pull batch / retention | 500 / 30 d and only past all consumer cursors | alert on cursor lag > 5 min |
 | DB | statement timeout | 5 s (read) / 30 s (write) | error |
 | DB | pool size per service | 10 | queued, then 503 |
 | Memory | per-request allocation guard | 64 MiB via bounded readers | abort |

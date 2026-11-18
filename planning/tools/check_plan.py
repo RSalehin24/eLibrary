@@ -30,7 +30,7 @@ INV_RE = re.compile(r"^- \*\*(INV-[A-Z]{3}-\d{3})\*\*\s*·\s*([a-z ,]+?)\s*·\s*
 LINK_RE = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)")
 VERIFY = {"type", "db", "model", "prop", "unit", "e2e", "gold", "fuzz", "review", "drill"}
 SERVICE_FILES = ["README.md", "domain-model.md", "api-contract.md", "state-machines.md", "test-plan.md"]
-SERVICES = ["identity", "access", "catalog", "content", "library", "notify", "ingestion"]
+SERVICES = ["identity", "catalog", "reader", "ingestion", "notify"]
 PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME)\b|\?\?\?")
 
 errors: list[str] = []
@@ -147,7 +147,7 @@ def check_services():
         for f in SERVICE_FILES:
             if not (d / f).exists():
                 err(f"05-services/{s}: missing {f}")
-    for s in ("gateway", "web"):
+    for s in ("web",):
         if not (ROOT / "05-services" / s / "README.md").exists():
             err(f"05-services/{s}: missing README.md")
 

@@ -1,6 +1,8 @@
 # ADR-0016 — Reader consumes chapters, not the EPUB file
 
-Status: ACCEPTED
+Status: SUPERSEDED
+
+Superseded by [ADR-0023](0023-reader-renders-whole-book.md) (owner decision D-28: the reader serves the whole book).
 
 ## Context
 "Read requires an account" is unenforceable once the whole EPUB is delivered to the browser. The legacy reader parses EPUB client-side.

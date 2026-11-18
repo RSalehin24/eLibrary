@@ -1,0 +1,12 @@
+# Evidence A — legacy backend (Django + DRF)
+
+Status: DRAFT
+
+Source: read-only subagent survey of `archive/app/backend` (~238 files, ~41k lines); not read in depth.
+
+- **Apps:** `common` (audit log, saved filters, health, throttles, epub/text utils, source-site audits, permissions), `accounts` (email-login user, TOTP 2FA, password setup/reset, managed users, Kindle addresses), `catalog` (books, contributors, series, categories, user shelf, generated assets, curated documents, exports, manual books), `ingestion` (submissions, title resolution, jobs, source catalog, curation, automation, scraper + EPUB pipeline), `processing` (book records, creation requests, sync, automation, UI projection read-model), `access` (grants, reader/preview sessions, bookmarks, highlights, reading sessions, downloads, send-to-Kindle).
+- **Coupling:** catalog ↔ ingestion point at each other; `common/permissions.py` imports access and catalog; access, catalog, ingestion and accounts all FK to the user and to `Book`; `processing` duplicates catalog/ingestion concepts (BookRecord, BookCreationRequest, SourceCatalogEntry) and adds a UI projection layer.
+- **API prefixes:** `/api/{auth,catalog,ingestion,processing,access}`; book-scoped routes appear under both catalog and access; reader has a token family and a slug family (duplicated bookmark/highlight routes).
+- **Auth:** cookie sessions only (no JWT), CSRF, HttpOnly/SameSite=Lax; roles = Django superuser/staff + `PermissionGrant` rows with 12 scopes (submit:create, preview:html, read:durable, read:once, download:file, send:kindle, metadata:edit, physical_books:view, processing:manage, access:manage, source_records:view, admin:full_control), global or narrowed to book/category/contributor, with expiry. TOTP via django_otp; middleware blocks all `/api/` until 2FA setup.
+- **Jobs:** Celery + Redis; ingestion tasks (process submission, curation run, refresh source catalog, catalog automation, recover stale jobs, heartbeat) and processing tasks (sync, create requests, automation, maintenance, runtime tick); beat runs several every minute, heartbeat every 5 s; worker recycled at 400 MB.
+- **Pain points:** god files (`book_manifest.py` 2,327 lines, `content_segment_extraction.py` 1,475, `metadata.py` 1,110, `epub_builder.py` 990); mechanical `*_modules`/`*_support` splitting; "common" is not generic; stray one-off scripts in backend root; no `tests` directory under `apps/*`.

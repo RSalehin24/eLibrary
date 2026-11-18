@@ -10,4 +10,4 @@ Server-side opaque sessions (256-bit random, SHA-256 hashed at rest), HttpOnly S
 
 ## Consequences
 + Immediate revocation, simple model for TLA+.
-− Session store lookup per request (cached 5 s by gateway, within the stated staleness bound).
+− Session store lookup per request (Caddy forward-auth calls identity `/internal/authorize` per request, [ADR-0024](0024-caddy-forward-auth-deny-by-default.md); a decision cache of at most 5 s is allowed).

@@ -14,7 +14,7 @@ Django 5.2 + DRF, Celery + Redis, PostgreSQL 16, React 18 + Vite, Docker Compose
 | catalog | Book, Contributor, Series, Category, BookGroup, UserBook, UserBookKindleSend, exports | 3.9k | Book row stores `main_content_html`, `toc`, `content_items` JSON inline |
 | ingestion | scraper, normalization, EPUB/HTML builders, submissions, jobs, curation, catalog sync | 20.7k | 2.3k-line `book_manifest.py`; 1.5k-line segment extraction |
 | processing | UI-facing projection of ingestion state (BookRecord, BookCreationRequest, sync, UI projections) | 8.5k | duplicates ingestion state |
-| access | PermissionGrant, preview sessions, reading sessions, bookmarks, highlights, opening records | 2.0k | CFI anchors |
+| access (legacy app; now identity and reader) | PermissionGrant, preview sessions, reading sessions, bookmarks, highlights, opening records | 2.0k | CFI anchors |
 | common | base models, permissions, audit log, saved filters, text utils | 2.3k | imports domain apps (inverted dependency) |
 
 ## Coupling (cross-app imports)

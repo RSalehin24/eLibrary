@@ -14,8 +14,8 @@ Status: DRAFT · Strategy: [ADR-0013](../../04-architecture/adr/0013-legacy-migr
 | Legacy table / data | Target service & entity | Transformations / risks |
 |---|---|---|
 | `accounts.User` (email, name, kindle_emails, totp_required, is_active, password hash, otp devices) | identity `Account`, `Credential(legacy_pbkdf2)`, `TotpEnrolment` | status: active→Active, `email_setup_pending`→Invited; TOTP secrets re-encrypted with the new key; demo user flagged; hash format `pbkdf2_sha256$…` verified (INV-MIG-003) |
-| `access.PermissionGrant` (12 scopes × targets) | access `Grant` | scope→action map ([access domain](../../05-services/access/domain-model.md)); `read:once`/`read:durable`→Read(mode); `physical_books:view`→`ViewInventory` (if D-01 keeps) else archived; staff/superuser → `Admin` grants + flags |
-| `access.BookOpeningRecord` | access `Opening` | 1:1 |
+| `access.PermissionGrant` (12 scopes × targets) | identity `Grant` | scope→action map ([identity domain](../../05-services/identity/domain-model.md)); `read:once`/`read:durable`→Read(mode); `physical_books:view`→`ViewInventory` (if D-01 keeps) else archived; staff/superuser → `Admin` grants + flags |
+| `access.BookOpeningRecord` | identity grant (read-once consumption) | 1:1 |
 | `catalog.Book` (+ `BookGroup`) | catalog `Book`, `Work` | `BookGroup`→`Work`; books without group → new `Work`; `record_type=physical` → inventory archive (D-01); `review_state`/duplicate-review fields dropped but exported to archive; slug & `catalog_code` preserved verbatim (INV-MIG-002) |
 | `catalog.Contributor` (+ roles via `BookContributor`) | catalog `Agent`, `AgentAlias`, `Credit` | **entity cleanup**: run agent dedupe proposals (fuzzy keys) → curator-approved merge list applied during migration, not guessed |
 | `catalog.Series`, `Category` (+ joins) | catalog `Series`, `Category` | ordinals kept |

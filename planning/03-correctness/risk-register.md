@@ -21,3 +21,4 @@ Likelihood/Impact: L/M/H. Owner is the user unless stated.
 | R-12 | Public search abused (scraping/DoS) | M | M | Rate limits, caching, query bounds, bot rules | Traffic spikes |
 | R-13 | Security incident (credential leak, session theft) | L | H | Threat model, short-lived capabilities, MFA, secret rotation runbook | Audit finding |
 | R-14 | Specification wrong (builds the wrong thing) | M | H | Sign-offs at G0 and G4, prototypes of public pages before backend depth | User rejects prototype |
+| R-15 | Container stack exceeds the host's memory/CPU (9 app containers + Postgres + builds on one host) | M | M | Per-container limits, memory budget table at G1, multi-stage cached builds, consolidation hatch (merge services) | Budget > 70% of host RAM |

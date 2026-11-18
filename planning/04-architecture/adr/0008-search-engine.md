@@ -1,6 +1,8 @@
 # ADR-0008 — Search engine inside catalog (candidate: Tantivy)
 
-Status: DRAFT
+Status: SUPERSEDED
+
+Superseded by [ADR-0020](0020-five-services-no-gateway.md): catalog uses PostgreSQL full-text search with Bengali normalization (brief section 9); no embedded engine.
 
 ## Context
 Bengali search needs custom analysis (normalization, variant folding, light suffix handling, edge n-grams, alias/transliteration), ranking, typo tolerance and facets. PostgreSQL FTS lacks Bengali analyzers; trigram helps with typos.

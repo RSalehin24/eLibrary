@@ -10,11 +10,12 @@ Status: DRAFT
 | Nightly | schedule | fuzzing, mutation tests, Kani proofs, model checking (Q8), E2E matrix, a11y scans, load smoke, `cargo audit` |
 | Corpus | on ingestion/search/ruleset changes | gold run (Q9), query-set run, determinism and conservation checks |
 | Release | tag | all above + full load + epubcheck on gold outputs + SBOM + signed artifacts + staging deploy + smoke |
-| Deploy | manual approval | run migrations (expand), switch symlink, health gate, smoke, auto-rollback on failure |
+| Image build | every merge to `main` and tag | build every service image once (multi-stage), scan, tag with git SHA, push to registry |
+| Deploy | manual approval | pull pinned digests, run `migrate` containers (expand), `docker compose up -d --wait` (health gate), smoke, auto-redeploy of previous digests on failure |
 
 ## Branching
 
-Trunk-based on `main` with short-lived branches; every merge is green; feature flags only for risky rollouts (flag register). Legacy code stays in the existing repository history; the new system starts in a clean top-level directory or repository (decision at P1) so legacy files do not bleed in.
+Trunk-based on `main` with short-lived branches; every merge is green; feature flags only for risky rollouts (flag register). The legacy project is kept read-only in `archive/` at the repository root (D-22); the new system lives in the top-level directories of this repository (`crates/`, `web/`, `deploy/`, …), so legacy files do not bleed in.
 
 ## Migrations discipline
 

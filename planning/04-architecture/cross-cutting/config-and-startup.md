@@ -14,12 +14,13 @@ terminates the process before opening any listener.
 2. Connect to the database with the service role; verify it **cannot** connect to other services' databases (self-test in non-production; checked in deployment tests).
 3. Compare applied migration version with the binary's embedded expected version; mismatch → exit `E_SCHEMA_VERSION`.
 4. Contract handshake with required peers (`/internal/contract`); incompatible → exit `E_CONTRACT`; optional peers → start degraded with a metric.
-5. Warm caches (public keys, grant policy), start workers, then open listeners and flip `/health/ready`.
+5. Verify that every `/api/*` route has a declared scope; a route without one → exit `E_UNDECLARED_ROUTE` (fail closed).
+6. Load keys, start event consumers (and, in `ingestion-worker`, the job loop), then open listeners and flip `/health/ready`.
 
 ## Health
 
 - `/health/live` — process alive (no dependencies).
-- `/health/ready` — database reachable, migrations current, required keys loaded, queue not stuck beyond threshold.
+- `/health/ready` — database reachable, migrations current, required keys loaded, job queue or event cursor not stuck beyond threshold.
 - Readiness never reflects optional peers; degradation is reported in `/health/detail` (internal only).
 
 ## Feature flags

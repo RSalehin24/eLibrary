@@ -1,12 +1,12 @@
 # Classification — front matter, dedication, book info, residual
 
-Status: DRAFT
+Status: DRAFT (reconciled; pure stage, lexicons stored in the ruleset)
 
 Replaces the legacy order-dependent mutate-and-decompose passes with **sequence labeling under a grammar**: each block receives exactly one label, with evidence. Conservation therefore holds by construction.
 
 ## Scope
 
-Applies to the region before the first body chapter (front), the region after the last (back), and — for Type B books — the first segment. It never alters Type A body chapters.
+Runs inside the `curate` job. Applies to the region before the first body chapter (front), the region after the last (back), and — for Type B books — the first segment. It never alters Type A body chapters.
 
 ## Labels (closed set)
 
@@ -54,3 +54,7 @@ Each region's confidence = min over decisions of (margin-normalized score). Belo
 ## Why not a learned model first
 
 The grammar plus lexicons is explainable, testable per rule, and works with the small gold set. A learned scorer (e.g. a linear model over the same features) may replace hand-set weights later if gold metrics justify it (ruleset change, same gates). Local inference is explicitly out of v1.
+
+## Lexicon spelling rule
+
+All lexicon words (dedication markers such as উৎসর্গ, role labels such as লেখক, অনুবাদক, সম্পাদক, সংকলক, publisher words such as প্রকাশক, প্রকাশনী, edition words such as সংস্করণ, প্রথম প্রকাশ, and front-heading names) are stored with their full vowel signs and compared as whole tokens after `exact_key` (see [Bengali normalization](../domain-model.md)). The legacy lists lost vowel signs and matched by substring; both are forbidden. Every lexicon file has golden tests that fail if a listed word differs from its correct spelling or if a longer word containing it matches.

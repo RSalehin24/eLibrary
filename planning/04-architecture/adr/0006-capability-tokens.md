@@ -1,6 +1,8 @@
 # ADR-0006 — Signed, short-lived capabilities for protected bytes
 
-Status: REVIEW
+Status: SUPERSEDED
+
+Superseded by [ADR-0023](0023-reader-renders-whole-book.md) (reading tickets issued by the reader after an identity check) and [ADR-0024](0024-caddy-forward-auth-deny-by-default.md). `access` and `content` no longer exist.
 
 ## Context
 Content must enforce "read requires an account and a grant" without calling access on every byte request, and without trusting URLs.

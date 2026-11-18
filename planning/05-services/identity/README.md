@@ -2,24 +2,42 @@
 
 Status: DRAFT
 
-Who is this person, and have they proven it? Nothing else.
+Who is this person, have they proven it, and what may they do? The only place that decides who may do what (D-27; absorbs the former `access` service).
 
 | | |
 |---|---|
-| Owns | accounts, credentials (Argon2id), TOTP enrolment, password links, sessions, Kindle addresses, login throttling |
-| Does not own | what an account may do (access), books, personal reading data |
-| Requirements | REQ-IDN-001…009, REQ-MIG-003 |
-| Emits | `AccountInvited`, `AccountActivated`, `AccountSuspended`, `AccountReactivated`, `AccountDisabled`, `PasswordLinkIssued`, `SessionRevoked` |
-| Consumes | none |
+| Owns | users, credentials (Argon2id), opaque sessions (cookie), TOTP, invites, password reset, roles, grants, demo-account limits, auth/grant audit log, `events` outbox |
+| Does not own | books, files, reading state, mail delivery |
+| Requirements | REQ-IDN-001...010, REQ-ACC-001...012 (reword pending, see Open questions), REQ-MIG-003 |
+| Emits (outbox) | `user.disabled`, `grant.changed`, `email.requested` (invite, reset, password-changed) |
+| Consumes | none (it is a producer only) |
 | Calls | none |
-| Called by | gateway (session resolve), access (subject facts), notify (addresses) |
+| Called by | Caddy (`/internal/authorize`, forward-auth on every `/api/*` request), catalog / reader / ingestion (`/internal/check`), notify (pulls `/internal/events`), web (public and `/me`, `/admin` routes) |
 
-## Design notes
+## Permission model (brief section 4, binding)
 
-- Roles do not exist here. An account is a person with credentials; abilities are grants in `access`.
-- The setup link and the reset link are the same mechanism with different `purpose`; issuing a new link supersedes the previous one for that account and purpose.
-- `PasswordLinkIssued` carries a one-time secret **reference** (not the secret): notify fetches the link text through a one-shot internal call to avoid persisting secrets in the event log.
-- Demo account: a normal account with `is_demo=true`; the flag is part of the subject assertion; mutations from demo sessions are rejected by access.
-- Superadmin seed: a CLI (`identity seed-admin`), idempotent, interactive password, prints nothing secret.
+- Deny by default. Roles: `reader`, `operator`, `admin`, `demo`. Scopes: `browse`, `preview`, `read`, `read_once`, `download`, `kindle`, `operate`, `manage_catalog`, `manage_users`.
+- **No wildcard roles.** There is no `is_staff`, no `is_superuser`, no `admin:full_control`. A role is a fixed, enumerated scope set (table in [domain model](domain-model.md)); `admin` does not imply `operate` unless the table lists it.
+- Grants are explicit rows `(user, scope, optional book, optional expiry, granted_by)`. Role scopes are global; grants add per-book exceptions (for example `read_once` on one book). Union only, no deny rows, so adding a grant never removes a permission (REQ-ACC-005).
+- **Ownership is a shelf only.** "My Books" lives in catalog and never grants access; identity has no ownership concept (fixes legacy L1).
+- Every `/api/*` route declares its required scope in code; a route with no declaration is rejected at startup (fail closed). Each service registers its route-to-scope table with identity at boot; identity serves it through `/internal/authorize`.
+- Publication state is enforced by the owning service (catalog/reader), because identity does not know books: `/internal/check` receives the book facts from the caller and applies the scope and grant rules; only `published` versions are readable.
 
-See [domain model](domain-model.md) · [API](api-contract.md) · [state machines](state-machines.md) · [tests](test-plan.md).
+## Authentication
+
+- Argon2id passwords (policy in [domain model](domain-model.md)); optional TOTP (two-step enrolment, single-use time step); opaque 256-bit session token in an HttpOnly, Secure, SameSite=Lax cookie, only its hash stored.
+- Accounts are created only by an admin **invite** (or the one-time CLI seed). No public sign-up. Invite acceptance and password reset share one token mechanism with a `purpose`.
+- **Reset without account enumeration (DRAFT proposal, not decided):** `POST /api/identity/password/reset-request` always returns `202` with the same body and does equivalent work for known and unknown addresses (dummy hash, same outbox write path, mail only when the account exists and is Active); rate limited per address and per IP. `confirm` returns one uniform `link_invalid` for unknown, used, expired or superseded tokens. Open question lists the choices.
+- **Demo is a restricted real account** (`demo` role, `is_demo=true`): signed in by a rate-limited `POST /api/identity/demo/sign-in` (never GET), no stored default password, no TOTP, read-only curated set, no download or Kindle, no mutations of profile, password or shelf, disabled by config flag.
+
+## Internal endpoints
+
+| Route | Caller | Purpose |
+|---|---|---|
+| `GET /internal/authorize` | Caddy forward-auth | cookie to verified `X-User-Id`, `X-User-Scopes`, `X-User-Demo` headers, or `401`/`403` |
+| `POST /internal/check` | catalog, reader, ingestion | decide one `(user, scope, book?)` with caller-supplied book facts |
+| `GET /internal/events?after=` | notify, reader, catalog | outbox cursor API |
+
+Service-to-service calls carry an internal service token (audience-bound, short-lived); identity verifies it on `/internal/*`.
+
+See [domain model](domain-model.md) | [API](api-contract.md) | [state machines](state-machines.md) | [tests](test-plan.md).

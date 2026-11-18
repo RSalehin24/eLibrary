@@ -5,7 +5,7 @@ Status: DRAFT
 ## Constraints
 
 - **C-1** Backend and shared code are Rust (stable toolchain pinned in `rust-toolchain.toml`).
-- **C-2** One developer. Operational surface must stay small: PostgreSQL, an object/file store, a reverse proxy. No broker, no Redis in v1.
+- **C-2** One developer. Operational surface must stay small: PostgreSQL, an object/file store, a reverse proxy (Caddy), all run as Docker Compose containers (ADR-0019). No broker, no Redis in v1.
 - **C-3** Bengali is the primary content language; English is secondary. All text handling must be Unicode-correct.
 - **C-4** Existing production data (~1,800 published books, accounts, annotations) must be migrated without loss.
 - **C-5** Anonymous visitors may search and preview; reading requires an account.

@@ -1,79 +1,86 @@
 ------------------------------- MODULE ReadOnce -------------------------------
-(* Read-once access across devices.
-   Covers INV-ACC-006 (at most one consumed opening; consume only on success;
-   reconnect is not a new opening) and INV-LIB-008 (one live session per account).
-   The race this models: two devices begin opening at the same time and both
-   succeed. The Busy guard prevents it.
-   STATUS: written, NOT YET MODEL-CHECKED. Must pass TLC at gate G2. *)
+(* Read-once access with reading tickets (ADR-0023, ADR-0024).
+   Covers INV-ACC-006: at most one consumed use per (user, book); the use is
+   consumed when a ticket is successfully REDEEMED, not when it is issued
+   (open), and never when the copy is missing/building.
+   Several devices may each hold an issued ticket; the identity check
+   (consume with PK insert on (user, book)) is atomic, so only one redeem wins.
+   Reloading with an already redeemed ticket does not consume again.
+   INV-LIB-008 (one live session) is RETIRED; the race it modeled is now this one.
+   STATUS: edited for the ticket design, NOT MODEL-CHECKED. Must pass TLC at gate G2. *)
 EXTENDS Naturals, FiniteSets
 
 CONSTANTS Accounts, Devices
 
-Phases == {"None", "Preparing", "Active", "Closed"}
+TicketStates == {"None", "Issued", "Redeemed", "Denied"}
 
-VARIABLES phase,     \* (account, device) -> session phase
-          openings   \* account -> number of consumed openings
+VARIABLES ticket,    \* (account, device) -> ticket state
+          copyReady, \* TRUE when the reading copy for the bound version is Ready
+          uses       \* account -> number of consumed uses (identity read_once row)
 
-vars == <<phase, openings>>
+vars == <<ticket, copyReady, uses>>
 
 TypeOK ==
-  /\ phase    \in [Accounts \X Devices -> Phases]
-  /\ openings \in [Accounts -> Nat]
-
-Busy(a) == \E d \in Devices : phase[<<a, d>>] \in {"Preparing", "Active"}
+  /\ ticket    \in [Accounts \X Devices -> TicketStates]
+  /\ copyReady \in BOOLEAN
+  /\ uses      \in [Accounts -> Nat]
 
 Init ==
-  /\ phase    = [p \in Accounts \X Devices |-> "None"]
-  /\ openings = [a \in Accounts |-> 0]
+  /\ ticket    = [p \in Accounts \X Devices |-> "None"]
+  /\ copyReady \in BOOLEAN
+  /\ uses      = [a \in Accounts |-> 0]
 
-StartOpen(a, d) ==
-  /\ phase[<<a, d>>] \in {"None", "Closed"}
-  /\ openings[a] = 0
-  /\ ~Busy(a)
-  /\ phase' = [phase EXCEPT ![<<a, d>>] = "Preparing"]
-  /\ UNCHANGED openings
+\* Open: the read scope is checked and a ticket issued; nothing is consumed.
+Issue(a, d) ==
+  /\ ticket[<<a, d>>] \in {"None", "Denied"}
+  /\ ticket' = [ticket EXCEPT ![<<a, d>>] = "Issued"]
+  /\ UNCHANGED <<copyReady, uses>>
 
-\* The opening is consumed only when preparation succeeds.
-PrepareOk(a, d) ==
-  /\ phase[<<a, d>>] = "Preparing"
-  /\ phase'    = [phase    EXCEPT ![<<a, d>>] = "Active"]
-  /\ openings' = [openings EXCEPT ![a] = @ + 1]
+\* Redeem succeeds: copy is Ready and the atomic consume wins (no use yet).
+RedeemConsume(a, d) ==
+  /\ ticket[<<a, d>>] = "Issued"
+  /\ copyReady
+  /\ uses[a] = 0
+  /\ ticket' = [ticket EXCEPT ![<<a, d>>] = "Redeemed"]
+  /\ uses'   = [uses EXCEPT ![a] = @ + 1]
+  /\ UNCHANGED copyReady
 
-PrepareFail(a, d) ==
-  /\ phase[<<a, d>>] = "Preparing"
-  /\ phase' = [phase EXCEPT ![<<a, d>>] = "None"]
-  /\ UNCHANGED openings
+\* Redeem loses the race or the use is already consumed by another ticket.
+RedeemDenied(a, d) ==
+  /\ ticket[<<a, d>>] = "Issued"
+  /\ copyReady
+  /\ uses[a] >= 1
+  /\ ticket' = [ticket EXCEPT ![<<a, d>>] = "Denied"]
+  /\ UNCHANGED <<copyReady, uses>>
 
-\* Refresh or proxy retry within the active session: no new opening.
-Reconnect(a, d) ==
-  /\ phase[<<a, d>>] = "Active"
+\* Copy missing or building: typed error, nothing consumed, ticket stays Issued.
+RedeemCopyUnavailable(a, d) ==
+  /\ ticket[<<a, d>>] = "Issued"
+  /\ ~copyReady
   /\ UNCHANGED vars
 
-Close(a, d) ==
-  /\ phase[<<a, d>>] = "Active"
-  /\ phase' = [phase EXCEPT ![<<a, d>>] = "Closed"]
-  /\ UNCHANGED openings
+\* Reload with a redeemed ticket: allowed, no new use.
+Reload(a, d) ==
+  /\ ticket[<<a, d>>] = "Redeemed"
+  /\ UNCHANGED vars
+
+CopyChanges == copyReady' = ~copyReady /\ UNCHANGED <<ticket, uses>>
 
 Next ==
-  \E a \in Accounts, d \in Devices :
-    StartOpen(a, d) \/ PrepareOk(a, d) \/ PrepareFail(a, d) \/ Reconnect(a, d) \/ Close(a, d)
+  \/ CopyChanges
+  \/ \E a \in Accounts, d \in Devices :
+       Issue(a, d) \/ RedeemConsume(a, d) \/ RedeemDenied(a, d)
+       \/ RedeemCopyUnavailable(a, d) \/ Reload(a, d)
 
 Spec == Init /\ [][Next]_vars
 
-AtMostOneOpening ==
-  \A a \in Accounts : openings[a] <= 1
+AtMostOneUse ==
+  \A a \in Accounts : uses[a] <= 1
 
-AtMostOneLiveSession ==
+\* A use exists iff exactly one device holds a Redeemed ticket.
+UseIffOneRedeemed ==
   \A a \in Accounts :
-    Cardinality({d \in Devices : phase[<<a, d>>] \in {"Preparing", "Active"}}) <= 1
+    Cardinality({d \in Devices : ticket[<<a, d>>] = "Redeemed"}) = uses[a]
 
-PreparingNeverConsumed ==
-  \A a \in Accounts, d \in Devices : phase[<<a, d>>] = "Preparing" => openings[a] = 0
-
-ActiveOrClosedMeansConsumed ==
-  \A a \in Accounts, d \in Devices :
-    phase[<<a, d>>] \in {"Active", "Closed"} => openings[a] = 1
-
-Safety == TypeOK /\ AtMostOneOpening /\ AtMostOneLiveSession
-          /\ PreparingNeverConsumed /\ ActiveOrClosedMeansConsumed
+Safety == TypeOK /\ AtMostOneUse /\ UseIffOneRedeemed
 ===============================================================================

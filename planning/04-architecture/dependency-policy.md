@@ -16,6 +16,18 @@ Rule from the owner's `AGENTS.md`: **no new dependencies without approval; prefe
 
 Few, large, well-maintained crates over many small ones; avoid crates that duplicate each other; pure-Rust preferred; no crates with network access at build time beyond the registry; vendored/audited if critical (crypto, parsing of hostile input).
 
+## Containers and deployment tooling (PROPOSED, need owner approval at P1 start)
+
+| Area | Candidate | Why | Notes |
+|---|---|---|---|
+| Container runtime | Docker Engine + Compose v2 plugin | required by D-22 | system packages; owner approves installation |
+| Edge proxy image | Caddy (official image, pinned by digest) | D-23 | automatic HTTPS |
+| Database image | PostgreSQL 16 (official image, pinned by digest) | D-24 | one container, database + role per service |
+| Rust build/runtime base | official `rust` builder + minimal runtime (distroless or `debian-slim`; choice at P1, pinned by digest) | multi-stage service images | musl vs glibc decided at P1 |
+| Web build/runtime base | official `node` LTS image (pinned) | Angular build and SSR | |
+| Image registry | private registry or image archive | release transport | decide at P1 |
+| Dev mail sink | a SMTP sink image (candidate: Mailpit) | local Kindle/mail flows | dev/CI only; needs approval |
+
 ## Register (all PROPOSED — none installed, none approved)
 
 | Area | Candidate | Std insufficient because | Needed | Notes |
@@ -39,7 +51,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | HTML sanitizing | `ammonia` | | P1(6a) | |
 | ZIP/EPUB | `zip` | no archive in std | P1(6a) | reproducible writer |
 | Image/SVG/text shaping | `resvg`, `tiny-skia`, `rustybuzz`, an image codec crate | covers need shaping | P6 (spike S-03) | pending spike |
-| Search engine | `tantivy` | no FTS in std | P4 (spike S-01) | pending spike; fallback Postgres |
+| Search engine | `tantivy` | no FTS in std | P4 (spike S-01) | NOT NEEDED: ADR-0020 uses PostgreSQL FTS; row kept until the owner removes it (unregistered, unapproved) |
 | Frontend framework | `typescript`, `@angular/core`, `@angular/common`, `@angular/router`, `@angular/forms`, `@angular/platform-browser`, `@angular/ssr` (+ Angular CLI, build tooling) | UI framework and SSR; decision D-02 | P4 (verify versions in S-02) | one Angular major, pinned |
 | Frontend design | `@angular/material`, `@angular/cdk` | Material Design 3 components and accessibility primitives; decision D-16 | P4 | the only UI component library; no second library without approval |
 | Frontend reactive | `rxjs` | peer requirement of Angular HTTP/router | P4 | prefer signals in app code |
