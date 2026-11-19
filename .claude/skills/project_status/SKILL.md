@@ -1,5 +1,5 @@
 ---
-name: resume
+name: project_status
 description: Start a session cheaply - read planning/STATUS.md only and report stage, next action, blockers in 5 lines.
 disable-model-invocation: true
 ---

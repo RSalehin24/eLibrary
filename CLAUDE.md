@@ -43,7 +43,7 @@ Precedence: the user's explicit instruction, then the nearest `AGENTS.md`/this f
 - Report what was changed vs only inspected, and what could not be verified.
 
 ## Token efficiency and parallelism
-- Start with `/resume` (reads only `STATUS.md`). Read files by section (`offset`/`limit`) or `rg` first; never re-read a file already in context.
+- Start with `/project_status` (reads only `STATUS.md`). Read files by section (`offset`/`limit`) or `rg` first; never re-read a file already in context.
 - Independent work goes in parallel in one message: multiple tool calls, or subagents via `/fanout` (`.claude/agents/`: `plan-writer`, `plan-reviewer`, `plan-checker`, built-in `Explore`). Subagents work on disjoint files and return <=8 lines; the parent alone edits STATUS/DECISIONS/index files.
 - Delegate broad searches and bulk checks to subagents (haiku for mechanical checks); keep the main thread for decisions and merging.
 - A hook runs `check_plan.py` after plan edits and is silent when clean; do not re-run it manually after each edit, only once at the end of a stage.
