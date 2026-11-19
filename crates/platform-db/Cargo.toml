@@ -13,3 +13,8 @@ workspace = true
 platform-config = { path = "../platform-config" }
 sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate"] }
 thiserror = "2.0.21"
+
+[dev-dependencies]
+platform-testkit = { path = "../platform-testkit" }
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }

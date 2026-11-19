@@ -84,6 +84,9 @@ pub fn run_all(report: &mut impl std::io::Write) -> Vec<&'static str> {
     if !boundaries_clean(report) {
         failed.push("Q6 dependency boundaries");
     }
+    if !database_tests(report) {
+        failed.push("Q4 database tests");
+    }
     if !register_clean(report) {
         failed.push("Q10 dependency register");
     }
@@ -205,5 +208,45 @@ fn report_lines(
             let _ = writeln!(report, "FAIL {name}: {message}");
             false
         }
+    }
+}
+
+const TEST_COMPOSE: &str = "deploy/compose/compose.test.yaml";
+const TEST_POSTGRES_ENDPOINT: &str = "127.0.0.1:55432";
+
+/// Gate Q4: start the throwaway Postgres, run the ignored database tests against it, remove it.
+fn database_tests(report: &mut impl std::io::Write) -> bool {
+    let started = compose_test(&["up", "-d", "--wait", "postgres"]);
+    let passed = started && run_database_tests(report);
+    let _ = compose_test(&["down", "-v"]);
+    let _ = writeln!(
+        report,
+        "{} Q4 database tests",
+        if passed { "ok  " } else { "FAIL" }
+    );
+    passed
+}
+
+fn compose_test(arguments: &[&str]) -> bool {
+    Command::new("docker")
+        .args(["compose", "-f", TEST_COMPOSE])
+        .args(arguments)
+        .output()
+        .is_ok_and(|output| output.status.success())
+}
+
+fn run_database_tests(report: &mut impl std::io::Write) -> bool {
+    let output = Command::new("cargo")
+        .args(["test", "--workspace", "--quiet", "--", "--ignored"])
+        .env("TESTKIT_POSTGRES", TEST_POSTGRES_ENDPOINT)
+        .output();
+    match output {
+        Ok(output) if output.status.success() => true,
+        Ok(output) => {
+            let _ = report.write_all(&output.stdout);
+            let _ = report.write_all(&output.stderr);
+            false
+        }
+        Err(_) => false,
     }
 }
