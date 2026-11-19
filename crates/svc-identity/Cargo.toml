@@ -15,7 +15,15 @@ platform-http = { path = "../platform-http" }
 platform-obs = { path = "../platform-obs" }
 platform-startup = { path = "../platform-startup" }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
-sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros", "time", "uuid"] }
+
+contracts-ids = { path = "../contracts-ids" }
+domain-credentials = { path = "../domain-credentials" }
+platform-random = { path = "../platform-random" }
+platform-time = { path = "../platform-time" }
+sha2 = "0.11.1"
+uuid = "1.29.3"
+thiserror = "2.0.21"
 
 [dev-dependencies]
 platform-testkit = { path = "../platform-testkit" }

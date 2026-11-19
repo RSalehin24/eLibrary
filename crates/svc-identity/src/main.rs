@@ -4,9 +4,7 @@ use axum::Router;
 use platform_http::ContractVersion;
 use platform_obs::ServiceIdentity;
 use platform_startup::{ServiceSpec, StartupError, run};
-use sqlx::migrate::Migrator;
-
-static MIGRATIONS: Migrator = sqlx::migrate!("./migrations");
+use svc_identity::MIGRATIONS;
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {

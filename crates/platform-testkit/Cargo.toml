@@ -13,3 +13,5 @@ workspace = true
 platform-db = { path = "../platform-db" }
 sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate"] }
 thiserror = "2.0.21"
+platform-time = { path = "../platform-time" }
+time = "0.3.55"
