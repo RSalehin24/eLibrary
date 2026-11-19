@@ -5,12 +5,15 @@ WORKDIR /src
 COPY Cargo.toml Cargo.lock clippy.toml ./
 COPY crates ./crates
 COPY xtask ./xtask
-RUN cargo build --release --locked -p "svc-${SERVICE}"
+RUN cargo build --release --locked -p "svc-${SERVICE}" \
+ && mkdir /out \
+ && find target/release -maxdepth 1 -type f -executable -name "svc-${SERVICE}*" -exec cp {} /out/ \;
 
 FROM debian:trixie-slim
 ARG SERVICE
 RUN useradd --system --no-create-home --uid 10001 elibrary
-COPY --from=build /src/target/release/svc-${SERVICE} /usr/local/bin/service
+COPY --from=build /out/ /usr/local/bin/
+RUN ln -s "/usr/local/bin/svc-${SERVICE}" /usr/local/bin/service
 USER 10001
 # why: slim has no curl; bash can open a TCP socket for the internal health probe.
 HEALTHCHECK --interval=10s --timeout=3s --start-period=10s --start-interval=1s --retries=3 \

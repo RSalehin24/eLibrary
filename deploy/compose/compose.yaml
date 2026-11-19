@@ -255,6 +255,27 @@ services:
       ingestion-migrate:
         condition: service_completed_successfully
 
+  ingestion-worker:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: ingestion}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: ingestion
+      ELIBRARY_DATABASE_USER: ingestion
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/ingestion_db_password
+    secrets:
+      - ingestion_db_password
+    entrypoint: ["/usr/local/bin/svc-ingestion-worker"]
+    depends_on:
+      ingestion-migrate:
+        condition: service_completed_successfully
+
   notify-migrate:
     <<: *service-base
     build:
