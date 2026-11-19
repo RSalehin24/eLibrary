@@ -54,7 +54,7 @@ elibrary/                       (this repository; legacy kept read-only in archi
 |---|---|
 | `domain-*` | other `domain-*`, `contracts-ids`, std/third-party pure crates |
 | `contracts-*` | `contracts-ids`, serde/schemars |
-| `platform-*` | `contracts-*` (ids/events only), third-party |
+| `platform-*` | other `platform-*`, `contracts-*` (ids/events only), third-party (I-25) |
 | `svc-X` (incl. `svc-gateway`) | `platform-*`, `domain-*`, `contracts-*` (any), **never** `svc-Y` |
 
 Consequences: a service can be built, tested and understood from its own crate plus

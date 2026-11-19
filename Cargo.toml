@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["crates/domain-text", "crates/contracts-ids", "crates/platform-time", "crates/platform-config", "crates/platform-http", "crates/platform-db", "crates/platform-obs", "crates/svc-identity"]
+members = ["crates/domain-text", "crates/contracts-ids", "crates/platform-time", "crates/platform-config", "crates/platform-http", "crates/platform-db", "crates/platform-obs", "crates/svc-identity", "xtask"]
 
 [workspace.package]
 edition = "2024"
