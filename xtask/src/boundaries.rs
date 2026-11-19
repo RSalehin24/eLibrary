@@ -7,6 +7,7 @@ pub type Edges = BTreeMap<String, Vec<String>>;
 
 const CONTRACTS_IDS: &str = "contracts-ids";
 const CONTRACTS_HTTP: &str = "contracts-http";
+const PLATFORM_TIME: &str = "platform-time";
 
 /// Every forbidden edge, as a readable line. Empty when the graph is clean.
 #[must_use]
@@ -21,7 +22,12 @@ pub fn violations(edges: &Edges) -> Vec<String> {
 
 fn is_allowed(from: &str, to: &str) -> bool {
     match Layer::of(from) {
-        Layer::Domain => to == CONTRACTS_IDS || Layer::of(to) == Layer::Domain,
+        // why: domain code needs the Scope wire enum and the Instant value type (not the Clock
+        // trait's I/O); logged as I-28.
+        Layer::Domain => {
+            [CONTRACTS_IDS, CONTRACTS_HTTP, PLATFORM_TIME].contains(&to)
+                || Layer::of(to) == Layer::Domain
+        }
         // why: shared HTTP wire types (error envelope, scopes) have one home; logged as I-26.
         Layer::Contracts => to == CONTRACTS_IDS || to == CONTRACTS_HTTP,
         // why: platform crates build on each other (obs and db use config); logged as I-25.
@@ -77,7 +83,7 @@ mod tests {
     fn domain_must_not_touch_platform_or_services() {
         let found = violations(&edges(&[(
             "domain-text",
-            &["platform-time", "svc-x", "domain-access"],
+            &["platform-db", "svc-x", "domain-access"],
         )]));
         assert_eq!(found.len(), 2);
     }

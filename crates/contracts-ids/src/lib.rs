@@ -71,3 +71,7 @@ uuid_id!(
     /// One section of a book version.
     SectionId
 );
+uuid_id!(
+    /// A reading ticket (the id; the secret is separate and never stored in clear).
+    TicketId
+);

@@ -73,3 +73,17 @@ fn page_round_trips_with_and_without_next() -> Result<(), serde_json::Error> {
     assert_eq!(serde_json::from_str::<Page<i32>>(&json)?, page);
     Ok(())
 }
+
+#[test]
+fn scope_names_match_the_wire_format_and_all_is_complete() -> Result<(), serde_json::Error> {
+    for scope in Scope::ALL {
+        assert_eq!(
+            serde_json::to_string(&scope)?,
+            format!("\"{}\"", scope.as_str())
+        );
+    }
+    let names: std::collections::BTreeSet<&str> =
+        Scope::ALL.iter().map(|scope| scope.as_str()).collect();
+    assert_eq!(names.len(), Scope::ALL.len(), "scope names are unique");
+    Ok(())
+}

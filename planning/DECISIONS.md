@@ -78,5 +78,6 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-70 | 2026-11-20 | **Crates approved for the service token and outbox client**: `hmac`, `sha2`, `subtle`, `getrandom`, plus `hyper` and `hyper-util` as the internal HTTP client (no `reqwest`) | owner choice (recommended option) |
 | D-71 | 2026-11-20 | **ESLint set approved for `web/`** (dev only): `eslint`, `typescript-eslint`, `angular-eslint`; enforces coding-standards section 16 | owner choice (recommended option) |
 | D-72 | 2026-11-20 | **Playwright and axe-core approved for `web/`** (dev only): `@playwright/test` (downloads Chromium once) and `axe-core` (no `@axe-core/playwright`) for accessibility and end-to-end checks | owner choice (recommended option) |
+| D-73 | 2026-11-20 | **Crates approved for identity sign-in**: `argon2` (Argon2id password hashing) and `sha1` (TOTP's HMAC-SHA1 only); TOTP and base32 hand-written and tested against the RFC vectors | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).

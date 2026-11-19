@@ -53,7 +53,7 @@ elibrary/                       (this repository; legacy kept read-only in archi
 
 | From | May depend on |
 |---|---|
-| `domain-*` | other `domain-*`, `contracts-ids`, std/third-party pure crates |
+| `domain-*` | other `domain-*`, `contracts-ids`, `contracts-http` (Scope), `platform-time` (Instant value type; I-28), std/third-party pure crates |
 | `contracts-*` | `contracts-ids`, `contracts-http`, serde/utoipa |
 | `platform-*` | other `platform-*`, `contracts-*` (ids/events only), third-party (I-25) |
 | `svc-X` (incl. `svc-gateway`) | `platform-*`, `domain-*`, `contracts-*` (any), **never** `svc-Y` |
