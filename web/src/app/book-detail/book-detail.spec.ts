@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { TestBed } from '@angular/core/testing';
 import { Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
@@ -21,7 +22,7 @@ describe('BookDetail', () => {
     });
     const fixture = TestBed.createComponent(BookDetail);
     await fixture.whenStable();
-    expect(fixture.nativeElement.textContent).toContain('বাংলা ভাষা');
+    expect(TestBed.inject(DOCUMENT).body.textContent).toContain('বাংলা ভাষা');
     expect(TestBed.inject(Title).getTitle()).toBe('বাংলা ভাষা — নমুনা লেখক');
   });
 });

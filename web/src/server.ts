@@ -20,6 +20,7 @@ const CONTENT_TYPES: Record<string, string> = {
   '.woff2': 'font/woff2',
   '.json': 'application/json',
 };
+const DEFAULT_PORT = 4000;
 const FIXTURE_BOOK = {
   slug: 'bangla-bhasha',
   title: 'বাংলা ভাষা',
@@ -50,7 +51,8 @@ function handle(req: IncomingMessage, res: ServerResponse, next: (error?: unknow
   }
   // Spike stand-in for the gateway: the real data comes from /api/catalog through Caddy and the gateway.
   if (path === `/api/catalog/books/${FIXTURE_BOOK.slug}`) {
-    return sendJson(res, FIXTURE_BOOK);
+    sendJson(res, FIXTURE_BOOK);
+    return;
   }
   const file = staticFile(path);
   if (file !== undefined) {
@@ -59,10 +61,20 @@ function handle(req: IncomingMessage, res: ServerResponse, next: (error?: unknow
     createReadStream(file).pipe(res);
     return;
   }
-  angularApp
-    .handle(req)
-    .then((response) => (response ? writeResponseToNodeResponse(response, res) : next()))
-    .catch(next);
+  render(req, res, next).catch(next);
+}
+
+async function render(
+  req: IncomingMessage,
+  res: ServerResponse,
+  next: (error?: unknown) => void,
+): Promise<void> {
+  const response = await angularApp.handle(req);
+  if (response) {
+    await writeResponseToNodeResponse(response, res);
+    return;
+  }
+  next();
 }
 
 function notFound(res: ServerResponse): void {
@@ -71,10 +83,18 @@ function notFound(res: ServerResponse): void {
 }
 
 if (isMainModule(import.meta.url) || process.env['pm_id']) {
-  const server = createServer((req, res) => handle(req, res, () => notFound(res)));
-  server.listen(Number(process.env['PORT'] ?? 4000), '0.0.0.0');
+  const server = createServer((req, res) => {
+    handle(req, res, () => {
+      notFound(res);
+    });
+  });
+  server.listen(Number(process.env['PORT'] ?? DEFAULT_PORT), '0.0.0.0');
   // PID 1 in a container ignores SIGTERM unless handled (S-06): drain and exit.
-  process.on('SIGTERM', () => server.close(() => process.exit(0)));
+  process.on('SIGTERM', () => {
+    server.close(() => {
+      process.exit(0);
+    });
+  });
 }
 
 /** Request handler used by the Angular CLI (dev server and build). */

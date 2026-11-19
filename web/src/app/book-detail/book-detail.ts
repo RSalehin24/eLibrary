@@ -4,7 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Meta, Title } from '@angular/platform-browser';
 import { ActivatedRoute } from '@angular/router';
 
-import { Book } from '../book';
+import { Book, parseBook } from '../book';
 
 @Component({
   selector: 'app-book-detail',
@@ -27,11 +27,16 @@ import { Book } from '../book';
     </mat-card>
   `,
   styles: `
-    :host { display: block; max-width: 48rem; margin: 1rem auto; padding: 0 1rem; }
+    :host {
+      display: block;
+      max-width: 48rem;
+      margin: 1rem auto;
+      padding: 0 1rem;
+    }
   `,
 })
 export class BookDetail {
-  protected readonly book: Book = inject(ActivatedRoute).snapshot.data['book'];
+  protected readonly book: Book = parseBook(inject(ActivatedRoute).snapshot.data['book']);
 
   constructor() {
     inject(Title).setTitle(`${this.book.title} — ${this.book.author}`);

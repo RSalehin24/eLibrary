@@ -76,5 +76,7 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-68 | 2026-11-20 | **epubcheck approved** (W3C, latest stable release jar from its GitHub release) for the ingestion worker publish gate (D-47, D-57) and spike S-04 | owner choice (recommended option) |
 | D-69 | 2026-11-20 | **TLA+ tools (`tla2tools.jar`, TLC) and Alloy 6 approved** as downloaded jars (outside git) to check the formal models in P2 | owner choice (recommended option) |
 | D-70 | 2026-11-20 | **Crates approved for the service token and outbox client**: `hmac`, `sha2`, `subtle`, `getrandom`, plus `hyper` and `hyper-util` as the internal HTTP client (no `reqwest`) | owner choice (recommended option) |
+| D-71 | 2026-11-20 | **ESLint set approved for `web/`** (dev only): `eslint`, `typescript-eslint`, `angular-eslint`; enforces coding-standards section 16 | owner choice (recommended option) |
+| D-72 | 2026-11-20 | **Playwright and axe-core approved for `web/`** (dev only): `@playwright/test` (downloads Chromium once) and `axe-core` (no `@axe-core/playwright`) for accessibility and end-to-end checks | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).
