@@ -72,5 +72,9 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-64 | 2026-11-20 | **Third-party images are pinned by version tag in dev (`postgres:16`, later `caddy:2`); digests are pinned by the release script** | owner choice (recommended option) |
 | D-65 | 2026-11-20 | **`utoipa` generates OpenAPI 3.1 and JSON Schema from the Rust contract types** (`schemars` not used); resolves the ADR-0004 open choice | owner choice (recommended option) |
 | D-66 | 2026-11-20 | **`cargo-deny` and `cargo-audit` approved** as system tools for gate Q5 (package or `cargo install`, whichever exists first) | owner choice (recommended option) |
+| D-67 | 2026-11-20 | **npm packages approved for spike S-02**: Angular CLI, `@angular/*` (core, common, router, forms, platform-browser, platform-server, ssr), `@angular/material`, `@angular/cdk`, `rxjs`, `typescript` and Angular's default test tooling, installed only under `web/` (and a scratch spike first); exact versions recorded after the spike | owner choice (recommended option) |
+| D-68 | 2026-11-20 | **epubcheck approved** (W3C, latest stable release jar from its GitHub release) for the ingestion worker publish gate (D-47, D-57) and spike S-04 | owner choice (recommended option) |
+| D-69 | 2026-11-20 | **TLA+ tools (`tla2tools.jar`, TLC) and Alloy 6 approved** as downloaded jars (outside git) to check the formal models in P2 | owner choice (recommended option) |
+| D-70 | 2026-11-20 | **Crates approved for the service token and outbox client**: `hmac`, `sha2`, `subtle`, `getrandom`, plus `hyper` and `hyper-util` as the internal HTTP client (no `reqwest`) | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).

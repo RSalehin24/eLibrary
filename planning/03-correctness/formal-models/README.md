@@ -2,36 +2,30 @@
 
 Status: DRAFT
 
-Re-baselined 2026-11-19 for the six-service design. Java and TLC/Alloy are still not installed, so no model has been run (installing Java needs the owner's approval; spike S-04, gate G2).
+Re-baselined 2026-11-19 for the six-service design. **Checked 2026-11-20** with TLC 2.19 (`tla2tools.jar` 1.7.4) and Alloy 6.2.0 on Java 27 (D-69); run all with `deploy/scripts/check-models.sh` (gate Q8, about 4 s).
 
 | Model | Tool | Covers | State |
 |---|---|---|---|
-| [tla/JobLifecycle.tla](tla/JobLifecycle.tla) | TLC | ingestion job lifecycle, leases, fencing, publish-once | written, **unchecked**; per-request exclusion and cancel flag to add |
-| [tla/ReadOnce.tla](tla/ReadOnce.tla) | TLC | read-once consumed on ticket redemption, multi-device race | edited for tickets, **not re-checked** |
-| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox, pull cursor, idempotent consumer, crash and cursor reset (consumer side) | rewritten for pull, **not re-checked**; producer extension planned |
-| [alloy/access.als](alloy/access.als) | Alloy 6 | scope-based deny-by-default policy | edited, **not re-checked**, partly stale (Preview public, Demo) |
+| [tla/JobLifecycle.tla](tla/JobLifecycle.tla) | TLC | ingestion job lifecycle, leases, fencing, publish-once | **checked**: `MCJobLifecycle` (3 jobs, 2 URLs, 2 attempts): 37,296 distinct states, Safety and EventuallySettled hold; per-request exclusion and cancel flag still to add |
+| [tla/ReadOnce.tla](tla/ReadOnce.tla) | TLC | read-once consumed on ticket redemption, multi-device race | **checked**: 2,450 distinct states, no error |
+| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox, pull cursor, idempotent consumer, crash and cursor reset (consumer side) | **checked**: Safety (193 states) and Safety with cursor reset (`OutboxReset.cfg`, 373 states), NoLoss under strong fairness of `Apply` (the first run found a crash loop that weak fairness allowed: model assumption fixed and documented); producer extension planned |
+| [alloy/access.als](alloy/access.als) | Alloy 6 | scope-based deny-by-default policy | **checked** and brought up to date (no Demo, `public` and `session` scopes, preview needs a session): 8 assertions, no counterexample within scope 6; a mutation test (TOTP condition removed) makes `ManagementNeedsAuthority` fail, so the checks are not vacuous |
 | planned | TLC and Alloy | AccountLifecycle, EntitlementDecision, TicketLifecycle, VersionLifecycle, PublishSaga, ReaderCopyLifecycle, ProgressRevision, RequestLifecycle, DeliveryLifecycle, Outbox and JobLifecycle extensions | see [planned-models](planned-models.md); all 46 `model` invariants are in [coverage](coverage.md) |
 
-**Honesty note.** These files were written on a machine without Java, so none has
-been run. Gate **G2** requires: every model analyzed, every property satisfied or a
-counterexample resolved (fix model *or* spec), and CI job Q8 green. Until then they are
-specifications, not evidence.
+**What this is and is not.** Each result is exhaustive only within the model's bounds (three events or jobs, two attempts, Alloy scope 6). A passing run shows the model satisfies its properties, not that the Rust code does: the code is tied to the models by property tests and trace replay (planned, P2/P3). Gate **G2** also needs the nine planned models and extensions below, and counterexamples resolved in the model or the requirement.
 
 ## How to run (Linux)
 
 ```
-# TLC: options -config <file>, -workers <num|auto>, -deadlock are VERIFIED in Lamport's official
-# "current-tools" PDF. The documented entry point is `java tlc2.TLC <switches> <Spec>.tla`
-# (standalone-tools page); with a jar on the classpath use: java -cp tla2tools.jar tlc2.TLC ...
-# (the -cp form and the minimum Java version were NOT in the pages read: confirm in spike S-04).
-java -cp tla2tools.jar tlc2.TLC -config JobLifecycle.cfg -workers auto JobLifecycle.tla
-# Alloy 6.2.0 needs Java 17+ (verified). CLI: `java -jar org.alloytools.alloy.dist.jar exec ...`
-# Documented options seen: -c/--command, -o/--output, -t <type>. The `-f` flag I wrote earlier is UNVERIFIED
-# and removed; run `exec --help` in spike S-04 to confirm the options.
-java -jar org.alloytools.alloy.dist.jar exec -o out access.als
+deploy/scripts/check-models.sh       # all models; verifies pinned jar checksums; fails on any counterexample
+# by hand (from planning/03-correctness/formal-models/tla; -deadlock because the models reach terminal states):
+java -cp tla2tools.jar tlc2.TLC -config Outbox.cfg -workers 4 -deadlock Outbox.tla
+java -cp tla2tools.jar tlc2.TLC -config MCJobLifecycle.cfg -workers 4 -deadlock MCJobLifecycle.tla
+# Alloy: `exec` writes a directory per run; -f recreates it; a `check` printed SAT is a counterexample, UNSAT means none
+java -jar org.alloytools.alloy.dist.jar exec -f -o <outdir> alloy/access.als
 ```
 
-Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models intentionally reach terminal states, so run with `-deadlock` or add a `Terminating` stuttering disjunct to `Next` (to decide in S-04).
+TLC config files cannot hold function values, so `JobLifecycle` is checked through the wrapper module `MCJobLifecycle.tla` (it defines `UrlOf`). The jars live under `tools/` (git-ignored) and are pinned by SHA-256 in `check-models.sh`.
 
 ## Interim evidence
 

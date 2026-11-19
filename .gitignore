@@ -107,3 +107,6 @@ deploy/secrets/*
 
 # Local backup output
 /backups/
+
+# Downloaded tools (jars), never committed; versions in the dependency register
+/tools/

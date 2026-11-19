@@ -10,7 +10,7 @@
    Covers INV-RDR-024 and INV-NTF-001 (consumer side: one effect per event,
    cursor advances with the effect); the producer side (INV-PLT-010, INV-IDN-023,
    INV-CAT-024, INV-ING-032) is a planned extension, see ../coverage.md.
-   STATUS: rewritten for pull semantics, NOT MODEL-CHECKED. Must pass TLC at gate G2. *)
+   STATUS: checked with TLC 2.19 (2026-11-20): Safety holds in Spec and SpecWithReset (OutboxReset.cfg), NoLoss holds under SF(Apply). *)
 EXTENDS Naturals, Sequences, FiniteSets
 
 CONSTANT Events
@@ -75,7 +75,10 @@ Next == \/ \E e \in Events : Produce(e)
 NextWithReset == Next \/ ResetCursor
 SpecWithReset == Init /\ [][NextWithReset]_vars
 
-Fairness == WF_vars(Pull) /\ WF_vars(Apply)
+\* Strong fairness for Apply: a consumer that crashes after every Pull would starve under weak
+\* fairness (Apply is never continuously enabled). The assumption is that a consumer able to
+\* make progress infinitely often does (it cannot crash forever); found by TLC at G2 prep.
+Fairness == WF_vars(Pull) /\ SF_vars(Apply)
 
 Spec == Init /\ [][Next]_vars /\ Fairness
 

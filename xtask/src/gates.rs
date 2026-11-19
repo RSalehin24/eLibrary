@@ -10,7 +10,7 @@ struct Step {
     arguments: &'static [&'static str],
 }
 
-const COMMAND_STEPS: [Step; 7] = [
+const COMMAND_STEPS: [Step; 8] = [
     Step {
         name: "Q1 fmt",
         program: "cargo",
@@ -40,6 +40,11 @@ const COMMAND_STEPS: [Step; 7] = [
         name: "Q5 audit",
         program: "cargo",
         arguments: &["audit"],
+    },
+    Step {
+        name: "Q8 models",
+        program: "bash",
+        arguments: &["deploy/scripts/check-models.sh"],
     },
     Step {
         name: "Q7 plan check",

@@ -37,7 +37,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 |---|---|---|---|---|---|
 | Async runtime | `tokio` (APPROVED D-62, in use) | all six | std has no async executor/IO | P1 | single runtime for all services |
 | HTTP server | `axum` (APPROVED D-62, in use), `tower` (APPROVED D-62, dev use) | all six | no HTTP in std | P1 | alternative: `actix-web`; choose one |
-| HTTP client / proxying | `reqwest` or `hyper` client | gateway (proxy, authorize call), all services (internal calls), ingestion (GET-only acquisition) | no HTTP/TLS in std | P1/P6 | thin GET-only wrapper for acquisition |
+| HTTP client / proxying | `hyper` (APPROVED D-70) and `hyper-util` (APPROVED D-70) as the internal client; `reqwest` not used | gateway (proxy, authorize call), all services (internal calls), ingestion (GET-only acquisition) | no HTTP/TLS in std | P1/P6 | thin GET-only wrapper for acquisition |
 | Serialization | `serde` (APPROVED D-62, in use), `serde_json` (APPROVED D-62, dev use) | all six | no derive serialization | P1 | contracts |
 | JSON Schema/OpenAPI | `utoipa` (APPROVED D-65, not yet added; `schemars` not used) | contracts | generating schemas | P1 | one of them (ADR-0004) |
 | Database | `sqlx` (Postgres; APPROVED D-62, in use, features runtime-tokio, postgres, migrate, macros) | identity, catalog, reader, ingestion, notify (not gateway) | no DB client | P1 | compile-time checked queries |
@@ -46,7 +46,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Metrics | `metrics` + Prometheus exporter | all six | none in std | P1 | |
 | IDs | `uuid` (APPROVED D-62, in use) | all except gateway | UUID v5/v7 generation | P1 | enable only needed features |
 | Time | `time` (APPROVED D-62, in use; jiff not chosen) | all six | std lacks calendar/zone | P1 | choose one; prefer `time` unless jiff features are needed |
-| Crypto | `argon2`, `sha2`, `hmac`, `rand`/`getrandom`, `subtle` | identity (hashing, sessions, TOTP), gateway (CSRF token compare) | no crypto in std | P3 | audited RustCrypto family; signature crates (`ed25519-dalek`, PASETO) are no longer needed because tickets are verified by identity (D-37) |
+| Crypto | `argon2`, `sha2` (APPROVED D-70, not yet added), `hmac` (APPROVED D-70, not yet added), `rand`, `getrandom` (APPROVED D-70, not yet added), `subtle` (APPROVED D-70, not yet added) | identity (hashing, sessions, TOTP), gateway (CSRF token compare) | no crypto in std | P3 | audited RustCrypto family; signature crates (`ed25519-dalek`, PASETO) are no longer needed because tickets are verified by identity (D-37) |
 | TOTP | hand-rolled on `hmac`+`sha1` (RFC 6238 is small) or `totp-rs` | identity | | P3 | prefer hand-rolled + tests |
 | Cookies | `cookie` (or hand-written header handling) | identity, gateway | no cookie parsing in std | P3 | smallest option preferred |
 | SMTP | `lettre` (SMTP transport) | notify | no SMTP in std | P1 | alternative: minimal hand-written SMTP client (not recommended) |
@@ -59,7 +59,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | ZIP/EPUB | `zip` | ingestion (writer), reader (reader of EPUB) | no archive in std | P1 | reproducible writer |
 | Image/SVG/text shaping | `resvg`, `tiny-skia`, `rustybuzz`, an image codec crate | ingestion (covers) | covers need shaping | P6 (spike S-03) | pending spike |
 | Full-text search | none: PostgreSQL FTS (and `pg_trgm` extension of the pinned image, if the search spike needs it) | catalog | | P4 (spike S-01) | no embedded engine; `tantivy` withdrawn from the register |
-| Frontend framework | `typescript`, `@angular/core`, `@angular/common`, `@angular/router`, `@angular/forms`, `@angular/platform-browser`, `@angular/platform-server`, `@angular/ssr` (+ Angular CLI, build tooling) | web | UI framework and SSR (D-02, D-39) | P4 (verify versions in S-02) | one Angular major, pinned; the SSR server's HTTP layer comes with `@angular/ssr` (confirm in S-02) |
+| Frontend framework (APPROVED D-67 for spike S-02; versions recorded after the spike) | `typescript`, `@angular/core`, `@angular/common`, `@angular/router`, `@angular/forms`, `@angular/platform-browser`, `@angular/platform-server`, `@angular/ssr` (+ Angular CLI, build tooling) | web | UI framework and SSR (D-02, D-39) | P4 (verify versions in S-02) | one Angular major, pinned; the SSR server's HTTP layer comes with `@angular/ssr` (confirm in S-02) |
 | Frontend design | `@angular/material`, `@angular/cdk` | web | Material Design 3 components and accessibility primitives; D-16 | P4 | the only UI component library; no second library without approval |
 | Frontend reactive | `rxjs` | web | peer requirement of Angular HTTP/router | P4 | prefer signals in app code |
 | Frontend lint/format | `eslint`, `typescript-eslint`, Angular ESLint plugin, `prettier` or Angular formatting | web | | P4 | dev-dependencies |
@@ -71,9 +71,9 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Compile-fail tests | `trybuild` | all | | P1 | dev-dependency |
 | Benchmarks | `criterion` | all | | when evidence needed | dev-dependency |
 | Test DB | `testcontainers` or local Postgres scripts | all with a database | | P1 | prefer scripts if allowed (Compose already provides Postgres) |
-| Tools (not linked into binaries) | `cargo-deny` and `cargo-audit` (APPROVED D-66, installed),  `cargo-mutants`, `kani`, TLC (Java), Alloy (Java), Playwright, k6 | | | P1–P8 | system packages need approval and a stated reason before install |
+| Tools (not linked into binaries) | `cargo-deny` and `cargo-audit` (APPROVED D-66, installed), TLC `tla2tools.jar` 1.7.4 (APPROVED D-69, sha256 936a2620...e88) and Alloy 6.2.0 `org.alloytools.alloy.dist.jar` (APPROVED D-69, sha256 6b8c1cb5...78d) under `tools/`,  `cargo-mutants`, `kani`, TLC (Java), Alloy (Java), Playwright, k6 | | | P1–P8 | system packages need approval and a stated reason before install |
 | Backup encryption and offsite copy | `age` or `restic` (choose one) | `backup` job (monthly encrypted copy off the host, D-33) | encrypts backups before they leave the host and copies them offsite; `pg_dump` and `tar` alone do neither | P1 | **PROPOSED, pending owner approval** (new tool; state version and license) |
-| Runtime tool in the ingestion worker image | Java runtime (JRE) and `epubcheck` | `ingestion-worker` | Build gate runs epubcheck before publish (D-47, REQ-ING-026) | P1 | **PROPOSED, needs owner approval** (new system package; state version, image size and memory) in the dependency batch |
+| Runtime tool in the ingestion worker image | Java runtime (JRE; installed, OpenJDK 27) and `epubcheck` (APPROVED D-68; v5.4.0 downloaded and checksum verified, sha256 33350c61...a28c) | `ingestion-worker` | Build gate runs epubcheck before publish (D-47, REQ-ING-026) | P1 | **PROPOSED, needs owner approval** (new system package; state version, image size and memory) in the dependency batch |
 
 Counts and versions are recorded when approved, not guessed here.
 
