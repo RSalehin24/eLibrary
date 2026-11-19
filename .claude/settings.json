@@ -22,7 +22,6 @@
       "Read(./archive/local-production/env/**)",
       "Read(./archive/logs/**)",
       "Edit(./archive/**)",
-      "Bash(git push:*)",
       "Bash(git reset --hard:*)",
       "Bash(git push --force:*)"
     ]
