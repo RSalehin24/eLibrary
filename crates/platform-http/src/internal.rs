@@ -1,3 +1,5 @@
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 
@@ -26,32 +28,51 @@ impl Readiness {
     }
 }
 
+/// Extra dependency check run on every `/internal/ready` call (for example, a database ping).
+pub type DependencyProbe =
+    Arc<dyn Fn() -> Pin<Box<dyn Future<Output = bool> + Send>> + Send + Sync>;
+
+/// What the router needs to answer the three internal endpoints.
 #[derive(Clone)]
-struct InternalState {
-    readiness: Readiness,
-    contract: ContractVersion,
+pub struct InternalChecks {
+    pub readiness: Readiness,
+    pub contract: ContractVersion,
+    pub dependencies: DependencyProbe,
+}
+
+impl InternalChecks {
+    /// Checks with no dependency to probe (services without a database).
+    #[must_use]
+    pub fn without_dependencies(readiness: Readiness, contract: ContractVersion) -> Self {
+        Self {
+            readiness,
+            contract,
+            dependencies: Arc::new(always_up),
+        }
+    }
 }
 
 /// `GET /internal/health` (alive), `/internal/ready` (503 until ready), `/internal/contract`.
-pub fn internal_router(readiness: Readiness, contract: ContractVersion) -> Router {
+pub fn internal_router(checks: InternalChecks) -> Router {
     Router::new()
         .route("/internal/health", get(|| async { StatusCode::OK }))
         .route("/internal/ready", get(ready))
         .route("/internal/contract", get(contract_version))
-        .with_state(InternalState {
-            readiness,
-            contract,
-        })
+        .with_state(checks)
 }
 
-async fn ready(State(state): State<InternalState>) -> StatusCode {
-    if state.readiness.is_ready() {
+async fn ready(State(state): State<InternalChecks>) -> StatusCode {
+    if state.readiness.is_ready() && (state.dependencies)().await {
         StatusCode::OK
     } else {
         StatusCode::SERVICE_UNAVAILABLE
     }
 }
 
-async fn contract_version(State(state): State<InternalState>) -> Json<ContractVersion> {
+async fn contract_version(State(state): State<InternalChecks>) -> Json<ContractVersion> {
     Json(state.contract)
+}
+
+fn always_up() -> Pin<Box<dyn Future<Output = bool> + Send>> {
+    Box::pin(std::future::ready(true))
 }

@@ -3,4 +3,4 @@
 
 mod internal;
 
-pub use internal::{ContractVersion, Readiness, internal_router};
+pub use internal::{ContractVersion, DependencyProbe, InternalChecks, Readiness, internal_router};

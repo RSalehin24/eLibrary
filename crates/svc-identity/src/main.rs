@@ -1,10 +1,12 @@
 //! Identity service. Sample stage (P1): config, database checks, listeners, readiness;
 //! no domain logic yet. `svc-identity migrate` applies migrations and exits.
 
+use std::sync::Arc;
+
 use axum::Router;
 use platform_config::{CommonConfig, DatabaseConfig, EnvSource};
-use platform_db::{apply_migrations, connect, ensure_schema_current};
-use platform_http::{ContractVersion, Readiness, internal_router};
+use platform_db::{apply_migrations, check_ready, connect, ensure_schema_current};
+use platform_http::{ContractVersion, DependencyProbe, InternalChecks, Readiness, internal_router};
 use platform_obs::{ServiceIdentity, init_logging, service_span};
 use sqlx::PgPool;
 use sqlx::migrate::Migrator;
@@ -45,10 +47,22 @@ async fn serve(config: CommonConfig, pool: PgPool) -> Result<(), Box<dyn std::er
     let readiness = Readiness::default();
     readiness.mark_ready();
     tracing::info!("ready");
-    let internal_app = internal_router(readiness, CONTRACT_VERSION);
+    let internal_app = internal_router(InternalChecks {
+        readiness,
+        contract: CONTRACT_VERSION,
+        dependencies: database_probe(pool),
+    });
     tokio::try_join!(
         axum::serve(public, Router::new()),
         axum::serve(internal, internal_app)
     )?;
     Ok(())
+}
+
+fn database_probe(pool: PgPool) -> DependencyProbe {
+    Arc::new(move || Box::pin(database_is_up(pool.clone())))
+}
+
+async fn database_is_up(pool: PgPool) -> bool {
+    check_ready(&pool).await.is_ok()
 }
