@@ -14,3 +14,7 @@ SQL
 }
 
 create_service identity
+create_service catalog
+create_service reader
+create_service ingestion
+create_service notify

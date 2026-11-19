@@ -1028,6 +1028,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "platform-startup"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-config",
+ "platform-db",
+ "platform-http",
+ "platform-obs",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "platform-time"
 version = "0.1.0"
 dependencies = [
@@ -1494,17 +1509,74 @@ dependencies = [
 ]
 
 [[package]]
+name = "svc-catalog"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-http",
+ "platform-obs",
+ "platform-startup",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "svc-gateway"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-http",
+ "platform-obs",
+ "platform-startup",
+ "tokio",
+]
+
+[[package]]
 name = "svc-identity"
 version = "0.1.0"
 dependencies = [
  "axum",
- "platform-config",
- "platform-db",
  "platform-http",
  "platform-obs",
+ "platform-startup",
  "sqlx",
  "tokio",
- "tracing",
+]
+
+[[package]]
+name = "svc-ingestion"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-http",
+ "platform-obs",
+ "platform-startup",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "svc-notify"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-http",
+ "platform-obs",
+ "platform-startup",
+ "sqlx",
+ "tokio",
+]
+
+[[package]]
+name = "svc-reader"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "platform-http",
+ "platform-obs",
+ "platform-startup",
+ "sqlx",
+ "tokio",
 ]
 
 [[package]]

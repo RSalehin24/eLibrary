@@ -1,20 +1,8 @@
-# Skeleton: postgres and one sample service. The other containers join as their services appear.
+# Skeleton: postgres plus one sample container per service (and a migrate one-shot for each
+# service with a database). Caddy and web join when they exist.
 name: elibrary
 
-x-identity-base: &identity-base
-  build:
-    context: ../..
-    dockerfile: deploy/docker/svc-identity.Dockerfile
-  environment:
-    ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
-    ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
-    ELIBRARY_DATABASE_HOST: postgres
-    ELIBRARY_DATABASE_PORT: "5432"
-    ELIBRARY_DATABASE_NAME: identity
-    ELIBRARY_DATABASE_USER: identity
-    ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/identity_db_password
-  secrets:
-    - identity_db_password
+x-service-base: &service-base
   networks: [internal]
   read_only: true
   cap_drop: [ALL]
@@ -28,6 +16,10 @@ services:
     secrets:
       - postgres_password
       - identity_db_password
+      - catalog_db_password
+      - reader_db_password
+      - ingestion_db_password
+      - notify_db_password
     volumes:
       - postgres-data:/var/lib/postgresql/data
       - ../postgres/init:/docker-entrypoint-initdb.d:ro
@@ -38,8 +30,32 @@ services:
       timeout: 3s
       retries: 5
 
+  gateway:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: gateway}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+
   identity-migrate:
-    <<: *identity-base
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: identity}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: identity
+      ELIBRARY_DATABASE_USER: identity
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/identity_db_password
+    secrets:
+      - identity_db_password
     command: ["migrate"]
     healthcheck:
       disable: true
@@ -48,9 +64,195 @@ services:
         condition: service_healthy
 
   identity:
-    <<: *identity-base
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: identity}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: identity
+      ELIBRARY_DATABASE_USER: identity
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/identity_db_password
+    secrets:
+      - identity_db_password
     depends_on:
       identity-migrate:
+        condition: service_completed_successfully
+
+  catalog-migrate:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: catalog}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: catalog
+      ELIBRARY_DATABASE_USER: catalog
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/catalog_db_password
+    secrets:
+      - catalog_db_password
+    command: ["migrate"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  catalog:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: catalog}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: catalog
+      ELIBRARY_DATABASE_USER: catalog
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/catalog_db_password
+    secrets:
+      - catalog_db_password
+    depends_on:
+      catalog-migrate:
+        condition: service_completed_successfully
+
+  reader-migrate:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: reader}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: reader
+      ELIBRARY_DATABASE_USER: reader
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/reader_db_password
+    secrets:
+      - reader_db_password
+    command: ["migrate"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  reader:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: reader}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: reader
+      ELIBRARY_DATABASE_USER: reader
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/reader_db_password
+    secrets:
+      - reader_db_password
+    depends_on:
+      reader-migrate:
+        condition: service_completed_successfully
+
+  ingestion-migrate:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: ingestion}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: ingestion
+      ELIBRARY_DATABASE_USER: ingestion
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/ingestion_db_password
+    secrets:
+      - ingestion_db_password
+    command: ["migrate"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  ingestion:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: ingestion}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: ingestion
+      ELIBRARY_DATABASE_USER: ingestion
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/ingestion_db_password
+    secrets:
+      - ingestion_db_password
+    depends_on:
+      ingestion-migrate:
+        condition: service_completed_successfully
+
+  notify-migrate:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: notify}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: notify
+      ELIBRARY_DATABASE_USER: notify
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/notify_db_password
+    secrets:
+      - notify_db_password
+    command: ["migrate"]
+    healthcheck:
+      disable: true
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  notify:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/service.Dockerfile
+      args: {SERVICE: notify}
+    environment:
+      ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
+      ELIBRARY_INTERNAL_ADDRESS: 0.0.0.0:9090
+      ELIBRARY_DATABASE_HOST: postgres
+      ELIBRARY_DATABASE_PORT: "5432"
+      ELIBRARY_DATABASE_NAME: notify
+      ELIBRARY_DATABASE_USER: notify
+      ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/notify_db_password
+    secrets:
+      - notify_db_password
+    depends_on:
+      notify-migrate:
         condition: service_completed_successfully
 
 networks:
@@ -65,3 +267,11 @@ secrets:
     file: ../secrets/postgres_password
   identity_db_password:
     file: ../secrets/identity_db_password
+  catalog_db_password:
+    file: ../secrets/catalog_db_password
+  reader_db_password:
+    file: ../secrets/reader_db_password
+  ingestion_db_password:
+    file: ../secrets/ingestion_db_password
+  notify_db_password:
+    file: ../secrets/notify_db_password
