@@ -104,3 +104,6 @@ states/
 # Secret values (names documented in deploy/secrets/README.md)
 deploy/secrets/*
 !deploy/secrets/README.md
+
+# Local backup output
+/backups/
