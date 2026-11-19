@@ -63,5 +63,9 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-55 | 2026-11-19 | **Each of identity, reader and catalog exposes a per-user data export**; the Settings screen bundles them into one JSON download | owner choice (recommended option) |
 | D-56 | 2026-11-19 | **A new book version is born `published`**: no `draft` state exists (ingestion publishes only gate-passing artifacts in one transaction). Archived states keep `archived_reason` (superseded, unpublished) | owner choice (recommended option) |
 | D-57 | 2026-11-19 | **The publish gate fails closed**: if epubcheck cannot run, the book is not published and the request stays in review/retry | owner choice (recommended option) |
+| D-58 | 2026-11-19 | **Tooling installs approved**: Rust (pacman `rust`), Docker Engine + Compose, Node/npm, Java runtime (JRE) + epubcheck; crates and npm packages still need the P1 dependency batch | owner choice (recommended option for Rust method; all four tools) |
+| D-59 | 2026-11-19 | **Crates approved for the first step (`domain-text`)**: `unicode-normalization` (runtime), `proptest` (dev). `unicode-segmentation`, `insta`, `icu_collator` and the rest of the P1 batch are not yet approved | owner choice (recommended option) |
+| D-60 | 2026-11-20 | **Slugs keep Bengali letters**: slug = exact key with spaces to hyphens (no transliteration table) | owner choice (recommended option) |
+| D-61 | 2026-11-20 | **`icu_collator` approved** (ICU4X, compiled `bn` data, with `icu_locale_core` for the locale) for the shared collation comparator and `bytea` sort keys | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).

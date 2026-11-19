@@ -51,8 +51,8 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Cookies | `cookie` (or hand-written header handling) | identity, gateway | no cookie parsing in std | P3 | smallest option preferred |
 | SMTP | `lettre` (SMTP transport) | notify | no SMTP in std | P1 | alternative: minimal hand-written SMTP client (not recommended) |
 | Image validation | an image decoding crate (`image` or smaller) | identity (profile images, D-44) | no image decoding in std | P3 | validated types and size limit; pick the smallest that checks PNG/JPEG/WebP |
-| Unicode | `unicode-normalization`, `unicode-segmentation` | catalog, ingestion, reader | std lacks normalization/graphemes | P1 | |
-| Collation | `icu_collator` (+ data) | catalog | std has no locale collation | P1 | verify bn data availability |
+| Unicode | `unicode-normalization` (APPROVED D-59, in use), `unicode-segmentation` | catalog, ingestion, reader | std lacks normalization/graphemes | P1 | |
+| Collation | `icu_collator` (+ data; APPROVED D-61, in use, with `icu_locale_core`) | catalog | std has no locale collation | P1 | verify bn data availability |
 | HTML parsing | `html5ever` (or `scraper`) | ingestion, reader | no HTML parser in std | P1 | hostile input; fuzzed |
 | HTML sanitizing | `ammonia` | ingestion, reader | | P1 | allow-list sanitizer |
 | XML parsing | `quick-xml` (OPF, NCX, nav parsing and well-formedness gate) | ingestion, reader | no XML parser in std | P1 | alternative: `roxmltree` |
@@ -66,7 +66,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Frontend tests | `vitest` + `jsdom` (Angular CLI default; verified on angular.dev/guide/testing), `@playwright/test`, `axe-core` / Playwright axe integration | web | | P4 | dev-dependencies |
 | Frontend codegen | an OpenAPI→TypeScript generator (candidate chosen in S-02) or a small in-repo generator driven by `xtask` | web | typed client from Rust contract schema | P4 | prefer the smallest option |
 | Frontend fonts | Noto Serif/Sans Bengali (self-hosted WOFF2; Noto Serif Bengali regular and bold also embedded in EPUBs) | web, ingestion | typography guide | P4 | font files, SIL OFL licence |
-| Property testing | `proptest` | all | std has no generators | P1 | dev-dependency |
+| Property testing | `proptest` (APPROVED D-59, in use) | all | std has no generators | P1 | dev-dependency |
 | Snapshot tests | `insta` | all | | P1 | dev-dependency |
 | Compile-fail tests | `trybuild` | all | | P1 | dev-dependency |
 | Benchmarks | `criterion` | all | | when evidence needed | dev-dependency |

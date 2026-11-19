@@ -97,3 +97,6 @@ dist/
 coverage/
 *.rs.bk
 states/
+
+# Rust build output
+/target/
