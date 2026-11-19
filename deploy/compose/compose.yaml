@@ -1,5 +1,5 @@
 # Skeleton: postgres plus one sample container per service (and a migrate one-shot for each
-# service with a database). Caddy and web join when they exist.
+# service with a database). `web` joins when it exists.
 name: elibrary
 
 x-service-base: &service-base
@@ -29,6 +29,21 @@ services:
       interval: 10s
       timeout: 3s
       retries: 5
+
+  caddy:
+    image: caddy:2
+    ports:
+      - "127.0.0.1:8443:443"
+    volumes:
+      - ../caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+    networks: [internal, edge]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: ["no-new-privileges:true"]
+    depends_on:
+      gateway:
+        condition: service_healthy
 
   gateway:
     <<: *service-base
@@ -258,9 +273,11 @@ services:
 networks:
   internal:
     internal: true
+  edge: {}
 
 volumes:
   postgres-data:
+  caddy-data:
 
 secrets:
   postgres_password:

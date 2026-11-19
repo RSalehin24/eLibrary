@@ -1,0 +1,22 @@
+# HTTPS and certificate handling only; no business logic. Forwards `/` to web and `/api/*`
+# to the gateway, nothing else. `/internal/*` never leaves the Compose network.
+{
+	admin off
+}
+
+localhost {
+	tls internal
+	encode zstd gzip
+
+	handle /internal/* {
+		respond "not found" 404
+	}
+
+	handle /api/* {
+		reverse_proxy gateway:8080
+	}
+
+	handle {
+		reverse_proxy web:4000
+	}
+}
