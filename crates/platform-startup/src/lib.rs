@@ -3,6 +3,7 @@
 
 mod error;
 mod serve;
+mod shutdown;
 
 use axum::Router;
 use platform_config::{CommonConfig, DatabaseConfig, EnvSource};

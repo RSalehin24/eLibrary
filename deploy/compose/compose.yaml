@@ -3,6 +3,10 @@
 name: elibrary
 
 x-service-base: &service-base
+  mem_limit: 128m
+  cpus: 1.0
+  pids_limit: 256
+  restart: unless-stopped
   networks: [internal]
   read_only: true
   cap_drop: [ALL]
@@ -11,6 +15,10 @@ x-service-base: &service-base
 services:
   postgres:
     image: postgres:16
+    mem_limit: 512m
+    cpus: 2.0
+    pids_limit: 256
+    restart: unless-stopped
     environment:
       POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
     secrets:
@@ -32,6 +40,10 @@ services:
 
   caddy:
     image: caddy:2
+    mem_limit: 128m
+    cpus: 1.0
+    pids_limit: 256
+    restart: unless-stopped
     ports:
       - "127.0.0.1:8443:443"
     volumes:
@@ -71,6 +83,7 @@ services:
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/identity_db_password
     secrets:
       - identity_db_password
+    restart: "no"
     command: ["migrate"]
     healthcheck:
       disable: true
@@ -114,6 +127,7 @@ services:
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/catalog_db_password
     secrets:
       - catalog_db_password
+    restart: "no"
     command: ["migrate"]
     healthcheck:
       disable: true
@@ -157,6 +171,7 @@ services:
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/reader_db_password
     secrets:
       - reader_db_password
+    restart: "no"
     command: ["migrate"]
     healthcheck:
       disable: true
@@ -200,6 +215,7 @@ services:
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/ingestion_db_password
     secrets:
       - ingestion_db_password
+    restart: "no"
     command: ["migrate"]
     healthcheck:
       disable: true
@@ -243,6 +259,7 @@ services:
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/notify_db_password
     secrets:
       - notify_db_password
+    restart: "no"
     command: ["migrate"]
     healthcheck:
       disable: true

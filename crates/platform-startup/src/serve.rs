@@ -8,6 +8,7 @@ use sqlx::PgPool;
 use tokio::net::TcpListener;
 
 use crate::StartupError;
+use crate::shutdown::ShutdownSignal;
 
 pub(crate) fn checks_without_database(contract: ContractVersion) -> InternalChecks {
     InternalChecks::without_dependencies(Readiness::default(), contract)
@@ -35,14 +36,16 @@ pub(crate) async fn serve(
     public_routes: Router,
     checks: InternalChecks,
 ) -> Result<(), StartupError> {
+    let shutdown = ShutdownSignal::install()?;
     let public = TcpListener::bind(config.listen_address()).await?;
     let internal = TcpListener::bind(config.internal_address()).await?;
     let readiness = checks.readiness.clone();
     readiness.mark_ready();
     tracing::info!("ready");
     tokio::try_join!(
-        axum::serve(public, public_routes),
-        axum::serve(internal, internal_router(checks))
+        axum::serve(public, public_routes).with_graceful_shutdown(shutdown.clone().wait()),
+        axum::serve(internal, internal_router(checks)).with_graceful_shutdown(shutdown.wait())
     )?;
+    tracing::info!("stopped");
     Ok(())
 }
