@@ -192,6 +192,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c9ea0ac24bc397ab3c98583a3c9ba74fa56b09a4449bbe172b9b1ddb016027a"
 
 [[package]]
+name = "const-oid"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "be95d4a884358a21a199689323c29e9256b4a1b315e22f183d155422041d3a9a"
+
+[[package]]
 name = "contracts-http"
 version = "0.1.0"
 dependencies = [
@@ -285,6 +291,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1dd6dbb5841937940781866fa1281a1ff7bd3bf827091440879f9994983d5c2"
 dependencies = [
  "block-buffer",
+ "const-oid",
  "crypto-common",
  "ctutils",
 ]
@@ -1036,6 +1043,17 @@ dependencies = [
  "platform-config",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "platform-service-token"
+version = "0.1.0"
+dependencies = [
+ "hmac",
+ "platform-config",
+ "platform-time",
+ "sha2",
+ "thiserror",
 ]
 
 [[package]]
