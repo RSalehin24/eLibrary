@@ -6,6 +6,7 @@ mod containers;
 mod gates;
 mod metadata;
 mod register;
+mod typescript;
 
 use std::io::Write;
 use std::process::ExitCode;

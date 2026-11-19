@@ -3,6 +3,9 @@
 use std::path::{Path, PathBuf};
 
 use contracts_http::CommonApi;
+
+use crate::typescript;
+use serde_json::Value;
 use utoipa::OpenApi;
 
 /// How `codegen` treats the committed files.
@@ -45,6 +48,10 @@ fn is_current(document: &Generated) -> bool {
 }
 
 fn write(document: &Generated) -> Result<(), String> {
+    if let Some(directory) = document.path.parent() {
+        std::fs::create_dir_all(directory)
+            .map_err(|error| format!("cannot create {}: {error}", directory.display()))?;
+    }
     std::fs::write(&document.path, &document.contents)
         .map_err(|error| format!("cannot write {}: {error}", document.path.display()))
 }
@@ -54,10 +61,18 @@ fn documents(root: &Path) -> Result<Vec<Generated>, String> {
     let common = CommonApi::openapi()
         .to_pretty_json()
         .map_err(|error| format!("cannot render common OpenAPI: {error}"))?;
-    Ok(vec![Generated {
-        path: directory.join("common.json"),
-        contents: format!("{common}\n"),
-    }])
+    let parsed: Value =
+        serde_json::from_str(&common).map_err(|error| format!("cannot reread OpenAPI: {error}"))?;
+    Ok(vec![
+        Generated {
+            path: directory.join("common.json"),
+            contents: format!("{common}\n"),
+        },
+        Generated {
+            path: root.join("web/src/app/core/api/generated/common.ts"),
+            contents: typescript::render(&parsed)?,
+        },
+    ])
 }
 
 #[cfg(test)]
@@ -76,10 +91,10 @@ mod tests {
         let root = scratch_root()?;
         assert_eq!(
             run(&root, Mode::Check)?.len(),
-            1,
-            "missing file counts as stale"
+            2,
+            "missing files count as stale"
         );
-        assert_eq!(run(&root, Mode::Write)?.len(), 1);
+        assert_eq!(run(&root, Mode::Write)?.len(), 2);
         assert_eq!(run(&root, Mode::Check)?, Vec::<PathBuf>::new());
         let file = root.join("planning/07-contracts/http/openapi/common.json");
         std::fs::write(&file, "{}").map_err(|error| error.to_string())?;

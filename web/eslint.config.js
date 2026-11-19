@@ -15,6 +15,8 @@ const BROWSER_ONLY_GLOBALS = [
 ];
 
 module.exports = defineConfig([
+  // Machine output of `cargo xtask codegen`: checked by the Q3 diff, not by lint.
+  { ignores: ['src/app/core/api/generated/**'] },
   {
     files: ['**/*.ts'],
     extends: [
