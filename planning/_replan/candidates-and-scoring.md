@@ -1,6 +1,9 @@
 # Candidate service splits and scoring (steps 3–4)
 
-Status: DRAFT
+Status: SUPERSEDED
+
+> **SUPERSEDED (2026-11-19).** Written before the owner's decisions D-27 (5 services, no gateway), D-28 (reader renders and serves the whole book) and D-29 (small scale). The current architecture is [new-architecture.md](new-architecture.md); the analysis is in [analysis/](analysis/). Kept only as history of an earlier, shallower pass.
+
 
 Every candidate includes the reader as its own service (F5) and runs each service in its own container (F4). `web`, `edge` (Caddy) and `postgres` exist in all. Scores are my judgment from the evidence (1 = poor, 5 = good), not measurements; weights from [REPLAN](../REPLAN.md) §3.
 

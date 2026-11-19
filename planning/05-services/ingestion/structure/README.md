@@ -1,6 +1,6 @@
 # Structure reconstruction — making it read like a printed book
 
-Status: DRAFT (reconciled; pure stage, unchanged by the move to one ingestion service)
+Status: DRAFT (reconciled; pure stage, kept from v1; requirements REQ-ING-015, 016, 017, 018)
 
 Goal: a `SectionTree` whose leaf order is exactly the book's reading order and whose nesting is exactly the author's.
 
@@ -12,7 +12,7 @@ pub struct Node { pub id: SectionId, pub title: DisplayText, pub kind: SectionKi
                   pub own_blocks: Vec<BlockId>, pub source: SourceRef, pub evidence: Vec<Evidence> }
 // SectionId = UUIDv5(book_id, source_key)  — stable under reorder-free rebuilds; source_key = canonical lesson/topic URL path or inferred-boundary hash
 ```
-`toc` and `nav` are produced from this single tree by one function (INV-ING-003).
+`toc` and `nav` are produced from this single tree by one function (INV-ING-015).
 
 ## Shapes (finite, classified once)
 
@@ -26,7 +26,7 @@ pub struct Node { pub id: SectionId, pub title: DisplayText, pub kind: SectionKi
 | `SinglePageFlow` | no TOC; no usable headings | one chapter (title = book title) + review if long |
 | `NoPublicBody` | nothing readable | request `needs_review` with a `LockedSource`/`IncompleteSource` review item |
 
-## Type A — source TOC authoritative (REQ-ING-004)
+## Type A - source TOC authoritative (REQ-ING-016, INV-ING-016)
 
 1. Collect **all** TOC pages (paginated). Merge in source order into one tree (the "unified TOC").
 2. Only `/lessons/...` and `/topic/...`-type entries are chapters; `/books/...` links are cross-references and are excluded (recorded as `Dropped(SourceChrome)` with link evidence).
@@ -34,9 +34,9 @@ pub struct Node { pub id: SectionId, pub title: DisplayText, pub kind: SectionKi
 4. Duplicate titles at the same level are kept distinct by source URL (`SectionId` from path); display titles may be disambiguated by a deterministic suffix only when identical (" (২)"), never merged.
 5. Plain-text TOCs inside the first content page are removed **only if** a linked TOC exists; recorded `Dropped(InlineTocSuperseded)`.
 6. The source's own body text is never split into extra chapters. Sub-headings inside a chapter remain in-chapter headings (anchors), not new TOC nodes — unless ruleset flag `expand_subchapters` is on **and** the gold set shows it increases fidelity for that shape (default off; resolves the legacy contradiction).
-7. Completeness (INV-ING-006) is checked against this tree: every leaf fetched or recorded empty-at-source.
+7. Completeness (INV-ING-018, REQ-ING-018) is checked against this tree: every leaf fetched or recorded empty-at-source.
 
-## Type B — single page (REQ-ING-005)
+## Type B - single page (REQ-ING-017, INV-ING-017)
 
 Infer boundaries with scored evidence; never invent silently.
 

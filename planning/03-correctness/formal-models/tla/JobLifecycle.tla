@@ -1,8 +1,9 @@
 ------------------------------ MODULE JobLifecycle ------------------------------
 (* Ingestion job lifecycle with leases and fencing epochs.
-   Covers INV-ING-006 (publish only when all leaves fetched),
-   INV-ING-010 (state machine, <=1 active job per URL, lease expiry),
-   INV-ING-016 (a job publishes at most once).
+   Covers INV-ING-018 (publish only when all leaves fetched),
+   INV-ING-004 (state machine, <=1 active job per URL, lease expiry),
+   INV-ING-007 (attempts bounded, eventually settled) and, with PublishSaga,
+   INV-ING-029 (a job publishes at most once). Ids renamed 2026-11-19; logic unchanged.
    Design mapping (ADR-0021): a claim (`FOR UPDATE SKIP LOCKED`) is the epoch increment; the
    heartbeat lease and visibility timeout are lease expiry; the fencing epoch is the (job, attempt) key.
    The model itself is unchanged by the five-service redesign.

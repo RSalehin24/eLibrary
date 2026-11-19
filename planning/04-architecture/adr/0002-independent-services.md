@@ -2,7 +2,7 @@
 
 Status: SUPERSEDED
 
-Superseded by [ADR-0020](0020-five-services-no-gateway.md) (five services, no gateway). The seven-service-plus-gateway split below is historical.
+Superseded by [ADR-0025](0025-six-services-with-gateway.md) (six services including a gateway, D-31); [ADR-0020](0020-five-services-no-gateway.md) was an intermediate step. The seven-service split below is historical.
 
 ## Context
 Complexity and thinking scope per feature must shrink. The legacy monolith had import cycles and a shared database. The rewrite branch kept a monolith and added more frameworks.

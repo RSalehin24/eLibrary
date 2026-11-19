@@ -1,6 +1,6 @@
 # Entities — recognition, resolution, duplicates
 
-Status: DRAFT (reconciled with exact-key matching and the catalog-side classifier; extraction rules kept)
+Status: DRAFT (reconciled with the exact-key duplicate rule; extraction rules kept from v1; requirements REQ-ING-019, 022, 023)
 
 ## 1. What is extracted
 
@@ -25,26 +25,18 @@ Status: DRAFT (reconciled with exact-key matching and the catalog-side classifie
 
 Every output item: `{value, kind, role?, evidence: [BlockId…], rule_ids, confidence}`.
 
-## 3. Resolution to catalog agents (read-only query plus review)
+## 3. Linking to catalog contributors
 
-For each person or organisation candidate, ingestion calls catalog `POST /internal/agents/resolve` (internal service token) with the candidate's `exact_key` and raw text. Catalog returns scored matches; ingestion never merges or edits agents.
+Ingestion extracts credits (name, role, raw text, `exact_key`, evidence, confidence) into the curated document and sends them with the candidate version. Linking a credit to a catalog contributor (agent) and its aliases is done by the catalog on intake and in its own audited agent management; ingestion never merges, edits or creates agents, and a name is never an identity key. The HTTP contract has no ingestion-to-catalog agent-resolution route; whether ingestion needs one to flag unknown spellings before publishing is an open question for the catalog design (reported, not decided). Latin and Bengali spellings of one person connect only through catalog aliases.
 
-| Match tier | Condition | Action |
-|---|---|---|
-| T1 exact | `exact_key` equals an agent's name or alias `exact_key` | link (confidence 1.0) |
-| T2 alias | `loose_key` equal (spelling-variant folding) or a Latin alias match | link only if there is a single candidate and it is corroborated (shared series, publisher or known co-credit); otherwise review |
-| T3 near | token-set overlap on `loose_key` above the configured suggestion threshold | never auto-link; review with candidates side by side |
-| T4 none | no match | propose a new agent only when the name is a syntactically clean full name and confidence is high; otherwise review |
+## 4. Work, translation, edition: the duplicate rule
 
-New aliases (a new spelling) are proposed with evidence for curator approval. Names are never identity keys (INV-CAT-005). Latin and Bengali spellings of one person are connected only through catalog agent aliases.
+The one decision procedure is the rule in the [domain model](../domain-model.md) section 9 (REQ-ING-023, INV-ING-023): exact normalized title key plus author, category and edition, compared by `exact_key` set equality or overlap, run through catalog `POST /internal/books/match` over catalog rows. Ingestion supplies the keys and owns the review state (`duplicate_reviews`). Summary of what binds this stage:
 
-## 4. Work, translation, edition: the duplicate policy
-
-The single decision procedure is the staged matching in the [domain model](../domain-model.md) ("Matching rules"), run by catalog `POST /internal/duplicates/classify` over catalog rows; ingestion supplies keys and owns the review state (`duplicate_reviews`). Summary of the rules that bind this stage:
-
-- Matching uses `exact_key` only: title key equal, then author, category, translator and publisher/edition comparison by exact-key set equality or overlap. There is no substring matching and no automatic fuzzy merge.
-- Same title with disjoint authors is a different work; same title and author with different translators is a new translation; with a different publisher or edition label a new edition; all equal is an exact duplicate (refused, source URL linked, `refresh_existing` offered).
-- Missing or low-confidence authors, a loose-key-only match, or a match against a soft-deleted book is `needs_review`: a human decides with side-by-side evidence. Near matches are listed, never merged.
+- No substring matching, no fuzzy threshold, no automatic merge. Outcomes are `exact_duplicate`, `new_edition`, `new_work`, `needs_review`.
+- Same title with disjoint authors is a different work; same title and author with a different edition is a new edition; all equal is an exact duplicate (refused for `create new`, the source URL linked). A differing translator, a missing or low-confidence author, or a match against a soft-deleted book is `needs_review` (README OPEN-9).
+- Near matches (equal `loose_key` with different `exact_key`, equal title key) are listed with evidence side by side for a human; they never change the outcome.
+- Work and edition grouping is not modelled (open point O-3): "new edition" is the operator's `create_as_new_edition` action.
 - The decision is stored and replayed as an input on reprocess.
 
 ## 5. Catalog hints vs page facts
@@ -53,7 +45,7 @@ Archive-listing text is the weakest source, the book page `<title>`/terms strong
 
 ## 6. Measures (gold)
 
-Per-field precision/recall/F1 for each role, publisher, edition, date; agent-resolution accuracy; duplicate-policy accuracy on labeled pairs. Targets: [G-3](../../../00-charter/goals-and-non-goals.md).
+Per-field precision/recall/F1 for each role, publisher, edition, date; duplicate-rule accuracy on labeled pairs. Targets: [G-3](../../../00-charter/goals-and-non-goals.md).
 
 ## 7. Marker words (correct spellings)
 

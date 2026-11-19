@@ -1,6 +1,9 @@
 # Recommended service list (step 5 — awaiting owner choice)
 
-Status: DRAFT
+Status: SUPERSEDED
+
+> **SUPERSEDED (2026-11-19).** Written before the owner's decisions D-27 (5 services, no gateway), D-28 (reader renders and serves the whole book) and D-29 (small scale). The current architecture is [new-architecture.md](new-architecture.md); the analysis is in [analysis/](analysis/). Kept only as history of an earlier, shallower pass.
+
 
 **Recommendation: C2** (weighted 4.25 vs 3.7 for the previous plan). Evidence: [A](evidence-A-backend.md) · [B](evidence-B-frontend.md) · [C](evidence-C-ingestion.md) · [D](evidence-D-reader.md) · [E](evidence-E-operations.md) · [F](evidence-F-data-features.md); [capabilities](capabilities.md); [scoring](candidates-and-scoring.md).
 

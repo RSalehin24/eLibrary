@@ -28,9 +28,9 @@ ROOT = Path(__file__).resolve().parent.parent
 REQ_RE = re.compile(r"^- \*\*(REQ-[A-Z]{3}-\d{3})\*\*\s*·\s*(MUST|SHOULD|COULD)\s*·\s*inv:\s*([^·]+?)\s*·\s*verify:\s*([^·]+?)\s*·\s*(.+)$")
 INV_RE = re.compile(r"^- \*\*(INV-[A-Z]{3}-\d{3})\*\*\s*·\s*([a-z ,]+?)\s*·\s*by:\s*([^·]+?)\s*·\s*(.+)$")
 LINK_RE = re.compile(r"(?<!\!)\[[^\]]*\]\(([^)\s]+)\)")
-VERIFY = {"type", "db", "model", "prop", "unit", "e2e", "gold", "fuzz", "review", "drill"}
+VERIFY = {"type", "db", "model", "prop", "unit", "e2e", "gold", "fuzz", "review", "drill", "metric", "static"}
 SERVICE_FILES = ["README.md", "domain-model.md", "api-contract.md", "state-machines.md", "test-plan.md"]
-SERVICES = ["identity", "catalog", "reader", "ingestion", "notify"]
+SERVICES = ["gateway", "identity", "catalog", "reader", "ingestion", "notify"]
 PLACEHOLDER_RE = re.compile(r"\b(TBD|TODO|FIXME)\b|\?\?\?")
 
 errors: list[str] = []
@@ -42,7 +42,7 @@ def err(msg: str) -> None:
 
 
 def md_files() -> list[Path]:
-    return sorted(p for p in ROOT.rglob("*.md") if "tools" not in p.relative_to(ROOT).parts or p.name == "README.md")
+    return sorted(p for p in ROOT.rglob("*.md") if "_v1" not in p.relative_to(ROOT).parts and ("tools" not in p.relative_to(ROOT).parts or p.name == "README.md"))  # _v1 = read-only copy of the previous plan
 
 
 def parse_requirements():

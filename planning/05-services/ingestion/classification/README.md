@@ -1,6 +1,6 @@
 # Classification — front matter, dedication, book info, residual
 
-Status: DRAFT (reconciled; pure stage, lexicons stored in the ruleset)
+Status: DRAFT (reconciled; pure stage, lexicons stored in the ruleset; requirements REQ-ING-019, 020, 021, 022)
 
 Replaces the legacy order-dependent mutate-and-decompose passes with **sequence labeling under a grammar**: each block receives exactly one label, with evidence. Conservation therefore holds by construction.
 
@@ -45,7 +45,7 @@ Decode with dynamic programming (Viterbi over the label sequence): maximize Σ e
 | R5 Residual | Remaining `FrontProse` is checked for *new information* (signature not present elsewhere, ≥ N words); new KV → Book Info; new prose → unnamed front section | `EmptyAfterNormalization` if nothing new |
 | R6 Naming | Titled sections keep their title on page and nav; unnamed sections show **no heading on the page**, nav label `অন্যান্য`/`Others` (+index when several) | — |
 | R7 Plain-text TOC | `InlineToc` removed only if a linked TOC exists | `InlineTocSuperseded` |
-| R8 Language | Labels and nav titles in the book language (INV-ING-009) | — |
+| R8 Language | Labels and nav titles in the book language (INV-ING-021) | — |
 
 ## Confidence and review
 

@@ -2,10 +2,10 @@
 
 Status: ACCEPTED
 
-Supersedes the event-delivery part of [ADR-0005](0005-postgres-outbox-and-queues.md) (the HTTP push relay and subscriber inbox endpoints). Basis: D-27.
+Supersedes the event-delivery part of [ADR-0005](0005-postgres-outbox-and-queues.md) (the HTTP push relay and subscriber inbox endpoints). Basis: D-27, D-31 (the gateway neither produces nor consumes events).
 
 ## Context
-The earlier design pushed outbox rows to subscribers' inbox endpoints, which needs a relay, subscriber registration, per-consumer dedupe tables and retry state on the producer. With five services and few consumers a simpler pull model suffices.
+The earlier design pushed outbox rows to subscribers' inbox endpoints, which needs a relay, subscriber registration, per-consumer dedupe tables and retry state on the producer. With six services and few consumers a simpler pull model suffices.
 
 ## Decision
 - A producer writes an `events` row (monotonic cursor, type, version, payload of ids and minimum data) in the same transaction as the change, and exposes `GET /internal/events?after=<cursor>` (service token required).

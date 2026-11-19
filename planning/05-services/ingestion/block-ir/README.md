@@ -1,6 +1,6 @@
 # Block IR
 
-Status: DRAFT (reconciled; content kept, storage references updated)
+Status: DRAFT (reconciled with the single-pipeline design; kept from v1; requirements REQ-ING-013, 014; invariant INV-ING-014)
 
 The intermediate representation that makes conservation checkable. It is an in-memory/pure-stage type; the persisted result is the curated document ([domain model](../domain-model.md), `curated_documents`), not a separate content-addressed store.
 

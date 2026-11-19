@@ -1,13 +1,16 @@
-# ADR-0012 — Identifiers, codes and slugs
+# ADR-0012 — Identifiers and slugs (no catalog codes)
 
-Status: REVIEW
+Status: ACCEPTED
+
+Amended by D-36 (no structured catalog codes) and D-32 (nothing is migrated).
 
 ## Context
-Legacy has UUID PKs, scrambled catalog codes (salted bit-mixing with check bits), and Unicode slugs.
+The legacy system had UUID primary keys, scrambled catalog codes (salted bit-mixing with check bits) and Unicode slugs. The owner decided (D-36) that books are identified by UUID and a unique slug only, and (D-32) that no legacy URLs or codes need to keep resolving.
 
 ## Decision
-Internal IDs are UUIDv7 newtypes. Human-facing catalog codes keep their existing values (migrated) and new codes use a reversible short encoding with a check character (`sqids`-style alphabet, no ambiguous characters). Slugs are Unicode NFC, lowercase, hyphen-separated, unique; former slugs are kept as redirects forever. Names and titles are never identifiers.
+Internal IDs are UUIDv7 newtypes. A book's human-facing identifier is its **slug**: Unicode NFC, lowercase, hyphen-separated, unique. There are no catalog codes, no check characters and no code decoder. Former slugs of a book are kept as redirects so links created in the new system keep working. Names and titles are never identifiers.
 
 ## Consequences
-+ Legacy URLs and codes continue to resolve (INV-MIG-002).
-− Two code generations coexist; the decoder accepts both.
++ One identifier scheme; no decoder, no two-generation coexistence.
++ Fewer places to validate (REQ and invariants for codes are dropped).
+- Slug changes need the redirect table; slug uniqueness is a database constraint.

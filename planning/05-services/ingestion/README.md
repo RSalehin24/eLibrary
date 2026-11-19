@@ -1,60 +1,103 @@
 # ingestion
 
-Status: DRAFT (rewritten for the 5-service architecture, D-27/D-29; basis `_replan/new-architecture.md` section 6)
+Status: DRAFT (rewritten for the six-service architecture, D-31/D-32; basis `_replan/new-architecture.md` section 6; requirements [ING](../../02-requirements/ing-ingestion.md); HTTP contract [ingestion](../../07-contracts/http/ingestion.md))
 
-The single pipeline from the source site (or an uploaded EPUB) to a candidate book in the catalog: mirror sync, request, scrape, curate and validate, duplicate review, EPUB build, publish to catalog. Operator-only.
+The single pipeline from the source site to a candidate book version in the catalog: mirror sync, request, scrape, curate and validate, duplicate review, EPUB build, publish. Operator-only (`operate`). Intake is scrape-only (D-42, REQ-ING-031): there is no manual upload. Nothing is migrated from the legacy app (D-32): books are re-ingested by this pipeline.
 
 | | |
 |---|---|
-| Owns | source mirror, intake requests, jobs and leases, scrape cache (files), curated documents (files + rows), review items, duplicate reviews, build artifacts (candidates), source credential and its status, automation settings, sync runs, console event outbox |
-| Does not own | published books and files (catalog), accounts and scopes (identity), mail (notify), the reader copy (reader) |
-| Requirements | REQ-ING-001…016, REQ-CAT-006 (duplicate policy, applied here with catalog data), REQ-CON-002/007/008/009 (EPUB build), REQ-DSC-002 (normalization shared with catalog) |
-| Containers | `ingestion-api` (HTTP, SSE) and `ingestion-worker` (same image, command `worker`): scheduler loop, job claimer, executors |
-| Emits | internal outbox `events` for the console: `request.changed`, `job.progress`, `sync.changed`, `credential.changed`, `automation.changed`, `build.finished` |
-| Consumes | catalog `book.published`, `book.unpublished`, `book.version_changed` (pull with cursor) |
-| Calls | catalog internal API (shell, duplicate classify, agent resolve, intake), the source site (GET only), identity `/internal/check` only through caddy forward-auth headers |
-| Called by | web operator console via caddy (`/api/ingestion/*`, scope `operate`) |
+| Owns | source mirror, requests, jobs and leases, scrape cache (files), curated documents (files + rows), review items, duplicate reviews, build artifacts (candidates), source-credential status, automation settings, sync runs, console event outbox, ingestion audit log |
+| Does not own | books, versions and files (catalog), accounts and scopes (identity), mail (notify), the reading copy (reader) |
+| Containers | `ingestion-api` (HTTP + SSE; inserts rows, never runs pipeline work) and `ingestion-worker` (same image, command `worker`: claimer, executors, reaper, scheduler tick, event consumer, retention) |
+| Emits | outbox `events` for the console: `request.changed`, `job.progress`, `sync.changed`, `credential.changed`, `automation.changed`, `build.finished` (internal only) |
+| Consumes | catalog `book.published`, `book.unpublished`, `book.version_changed` (pull with stored cursor, idempotent) |
+| Calls | the source site (GET only); catalog internal API (`POST /internal/books/{id}/versions`, `POST /internal/books/match`, `GET /internal/books`, `GET /internal/events`); identity `POST /internal/check` for `operate` |
+| Called by | web operator console through the gateway (`/api/ingestion/*`, scope `operate`) |
 
 ## Pipeline
 
 ```
- mirror sync ──► request ──► scrape ──► curate / validate ──► duplicate check ──► build EPUB ──► publish (catalog intake, in_review)
- (GET listing)   (one model)  (GET only)  (pure, versioned)     (review state)      (audit gate)      only after build success
-                                                                                                         │
-                                         catalog approval (manage_catalog) ──► book.published ──► request: published
+ mirror sync ─► request ─► scrape ─► curate/validate ─► duplicate review ─► build EPUB ─► publish (automatic when all gates passed)
+ (GET listing)  (one model) (GET only) (pure, versioned)  (explicit state)    (audit gate)    idempotent; only after every gate passed
+                                                                                              │
+                                  catalog publishes in the same call ─► outcome published
 ```
 
-- Every arrow is a row in `jobs`, claimed with `FOR UPDATE SKIP LOCKED` (no inline work in any HTTP handler, no Redis, no Celery).
-- Stages curate, validate, duplicate classification and build are pure functions of `(curated document, ruleset version, builder version)`; their results are cached by those keys.
-- Nothing is dropped silently (INV-ING-002): dropped blocks carry a reason code; unresolved facts become review items.
-- A failed or unfinished build never leaves anything visible: the catalog sees nothing until the publish step succeeds, and even then the version is `in_review` until a human approves.
+- Every arrow is a row in `jobs`, claimed with `FOR UPDATE SKIP LOCKED`. No work in an HTTP handler, no Redis, no Celery, no inline fallback (REQ-ING-005).
+- Curate, validate, duplicate classification and build are pure functions of `(scrape manifest, ruleset version, overrides, builder version)`; derived artifacts are regenerable (REQ-ING-013).
+- Nothing is dropped silently: dropped blocks carry a reason code (REQ-ING-014); unresolved facts become review items.
+- A failed build never leaves anything visible: catalog sees nothing until every gate passed and `publish` succeeds; then the book is visible with no human step (D-49). Anything that fails a gate stays in the review queue (duplicate review, `needs_review`, `failed`) where an operator acts.
 
-## Design rules (from the brief and the analysis)
+## Design rules (answer the legacy defects)
 
 | Rule | Where |
 |---|---|
-| One request model (replaces `BookSubmission` + `BookCreationRequest`, `SourceCatalogEntry` + `BookRecord`, `ProcessingJob` + engine state) | [domain model](domain-model.md) |
-| Source mirror columns and workflow state are different tables; re-sync never touches workflow | `mirror_entries` vs `requests` |
-| Postgres jobs: leases with heartbeat, visibility timeout, attempt counter, fencing epoch, typed errors, idempotent steps, cancel flag per page | [state machines](state-machines.md) |
-| Acquisition is GET-only; no source form is ever submitted (D-03) | `SourceClient` exposes only `get` (INV-ING-012) |
-| One explicit source credential, rotatable, visible status | `source_credentials`, credential state machine |
-| Correct Bengali normalization and exact matching rules; duplicate review is a state | domain model sections "Bengali normalization", "Matching rules" |
-| EPUB build: escaping on, sanitized, images and fonts packaged, complete OPF, audit gate | domain model "Build" |
-| Console live updates by SSE from outbox + LISTEN/NOTIFY with versioned snapshot | [API](api-contract.md) |
-| Automation fixes the legacy idle-run defect | [state machines](state-machines.md) "Automation sequence" |
+| One request model; execution status separate from domain outcome | [domain model](domain-model.md), [state machines](state-machines.md) |
+| Source mirror and workflow state are separate tables; re-sync never touches workflow | `mirror_entries` vs `requests` |
+| Postgres queue: leases, heartbeat from the working thread, typed errors, cooperative cancel per page, idempotent steps | [orchestration](orchestration/README.md), [state machines](state-machines.md) |
+| GET-only acquisition, explicit source cookie (secret file), visible expiry status, polite delay, honest User-Agent, scrape cache as files | [acquisition](acquisition/README.md) |
+| Bengali-correct normalization (NFC, vowel signs kept), tested lexicon, whole-token matching | [domain model](domain-model.md), [rulesets](rulesets/README.md) |
+| Structure, TOC, front matter, dedication, book info | [structure](structure/README.md), [classification](classification/README.md), [block-ir](block-ir/README.md), [entities](entities/README.md) |
+| Duplicate rule: exact normalized key + author + category + edition; near matches listed, never merged | [entities](entities/README.md), [domain model](domain-model.md) |
+| EPUB build: escaping on, sanitized, images and fonts packaged, nav + NCX, audit gate | [builder](builder/README.md) |
+| Publish saga: idempotent candidate to catalog | [orchestration](orchestration/README.md), [state machines](state-machines.md) |
+| Console live updates: SSE + versioned snapshot | [API](api-contract.md) |
+| Automation: stored `next_due`, claimed under lock | [state machines](state-machines.md) |
+| Retention: raw pages 30 days | [domain model](domain-model.md), [orchestration](orchestration/README.md) |
 
-## Sub-designs (kept, to be reconciled)
+## Requirement coverage (every REQ-ING row)
 
-The folders below hold the detailed designs of the pure stages and remain valid where they do not mention the removed `content` service, saga steps `content.put_document`, or `Snapshot` blobs in a content-addressed store; those parts are superseded by this folder: [acquisition](acquisition/README.md) · [block-ir](block-ir/README.md) · [structure](structure/README.md) · [classification](classification/README.md) · [entities](entities/README.md) · [builder](builder/README.md) · [orchestration](orchestration/README.md) · [rulesets](rulesets/README.md).
+| REQ | Where specified | Tests |
+|---|---|---|
+| REQ-ING-001 | [domain model](domain-model.md) Requests; [state machines](state-machines.md) Request | TST-ING-001 |
+| REQ-ING-002 | domain model Source mirror; state machines Sync run | TST-ING-002 |
+| REQ-ING-003 | state machines Sync run | TST-ING-003 |
+| REQ-ING-004 | domain model Jobs; state machines Job | TST-ING-004, TST-ING-005 |
+| REQ-ING-005 | [API](api-contract.md) rule 1; [orchestration](orchestration/README.md) | TST-ING-006 |
+| REQ-ING-006 | domain model typed errors; orchestration | TST-ING-007 |
+| REQ-ING-007 | state machines Job (cancel, idempotency); acquisition | TST-ING-008, TST-ING-040 |
+| REQ-ING-008 | state machines action table; API | TST-ING-009 |
+| REQ-ING-009 | API; domain model audit | TST-ING-010 |
+| REQ-ING-010 | [acquisition](acquisition/README.md) | TST-ING-011, TST-ING-038, TST-ING-042 |
+| REQ-ING-011 | acquisition Credential; state machines Credential | TST-ING-012, TST-ING-039 |
+| REQ-ING-012 | domain model Scrape cache; acquisition | TST-ING-013, TST-ING-036 |
+| REQ-ING-013 | domain model Curated document; [block-ir](block-ir/README.md) | TST-ING-014 |
+| REQ-ING-014 | block-ir Conservation ledger | TST-ING-015 |
+| REQ-ING-015 | [structure](structure/README.md); [builder](builder/README.md) | TST-ING-016 |
+| REQ-ING-016 | structure Type A | TST-ING-017 |
+| REQ-ING-017 | structure Type B | TST-ING-018 |
+| REQ-ING-018 | acquisition Completeness; domain model Validation | TST-ING-019 |
+| REQ-ING-019 | [entities](entities/README.md); [classification](classification/README.md) | TST-ING-020 |
+| REQ-ING-020 | classification post-decode rules | TST-ING-021 |
+| REQ-ING-021 | classification R8; builder labels | TST-ING-022 |
+| REQ-ING-022 | domain model Bengali normalization; [rulesets](rulesets/README.md) | TST-ING-023 |
+| REQ-ING-023 | domain model Duplicate review; entities section 4; state machines Duplicate review | TST-ING-024, TST-ING-025 |
+| REQ-ING-024 | builder Rules for the writer | TST-ING-026 |
+| REQ-ING-025 | builder | TST-ING-027 |
+| REQ-ING-026 | builder Validation gate | TST-ING-028 |
+| REQ-ING-027 | builder Cover; acquisition | TST-ING-029 |
+| REQ-ING-028 | builder Preview | TST-ING-030 |
+| REQ-ING-029 | orchestration Publish; state machines Publish | TST-ING-031, TST-ING-040 |
+| REQ-ING-030 | rulesets | TST-ING-032, TST-ING-041 |
+| REQ-ING-031 | this page (intake); API | TST-ING-033 |
+| REQ-ING-032 | API Live updates | TST-ING-034 |
+| REQ-ING-033 | state machines Automation | TST-ING-035 |
+| REQ-ING-034 | domain model Retention; orchestration | TST-ING-036 |
+| REQ-ING-035 | domain model audit and logs; API | TST-ING-037 |
+| REQ-ING-036 | state machines Publish; orchestration Publish | TST-ING-043 |
 
-See [domain model](domain-model.md) · [API](api-contract.md) · [state machines](state-machines.md) · [tests](test-plan.md) · [gold corpus](../../06-data/gold-corpus/README.md).
+The authoritative test ids are in [test plan](test-plan.md); the column above is a pointer and the test plan wins on any mismatch.
 
 ## Open points (not decided here)
 
-1. Source credential storage: encrypted column with a key from a secret file (needs a crypto crate, dependency approval) or plain column restricted by the database role.
-2. Which Bengali font(s) to embed in EPUBs and the cover (OFL asset, repository addition) and subsetting.
-3. Honest User-Agent versus the source's Cloudflare behavior (legacy D6); fallback if the source blocks an identified client.
-4. Retention of raw scraped pages (third-party copyright) and curated documents of cancelled requests.
-5. Default values: error budget, politeness delay and concurrency, requests per automation run, similarity threshold for fuzzy suggestions.
-6. Whether reader-role users may ever file a request (designed operator-only).
-7. Whether catalog approval is done by `operate` users or only `manage_catalog` holders (designed: `manage_catalog`).
+| # | Point | Status |
+|---|---|---|
+| OPEN-1 | Permission from the source site (D-03): the owner's outstanding action; go-live gate G6 stays blocked without it. Locked chapters are never unlocked by submitting a form | owner action |
+| OPEN-2 | epubcheck runs in the worker before publish (D-47, decided); the Java runtime and epubcheck install in the worker image still need approval in the P1 dependency batch | owner (tooling install) |
+| OPEN-3 | Generated fallback cover (REQ-ING-027): text shaping and rasterisation need a crate or tool; method not chosen | owner (dependency batch) |
+| OPEN-4 | Crates for HTTP client, HTML parser, sanitizer, ZIP, templating, Unicode normalization, XML: none approved yet (D-17 batch at P1 start); this design names roles, not crates | owner (dependency batch) |
+| OPEN-5 | Contract open points C-2 (ingestion chooses the book UUID for `POST /internal/books/{id}/versions`; this design assumes yes) and C-3 (`POST /internal/books/match` kept) | open-points.md |
+| OPEN-6 | O-3: work/edition grouping is not modelled; "new edition" is a human action only; the model has no work entity | open-points.md |
+| OPEN-7 | O-4: scope guarding CSV export and book deletion (not an ingestion route today) | open-points.md |
+| OPEN-8 | Numbers marked "provisional" (job-log retention, lease length, back-off base, worker slots) are tuned at the P0 baseline (O-7) | open-points.md |
+| OPEN-9 | Translator difference between otherwise equal records: this design lists it as `needs_review` (the outcome set is fixed by INV-ING-023 to exact_duplicate, new_edition, new_work, needs_review); confirm | open |

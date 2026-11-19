@@ -2,10 +2,13 @@
 
 Status: DRAFT
 
-Each decision blocks a named gate. A recommendation is given so a "yes" is enough. Answered decisions move to [DECISIONS](../DECISIONS.md). Questions are asked as selectable questions (see CLAUDE.md).
+Each decision blocks a named gate. A recommendation is given so a "yes" is enough. Answered decisions move to [DECISIONS](../DECISIONS.md). Questions are asked as selectable questions (see CLAUDE.md). Source: `_replan/open-points.md` (raised by plan writers 2026-11-19); not decided here.
 
 | ID | Decision | Options | Recommendation | Blocks |
 |---|---|---|---|---|
-| OD-01 | PostgreSQL FTS quality for Bengali (ADR-0020 replaced the embedded engine) | (a) FTS plus normalization plus `pg_trgm` for typos, confirmed by a spike on the gold corpus; (b) re-open an embedded engine | (a): matches the brief, no extra component; spike confirms thresholds | search design gate |
-| OD-02 | Annotation anchors (ADR-0015) refer to a reading copy `(book_id, version)` instead of an artifact set; re-anchoring on `book.version_changed` | (a) keep re-anchoring, adapt to reading copies; (b) drop re-anchoring and mark annotations stale on a new version | (a): protects user highlights; cost is small at this scale | reader design gate |
-| OD-03 | Models for the pull-based outbox (`Outbox.tla` models push delivery) | (a) adapt the model to cursor pull; (b) drop the model | (a): the idempotency and duplicate-tolerance claims depend on it | correctness gate |
+| O-1 | Add a `user.deleted` event (account deletion by an admin, D-30) to the event list | (a) add it; (b) rely on `user.disabled` plus resynchronization | (a): consumers must remove the user's reading state and shelves | events and data-ownership design |
+| O-2 | Who sets security headers (CSP, HSTS, frame, referrer) | (a) gateway for API responses, `web` for pages, Caddy only HSTS; (b) Caddy for all | (a) | gateway, web and Caddy design |
+| O-3 | Work/edition grouping | (a) not modelled, only the human "new edition" action; (b) model works and editions | (a): not needed at this scale | catalog data model |
+| O-4 | Scope guarding CSV export and book deletion | (a) `manage_catalog`; (b) new dedicated scopes | (a) | scope table (X3) and catalog contract |
+| O-5 | Search relevance gate (MRR/recall on the gold corpus) strength | (a) SHOULD; (b) MUST | (a): at this scale | search design, test plan |
+| O-7 | NFR numbers (latency, 10 rps, 8 GB, 100 GB, 1 MB body, 100-row page, 5,000-row CSV, 90 s start) | (a) accept as provisional until the P0 baseline; (b) fix now | (a) | non-functional requirements |

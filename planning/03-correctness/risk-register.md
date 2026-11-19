@@ -2,23 +2,31 @@
 
 Status: DRAFT
 
-Likelihood/Impact: L/M/H. Owner is the user unless stated.
+Rebuilt 2026-11-19 for the six-service design in Docker Compose (D-31, D-32). Likelihood/Impact: L/M/H. Owner is the user unless stated. Kept from v1: R-01 to R-15 where the risk survives (ids stay stable); changed rows say so; new rows R-16 to R-24. Likelihood and impact are the author's planning judgements, not measurements.
 
 | ID | Risk | L | I | Mitigation | Trigger / early signal |
 |---|---|---|---|---|---|
-| R-01 | Source content not licensed for republication (D-03) | M | H | Decision before ingestion go-live; keep source attribution; ability to unpublish per source | Unanswered at G0 |
-| R-02 | Source site changes markup | H | M | Drift detector, canary per structure type, halt-on-drift | Canary failing |
-| R-03 | Bengali extraction quality below targets | M | H | Gold corpus first; rules + lexicons; review queue; no auto-publish below threshold | Gold F1 < target at G6 |
-| R-04 | Rust rewrite of 20k lines of heuristics takes too long | H | H | Port by stage with the Python pipeline as oracle; pure library crates; scope stage-by-stage | Stage > 2× estimate |
-| R-05 | Formal models diverge from code | M | M | Model-based tests; invariant register ties code to model; review on change | Model-based test failures |
-| R-06 | Search relevance for Bengali insufficient | M | M | Spike S-01; judged query set; fallback to Postgres trigram | MRR < 0.85 |
-| R-07 | Angular Material lacks needed M3 components / Angular churn / second toolchain burden | M | M | Spike S-02 component audit; compose from CDK + tokens; pin one Angular major and upgrade deliberately; reader behind `ReaderHost`; generated client keeps types in sync | S-02 gaps; upgrade breaks visual snapshots |
-| R-15 | npm dependency tree conflicts with "minimal dependencies" rule | M | M | register + approval; lockfile discipline; `npm audit` nightly; prefer Angular/CDK built-ins over extra packages | register growth beyond approved set |
-| R-08 | Operational complexity of many services for one developer | M | M | Single-binary dev mode; shared platform kit; same deploy script; consolidate services if toil > threshold | Deploy > 30 min or on-call load |
-| R-09 | Data migration loses/corrupts data | L | H | Idempotent steps, reconciliation, rehearsals, rollback | Any unexplained diff |
-| R-10 | Scope creep (repeat of the rewrite branch) | H | H | Gates, non-goals, one deliverable per phase, user sign-off | Phase exceeds budget by 50% |
-| R-11 | TLA+/Alloy tooling not usable in CI | M | L | Spike S-04; run locally with committed results as fallback | Spike fails |
-| R-12 | Public search abused (scraping/DoS) | M | M | Rate limits, caching, query bounds, bot rules | Traffic spikes |
-| R-13 | Security incident (credential leak, session theft) | L | H | Threat model, short-lived capabilities, MFA, secret rotation runbook | Audit finding |
-| R-14 | Specification wrong (builds the wrong thing) | M | H | Sign-offs at G0 and G4, prototypes of public pages before backend depth | User rejects prototype |
-| R-15 | Container stack exceeds the host's memory/CPU (9 app containers + Postgres + builds on one host) | M | M | Per-container limits, memory budget table at G1, multi-stage cached builds, consolidation hatch (merge services) | Budget > 70% of host RAM |
+| R-01 | Source content not licensed for republication | M | H | Written permission before ingestion go-live (D-03); keep source attribution; unpublish per source; see R-20 | Unanswered at G0 |
+| R-02 | Source site changes markup | H | M | Fixtures, drift detector, canary per structure shape, halt-on-drift | Canary failing |
+| R-03 | Bengali extraction quality below targets | M | H | Gold corpus first (120 books, 40 held out); rules and lexicons; review queue; no auto-publish below threshold | Holdout metrics below the P0 baseline at G6 |
+| R-04 | The new ingestion pipeline (written from the design, not ported) takes too long | H | H | Pure crates built from P1 against the gold corpus; one pipeline; scope stage by stage; legacy code in `archive/` is reference only | A stage takes more than twice its estimate |
+| R-05 | Formal models diverge from code | M | M | Model-based tests replay traces; invariant register ties code to model; model and invariant change together | Model-based test failures |
+| R-06 | Bengali search on PostgreSQL full-text is insufficient (changed: no separate engine, D-29) | M | M | Spike S-01 with judged queries; Bengali normalization before indexing; trigram only after an owner decision | Relevance below the S-01 baseline (target OPEN, O-5) |
+| R-07 | Angular Material lacks needed M3 components, Angular churn, second toolchain | M | M | Spike S-02 component audit; compose from CDK and tokens; one Angular major pinned; reader renderer is custom (R-22) | S-02 gaps; upgrade breaks visual snapshots |
+| R-08 | Six services, ten containers and one PostgreSQL are a heavy operations load for one part-time developer (changed from "many services") | M | M | Shared platform kit; one Compose file; scripted rolling restart; runbooks; memory budget table at G1 (S-06); consolidation only through a new owner decision | Deploy over 30 minutes; toil over an hour a week |
+| R-09 | Data migration loses data | n/a | n/a | **Retired**: fresh start (D-32), nothing is migrated | |
+| R-10 | Scope creep | H | H | Gates, non-goals, one deliverable per phase, owner sign-off, plan-change page | Phase exceeds its estimate by 50% |
+| R-11 | TLA+/Alloy tooling not usable in CI (Java needs approval) | M | L | Spike S-04; run locally with committed results as fallback | Spike fails or Java not approved |
+| R-12 | Public metadata routes abused (scraping, DoS) | M | M | Gateway rate limits, query bounds, bounded concurrency; metadata only is public (D-34) | Traffic spikes |
+| R-13 | Security incident (credential leak, session theft) | L | H | Threat model, opaque sessions, 15-minute tickets, MFA, secret files, rotation runbook | Audit finding |
+| R-14 | Specification wrong (builds the wrong thing) | M | H | Sign-offs at G0, G4, G5; prototypes before backend depth | Owner rejects a prototype |
+| R-15 | npm dependency tree conflicts with the minimal-dependency rule | M | M | Register and approval; lockfile discipline; `npm audit` nightly; prefer Angular and CDK built-ins | Register growth beyond the approved set |
+| R-16 | Container stack exceeds the host's memory or CPU (ten containers, builds, Java) (v1 id duplicated R-15; renumbered) | M | M | Per-container limits; memory budget table at G1; multi-stage cached builds; load test at G8 | Budget above 70% of host RAM |
+| R-17 | **Monthly backup loses up to 30 days of data** (D-33): reading progress, review decisions, user and grant changes after the last backup | M | M | Monthly restore drill; books can be re-ingested; users re-invited; backup copy is off the host; the owner may raise frequency; backup also taken before every release (proposal, OPEN) | A loss event; restore drill fails or exceeds the 4 h RTO |
+| R-18 | **Java in the ingestion worker** (D-47): large runtime, new system package, extra attack surface and memory, epubcheck version drift | M | M | Approval in the P1 batch; pinned version; non-root, no network, memory cap, timeout; fail closed; image-scan gate Q11; spike S-04 measures size and memory | Worker image or memory over budget; epubcheck upgrade changes verdicts |
+| R-19 | **SSR container** (D-39): the Node `web` server adds a runtime, memory and a rendering failure mode; hydration or SSR-only bugs | M | M | Spike S-02 audits SSR and hydration; memory limit; public pages degrade to an error page, not to a blank one; image at most 50 MB; INV-WEB-022 and INV-WEB-024 tested | SSR memory growth; first byte over budget |
+| R-20 | **Source-site permission** not obtained or withdrawn (D-03): ingestion go-live (G6) is blocked, the library stays empty | M | H | Owner action tracked in STATUS; pipeline built and tested on fixtures; no live contact in CI; locked chapters never unlocked; operator can pause all scraping | No written answer at G0; any request or block from the source |
+| R-21 | **A reader can copy a whole book** (D-28): the reader serves the full rendered book | H | M | Accepted limit; controls are entitlements, short tickets, rate limits, audit; stated in records and UI (INV-RDR-010) | Abnormal open or download rates in the audit log |
+| R-22 | **Custom reader renderer** (D-28) is larger than planned (selection, anchors, themes, Bengali typography, accessibility) | H | M | Spike S-08 builds a whole-book package and a minimal renderer in P0; reader prototype signed off before P5 depth; scope limited to the owner's listed features | Prototype over 2 weeks |
+| R-23 | One part-time developer: illness or absence stalls everything; estimates are optimistic | M | H | Plans and decisions kept in `planning/`; small phases with usable output; estimates re-baselined at each gate; scope reduction before gate relaxation | A gate fails twice |
+| R-24 | **A defect that passes every gate is public until unpublished** (D-49: publishing is automatic, no human approval): a wrong extraction, wrong metadata or a bad duplicate decision becomes visible at once | M | M | Gold-corpus gate on ruleset and builder changes; epubcheck, structure audit and conservation checks as gates; the `manage_catalog` unpublish action (reversible by restore); audit trail of every publish, unpublish and edit; first batches in small bounded sizes (launch runbook) | A reader or operator report of a wrong book; gold-corpus metric regression |

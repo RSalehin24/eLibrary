@@ -1,6 +1,9 @@
 # Capability map (step 2)
 
-Status: DRAFT
+Status: SUPERSEDED
+
+> **SUPERSEDED (2026-11-19).** Written before the owner's decisions D-27 (5 services, no gateway), D-28 (reader renders and serves the whole book) and D-29 (small scale). The current architecture is [new-architecture.md](new-architecture.md); the analysis is in [analysis/](analysis/). Kept only as history of an earlier, shallower pass.
+
 
 Built from evidence A–F plus the fixed requirements F1–F7 ([REPLAN](../REPLAN.md)). A capability is something the product must do; services are chosen from these in step 3. "Legacy" = where it lived in the archive.
 

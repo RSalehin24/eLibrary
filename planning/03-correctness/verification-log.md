@@ -2,7 +2,7 @@
 
 Status: DRAFT
 
-What was checked on 2026-11-17, against what source, with what result. "Verified" means read from the primary source or executed. Anything not listed here is **not verified**.
+Entries are dated. Sections 1 to 4 record what was checked on 2026-11-17 (v1 plan; kept as written, they were not re-verified in the 2026-11-19 rewrite). What was checked on 2026-11-17, against what source, with what result. "Verified" means read from the primary source or executed. Anything not listed here is **not verified**.
 
 ## 1. Executed checks
 
@@ -66,3 +66,18 @@ What was checked on 2026-11-17, against what source, with what result. "Verified
 | Whether Kindle limits changed | Amazon page 503 | before P7 |
 | Performance, relevance and accuracy targets | need data and code | gold baseline / G4–G6 |
 | All requirements' implementations | no code exists | per gate |
+
+## 5. Entry 2026-11-19 (six-service rewrite of the roadmap and correctness documents)
+
+**No facts were re-verified in this rewrite.** The work was editorial: re-baselining the roadmap and correctness documents on the owner decisions D-22 to D-48 and the new architecture brief.
+
+| Item | State |
+|---|---|
+| Entries in sections 1 to 4 (2026-11-17) | carried over unchanged; still valid only for what they say; the Python mirrors cover the **v1** models, not the models edited since or the planned ones |
+| Formal models | none run: Java is not installed. `coverage.md` lists all 46 invariants whose mechanism includes `model` with state `planned`, `edited, not re-checked` or `unchecked`; the `.tla` and `.als` files received comment-only id renames and their logic is unchanged |
+| Tool, flag and lint names in [coding standards](coding-standards.md), [type-driven design](type-driven-design.md) | carried over from 2026-11-17; **verify at gate G1 and spike S-02** |
+| New claims added (Compose rules, Java in the worker, SSR rules) | design statements, not verified; sources are the decisions D-22, D-39, D-47 and [deployment topology](../04-architecture/deployment-topology.md) |
+| Estimates in [phases](../12-roadmap/phases.md) | planning figures, not measurements |
+| Plan checker | not run by the writer of this entry (other writers were editing concurrently); the parent runs it at the end of the wave |
+
+Still not verified (additions to section 4): epubcheck and Java runtime size and memory in the worker image (S-04); Angular SSR memory and first byte on Node (S-02); PostgreSQL full-text quality on Bengali (S-01); whole-book serving at 5 MB (S-08); backup and restore timings (S-09).

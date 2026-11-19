@@ -1,12 +1,12 @@
 ------------------------------- MODULE ReadOnce -------------------------------
 (* Read-once access with reading tickets (ADR-0023, ADR-0024).
-   Covers INV-ACC-006: at most one consumed use per (user, book); the use is
+   Covers INV-IDN-020 and INV-RDR-009: at most one consumed use per (user, book); the use is
    consumed when a ticket is successfully REDEEMED, not when it is issued
    (open), and never when the copy is missing/building.
    Several devices may each hold an issued ticket; the identity check
    (consume with PK insert on (user, book)) is atomic, so only one redeem wins.
    Reloading with an already redeemed ticket does not consume again.
-   INV-LIB-008 (one live session) is RETIRED; the race it modeled is now this one.
+   The v1 one-live-session invariant is RETIRED; the race it modeled is now this one.
    STATUS: edited for the ticket design, NOT MODEL-CHECKED. Must pass TLC at gate G2. *)
 EXTENDS Naturals, FiniteSets
 

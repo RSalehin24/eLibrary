@@ -2,34 +2,58 @@
 
 Status: DRAFT
 
-## Event pull (outbox cursor)
+## Event pull (REQ-NTF-001, INV-NTF-001)
 
-```
- read cursor c -> GET source/internal/events?after=c -> insert outbox rows (UNIQUE conflict = skip) + set cursor in ONE transaction -> repeat; empty page -> sleep
-```
-Crash before the transaction: events are re-read. Crash after: cursor already moved. Duplicates are absorbed by the unique key (INV-NTF-001, REQ-NTF-001).
+| State | Event | Guard | Next |
+|---|---|---|---|
+| Idle | poll due | cursor c for a source | Fetching |
+| Fetching | page received | non-empty | Storing |
+| Fetching | empty page | | Idle (cursor kept) |
+| Fetching | source error or timeout | | Idle (backoff, cursor unchanged) |
+| Storing | one transaction: insert rows (`UNIQUE` conflict skips) and set cursor | commit | Fetching |
+| Storing | crash before commit | | events re-read; duplicates absorbed |
 
-## Mail delivery (outbox row)
+## Mail delivery (outbox row; REQ-NTF-002, 008, 010)
 
-```
- Queued --claim (lease)--> Sending --send ok--> Sent
-                              |--transient error--> Retry(next_attempt_at) --due--> Sending   (attempts < N, within 24 h)
-                              +--permanent error / attempts exhausted--> Failed --admin retry--> Queued
- Sending --lease expired (crash)--> Retry
-```
-**Claim-before-send**: the row exists in `Queued` under `UNIQUE (source, event_id, kind)` before any send, and `Sending` is entered by a leased claim. A crash after the provider accepted but before `Sent` is recorded can cause one repeat on lease expiry; this residual at-least-once window is documented and bounded to one extra attempt (providers without idempotency tokens). `Sent` is terminal and never re-claimed.
+| From | Event | Guard | To |
+|---|---|---|---|
+| (none) | event stored | unique `(source, event_id, kind)` | Queued |
+| Queued, Retry | claim | `next_attempt_at <= now`, `SKIP LOCKED`, lease set | Sending |
+| Sending | provider accepted | | Sent (terminal) |
+| Sending | error `Retryable` | attempts below the maximum | Retry (`next_attempt_at` by exponential backoff) |
+| Sending | error `Retryable` | attempts exhausted | Failed |
+| Sending | error `Permanent` (for example identity says account no longer exists) | | Failed |
+| Sending | lease expired (crash) | | Retry (one possible repeat, documented) |
+| Failed | admin retry through operations | | Queued |
 
-## Kindle delivery
+Sent is terminal and never re-claimed. A failed mail never undoes account creation or the reset request. Each attempt writes one `delivery_log` row.
 
-```
- Queued --> Preflight --reject--> Rejected (terminal, user-visible reason)
-               |
-               +--ok--> Sending --ok--> Sent
-                           |--transient--> Retry --> Sending
-                           +--permanent / exhausted--> Failed --admin retry--> Queued
-```
-Preflight checks, in order: user active and address present on the profile; EPUB exists for a published version; size <= 50 MB; sender-approval confirmed; daily cap. Rejections never retry automatically. The EPUB is streamed from catalog during `Sending` (not stored). Terminal: `Sent`, `Rejected`, `Failed`.
+## Kindle delivery (REQ-NTF-005..009)
+
+| From | Event | Guard | To |
+|---|---|---|---|
+| (none) | `kindle.requested` stored | unique `request_id` | Queued |
+| Queued | claim | lease | Preflight |
+| Preflight | identity `check` denies `kindle` or account not Active | permanent | Rejected (reason, reported to catalog) |
+| Preflight | no valid address on the account | | Rejected `no_address` |
+| Preflight | book not published or format not EPUB | | Rejected `unsupported_format` |
+| Preflight | total size above 50 MB | | Rejected `too_large` |
+| Preflight | owner has not confirmed sender approval | | Rejected `sender_not_approved` |
+| Preflight | quota exceeded | | Rejected (limit, no retry) or deferred within the window |
+| Preflight | all checks pass | | Sending |
+| Sending | sent | | Sent (reported to catalog) |
+| Sending | `smtp_failed` retryable | attempts below max | Retry then Sending |
+| Sending | retryable exhausted or permanent | | Failed (reported to catalog) |
+| Failed | admin retry | | Queued |
+
+Preflight order: identity Allow and account Active, address, publication and format, size, sender approval, quota. Rejections never retry automatically. At most one attachment is held per send; concurrency is a configured bound. Terminal: Sent, Rejected, Failed.
+
+Reported status mapping (catalog and `GET` status routes): Queued and Retry report `queued`; Sent reports `sent`; Rejected (any Preflight failure) and Failed report `failed` with the typed reason or error class. Kindle statuses are `queued`, `sent`, `failed` only. The status report to catalog is retried until acknowledged and does not change the delivery state.
 
 ## Template set
 
-`Draft -> Active` (all keys in `bn` and `en`, typed variables compile); exactly one active version per (key, language); activation is atomic for the set.
+`Draft` then `Active` only when every key exists in `bn` and `en` with compiling typed variables; one active version per (key, language); activation atomic for the set.
+
+## Retention job
+
+Selects at most a bounded batch of rows older than the retention for outbox, delivery log and quota counters per run; repeats until none remain; a terminal-state row only (never `queued`, `sending`, `retry`).

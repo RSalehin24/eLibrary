@@ -8,8 +8,8 @@ The owner wants Google's Material UI. Findings (2026-11-17 web check; see [DECIS
 ## Decision
 - UI language: **TypeScript (strict)**; framework: **Angular**; components and design language: **Angular Material + CDK, Material Design 3** (themes via the library's theming API, tokens mapped in [design system](../../08-ux/design-system.md)).
 - Rust remains the language of all backend and shared domain code (ADR-0001). The UI consumes **TypeScript types and clients generated from the Rust contract schema** (ADR-0004); hand-written wire types are forbidden.
-- Public and account pages use Angular server-side rendering with hydration (SEO, first paint); verify configuration and version in spike S-02.
-- The reader implements the `ReaderHost` interface (see [web](../../05-services/web/README.md)) as an Angular feature; it receives chapter HTML and the section index only (ADR-0016).
+- Public pages are server-side rendered (D-39): the `web` container is an Angular SSR server on Node, not static files. Account pages use the same app with hydration; verify configuration and version in spike S-02.
+- The reader implements the `ReaderHost` interface (see [web](../../05-services/web/README.md)) as an Angular feature; it receives the whole rendered book from the reader service under a reading ticket and renders it in the browser ([ADR-0023](0023-reader-renders-whole-book.md); ADR-0016 is superseded).
 - Page states are discriminated unions with exhaustiveness checks (`never`), preserving INV-WEB-001 at compile time.
 
 ## Verified facts (2026-11-17; evidence in the [verification log](../../03-correctness/verification-log.md))
@@ -22,7 +22,7 @@ The owner wants Google's Material UI. Findings (2026-11-17 web check; see [DECIS
 ## Consequences
 + Real Material 3 maintained by Google; strong accessibility primitives (CDK); mature SSR; large pool of documentation.
 + Contract drift stays impossible: generated types fail the build on mismatch.
-− Second language and toolchain (Node, TypeScript, Angular CLI); npm dependency tree is large — every package goes through the [dependency register](../dependency-policy.md) with the lockfile managed by the package manager.
+− Second language and toolchain (Node, TypeScript, Angular CLI), and Node is also a runtime container (SSR); npm dependency tree is large — every package goes through the [dependency register](../dependency-policy.md) with the lockfile managed by the package manager.
 − Angular major-version churn: pin versions, upgrade deliberately, one major at a time.
 − Component or Expressive-style gaps are possible; spike S-02 compares the component list with the screen inventory and Bengali typography before gate G4. A gap is handled by composing from CDK + tokens inside the design system, never by adding a second UI library without approval.
 − Reopen this ADR if S-02 shows blocking gaps (accessibility, Bengali selection/anchoring, performance budgets).

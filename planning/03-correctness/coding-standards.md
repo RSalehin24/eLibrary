@@ -2,6 +2,8 @@
 
 Status: DRAFT
 
+Rebuilt 2026-11-19 for six Rust services, the Angular SSR `web` and Docker Compose (D-22, D-31, D-39); shape thresholds are D-19 (binding). Kept from v1: sections 1 to 15 unless marked *changed*. No fact in this file was re-verified in the rewrite (see the [verification log](verification-log.md)).
+
 Complements [type-driven design](type-driven-design.md) (error elimination) and the [engineering philosophy](../00-charter/engineering-philosophy.md) (rules). Items marked **verify** must be confirmed against the installed tool's documentation before being relied on (we do not invent flags).
 
 ## 1. Function and module shape
@@ -46,7 +48,7 @@ Closed enums per crate (`thiserror` if approved; otherwise hand-written `impl Er
 
 ## 7. Persistence (SQL)
 
-Forward-only migrations (never edit applied ones); explicit column lists; transactions scoped small and short; constraints in the schema, not only code; indexes justified by a query (with `EXPLAIN` in review for hot paths); no N+1 (batch/JOIN within the service); parameterized queries only (sqlx macros); timestamps `timestamptz` UTC; soft delete only where the domain needs history.
+Forward-only migrations (never edit applied ones), run by the one-shot `migrate` job of each service against its own database and role only (a role has no privilege on another service's database, INV-PLT-002); status columns are enums or have CHECK constraints (INV-PLT-023); explicit column lists; transactions scoped small and short; constraints in the schema, not only code; indexes justified by a query (with `EXPLAIN` in review for hot paths); no N+1 (batch/JOIN within the service); parameterized queries only (sqlx macros); timestamps `timestamptz` UTC; soft delete only where the domain needs history.
 
 ## 8. Testing practices
 
@@ -62,7 +64,7 @@ Log at boundaries only (request in/out, job step, external call, state transitio
 
 ## 11. Security practice
 
-Map to OWASP ASVS level 2 for web/API controls (checklist in the threat model review); validate at the edge; output-encode; least privilege; dependency scanning (`cargo audit`, `cargo deny`); secrets only via files with strict permissions; constant-time comparison for secrets; rate limits; CSP.
+Map to OWASP ASVS level 2 for web/API controls (checklist in the threat model review); services trust identity headers only from the gateway and verify the internal service token on every `/internal/*` route (INV-PLT-020); acquisition is GET-only with allow-listed hosts (D-03); validate at the edge; output-encode; least privilege; dependency scanning (`cargo audit`, `cargo deny`); secrets only via files with strict permissions; constant-time comparison for secrets; rate limits; CSP.
 
 ## 12. Performance practice
 
@@ -95,12 +97,21 @@ The owner's rules apply unchanged (20 lines, ≤ 3 parameters, ≤ 2 nesting, no
 | Wire types | only from `core/api/generated`; runtime-validate untrusted JSON at the boundary if the generator does not | Q3 diff |
 | Components | standalone, `OnPush`, small (template + class ≲ 150 lines), presentational vs container split, no logic in templates beyond trivial expressions, inputs/outputs typed, no direct DOM access except through CDK/renderer services | review + lint |
 | Subscriptions | prefer signals / `async` pipe / `takeUntilDestroyed`; no manual subscribe without teardown | lint + review |
-| HTTP | only in `core/`; every call has a typed result, timeout and error mapping to `ErrorCode` | review + tests |
-| Security | no `innerHTML` except through the approved sanitizing component for chapter HTML; strict CSP (no inline scripts); no secrets in the bundle; never log personal data | lint rule + e2e CSP check |
+| HTTP | only in `core/`, through the generated client for both the browser and the SSR server (INV-WEB-024); every call has a typed result, timeout and error mapping to `ErrorCode`; no preliminary GET before a mutation and no periodic health request (INV-WEB-020) | review + tests |
+| SSR (*new*, D-39) | no `window`, `document` or storage access outside browser-only code paths; the SSR server holds no secret and no user session beyond the request; public pages render title, canonical and metadata on the server (INV-WEB-022) | lint rule + e2e |
+| Security | no `innerHTML` except through the approved sanitizing component for chapter HTML; strict CSP (no inline scripts); no secrets in the bundle; the reading ticket lives in memory only, never in a URL, storage or log (INV-WEB-021); never log personal data | lint rule + e2e CSP check |
 | Accessibility | Angular Material/CDK a11y primitives (focus trap, live announcer, key manager); every interactive element labeled; axe in CI | e2e |
-| i18n | all strings through the i18n catalog (`bn`, `en`); key parity test (INV-WEB-009) | unit |
+| i18n | all strings through the i18n catalog (`bn`, `en`); key parity test (INV-WEB-011) | unit |
 | Style | tokens only; no hard-coded colors/px for theme-able values; no `!important`; no deep `::ng-deep` | stylelint (to verify) |
 | Naming | `kebab-case` files, `PascalCase` classes, intention-revealing names, no abbreviations | lint |
 | Performance | lazy-loaded feature routes, `@defer`/image `loading=lazy` where appropriate, budgets in [performance](../09-testing/performance.md); measure before optimizing | CI budgets |
 | Testing | unit tests for logic (pure functions first), component tests for states, Playwright for journeys, no sleeps; deterministic via fake timers/clock | CI |
 | Dependencies | each npm package approved and registered; lockfile managed only by the package manager; `npm audit` (or equivalent) in nightly | Q10 |
+
+## 17. Containers and Compose (*new*, D-22, D-24)
+
+Every runtime component is declared in the Compose file with a memory limit and a restart policy; only `caddy` publishes host ports (INV-PLT-001); services run as a non-root user with a read-only root filesystem and named volumes only where state lives; base images are pinned by digest; images are built multi-stage and carry no build tools or secrets (INV-PLT-016); secrets are mounted as read-only files, never environment variables or image layers; every service has a readiness check that fails when its database is unreachable (INV-PLT-004); the previous image stays runnable until the new one is healthy (INV-PLT-022). `docker compose config` and an image scan run in gate Q11 ([quality gates](quality-gates.md)).
+
+## 18. The Java runtime in the ingestion worker (*new*, D-47)
+
+epubcheck needs a Java runtime, a system package outside the Rust toolchain; it is registered in the [dependency policy](../04-architecture/dependency-policy.md) and approved in the P1 batch. Rules: Java exists only in the `ingestion-worker` image (not in `ingestion-api` if the two images are split later), runs as the same non-root user with a memory cap, is invoked only by the build step with a timeout and bounded output, and receives no network. Its absence or failure is a typed `permanent` build error: a book is never published without a passing epubcheck (INV-ING-026; see [ingestion tests](../05-services/ingestion/test-plan.md)).

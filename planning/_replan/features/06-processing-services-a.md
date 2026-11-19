@@ -4,11 +4,11 @@ Status: DRAFT (research evidence; read-only record)
 
 Root: `archive/app/backend/apps/processing/service_modules/`. Paths below are relative to it. Method: every line of every assigned file was read with the Read tool. No code was run.
 
-Structural note: these files are NOT importable modules. Apart from `scrape_cache.py` and `service_imports_and_constants.py` they have no imports; they are fragments that are concatenated into one namespace (probably by `processing/services.py`, which is outside this slice and not read). Functions call each other across files freely. Models (`models.py`), `source.py`, `tasks.py`, views and SSE endpoints are outside this slice. Files `r..z` are another agent's job: `sync_*`, `state_serializers`, `ui_*` are in my slice (they sort before `r`? no: `s`,`u` sort after `r`) - see Coverage section for the exact split I used.
+Structural note: these files are NOT importable modules. Apart from `scrape_cache.py` and `service_imports_and_constants.py` they have no imports; they are fragments that are concatenated into one namespace (probably by `processing/services.py`, which is outside this slice and not read). Functions call each other across files freely. Models (`models.py`), `source.py`, `tasks.py`, views and SSE endpoints are outside this slice. Files from `r` onward are another agent's job; I read them too as extras (see Coverage).
 
 ## 1. Coverage table
 
-Rule: filename sorts before `r`. Files starting with `s`/`u` are therefore excluded by the stated rule, but the listing and the task wording ("a..q") left them for the other agent. I read them anyway, because they are small and needed to explain the UI-invalidation mechanism, and they are marked "extra".
+Rule: filename sorts before `r`. Files starting with `r`, `s`, `u` are outside my slice (the other agent's); I read them anyway because they are needed to explain request actions and the UI-invalidation mechanism, and they are marked "extra".
 
 | file | lines | fully read | slice |
 |---|---|---|---|

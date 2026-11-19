@@ -1,70 +1,92 @@
-# catalog — domain model
+# catalog - domain model
 
-Status: DRAFT
+Status: DRAFT (rewritten: no works table, no catalog code, no demo; D-31, D-36, D-42, D-43)
 
-PostgreSQL schema `catalog`, role `catalog`. Files on volume `/data/catalog` (not shared with other services). UUIDs are v4 unless noted; all timestamps `timestamptz`.
+PostgreSQL database `catalog`, role `catalog`. Files on volume `/data/catalog` (not shared). UUIDv4 unless noted; all timestamps `timestamptz` UTC; mutable aggregates carry `revision bigint` ([data ownership](../../04-architecture/data-ownership.md)). No cross-service foreign keys: `user_id` columns are opaque ids.
 
-## Identity and publication
+## Entities and value types
 
-| Table | Columns | Keys / constraints / indexes |
+| Type | Meaning | Invariant |
 |---|---|---|
-| `works` | `id`, `canonical_title`, `original_language`, `created_at` | groups editions and translations (replaces legacy `BookGroup`); optional for a book |
-| `books` | `id`, `work_id?`, `code` (stable public code), `slug`, `source_key?` (hash of the canonical source URL), `published_version_id?`, `latest_version_id?`, `deleted_at?`, `deleted_by?`, `revision` (int), `created_at` | PK `id`; `UNIQUE(code)`; `UNIQUE(slug)`; `UNIQUE(source_key)` where not null; FK `published_version_id` and `latest_version_id` to `book_versions` (deferrable); `code` and `id` immutable (trigger rejects UPDATE) (INV-CAT-003) |
-| `book_versions` | `id`, `book_id`, `version_no`, `state` (`draft`\|`in_review`\|`published`\|`archived`), `title`, `subtitle?`, `language`, `edition_label?`, `publisher_agent_id?`, `first_published?`, `summary?`, `forced` (bool), `ingestion_request_id?`, `build_hash`, `created_by` (account or `ingestion`), `created_at`, `state_changed_at`, `rejected_reason?` | `UNIQUE(book_id, version_no)`; `UNIQUE(book_id, build_hash)` (makes intake idempotent); partial `UNIQUE(book_id) WHERE state='published'` (at most one published version); CHECK: `state='published'` requires an `epub` asset and a credit with role in {writer, translator, editor, compiler} (trigger at transition) (INV-CAT-002); versions are append-only except `state*`, `summary`, metadata columns while `draft`/`in_review` |
-| `book_slugs` | `slug`, `book_id`, `created_at` | PK `slug`; every former and current slug; old slug answers 301 |
-| `book_sources` | `book_id`, `source_url`, `source_key`, `first_linked_at` | `UNIQUE(source_key)`; used by ingestion duplicate check stage 1 |
+| `Book` | identity of a book: immutable `id`, current `slug`, pointer to the current published version, tombstone | INV-CAT-005, 003 |
+| `BookVersion` | one immutable build of the book (metadata snapshot plus assets) with a state | INV-CAT-001, 021 |
+| `Agent`, `Alias` | a contributor and its spellings; identity is the id only | INV-CAT-007 |
+| `Credit` | (version, role, agent, ordinal) | INV-CAT-004, 007 |
+| `Series`, `Category` | ordered series, category tree (depth <= 3) | INV-CAT-008 |
+| `Asset` | write-once file: `epub`, `cover`, `preview` | INV-CAT-020, 021 |
+| `ShelfEntry` | (user, book), never an access decision | INV-CAT-025 |
+| `SavedFilter` | per-user named query JSON | INV-CAT-026, 033 |
+| `KindleRequest` | request issued plus status reported by notify | INV-CAT-029 |
+| `Slug`, `Sha256`, `Revision` | validated newtypes | INV-CAT-005 |
+| `PublicDocument` | the only input of the search indexer and public detail: metadata, cover reference, summary; no preview text (D-34), no source URL, no user data | INV-CAT-012 |
+| `PreviewArtifact` | stored preview (TOC, first N characters) served only to `preview` | INV-CAT-019 |
+| `Visible<Book>` | produced only by the single `visible_books` repository filter; reader-facing handlers accept only this | INV-CAT-002, 003 |
+| `VersionState` | enum; transitions only through consuming methods (`Version<Published>::archive`; a version is constructed `published` by intake, D-56) | INV-CAT-001 |
 
-Visible to the public iff `books.published_version_id IS NOT NULL AND books.deleted_at IS NULL`. The two columns are only changed inside the transitions in [state machines](state-machines.md).
+Visibility: a book is publicly visible iff `books.current_version_id IS NOT NULL AND books.deleted_at IS NULL`. Both columns change only inside the transitions of [state machines](state-machines.md).
 
-## Metadata (per version) and history
+## Tables: books and versions
+
+| Table | Columns | Keys, constraints, indexes |
+|---|---|---|
+| `books` | `id`, `slug`, `current_version_id?`, `latest_version_id?`, `source_key?` (hash of the canonical source URL), `deleted_at?`, `deleted_by?`, `revision`, `created_at`, `updated_at` | PK `id`; `UNIQUE(slug)`; `UNIQUE(source_key)` where not null; `id` immutable (trigger rejects UPDATE of `id`); FKs to `book_versions` deferrable. INV-CAT-003, 005 |
+| `book_slugs` | `slug` (PK), `book_id`, `created_at` | every former and current slug; an old slug answers `301 {redirect_to}` permanently; a slug is never reused by another book. INV-CAT-005 |
+| `book_versions` | `id`, `book_id`, `version_no`, `state` (`published` \| `archived`; born `published`, D-56), `archived_reason?` (`superseded` \| `unpublished`), `title`, `subtitle?`, `language`, `edition_label?`, `publisher_agent_id?`, `first_published?`, `summary?`, `preview_chars` (int, 0 allowed), `build_hash`, `source_hash`, `builder_version`, `ingestion_request_id?`, `created_by`, `created_at`, `state_changed_at` | `UNIQUE(book_id, version_no)`; `UNIQUE(book_id, build_hash)` (idempotent intake, INV-CAT-022); partial `UNIQUE(book_id) WHERE state='published'`; `CHECK(state <> 'archived' OR archived_reason IS NOT NULL)`; trigger at `published`: an `epub` asset exists, hash verified, and at least one credit with role in {writer, translator, editor, compiler} (INV-CAT-004); rows are append-only except state columns and metadata columns while `draft` (the in-transaction intake state, INV-CAT-021) |
+| `book_sources` | `book_id`, `source_url`, `source_key`, `first_linked_at` | `UNIQUE(source_key)`; read only on `/manage/*` and by `books/match`; the reader-facing view type has no field for it (INV-CAT-002) |
+
+## Tables: metadata, agents, history
 
 | Table | Columns | Constraints |
 |---|---|---|
-| `agents` | `id`, `kind` (`person`\|`organization`), `display_name`, `code`, `exact_key`, `merged_into?`, `revision` | `UNIQUE(code)`; identity is the id only (INV-CAT-005) |
-| `agent_aliases` | `agent_id`, `alias`, `script` (`bengali`\|`latin`), `exact_key`, `loose_key` | `UNIQUE(exact_key, agent_id)`; feeds search (REQ-DSC-003) |
-| `credits` | `version_id`, `agent_id?`, `raw_name?`, `role` (writer, translator, editor, compiler, illustrator, cover_artist, publisher), `ordinal` | PK `(version_id, role, ordinal)`; `agent_id` or `raw_name` present; unresolved `raw_name` becomes an agent on approval (exact-key dedupe) |
-| `series` , `version_series` | `series(id, name, exact_key)` ; `version_series(version_id, series_id, ordinal numeric?)` | `UNIQUE(series_id, ordinal)` per published version when ordinal present |
-| `categories`, `version_categories` | `categories(id, code, name, exact_key, parent_id?)` ; join on `(version_id, category_id)` | tree depth <= 3, acyclic |
-| `field_overrides` | `book_id`, `field`, `value`, `set_by`, `set_at`, `source_value_hash`, `stale` (bool) | PK `(book_id, field)`; override wins over any source value; `stale` set when a new ingested version changes the source value (INV-CAT-004) |
-| `metadata_revisions` | `id` (bigserial), `book_id`, `version_id`, `revision_no`, `source` (`ingestion`\|`admin`), `changed_by`, `changed_at`, `changes` (jsonb: field to [old,new]), `snapshot` (jsonb) | `UNIQUE(book_id, revision_no)`; append-only (REVOKE UPDATE/DELETE); restoring writes a new revision, never rewrites history |
-| `metadata_reviews` | `id`, `version_id`, `state` (`open`\|`approved`\|`rejected`), `requested_by`, `decided_by?`, `decided_at?`, `note?` | partial `UNIQUE(version_id) WHERE state='open'`; created when a version enters `in_review` |
-| `agent_merges` | `from_agent`, `into_agent`, `moved_credits` (jsonb), `at`, `by` | enables split/undo |
+| `agents` | `id`, `kind` (`person` \| `organization`), `display_name`, `exact_key`, `merged_into?`, `revision` | identity is the id only; names are never keys (INV-CAT-007) |
+| `agent_aliases` | `agent_id`, `alias`, `script` (`bengali` \| `latin`), `exact_key`, `loose_key` | `UNIQUE(exact_key, agent_id)`; feeds search ([search](search.md)) |
+| `credits` | `version_id`, `agent_id?`, `raw_name?`, `role` (writer, translator, editor, compiler, illustrator, cover_artist, publisher), `ordinal` | PK `(version_id, role, ordinal)`; `agent_id` or `raw_name` present; `raw_name` becomes an agent on publish (exact-key dedupe); a contributor facet matches (role, agent) on one row |
+| `series`, `version_series` | `series(id, name, exact_key)`; `version_series(version_id, series_id, ordinal numeric?)` | `UNIQUE(series_id, ordinal)` per published version when ordinal present |
+| `categories`, `version_categories` | `categories(id, name, exact_key, parent_id?)`; join `(version_id, category_id)` | tree depth <= 3, acyclic |
+| `field_overrides` | `book_id`, `field`, `value` (jsonb), `set_by`, `set_at`, `source_value_hash`, `stale` | PK `(book_id, field)`; exactly one effective source per field: the override wins; `stale` is set when a new version changes the source value (override still effective); `0` and `null` are distinct values (INV-CAT-006) |
+| `metadata_revisions` | `id`, `book_id`, `version_id`, `revision_no`, `source` (`ingestion` \| `operator`), `changed_by`, `changed_at`, `changes` (jsonb field to [old, new]), `snapshot` (jsonb) | `UNIQUE(book_id, revision_no)`; append-only (REVOKE UPDATE, DELETE); restoring writes a new revision |
+| `agent_merges` | `from_agent`, `into_agent`, `moved_credits` (jsonb), `at`, `by` | enables split and undo; `into` must be active so cycles are impossible |
 
-Provenance: every revision row says whether the change came from `ingestion` (with `ingestion_request_id` on the version) or from an `admin`. Re-ingestion creates a new version; overrides stay and are flagged `stale` when their source value changes.
-
-## Assets (former content service)
+## Tables: assets
 
 | Table | Columns | Constraints |
 |---|---|---|
-| `assets` | `id`, `version_id`, `kind` (`epub`\|`cover`\|`preview`), `sha256`, `size_bytes`, `media_type`, `storage_path` (relative, derived from hash), `created_at` | `UNIQUE(version_id, kind)`; write-once (trigger rejects UPDATE/DELETE except by the purge job); `kind='epub'` is `application/epub+zip` verified by magic bytes and a ZIP structure check; cover is a verified raster image, <= size cap; `preview` is sanitized HTML produced by ingestion from the allow-list (metadata, summary, TOC, first N characters of the first chapter) and re-sanitized on intake (INV-CON-003, INV-CON-009) |
+| `assets` | `id`, `version_id`, `kind` (`epub` \| `cover` \| `preview`), `sha256`, `size_bytes`, `media_type`, `storage_path`, `created_at` | `UNIQUE(version_id, kind)`; write-once (trigger rejects UPDATE and DELETE except by the purge job); `epub` is `application/epub+zip` verified by magic bytes and ZIP structure; `cover` is a verified raster image within the size cap; `preview` is a `PreviewArtifact` re-sanitized on intake. INV-CAT-020, 021, 028 |
 
-Storage layout: `/data/catalog/blobs/ab/cd/<sha256>`; written to a temp file, hashed, fsynced, renamed; the row is inserted in the same request after the rename. A blob without a row is orphan-swept after 24 h; a row whose blob is missing or fails its hash blocks `approve` and is reported by the nightly verify job.
+Layout, atomic write and sweep: [files](files.md).
 
-## Shelves, Kindle, downloads
-
-| Table | Columns | Constraints |
-|---|---|---|
-| `shelves` | `id`, `user_id`, `name`, `kind` (`my_books`\|`custom`), `created_at` | `UNIQUE(user_id, name)`; one `my_books` per user (partial unique); a shelf never grants access (X3) |
-| `shelf_items` | `shelf_id`, `book_id`, `added_at` | PK `(shelf_id, book_id)`; may reference non-visible books (hidden from reads) |
-| `kindle_requests` | `id`, `user_id`, `book_id`, `version_id`, `asset_id`, `to_address`, `requested_at`, `state` (`issued`\|`rejected_limit`), `idempotency_key` | `UNIQUE(user_id, idempotency_key)`; catalog only records issuance; delivery result is in notify |
-| `download_log` | `id`, `user_id`, `book_id`, `version_id`, `at`, `kind` (`download`\|`kindle_internal`\|`reader_internal`) | INSERT-only; feeds audit and rate limits |
-
-## Search
+## Tables: shelf, saved filters, Kindle, audit
 
 | Table | Columns | Constraints |
 |---|---|---|
-| `search_docs` | `book_id` (PK), `version_id`, `doc` (tsvector, config `simple`), `title_sort`, `title_exact_key`, `code`, `facet_categories int[]`, `facet_writers int[]`, `facet_series int[]`, `language`, `published_at` | GIN on `doc`; btree on `(title_sort, book_id)` and `(published_at, book_id)`; GIN on facet arrays; row exists iff the book is publicly visible; updated in the same transaction as `published_version_id` |
+| `shelf_entries` | `user_id`, `book_id`, `added_at` | PK `(user_id, book_id)`; add is idempotent; may point at a no-longer-visible book (hidden on read, never grants access). INV-CAT-025 |
+| `saved_filters` | `id`, `user_id`, `name`, `query` (jsonb), `created_at` | `UNIQUE(user_id, name)` (duplicate gives typed 409 `duplicate_saved_filter`); count per user bounded by a configured limit (value not yet in [limits](../../04-architecture/cross-cutting/limits.md); needs a row); `query` validated against a schema on save and on apply; row visible only to `user_id`. INV-CAT-026, 033 |
+| `kindle_requests` | `id`, `user_id`, `book_id`, `version_id`, `address_index`, `requested_at`, `status` (`queued` \| `sent` \| `failed`), `error_class?`, `reason?`, `idempotency_key` | `UNIQUE(user_id, idempotency_key)`; status updated by notify through `/internal/kindle-requests/{id}/status` (idempotent by request id and status). INV-CAT-029 |
+| `download_log` | `id`, `user_id`, `book_id`, `version_id`, `at`, `kind` (`download` \| `kindle_internal` \| `reader_internal`) | INSERT-only; feeds rate limits |
+| `audit_log` | `id`, `actor`, `action`, `target`, `at`, `details` | INSERT-only for the service role; written in the same transaction as the change; covers publish, unpublish, edit, merge, delete, file replace, export, EPUB download, Kindle request. INV-CAT-031 |
 
-Weights: A title and subtitle, B contributor names and aliases (loose key), C series, category, code, D preview text. Text is normalized by the shared `bn-text` function (see ingestion domain model, "Bengali normalization"); the same function version is stored in `search_meta.normalizer_version`; a mismatch triggers a rebuild. Only metadata and the preview asset are indexed (INV-DSC-004): the indexer takes a `PublicDocument` value that cannot hold other text.
+## Tables: search and events
 
-## Events and cursors
-
-| Table | Columns | Notes |
+| Table | Columns | Constraints |
 |---|---|---|
-| `events` | `id` (bigserial), `type`, `book_id`, `version_id?`, `payload` (jsonb), `created_at` | written in the same transaction as the change; payload carries `book_id`, `slug`, `version_id`, `version_no`, `epub_sha256`; consumers use `id` as cursor; retained 30 days |
-| `event_cursors` | `source` (PK), `last_id` | catalog's cursors into identity's events |
-| `audit_log` | `id`, `actor`, `action`, `target`, `at`, `details` | INSERT-only; all admin transitions, overrides, deletes, exports |
+| `search_docs` | `book_id` (PK), `version_id`, `doc` (tsvector), `title_sort`, `title_exact_key`, `facet_*` arrays, `language`, `published_at`, `normalizer_version` | row exists iff the book is publicly visible; written in the same transaction as the pointer; details in [search](search.md). INV-CAT-009, 012, 013 |
+| `events` | `cursor` (bigserial), `id` (uuid7), `type`, `subject_id`, `payload`, `created_at` | written in the same transaction as the change; payload ids only; retained 30 days and not pruned past a known consumer cursor. INV-CAT-024 |
+| `event_cursors` | `source` (PK), `last_cursor` | identity events; advanced in the same transaction as the effect |
 
-## Value types
+## Invariants by id (where each is enforced)
 
-`Sha256`, `Slug`, `BookCode`, `SafeHtml` (sanitizer output, idempotent), `PublicDocument` (metadata plus preview only), `VersionState` (enum, transitions only through `Version<S>` methods), `Revision`.
+| INV | Enforced by |
+|---|---|
+| INV-CAT-001 | `VersionState` type, transition table, TLA+ model |
+| INV-CAT-002, 003 | one `visible_books` filter; reader-facing view types without source fields |
+| INV-CAT-004 | trigger at `published`, unit test |
+| INV-CAT-005 | immutable `id`, `UNIQUE(slug)`, `book_slugs` |
+| INV-CAT-006 | revision check in the command, `field_overrides`, `metadata_revisions` |
+| INV-CAT-007 | `agents` keyed by id, `agent_merges` |
+| INV-CAT-008, 015, 016 | query builder, snapshot token, keyset |
+| INV-CAT-009..014, 018 | [search](search.md) |
+| INV-CAT-012, 019 | `PublicDocument`, `PreviewArtifact` types |
+| INV-CAT-020..023, 028 | [files](files.md), [versions](versions.md) |
+| INV-CAT-024 | outbox transaction rule |
+| INV-CAT-025, 026, 033 | shelf and saved filter constraints above |
+| INV-CAT-027, 029, 030, 031, 032 | [API](api-contract.md), audit table, GET handlers take a read-only connection |

@@ -6,31 +6,24 @@ Resume here. Do not re-derive earlier decisions; read [DECISIONS](DECISIONS.md) 
 
 ## Current stage
 
-*2026-11-18:* legacy files moved to `archive/` (new project from scratch); deployment is now **Docker Compose, one container per component** (ADR-0019, D-22…D-25); responsive mobile/tablet/desktop requirement added (REQ-WEB-012). Docker/Compose install needs owner approval (P1).
-
-**Planning (pre-P0).** The plan structure, requirements (118), invariants (110), architecture, service designs, UX, roadmap and rules are drafted. No product code exists. The plan check passes; the TLA+/Alloy models are written but **unchecked**.
+**Planning, rewrite complete (2026-11-19); awaiting owner review.** Owner decisions D-22..D-57 are recorded in [DECISIONS](DECISIONS.md): six Rust services (gateway, identity, catalog, reader, ingestion, notify), Caddy for HTTPS only, Angular Material M3 with SSR, Docker Compose, fresh start (nothing migrated, old app shut down, D-32 and D-50), monthly backups (D-33), fully automatic publishing (D-49, D-56, D-57), events-only notify (D-53), batch grants and per-user export (D-54, D-55), gold labelling allowed before source permission for private research only (D-51), reader modes scroll and paged (D-52). Waves A-E are done (charter, discovery, requirements, architecture, contracts, service designs, UX, testing, data, security, operations, roadmap, formal models); wave F is done (three coherence reviews, fix passes A and B, traceability regenerated, [delta](_replan/delta.md) written); `check_plan.py` passes with 215 requirements and 215 invariants. See [rewrite-plan](_replan/rewrite-plan.md). The previous plan is kept read-only in `_v1/`. No product code exists. Remaining open owner points are in [open-points](_replan/open-points.md).
 
 ## Next action (owner)
 
-1. All planning decisions D-01…D-21 are answered ([DECISIONS](DECISIONS.md)). The one outstanding action for the owner: **obtain the source site's written permission** (D-03); ingestion go-live (G6) stays blocked until then.
-2. Approve the tooling installs when ready (each needs your OK): Java (TLC/Alloy/epubcheck, spike S-04), Rust toolchain (P1), Node/npm (spike S-02).
-3. Start P0: gold-corpus labeling tool and sampling ([gold corpus](06-data/gold-corpus/README.md)), spikes S-01…S-07 ([spikes](12-roadmap/spikes.md)).
+1. Obtain the source site's written permission (D-03); ingestion go-live (G6) and any publication stay blocked until then. Gold labelling may start without it (D-51).
+2. Approve the tooling installs (each needs your OK): Docker Engine and Compose, Rust toolchain, Node/npm, Java runtime plus epubcheck (D-47).
+3. Approve the dependency batch at the start of P1 (Rust crates, npm packages, backup encryption and offsite tool; see [dependency policy](04-architecture/dependency-policy.md)).
+4. Answer the remaining open points when asked, then start P0 ([phases](12-roadmap/phases.md)).
 
 ## Blockers
 
 | Blocker | Blocks | Owner |
 |---|---|---|
-| D-03 source rights unanswered | ingestion go-live (G6), spike S-05 | owner |
+| D-03 source rights unanswered | ingestion go-live (G6) and any publication (not gold labelling, D-51) | owner |
 | Java not installed on this machine | running TLA+/Alloy/epubcheck (spike S-04, gate G2) — installing needs approval | owner |
 | Docker Engine + Compose not verified/approved on this machine | local stack, image builds (P1) — installing needs approval | owner |
 | Rust toolchain not installed on this machine | any Rust code, spikes S-03/S-07 — installing needs approval | owner |
 | Node/npm and Angular tooling not installed or approved | spike S-02, the web app — installing needs approval | owner |
-
-## Done so far
-
-- Plan folder created and checked (`python3 planning/tools/check_plan.py` → 0 errors).
-- Verification pass 2026-11-17: facts checked against primary sources, model logic checked in Python mirrors, 18 corrections logged — see [verification log](03-correctness/verification-log.md) and I-12…I-18.
-- Engineering philosophy, working agreement, coding standards and dependency policy added from the owner's `CLAUDE.md`/`AGENTS.md`.
 
 ## Not verified
 

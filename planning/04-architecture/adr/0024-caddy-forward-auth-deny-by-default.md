@@ -1,8 +1,10 @@
 # ADR-0024 — Caddy forward-auth and deny-by-default scope declaration
 
-Status: ACCEPTED
+Status: SUPERSEDED
 
-Supersedes the gateway design (assertion minting, `X-Subject-Assertion`, [ADR-0011](0011-authentication.md) gateway caching note). Basis: D-27.
+Superseded by [ADR-0026](0026-gateway-auth-check-via-identity.md) (D-31: the gateway, not Caddy, asks identity; Caddy handles HTTPS only; the demo role and demo sign-in were dropped by D-35; public preview text was dropped by D-34). Kept as history; the deny-by-default and scope-declaration rules below carry over unchanged.
+
+Originally superseded the gateway design (assertion minting, `X-Subject-Assertion`, [ADR-0011](0011-authentication.md) gateway caching note). Basis: D-27.
 
 ## Context
 The legacy system defaulted to `AllowAny`, had wildcard roles (`is_staff`, `admin:full_control`), and let ownership bypass gates. With the gateway removed, authentication must happen at the edge without a custom proxy.

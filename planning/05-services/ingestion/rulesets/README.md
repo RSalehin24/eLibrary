@@ -1,6 +1,6 @@
 # Rulesets and promotion gates
 
-Status: DRAFT (reconciled; rulesets are files in the ingestion image, used by the curate and duplicate_check jobs)
+Status: DRAFT (reconciled; rulesets are files in the ingestion image, used by the curate and duplicate_check jobs; requirements REQ-ING-022, 030)
 
 All interpretation knowledge (lexicons, label aliases, templates, thresholds, chrome phrases, normalizer settings) lives in versioned, immutable **rulesets**, never inline in code. This makes "what changed?" answerable and "did it get worse?" measurable.
 
@@ -24,7 +24,7 @@ Rules reference lexicons by name; the build embeds a hash of the directory (`rul
 edit on branch ──► CI: unit tests of every rule example
               └─► gold run (all gold books; stages 2–6) ─► GoldReport
 GoldReport vs promoted ruleset:
-   every metric ≥ promoted − 0   (no regression; ε = 0, INV-ING-011)
+   every metric ≥ promoted − 0   (no regression; ε = 0, INV-ING-030)
    conservation = 100%, determinism = 100%, epubcheck errors = 0
 Candidate ─► shadow reprocess of published books' stored scrape cache (no publish) ─► diff summary (counts by change type) reviewed by an operator
           ─► Promote (tag, immutable) ─► new jobs use it; reprocess is explicit, never automatic

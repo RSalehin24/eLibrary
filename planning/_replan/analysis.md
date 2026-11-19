@@ -1,6 +1,9 @@
 # Analysis of the archived application (first-hand reading)
 
-Status: DRAFT
+Status: SUPERSEDED
+
+> **SUPERSEDED (2026-11-19).** Written before the owner's decisions D-27 (5 services, no gateway), D-28 (reader renders and serves the whole book) and D-29 (small scale). The current architecture is [new-architecture.md](new-architecture.md); the analysis is in [analysis/](analysis/). Kept only as history of an earlier, shallower pass.
+
 
 Read directly by the assistant (not delegated): models of `access`, `accounts`, `catalog`, `ingestion`, `processing`; `common/permissions.py`; `access/views/reader.py`; `processing/service_modules/request_processing_pipeline.py`; `ingestion/services/submission_modules/processing_job_runner.py`; `ingestion/pipeline/curated_pipeline.py`; `processing/source.py`; the v1.0 release note, processing use cases and authentication-flow docs. Paths are under `archive/app/backend/apps` unless noted. Everything below was read, not inferred, except where marked *unverified*.
 

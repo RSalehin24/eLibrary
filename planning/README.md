@@ -1,6 +1,6 @@
 # eLibrary — ground-up rebuild plan
 
-Status: DRAFT · v0.1 · Owner: Reyanus Salehin · Written 2026-11-17
+Status: DRAFT · v0.2 · Owner: Reyanus Salehin · Six services (D-31) · Updated 2026-11-19
 
 This folder is the single source of truth for rebuilding the Bangla Library
 platform from scratch in Rust, as independent services. **No product code is
@@ -44,7 +44,7 @@ world (the scraped source site, Bengali text) against a labeled corpus.
 | 03 | [correctness](03-correctness/) | How do we make errors impossible or detectable? |
 | 04 | [architecture](04-architecture/) | Services, data ownership, communication, ADRs |
 | 05 | [services](05-services/) | Per-service domain model, API, state machines, tests |
-| 06 | [data](06-data/) | Legacy migration and the gold corpus |
+| 06 | [data](06-data/) | Gold corpus, seed and fixtures; nothing is migrated (D-32) |
 | 07 | [contracts](07-contracts/) | HTTP and event contracts (the generated-code source) |
 | 08 | [ux](08-ux/) | Information architecture, flows, design system, Bengali typography |
 | 09 | [testing](09-testing/) | Test strategy and pyramids |
@@ -54,12 +54,12 @@ world (the scraped source site, Bengali text) against a labeled corpus.
 
 ## Status of decisions
 
-Open decisions that block work are in
-[04-architecture/open-decisions.md](04-architecture/open-decisions.md). Start there.
+Decisions are in [DECISIONS.md](DECISIONS.md) (D-01..D-52).
+[04-architecture/open-decisions.md](04-architecture/open-decisions.md) holds only the open owner points.
 
 ## Conventions
 
 - Requirement: `REQ-<DOM>-NNN`; invariant: `INV-<DOM>-NNN`; test: `TST-<DOM>-NNN`.
-- Domains: `IDN ACC CAT DSC CON LIB ING NTF GWY WEB PLT MIG`.
+- Domains: `IDN CAT RDR ING GWY NTF WEB PLT NFR`.
 - Every doc starts with `Status:` (`DRAFT`, `REVIEW`, `ACCEPTED`). `ACCEPTED`
   docs may not contain `TBD`, `TODO` or `???` (the checker enforces this).

@@ -2,33 +2,33 @@
 
 Status: DRAFT
 
-Epics map to requirements and verification. Detailed tasks are created at the start of each phase, never earlier (they would rot).
+Re-baselined 2026-11-19 for six services in Docker Compose. Kept from v1: the epic table form and the definition of done; changed: epics follow the six services (D-31), no migration or cutover epics (D-32), no demo or inventory epics (D-35; inventory deferred, D-01). Epics map to requirement families (`REQ-<PREFIX>-nnn` in [02-requirements](../02-requirements/)) and verification. Detailed tasks are created at the start of each phase, never earlier (they would rot). Efforts live in [phases](phases.md) as planning figures.
 
 | Epic | Phase | Scope | Requirements | Key tests |
 |---|---|---|---|---|
-| E-01 Gold corpus & tools | P0 | labeling tool, 200 books, queries, pairs, guidelines | ING-011, DSC-010, CAT-006 | corpus self-checks |
-| E-02 Workspace & CI | P1 | layout, lints, Q1–Q7, xtask | PLT-001/002/004/005 | Q-gates |
-| E-03 `domain-text` | P1 | normalizer, keys, collation, slug | DSC-002/006 | TST-DSC-001/007 |
-| E-04 Formal models | P2 | all models checked | ACC/ING/PLT model INVs | Q8 |
-| E-05 identity | P3 | accounts, links, sessions, TOTP, throttle | IDN-* | TST-IDN-* |
-| E-06 access | P3 | decide, grants, capabilities, openings | ACC-* | TST-ACC-* |
-| E-07 gateway | P3 | routing, CSRF, rate limit, assertions, headers | GWY-* | e2e |
-| E-08 catalog core | P4 | books, agents, taxonomy, overrides, redirects | CAT-* | TST-CAT-* |
-| E-09 search | P4 | analyzer, index projection, query API | DSC-* | TST-DSC-* |
-| E-10 content (public) | P4 | preview/cover, store, artifact sets | CON-001/002/003/008/009 | TST-CON-* |
-| E-11 web public | P4 | pages, design system, SEO, i18n | WEB-* | e2e, a11y |
-| E-12 content (protected) | P5 | sections, EPUB, ranges | CON-004/005/006/007 | TST-CON-* |
-| E-13 library | P5 | progress, sessions, annotations, shelf, filters | LIB-* | TST-LIB-* |
-| E-14 reader | P5 | ReaderHost impl, settings, annotations UI | WEB-001/003/004 | e2e, SR |
-| E-15 ingestion pure crates | P1→P6 | Block IR, structure, classification, entities, builders, rulesets | ING-001…009, 011, 015 | TST-ING-002…010, 016 |
-| E-16 ingestion service | P6 | acquisition, orchestration, saga, review, reprocess | ING-006, 010, 012…014, 016 | TST-ING-001, 007, 011, 013, 015, 017, 018 |
-| E-17 admin UI | P3→P7 | accounts/access, catalog editor, Sources/Jobs/Review, audit | WEB-008 | e2e |
-| E-18 notify | P7 | mail, Kindle, templates | NTF-* | TST-NTF-* |
-| E-19 exports | P7 | CSV/XLSX/PDF | CAT-008 | TST-CAT-007 |
-| E-20 inventory (D-01) | P7 or later | physical books | CAT-009 | db/e2e |
-| E-21 migration | P8 | ETL, reconciliation, rehearsals | MIG-* | drills |
-| E-22 hardening | P8 | load, FI, security, a11y audit, restore drill | PLT-007/008 | FI-*, drills |
-| E-23 cutover | P9 | runbook execution | MIG-004 | cutover checks |
+| E-01 Gold corpus and tools | P0 | labeling page, 120 books (80 dev, 40 holdout), 200 queries, 100 duplicate pairs, 300 normalizer pairs, guidelines; not blocked by the source permission (private research, GET-only, nothing committed or published, D-51) | ING (extraction, duplicates), CAT (search) | corpus self-checks |
+| E-02 Spikes | P0, P1 | S-01, S-02, S-04, S-05, S-07, S-08 (P0); S-06, S-09 (P1); S-03 at P6 start | NFR, WEB, ING | spike result files |
+| E-03 Workspace, Compose and CI | P1 | cargo workspace, lints (D-19), Compose skeleton for ten containers plus `migrate` and `backup`, Dockerfiles, Caddy, Postgres init (one role per service), Q1 to Q7, Q10, Q11, xtask, testkit | PLT, NFR | Q gates, INV-PLT-001 checks |
+| E-04 Platform crates and contracts | P1 | config, startup checks, errors, telemetry, clock, ids, service token, outbox pull client; contract crates; codegen to the TypeScript client and service fakes | PLT | startup and contract tests |
+| E-05 `domain-text` | P1 | Bengali normalizer, collation, slug | ING, CAT (matching, search) | normalizer property tests, gold normalizer cases |
+| E-06 Formal models | P2 | nine planned models, three extensions, fix `access.als`, run the existing four | model invariants in [coverage](../03-correctness/formal-models/coverage.md) | Q8 |
+| E-07 identity | P3 | users, invites, sessions, TOTP, reset, roles and scopes, grants, tickets, audit, profile image, host-command recovery, events | IDN | identity test plan |
+| E-08 gateway | P3 | routing, authorize call, CSRF, rate limits, headers, streams, health | GWY | gateway test plan, e2e |
+| E-09 web shell and auth screens | P3 | sign-in card shell, settings, users and access, M3 theme, i18n (`bn`, `en`), SSR skeleton | WEB | e2e, a11y |
+| E-10 catalog core | P4 | books, versions and review workflow, metadata and history, contributors, files, internal publish endpoint, events, tombstones | CAT | catalog test plan |
+| E-11 search | P4 | PostgreSQL FTS, Bengali normalization, query API, index projection from `PublicDocument` | CAT | search tests, judged queries |
+| E-12 shelf, filters, downloads | P4 | My Books, saved filters (D-43), downloads, Kindle request | CAT | catalog test plan |
+| E-13 web public and library | P4 | SSR public pages (metadata only), library, book detail, prototypes | WEB | e2e, a11y, SEO |
+| E-14 reader service | P5 | copy build, sanitizer, package, tickets and read-once, progress, bookmarks, highlights, notes, re-anchoring, preferences, export | RDR | reader test plan |
+| E-15 reader UI | P5 | whole-book renderer, modes, themes, typography, annotations UI, notes page | WEB, RDR | e2e, screen reader |
+| E-16 ingestion pure crates | P1 to P6 | Block IR, structure, classification, entities, normalization, duplicate key, EPUB builder, rulesets | ING | gold gates, property tests |
+| E-17 ingestion service | P6 | source adapter (GET only), mirror sync, requests, queue and worker, scrape cache, curation, duplicate review, build and epubcheck in the worker, publish saga, automation, console and SSE | ING | ingestion test plan, FI-01 to FI-04, FI-12, FI-13 |
+| E-18 Import workspace UI | P6 | catalog sync, requests, review, jobs, credential status | WEB, ING | e2e |
+| E-19 notify | P7 | invites, resets, Kindle with delivery status, templates, retention | NTF | notify test plan, FI-05, FI-06 |
+| E-20 audit viewer and exports | P7 | audit viewer (scope OPEN, C-1), CSV export, JSON account export, erasure | IDN, CAT, RDR | unit, e2e |
+| E-21 completeness | P7 | remaining requirements and screens, polish, generated report `unverified = 0` | all | traceability report |
+| E-22 hardening | P8 | load, fault injection, security review, accessibility audit, monthly backup restore drill, rollback rehearsal, runbooks | NFR, PLT | FI-01 to FI-20, drills |
+| E-23 launch | P9 | launch runbook, first admin, invites, first ingestion batch, first backup and restore, observation | PLT, NFR | launch checks |
 
 ## Definition of done (every epic)
 
@@ -36,5 +36,5 @@ Epics map to requirements and verification. Detailed tasks are created at the st
 1. Requirements implemented; each named verification mechanism exists and runs in CI.
 2. Service docs (API, state machine, test plan) updated in the same pull requests.
 3. No new `TBD`; plan check green; invariants referenced by tests by id.
-4. Metrics/logs/alerts added where the epic introduces a runtime behavior.
+4. Metrics, logs and alerts added where the epic introduces a runtime behavior.
 5. Owner demo or sign-off when user-visible.

@@ -1,36 +1,39 @@
-# Lessons learned (main branch + `reyan-new-version`)
+# Lessons learned
 
 Status: DRAFT
 
-## From `main`
+Source: the [X1 issues register](../_replan/analysis/X1-issues-register.md) (136 issues, top-25 boundary list in its section 2) and [new architecture](../_replan/new-architecture.md) section 7. The earlier rewrite branch `reyan-new-version` is reference only; its lessons are kept from v1 at the end.
 
-1. **Boundaries by folder are not boundaries.** Six apps, one database and free imports produced cycles; the "common" app depends on the domains it serves.
-2. **State duplicated for the UI becomes a second source of truth.** `processing` mirrors `ingestion` and keeps projection tables.
-3. **Heuristics without an oracle only grow.** The contributor-name validator accretes negative rules from "the persisted-bad-row corpus"; no gold set says when it is right.
-4. **Silent drops hide bugs.** Unclassified front-matter text is discarded by design.
-5. **Order-dependent mutation.** The soup is `decompose()`d as passes run; results depend on pass order.
-6. **Percentage tolerance is not completeness.** 5%/33% missing chapters is accepted; one book is special-cased.
-7. **Side effects on the source site** (mark-complete) make scraping non-idempotent and legally/ethically fragile.
-8. **Anchors that break on rebuild.** CFI highlights cannot survive regenerated chapters.
-9. **Search was an afterthought** (`icontains`).
-10. **Three implementations of one rule** (duplicate matching).
+## Top defects and the rule that answers each
 
-## From `reyan-new-version` (+1,484 files / ~124k lines, not accepted)
+| # | Legacy defect | X1 | Design rule (new architecture section 7) | Where it is enforced |
+|---|---|---|---|---|
+| 1 | Shelf made any user "owner" and bypassed all gates; wildcard roles; AllowAny default | X1-001, X1-008 | Deny by default, scope declared per route, ownership never grants access | Identity decision point; startup check of route scopes |
+| 2 | Draft, rejected, failed and deleted books visible and readable | X1-009, X1-010 | Only `published` versions are visible; entitlement includes publication state | Catalog reader-facing queries; reader open |
+| 3 | Reader token in URL, token-only content routes, no revocation | X1-003 | Header or body ticket, 15 min, bound to user and version, revocable by grant version | Reader tickets |
+| 4 | `/media/` served without auth | X1-011 | Files never served by Caddy or gateway; services stream after a check | Catalog and reader file routes |
+| 5 | Job engine on Redis pub/sub: lost messages, double runs, success reported for failures | X1-065..X1-067, X1-031 | PostgreSQL queue with leases and typed outcomes; status is separate from outcome | Ingestion jobs table |
+| 6 | Pipeline ran inside the HTTP request when dispatch failed | X1-067 | No inline execution anywhere | Ingestion API only enqueues |
+| 7 | Retry chosen by error text; pause only between big steps | X1-068 | Typed errors; cancel flag checked per page | Ingestion worker |
+| 8 | Whole book stored in several rows, four copies of content | X1-035, X1-030 | One authoritative curated document; derived artifacts regenerable | Ingestion and catalog data ownership |
+| 9 | Scraper posted "mark complete" to the source site | X1-012 | Acquisition is GET-only (D-03) | Ingestion fetcher (no POST method exists) |
+| 10 | Autoescape off, unsanitized HTML, images and fonts missing from EPUB | X1-004, X1-047 | Escaping on, allow-list sanitize, package images and fonts, audit gate | Ingestion build; reader sanitizer |
+| 11 | Substring title matching; Bengali word lists without vowel signs | X1-046, X1-049 | Exact normalized key plus author, category, edition | Ingestion curate |
+| 12 | Dark mode broken for OS preference; hard-coded colours; ten breakpoints | X1 section 1.6 | M3 tokens, `prefers-color-scheme` plus toggle, four window classes | Web design system |
+| 13 | No backups, no limits, secrets printed on deploy, deploy does down then up | X1-080, X1-083, X1-013, X1-002 | Backups with restore drill, resource limits, secrets via files, rolling restart per service | Platform and operations |
+| 14 | Two parallel pipelines, duplicated mirror, job and request concepts | X1-106, X1-030 | One pipeline in ingestion; each service owns its state; no dual-written mirrors or triggers | Service data ownership |
+| 15 | Destructive re-scrape overwrote published content; non-atomic persistence | X1-027, X1-028 | New builds are candidates; publish is one transaction; previous version kept until the next is published | Catalog versions |
+| 16 | Sync re-run overwrote workflow state; empty list resolved everything | X1-024, X1-026 | Mirror and workflow state stored separately; empty input is a no-op | Ingestion mirror |
+| 17 | Test backdoor in production control flow; shared demo credentials | X1-005, X1-007 | Test seams by substitution only; no demo account (D-35) | Identity, all services |
+| 18 | Anonymous intake endpoints guarded by UUID secrecy | X1-006 | Invite-only: every intake route needs a session and `operate` | Gateway and ingestion |
 
-1. **Scope exploded in one branch**: framework swap, PWA, new broker, reader and engine extraction, local inference, schema removals — all before UI acceptance.
-2. **Verification theatre**: hundreds of test counts and screenshots, but its own gate (W08, user acceptance of UX) never passed; reader and engine were "not started".
-3. **Handover documents longer than the decisions they record** (1,700-line handoff).
-4. **Good ideas to keep**: service ownership table; no cross-service foreign keys; opaque IDs; private versioned contract; the website never owns engine checkpoints; reader/engine failure must not break browsing.
-5. **Schema removals without an environment decision** made the work unmergeable.
+## Process lessons (kept from v1)
 
-## Rules we adopt because of this
-
-| Rule | Mechanism |
-|---|---|
-| Plan before code; gates block progress | [12-roadmap/gates.md](../12-roadmap/gates.md) |
-| One phase = one deliverable that a person can use | roadmap exit criteria are user-visible |
-| UX acceptance is a gate *before* more services are built on top | G4 requires user sign-off on public pages |
-| Never accept a heuristic without a gold-set metric | REQ-ING-011 |
-| Never drop data silently | INV-ING-002 |
-| One implementation per rule, in one crate | architecture rule R-1 |
-| Docs stay short; decisions are ADRs | [04-architecture/adr](../04-architecture/adr/) |
+1. Boundaries by folder are not boundaries: free imports in one database produced cycles. Services own their data and share only contracts.
+2. State copied for the UI becomes a second source of truth: read models are derived and rebuildable.
+3. Heuristics without an oracle only grow: every normalization or matching rule needs a gold-set metric.
+4. Silent drops hide bugs: nothing is discarded without a recorded reason.
+5. Percentage tolerance is not completeness: completeness is a gate with named causes.
+6. Never accept scope explosion in one branch (`reyan-new-version`: framework swap, PWA, broker, engine extraction in one 124k-line change that never passed UX acceptance). One phase delivers one thing a person can use; gates block progress.
+7. Handover documents must not be longer than the decisions they record; docs stay short and decisions are logged.
+8. Good ideas from that branch: a service ownership table, no cross-service foreign keys, opaque ids, a private versioned contract, and reader or engine failure not breaking browsing.

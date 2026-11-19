@@ -1,6 +1,7 @@
 /* Authorization model (Alloy 6) for identity's decision function.
-   Covers INV-ACC-001, 002, 003, 004, 005, 007, 009, 012 and INV-DSC-004's
-   data-flow premise (public routes never reach unpublished books).
+   Covers INV-IDN-013 to INV-IDN-018 and INV-IDN-025 (ids renamed 2026-11-19;
+   logic unchanged and partly stale, see ../coverage.md: Preview is still public,
+   Demo remains).
    Design (ADR-0024): deny by default; explicit grants only; ownership and
    "My Books" grant nothing; there is no wildcard or admin-bypass role.
    The Rust decision in identity must implement exactly `allow`; the property
@@ -49,18 +50,18 @@ pred allow[s: Subject, sc: Scope, b: Book, G: set Grant] {
         and (s in Demo implies not demoForbidden[sc]))        // demo: read-only
 }
 
-/* INV-ACC-001: anonymous subjects only get public scopes on published books. */
+/* INV-IDN-014: anonymous subjects only get public scopes on published books. */
 assert AnonymousLimited {
     all sc: Scope, b: Book, G: set Grant |
         allow[Anonymous, sc, b, G] implies (publicScope[sc] and b in Published)
 }
 
-/* INV-ACC-002: reading is never allowed for anonymous subjects. */
+/* INV-IDN-014: reading is never allowed for anonymous subjects. */
 assert ReadNeedsAccount {
     all b: Book, G: set Grant | not allow[Anonymous, Read, b, G]
 }
 
-/* INV-ACC-002: ownership, shelves and role names grant nothing; with no live grant
+/* INV-IDN-013/015: ownership, shelves and role names grant nothing; with no live grant
    the decision equals the public rule (deny by default, no wildcard). */
 assert NoGrantNoAccess {
     all s: User, sc: Scope, b: Book, G: set Grant |
@@ -68,19 +69,19 @@ assert NoGrantNoAccess {
             (allow[s, sc, b, G] iff (publicScope[sc] and b in Published))
 }
 
-/* INV-ACC-004: dead (expired/revoked) grants have no effect. */
+/* INV-IDN-017: dead (expired/revoked) grants have no effect. */
 assert DeadGrantsIgnored {
     all s: Subject, sc: Scope, b: Book, G: set Grant |
         allow[s, sc, b, G] iff allow[s, sc, b, G & Live]
 }
 
-/* INV-ACC-005: monotonicity in the grant set. */
+/* INV-IDN-018: monotonicity in the grant set. */
 assert Monotonic {
     all s: Subject, sc: Scope, b: Book, G1, G2: set Grant |
         (G1 in G2 and allow[s, sc, b, G1]) implies allow[s, sc, b, G2]
 }
 
-/* INV-ACC-007 / 009: management needs an explicit live grant, an Active user,
+/* INV-IDN-025: management needs an explicit live grant, an Active user,
    a TOTP-complete session, and is never available to the demo account. */
 assert ManagementNeedsAuthority {
     all s: Subject, sc: Scope, b: Book, G: set Grant |
@@ -88,13 +89,13 @@ assert ManagementNeedsAuthority {
             (s in Active & MfaOk and s not in Demo and granted[s, sc, b, G])
 }
 
-/* INV-ACC-007: the demo account never downloads, sends to Kindle or manages. */
+/* (legacy, D-35) the demo account never downloads, sends to Kindle or manages. */
 assert DemoReadOnly {
     all s: Demo, sc: Scope, b: Book, G: set Grant |
         demoForbidden[sc] implies not allow[s, sc, b, G]
 }
 
-/* INV-ACC-012: unpublished books are visible to no one through book scopes. */
+/* INV-IDN-016: unpublished books are visible to no one through book scopes. */
 assert UnpublishedHidden {
     all s: Subject, b: Book - Published, G: set Grant, sc: Scope |
         bookScope[sc] implies not allow[s, sc, b, G]

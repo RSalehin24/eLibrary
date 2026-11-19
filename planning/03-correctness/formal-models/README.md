@@ -2,13 +2,15 @@
 
 Status: DRAFT
 
+Re-baselined 2026-11-19 for the six-service design. Java and TLC/Alloy are still not installed, so no model has been run (installing Java needs the owner's approval; spike S-04, gate G2).
+
 | Model | Tool | Covers | State |
 |---|---|---|---|
-| [tla/JobLifecycle.tla](tla/JobLifecycle.tla) | TLC | ingestion job lifecycle, leases, fencing, publish-once | written, **unchecked** |
+| [tla/JobLifecycle.tla](tla/JobLifecycle.tla) | TLC | ingestion job lifecycle, leases, fencing, publish-once | written, **unchecked**; per-request exclusion and cancel flag to add |
 | [tla/ReadOnce.tla](tla/ReadOnce.tla) | TLC | read-once consumed on ticket redemption, multi-device race | edited for tickets, **not re-checked** |
-| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox with pull cursor, idempotent consumer, crash and cursor reset | rewritten for pull, **not re-checked** |
-| [alloy/access.als](alloy/access.als) | Alloy 6 | scope-based deny-by-default policy (ownership grants nothing, no wildcard) | edited, **not re-checked** |
-| planned | TLC | account/link/session lifecycle, book lifecycle, artifact publication, progress revisions | see [planned-models](planned-models.md) |
+| [tla/Outbox.tla](tla/Outbox.tla) | TLC | outbox, pull cursor, idempotent consumer, crash and cursor reset (consumer side) | rewritten for pull, **not re-checked**; producer extension planned |
+| [alloy/access.als](alloy/access.als) | Alloy 6 | scope-based deny-by-default policy | edited, **not re-checked**, partly stale (Preview public, Demo) |
+| planned | TLC and Alloy | AccountLifecycle, EntitlementDecision, TicketLifecycle, VersionLifecycle, PublishSaga, ReaderCopyLifecycle, ProgressRevision, RequestLifecycle, DeliveryLifecycle, Outbox and JobLifecycle extensions | see [planned-models](planned-models.md); all 46 `model` invariants are in [coverage](coverage.md) |
 
 **Honesty note.** These files were written on a machine without Java, so none has
 been run. Gate **G2** requires: every model analyzed, every property satisfied or a
@@ -33,7 +35,7 @@ Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models
 
 ## Interim evidence
 
-`planning/tools/model_mirror.py` re-implemented the three earlier TLA+ models and the Alloy policy (it still mirrors the pre-redesign push outbox, session and access models and is out of date for the edited ones) in Python and checks their properties by explicit-state search (jobs up to 4 jobs × 2 attempts = 1,016,064 states). All properties hold; every deliberately broken variant is detected, including removed fencing (finding F-1, fixed with a ghost per-run outcome). Details: [verification log](../verification-log.md). This validates the *logic* only; TLC/Alloy remain required at G2.
+`planning/tools/model_mirror.py` re-implemented the three earlier TLA+ models and the Alloy policy (it mirrors the v1 push outbox, session and access models and is out of date for every model edited since; it covers none of the planned models) in Python and checks their properties by explicit-state search (jobs up to 4 jobs × 2 attempts = 1,016,064 states). All properties hold; every deliberately broken variant is detected, including removed fencing (finding F-1, fixed with a ghost per-run outcome). Details: [verification log](../verification-log.md). This validates the *logic* only; TLC/Alloy remain required at G2.
 
 ## Rules
 
@@ -51,4 +53,5 @@ Note: TLC flags `-deadlock` (disable deadlock checking) matters here: the models
 | JobLifecycle | 3 jobs, 2 URLs (two jobs share one), MaxAttempts 2 | smallest scope showing URL exclusion, expiry, zombie holders |
 | ReadOnce | 2 accounts, 3 devices | smallest scope with a multi-device ticket-redeem race |
 | Outbox | 3 events | duplicate pulls, crash, ordering by cursor |
+| planned models | set when each is written (P2); smallest scope that shows the race | recorded here at G2 |
 | access | 6 atoms per signature | small-scope hypothesis |

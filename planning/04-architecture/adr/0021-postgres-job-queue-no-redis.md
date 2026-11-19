@@ -2,7 +2,7 @@
 
 Status: ACCEPTED
 
-Supersedes the job-queue part of [ADR-0005](0005-postgres-outbox-and-queues.md). Basis: D-27, D-29.
+Supersedes the job-queue part of [ADR-0005](0005-postgres-outbox-and-queues.md). Basis: D-27, D-29, D-31.
 
 ## Context
 The legacy system ran a job engine over Redis pub/sub and Celery: messages were lost, jobs ran twice, failures were reported as success, and the pipeline ran inside the HTTP request when dispatch failed. At under 5,000 books and a handful of concurrent jobs, no broker is justified.

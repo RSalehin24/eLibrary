@@ -1,6 +1,8 @@
 # ADR-0020 — Five services, nine containers, no gateway
 
-Status: ACCEPTED
+Status: SUPERSEDED
+
+Superseded by [ADR-0025](0025-six-services-with-gateway.md) (D-31: six services including a separate gateway; ten containers). The merges of `access`, `content` and `library` and the PostgreSQL-FTS choice below still stand; the "no gateway" and "static web" parts do not. Kept as history.
 
 Supersedes [ADR-0002](0002-independent-services.md) and [ADR-0008](0008-search-engine.md). Basis: owner decisions D-27 (five services, no gateway) and D-29 (small scale).
 

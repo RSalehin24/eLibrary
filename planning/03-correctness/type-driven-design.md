@@ -2,13 +2,14 @@
 
 Status: DRAFT
 
+Rebuilt 2026-11-19 for six services (D-31): authorization is decided only by identity and carried to other services as gateway headers and reading tickets, not as signed capability tokens. Kept from v1: T-1 to T-3, T-6 to T-11; changed: T-4, T-5; no Rust code exists yet and the lint names stay to be verified at gate G1.
+
 Rust conventions that turn invariants into compile errors. These are binding for
 all crates ([workspace layout](../04-architecture/workspace-layout.md)).
 
 ## T-1 Newtypes for every identifier and unit
 
-`BookId(Uuid)`, `AccountId(Uuid)`, `SectionId(Uuid)`, `Sha256(String)`,
-`Slug(String)`, `Percent(f32 in 0..=100)`, `Bytes(u64)`. Constructors validate; no `Deref` to the inner type.
+`BookId(Uuid)`, `UserId(Uuid)`, `VersionId(Uuid)`, `SectionId(Uuid)`, `Slug(String)` (no catalog codes, D-36), `Sha256(String)`, `Percent(f32 in 0..=100)`, `Bytes(u64)`. Constructors validate; no `Deref` to the inner type.
 
 ## T-2 Parse, don't validate
 
@@ -25,25 +26,27 @@ impl Session<PasswordOk> { pub fn with_totp(self, code: TotpCode, acct: &Account
 // No constructor produces Session<Authenticated> any other way (INV-IDN-004).
 ```
 
-Same for `Book<Draft|Published|Archived>`, `Job<…>`, `Build<…>`. Persistent
+Same for `Version<Draft|InReview|Published|Archived>` (INV-CAT-001), `Request<…>` and `Job<…>` (INV-ING-008), `Delivery<…>` (INV-NTF-008). Persistent
 state is an enum; transitions are the *only* functions that change it.
 
 ## T-4 Witness types for authorization
 
 ```rust
-pub struct Allow<A: Action> { _private: () }       // only access can mint
-pub fn decide<A: Action>(f: &Facts, grants: &Grants, now: Instant) -> Result<Allow<A>, Deny>;
-pub fn read_chapter(_w: Allow<Read>, cap: Verified<ReadCapability>, …) -> Chapter;
+// Only `identity` can construct a decision (INV-IDN-013, INV-IDN-024).
+pub struct Allow<S: Scope> { _private: () }
+pub fn decide<S: Scope>(facts: &Facts, now: Instant) -> Result<Allow<S>, Deny>;
+
+// Every other service accepts only what the gateway established:
+pub struct Caller { user: UserId, scopes: ScopeSet }   // from gateway headers + internal service token
+pub fn route<S: Scope>(_c: &Caller) -> ...             // handler declares its scope in the type
+pub struct Verified<ReadingTicket>(..);                // only constructor calls identity `verify` (D-37, INV-RDR-006)
 ```
 
-A handler that forgets authorization does not compile (INV-ACC-003, INV-CON-004).
-Across services the witness is the signed `Capability` (verified by public key).
+A handler without a declared scope does not compile, and a route table entry without `scope` or `public` stops startup (INV-IDN-024). No service verifies a signature locally: tickets are opaque and checked by identity at every redemption (INV-IDN-021).
 
 ## T-5 Public vs full documents
 
-`PublicDocument` and `FullDocument` are distinct types. Only
-`FullDocument::to_preview(&PreviewPolicy) -> PreviewArtifact` crosses over, and the
-search indexer accepts only `PublicDocument` (INV-CON-003, INV-DSC-004).
+`PublicDocument` (metadata only, D-34) and `PreviewArtifact` and the reader's `SanitizedBook` are distinct types. The search indexer and the public routes accept only `PublicDocument`; preview text and book text have no conversion into it (INV-CAT-012, INV-CAT-002).
 
 ## T-6 Total functions, exhaustive matches
 
@@ -79,4 +82,4 @@ Generated wire types (no hand-written DTOs); `PageState<T>` as a discriminated u
 
 `trait Clock { fn now(&self) -> Instant; }` and `trait Rng`. Production, tests and
 models inject their own. `SystemTime::now` and `rand::thread_rng` appear only in
-the production implementations (INV-PLT-010).
+the production implementations (INV-PLT-011).

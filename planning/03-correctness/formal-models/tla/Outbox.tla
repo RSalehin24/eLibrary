@@ -7,8 +7,9 @@
    persisted only if effect and cursor are not atomic; here they are, so a crash
    simply re-reads from the stored cursor, and a batch may be re-fetched
    (duplicate delivery is modeled by Pull not advancing anything).
-   Covers INV-PLT-009, INV-NTF-001 (one effective send per event) and
-   INV-ING-016 (one effective publish per event).
+   Covers INV-RDR-024 and INV-NTF-001 (consumer side: one effect per event,
+   cursor advances with the effect); the producer side (INV-PLT-010, INV-IDN-023,
+   INV-CAT-024, INV-ING-032) is a planned extension, see ../coverage.md.
    STATUS: rewritten for pull semantics, NOT MODEL-CHECKED. Must pass TLC at gate G2. *)
 EXTENDS Naturals, Sequences, FiniteSets
 

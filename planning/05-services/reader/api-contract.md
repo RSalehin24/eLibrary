@@ -1,45 +1,30 @@
-# reader - API contract
+# reader - API contract (summary)
 
-Status: DRAFT - source of truth: generated schema in [07-contracts](../../07-contracts/http/README.md)
+Status: DRAFT
 
-Public prefix `/api/reader`. Caddy forward-auths every route; the user id and scopes arrive as headers from Caddy only. Each route declares its scope in code (fail closed at startup). The ticket travels in the `X-Reader-Ticket` header, never in the URL.
+Endpoints are owned by [07-contracts/http/reader.md](../../07-contracts/http/reader.md) (19 public routes, 2 internal routes plus health, ready, contract). This page records how the service honours the cross-cutting rules; it does not repeat the routes.
 
-| Method and path | Scope | Request -> response | Errors |
-|---|---|---|---|
-| `POST /books/{slug}/open` | `read` (or `read_once` grant) | `{}` -> `200 {ticket, expires_at, book:{id, slug, title, version, language}, progress}` ; writes an `opens` row. Does **not** consume read-once. | `not_found` (also for unpublished), `read_denied{reason}`, `copy_unavailable` (503, rebuild queued), `rate_limited` |
-| `GET /book` | `read` + ticket header | whole rendered book as one package: `200` content type `application/vnd.elibrary.reading-package+json` (or gzip/zstd by `Accept-Encoding`), `Cache-Control: no-store`. On the first successful redemption of a `read_once` ticket the service calls identity consume. | `ticket_invalid`, `ticket_expired`, `read_once_consumed`, `copy_unavailable`, `read_denied` |
-| `POST /tickets/refresh` | `read` + ticket header | extends a still-valid ticket by issuing a new one for the same user/book/version, max total 2 h per open chain; `read_once` books cannot be refreshed after redemption | `ticket_expired`, `refresh_limit` |
-| `DELETE /tickets/current` | session | revokes the presented ticket (close book) | none |
-| `GET /books/{slug}/progress` | `read` | `{chapter_id, offset, percent, revision}` | `not_found` |
-| `PUT /books/{slug}/progress` | `read` + ticket | `{chapter_id, offset, percent, revision}` -> `200` current value; a stale `revision` returns `200` with the stored value and `applied:false` | `ticket_invalid`, `validation` |
-| `GET /books/{slug}/bookmarks` | `read` | list, newest first | none |
-| `POST /books/{slug}/bookmarks` | `read` + ticket | `{chapter_id, offset, label?}` -> `201` (existing duplicate -> `200` same row) | `ticket_invalid`, `validation`, `limit_exceeded` |
-| `DELETE /books/{slug}/bookmarks/{id}` | session (owner only; no ticket, so access loss never traps data) | `204` (idempotent) | `not_found` for other owners' ids |
-| `GET /books/{slug}/highlights` | `read` | list | none |
-| `POST /books/{slug}/highlights` | `read` + ticket | `{chapter_id, anchor, color, kind, note?}` -> `201` | `ticket_invalid`, `validation`, `limit_exceeded` |
-| `PATCH /books/{slug}/highlights/{id}` | session (owner) | `{color?, note?}` with `If-Match` | `stale_revision`, `not_found` |
-| `DELETE /books/{slug}/highlights/{id}` | session (owner) | `204` | none |
-| `GET /notes?book&q&after` | session | notes page feed with chapter title and deep link `{slug, chapter_id, offset}` | none |
-| `GET /notes/export?format=md\|json` | session | all and only the owner's annotations | none |
-| `GET /continue` | session | recent books with progress ("continue reading") | none |
-| `GET /books/{slug}/search?q=` | `read` + ticket | OPTIONAL (only if cheap): matches `{chapter_id, offset, snippet}` | `validation` |
-| `DELETE /me/data` | session | erase the caller's reader rows (also done on `user.disabled` after grace period) | none |
+## Authorization per route class
 
-Demo users: `read` is held but write routes (progress, bookmarks, highlights, notes, delete data) return `403 forbidden_demo`; the renderer keeps demo state in memory only.
-
-## Internal
-
-| Route | Caller | Purpose |
+| Class | Needs | Notes |
 |---|---|---|
-| `GET /internal/copies/{book_id}` | catalog (optional status) | `{version, state}` so the catalog can show "reading ready" |
-| `GET /internal/contract` | all | handshake |
+| `open`, `copy` | session + scope `read` (`preview` is a separate scope, D-41) | `open` asks identity to decide and mint; a shelf entry grants nothing; non-published or deleted is `not_found` |
+| `tickets/{ticket_id}/book`, `/search` | session + `read` + `X-Reader-Ticket` header | `{ticket_id}` is a non-secret handle; the secret travels only in the header; identity verifies on every call |
+| progress, bookmark and highlight create and read | session + `read` + ticket | owner from the verified header, never from the body |
+| bookmark and highlight delete or edit by id, `/me/*` | session | needs no book access, so a user who lost access can still manage and export their data |
+| internal | service token | `GET /internal/copies` (drift listing), erase route **OPEN (O-1)** |
 
-The reader pulls `catalog GET /internal/events?after=` and `identity GET /internal/events?after=`; it exposes no events of its own (no `/internal/events`).
+## Rules honoured
 
-## Error model
+- **No file or chapter route** (REQ-RDR-008): one package response; the EPUB never leaves the reader's fetch from catalog.
+- **Headers on the package and resources**: `private, no-store`, `X-Content-Type-Options: nosniff`, restrictive CSP (no script, no external loads) (REQ-RDR-025).
+- **Tickets**: never in a URL or query string, never logged; log redaction test (TST-RDR-004).
+- **GET side effects**: only the audit row; a missing copy returns `copy_unavailable` and may enqueue an idempotent rebuild job, never changes entitlement or catalog state.
+- **Concurrency and idempotency**: progress `revision` increases or the write is a no-op returning the stored value; bookmark duplicates return the existing row (`created: false`); highlight edit uses `If-Match`.
+- **Errors**: `ticket_invalid`, `ticket_expired`, `read_once_consumed`, `copy_unavailable`, `forbidden`, `not_found`, `validation_failed`, `limit_exceeded`, `stale_revision`, `rate_limited` ([error catalog](../../07-contracts/error-catalog.md)). Web maps each to a visible state with a retry (REQ-RDR-022).
+- **Rate limits**: open 30 per user per hour; ticket verification and redemption are bounded per user (value to be added to limits).
+- **Export**: `/me/export` JSON of all own reading data (REQ-RDR-017); `/me/annotations/export?format=md|json` (SHOULD, REQ-RDR-019).
 
-Same envelope as identity: `{ "error": { "code", "message", "request_id" } }`. `401 unauthenticated`, `403 read_denied|forbidden_demo|ticket_invalid`, `404 not_found`, `409 stale_revision`, `410 ticket_expired`, `422 validation|limit_exceeded`, `429 rate_limited`, `503 copy_unavailable`. `read_denied.reason` is the closed set from identity (`NoScope`, `ReadOnceConsumed`, `Unpublished`, `DemoRestricted`, `Inactive`, `MfaRequired`).
+## Open items
 
-## Honest-limit contract note
-
-`GET /book` returns the full sanitized text. API docs and the in-app help state that this is entitlement-checked delivery, not copy protection.
+- O-1: the erase route is replaced by an event if `user.deleted` is added.

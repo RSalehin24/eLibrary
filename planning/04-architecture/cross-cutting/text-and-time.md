@@ -4,7 +4,7 @@ Status: DRAFT
 
 ## Text pipeline (`domain-text`)
 
-Single implementation of normalization used by ingestion, catalog (including PostgreSQL FTS keys) and reader.
+Single implementation of normalization used by ingestion, catalog (including PostgreSQL FTS keys) and reader; the same normalizer version is used for the query and the index.
 
 | Step | Rule |
 |---|---|

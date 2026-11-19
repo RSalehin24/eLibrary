@@ -2,69 +2,88 @@
 
 Status: DRAFT
 
-## User status
+All transitions run in one transaction with the audit row and, where listed, the outbox event. Any pair not listed is unrepresentable (typestate or enum transition function plus a database check).
 
-```
- Invited --accept invite--> Active <--reactivate-- Suspended
-    |                         | ^                      ^
-    |                         | +------suspend---------+
-    +-------disable-----------+--disable--> Disabled (terminal)
-```
+## User status (REQ-IDN-009, INV-IDN-001, INV-IDN-009)
 
-| From | Event | To | Side effects (same transaction) |
+| From | Event | Guard | To | Side effects |
+|---|---|---|---|---|
+| (none) | admin invite | `manage_users`, email not taken | Invited | issue invite link; `email.requested` |
+| (none) | `seed-first-admin` | no admin exists; not dry-run | Active | audit; no password stored, a setup link is issued |
+| Invited | accept link | link `Issued`, not expired, password policy ok | Active | store credential; consume link; audit |
+| Invited | resend invite | admin | Invited | supersede old link; new link; `email.requested` |
+| Active | suspend | admin; not self; not last active admin | Suspended | revoke all sessions; `user.disabled`; bump `grant_version` |
+| Suspended | reactivate | admin; not self | Active | audit; `grant.changed` |
+| Invited, Active, Suspended | disable | admin; not self; not last active admin | Disabled | revoke sessions, supersede links; `user.disabled` |
+| any | delete | admin; not self; not last admin | (removed) | revoke sessions; erase image; announce (**OPEN O-1**); audit |
+
+Disabled is terminal. The chain is Invited, Active, Suspended, Disabled; there is no other transition. Role change (reader, operator, admin) is a field change, not a status change: admin only, never for oneself, never demoting the last active admin; emits `grant.changed`.
+
+## Link (invite and reset) (REQ-IDN-002, INV-IDN-002)
+
+| From | Event | Guard | To |
 |---|---|---|---|
-| none | admin invite | Invited | issue invite token; `email.requested` |
-| Invited | accept invite | Active | store credential; audit |
-| Active | suspend | Suspended | revoke all sessions; `user.disabled` |
-| Suspended | reactivate | Active | audit; `grant.changed` (caches refresh) |
-| Invited, Active, Suspended | disable | Disabled | revoke sessions, supersede tokens; `user.disabled` |
+| (none) | issue | same (user, purpose) `Issued` link exists | old becomes Superseded, new Issued |
+| Issued | consume | `now < expires_at`, row locked, nonce matches; for reset the user is Active | Consumed |
+| Issued | clock passes `expires_at` | | Expired (evaluated at use) |
+| Issued | newer link issued | | Superseded |
+| Consumed, Expired, Superseded | any | | unchanged; response identical to unknown (`link_invalid`, 410) |
 
-Any other pair is unrepresentable (typestate `User<S>`; INV-IDN-001, INV-IDN-008). The seeded admin starts `Active` through the CLI only.
+Invite 7 days, reset 24 h. Reset confirm revokes all of the account's sessions and is throttled.
 
-## Invite and reset token
+## Reset request (no enumeration, REQ-IDN-008)
 
-```
- Issued --consume--> Consumed
-    |--new token same (user,purpose)--> Superseded
-    +--now >= expires_at--> Expired
-```
+Request always returns 202 with the same body and equivalent work: known and Active gives supersede, new link, `email.requested`; otherwise a dummy hash and no row. Limits per address and per account apply before the branch.
 
-Invite lifetime 7 days, reset 1 hour. Consume succeeds only from `Issued` and `now < expires_at`, in one transaction with a row lock on the token (INV-IDN-002). Terminal states never return to `Issued`. Reset confirm additionally requires user status `active`; a reset token for a `disabled` or `suspended` user is `link_invalid`.
+## Sign-in and session (REQ-IDN-004, 007, INV-IDN-004, INV-IDN-007)
 
-## Reset request (DRAFT proposal, no enumeration)
+| From | Event | Guard | To |
+|---|---|---|---|
+| Anonymous | password ok, Active, TOTP not required | not throttled | Authenticated (cookie, CSRF token returned) |
+| Anonymous | password ok, Active, TOTP required | | PendingTotp (authorizes only `/auth/totp/verify`, 5 minutes) |
+| PendingTotp | code ok | step greater than `last_accepted_step` | Authenticated (`mfa_ok`) |
+| PendingTotp | code wrong or expired | failure counted | PendingTotp or discarded |
+| Anonymous | wrong or unknown credentials | | Anonymous (uniform `invalid_credentials`) |
+| Authenticated | sign-out, password change (others), suspend, disable, delete | | Revoked |
+| Authenticated | idle 12 h or absolute 30 d | injected clock | Revoked |
 
-```
- request(email) --always--> 202 (same body, same work)
-     |- known + active   -> supersede old reset token, issue new, outbox email.requested
-     +- unknown/other    -> dummy hash, no token, no outbox row
-```
-Rate limits per address and per IP apply before the branch, so limits do not reveal existence.
+A suspended or disabled account never reaches Authenticated. `Session<Authenticated>` is constructible only from a password check plus TOTP when required.
 
-## Sign-in and session
+## TOTP (REQ-IDN-004, 005, 006, INV-IDN-005)
 
-```
- anonymous --password ok--> PasswordOk --totp not required--> Authenticated
-                               |  +--totp required, code ok--> Authenticated
-                               +--5 min / failure--> discarded
- Authenticated --sign-out / revoke / idle 12h / absolute 30d--> Revoked
-```
-`Authenticated` is constructible only from `PasswordOk` plus a verified TOTP when required (INV-IDN-004). `PasswordOk` authorizes only `/sign-in/totp`.
+| From | Event | Guard | To |
+|---|---|---|---|
+| None | setup | session; re-auth | Pending (secret shown once) |
+| Pending | confirm | valid code | Enabled |
+| Pending | abandon or new setup | | None or Pending (replaced) |
+| Enabled | accepted code | step > last accepted, row locked | Enabled (step recorded) |
+| Enabled | disable | password and code; account does not require TOTP | None |
+| Enabled | reveal secret | password and code | Enabled |
 
-## TOTP
+`Pending` never counts as a second factor. Concurrent verification of one code accepts once.
 
-`None -> Pending (setup) -> Enabled (confirm with a valid code)`; `Enabled -> None` needs current password and code. A step is accepted only if greater than `last_accepted_step`, updated under a row lock (INV-IDN-009). `Pending` never counts as a second factor.
+## Grant (REQ-IDN-011, 012, 017)
 
-## Grant
+Stored fields: `active`, `expires_at`. Derived state: Live iff `active` and (`expires_at` null or `now < expires_at`). Transitions: create (Live), edit expiry or active flag, revoke (active false); all admin only, never for oneself, each emits `grant.changed` and bumps the user's `grant_version`; a duplicate active (user, scope, book) is rejected.
 
-`Live` iff `now < expires_at` (or no expiry) and `revoked_at IS NULL`; state is derived from the injected clock, not stored (REQ-ACC-004). `Live -> Revoked` by admin. Each change emits `grant.changed`.
+## Reading ticket and read-once (REQ-IDN-020, 021, 022; INV-IDN-020..022)
 
-## Read-once (identity side)
+| From | Event | Guard | To |
+|---|---|---|---|
+| (none) | mint (`/internal/tickets`) | `decide` allows `read` (and read-once not yet consumed for another ticket) | Minted (hash stored, 15 min, grant version recorded); read-once untouched |
+| Minted | verify without redeem | not expired; user Active; grant version unchanged or still allowed; book published; ids match | Minted |
+| Minted | verify with `redeem` | as above; no `read_once_uses` row or row has this ticket id | Redeemed (row inserted for read-once; idempotent for the same ticket) |
+| Redeemed | verify again, same ticket | | Redeemed (reconnect is not a new opening) |
+| Minted, Redeemed | 15 min pass | | Expired (`ticket_expired`) |
+| Minted, Redeemed | user disabled, grant changed (version moves past the ticket's), book unpublished, other user or book or version | | rejected (`ticket_invalid`) |
+| any | different ticket redeemed for a consumed read-once book | | rejected (`read_once_consumed`) |
 
-```
- NotConsumed --/internal/check consume=true, grant ok, published--> Consumed (terminal per user+book)
-```
-The row insert is the consumption (PK `(user_id, book_id)`). Reader calls consume only on successful ticket redemption, and not when the reading copy is missing (brief 5.4); a redemption retry with the same `ticket_id` returns `already_consumed_by_this_ticket` (allowed), a different ticket returns `ReadOnceConsumed`.
+Admin reset of the counter deletes the `read_once_uses` row (audited). A missing reading copy does not consume (the reader reports `copy_unavailable` before redeeming).
 
-## Outbox event delivery (producer side)
+## Outbox event (REQ-IDN-023)
 
-`Written (in the change transaction) -> Visible (committed, via the cursor) -> Retained`. Events are never updated. Consumers store their cursor; `GET /internal/events?after=n` is a pure read ordered by `id`. Events older than 30 days and acknowledged by all consumers may be pruned. Duplicates and gaps in delivery are impossible, redelivery after a consumer crash is expected.
+Written (inside the change transaction) then Visible (committed, ordered by `cursor`) then Retained 30 days and pruned only past all consumer cursors. Events are never updated; redelivery is expected.
+
+## Admin host commands (REQ-IDN-032, 033)
+
+`admin-reset` and `seed-first-admin`: DryRun (default, prints the plan) then Applied only with an explicit flag; seed refuses when an admin exists; reset sets a one-time setup link, never a password; every run is audited.
