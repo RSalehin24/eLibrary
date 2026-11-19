@@ -2,8 +2,10 @@
 
 mod boundaries;
 mod codegen;
+mod containers;
 mod gates;
 mod metadata;
+mod register;
 
 use std::io::Write;
 use std::process::ExitCode;

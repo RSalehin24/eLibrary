@@ -46,3 +46,23 @@ fn workspace_dependencies(dependencies: Vec<Dependency>) -> Vec<String> {
         .map(|dependency| dependency.name)
         .collect()
 }
+
+/// Names of the external (non-path) crates the workspace crates depend on directly.
+///
+/// # Errors
+/// Returns a message when cargo cannot run or its output is not understood.
+pub fn external_dependencies() -> Result<std::collections::BTreeSet<String>, String> {
+    let output = Command::new("cargo")
+        .args(["metadata", "--format-version", "1", "--no-deps"])
+        .output()
+        .map_err(|error| format!("cannot run cargo metadata: {error}"))?;
+    let metadata: Metadata = serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("cannot read cargo metadata: {error}"))?;
+    Ok(metadata
+        .packages
+        .into_iter()
+        .flat_map(|package| package.dependencies)
+        .filter(|dependency| dependency.path.is_none())
+        .map(|dependency| dependency.name)
+        .collect())
+}

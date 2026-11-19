@@ -2,9 +2,11 @@
 # to the gateway, nothing else. `/internal/*` never leaves the Compose network.
 {
 	admin off
+	auto_https disable_redirects
 }
 
-localhost {
+# why: an unprivileged port inside the container; the host maps it to 443 in production.
+localhost:8443 {
 	tls internal
 	encode zstd gzip
 

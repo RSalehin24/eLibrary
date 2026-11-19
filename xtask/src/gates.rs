@@ -2,7 +2,7 @@
 
 use std::process::Command;
 
-use crate::{boundaries, metadata};
+use crate::{boundaries, containers, metadata, register};
 
 struct Step {
     name: &'static str,
@@ -59,6 +59,12 @@ pub fn run_all(report: &mut impl std::io::Write) -> Vec<&'static str> {
     if !boundaries_clean(report) {
         failed.push("Q6 dependency boundaries");
     }
+    if !register_clean(report) {
+        failed.push("Q10 dependency register");
+    }
+    if !containers_clean(report) {
+        failed.push("Q11 containers");
+    }
     failed
 }
 
@@ -111,4 +117,66 @@ fn path_with_cargo_bin() -> std::ffi::OsString {
         paths.push(std::path::PathBuf::from(home).join(".cargo").join("bin"));
     }
     std::env::join_paths(paths).unwrap_or_default()
+}
+
+const REGISTER_PATH: &str = "planning/04-architecture/dependency-policy.md";
+
+fn register_clean(report: &mut impl std::io::Write) -> bool {
+    let missing = std::fs::read_to_string(REGISTER_PATH)
+        .map_err(|error| format!("cannot read {REGISTER_PATH}: {error}"))
+        .and_then(|text| {
+            metadata::external_dependencies().map(|names| register::unapproved(&text, &names))
+        });
+    report_lines(
+        report,
+        "Q10 dependency register",
+        missing.map(|names| {
+            names
+                .iter()
+                .map(|n| format!("{n} has no APPROVED register entry"))
+                .collect()
+        }),
+    )
+}
+
+fn containers_clean(report: &mut impl std::io::Write) -> bool {
+    let lines = compose_config().map(|config| containers::violations(&config));
+    report_lines(report, "Q11 containers", lines)
+}
+
+fn compose_config() -> Result<serde_json::Value, String> {
+    let output = Command::new("docker")
+        .args([
+            "compose",
+            "-f",
+            "deploy/compose/compose.yaml",
+            "config",
+            "--format",
+            "json",
+        ])
+        .output()
+        .map_err(|error| format!("cannot run docker compose: {error}"))?;
+    serde_json::from_slice(&output.stdout)
+        .map_err(|error| format!("cannot read compose config: {error}"))
+}
+
+fn report_lines(
+    report: &mut impl std::io::Write,
+    name: &str,
+    lines: Result<Vec<String>, String>,
+) -> bool {
+    match lines {
+        Ok(found) if found.is_empty() => {
+            let _ = writeln!(report, "ok   {name}");
+            true
+        }
+        Ok(found) => {
+            let _ = writeln!(report, "FAIL {name}\n  {}", found.join("\n  "));
+            false
+        }
+        Err(message) => {
+            let _ = writeln!(report, "FAIL {name}: {message}");
+            false
+        }
+    }
 }

@@ -36,13 +36,13 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Area | Candidate | Used by | Std insufficient because | Needed | Notes |
 |---|---|---|---|---|---|
 | Async runtime | `tokio` (APPROVED D-62, in use) | all six | std has no async executor/IO | P1 | single runtime for all services |
-| HTTP server | `axum` (APPROVED D-62, in use; `tower` dev use) | all six | no HTTP in std | P1 | alternative: `actix-web`; choose one |
+| HTTP server | `axum` (APPROVED D-62, in use), `tower` (APPROVED D-62, dev use) | all six | no HTTP in std | P1 | alternative: `actix-web`; choose one |
 | HTTP client / proxying | `reqwest` or `hyper` client | gateway (proxy, authorize call), all services (internal calls), ingestion (GET-only acquisition) | no HTTP/TLS in std | P1/P6 | thin GET-only wrapper for acquisition |
 | Serialization | `serde` (APPROVED D-62, in use), `serde_json` (APPROVED D-62, dev use) | all six | no derive serialization | P1 | contracts |
 | JSON Schema/OpenAPI | `utoipa` (APPROVED D-65, not yet added; `schemars` not used) | contracts | generating schemas | P1 | one of them (ADR-0004) |
 | Database | `sqlx` (Postgres; APPROVED D-62, in use, features runtime-tokio, postgres, migrate, macros) | identity, catalog, reader, ingestion, notify (not gateway) | no DB client | P1 | compile-time checked queries |
 | Errors | `thiserror` (APPROVED D-62, in use) | all six | boilerplate for `Error` impls | P1 | optional; hand-written is acceptable |
-| Logging/tracing | `tracing`, `tracing-subscriber` (APPROVED D-62, in use; features fmt, json, std) | all six | std has only print | P1 | |
+| Logging/tracing | `tracing` (APPROVED D-62, in use), `tracing-subscriber` (APPROVED D-62, in use; features fmt, json, std) | all six | std has only print | P1 | |
 | Metrics | `metrics` + Prometheus exporter | all six | none in std | P1 | |
 | IDs | `uuid` (APPROVED D-62, in use) | all except gateway | UUID v5/v7 generation | P1 | enable only needed features |
 | Time | `time` (APPROVED D-62, in use; jiff not chosen) | all six | std lacks calendar/zone | P1 | choose one; prefer `time` unless jiff features are needed |
@@ -52,7 +52,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | SMTP | `lettre` (SMTP transport) | notify | no SMTP in std | P1 | alternative: minimal hand-written SMTP client (not recommended) |
 | Image validation | an image decoding crate (`image` or smaller) | identity (profile images, D-44) | no image decoding in std | P3 | validated types and size limit; pick the smallest that checks PNG/JPEG/WebP |
 | Unicode | `unicode-normalization` (APPROVED D-59, in use), `unicode-segmentation` | catalog, ingestion, reader | std lacks normalization/graphemes | P1 | |
-| Collation | `icu_collator` (+ data; APPROVED D-61, in use, with `icu_locale_core`) | catalog | std has no locale collation | P1 | verify bn data availability |
+| Collation | `icu_collator` (+ data; APPROVED D-61, in use), `icu_locale_core` (APPROVED D-61, in use) | catalog | std has no locale collation | P1 | verify bn data availability |
 | HTML parsing | `html5ever` (or `scraper`) | ingestion, reader | no HTML parser in std | P1 | hostile input; fuzzed |
 | HTML sanitizing | `ammonia` | ingestion, reader | | P1 | allow-list sanitizer |
 | XML parsing | `quick-xml` (OPF, NCX, nav parsing and well-formedness gate) | ingestion, reader | no XML parser in std | P1 | alternative: `roxmltree` |
