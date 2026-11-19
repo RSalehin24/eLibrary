@@ -8,7 +8,7 @@ Resume here. Do not re-derive earlier decisions; read [DECISIONS](DECISIONS.md) 
 
 *2026-11-18:* legacy files moved to `archive/` (new project from scratch); deployment is now **Docker Compose, one container per component** (ADR-0019, D-22…D-25); responsive mobile/tablet/desktop requirement added (REQ-WEB-012). Docker/Compose install needs owner approval (P1).
 
-**Planning (pre-P0).** The plan structure, requirements (105), invariants (105), architecture, service designs, UX, roadmap and rules are drafted. No product code exists. The plan check passes; the TLA+/Alloy models are written but **unchecked**.
+**Planning (pre-P0).** The plan structure, requirements (118), invariants (110), architecture, service designs, UX, roadmap and rules are drafted. No product code exists. The plan check passes; the TLA+/Alloy models are written but **unchecked**.
 
 ## Next action (owner)
 

@@ -74,3 +74,26 @@ migration/runtime/*
 test-results/
 
 AGENTS.md
+
+# Legacy app moved to archive/: keep its secrets/runtime ignored at the new paths
+archive/local/env/.env
+archive/local/env/.compose.env
+archive/local-production/env/*.env
+archive/deploy/env/.*.env
+archive/local/runtime/*
+!archive/local/runtime/.gitkeep
+archive/migration/env/migrate.env
+archive/migration/runtime/*
+archive/app/frontend/node_modules/
+archive/app/frontend/dist/
+archive/app/backend/storage/
+archive/logs/**/*.log
+
+# Rebuild toolchains (Rust / Angular / TLA+ / Alloy)
+target/
+node_modules/
+dist/
+.angular/
+coverage/
+*.rs.bk
+states/
