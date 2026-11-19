@@ -1,5 +1,5 @@
 # Skeleton: postgres plus one sample container per service (and a migrate one-shot for each
-# service with a database). `web` joins when it exists.
+# service with a database). 
 name: elibrary
 
 x-service-base: &service-base
@@ -68,6 +68,19 @@ services:
     depends_on:
       gateway:
         condition: service_healthy
+      web:
+        condition: service_healthy
+
+  web:
+    <<: *service-base
+    build:
+      context: ../..
+      dockerfile: deploy/docker/web.Dockerfile
+    mem_limit: 384m
+    tmpfs:
+      - /tmp
+    environment:
+      NG_ALLOWED_HOSTS: localhost
 
   gateway:
     <<: *service-base
