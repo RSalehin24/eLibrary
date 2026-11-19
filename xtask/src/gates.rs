@@ -173,6 +173,8 @@ fn compose_config() -> Result<serde_json::Value, String> {
     let output = Command::new("docker")
         .args([
             "compose",
+            "--profile",
+            "backup",
             "-f",
             "deploy/compose/compose.yaml",
             "config",

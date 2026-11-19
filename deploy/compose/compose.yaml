@@ -71,6 +71,23 @@ services:
       web:
         condition: service_healthy
 
+  # One-shot, started by deploy/scripts/backup.sh (profile `backup`): pg_dump of every database.
+  backup:
+    <<: *service-base
+    profiles: [backup]
+    image: postgres:16
+    restart: "no"
+    entrypoint: ["/bin/bash", "/backup-job.sh"]
+    tmpfs:
+      - /tmp
+    volumes:
+      - ../scripts/backup-job.sh:/backup-job.sh:ro
+    secrets:
+      - postgres_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   web:
     <<: *service-base
     build:
@@ -229,6 +246,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/service.Dockerfile
+      target: runtime-java
       args: {SERVICE: ingestion}
     environment:
       ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
@@ -253,6 +271,7 @@ services:
     build:
       context: ../..
       dockerfile: deploy/docker/service.Dockerfile
+      target: runtime-java
       args: {SERVICE: ingestion}
     environment:
       ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
@@ -270,9 +289,11 @@ services:
 
   ingestion-worker:
     <<: *service-base
+    mem_limit: 768m
     build:
       context: ../..
       dockerfile: deploy/docker/service.Dockerfile
+      target: runtime-java
       args: {SERVICE: ingestion}
     environment:
       ELIBRARY_LISTEN_ADDRESS: 0.0.0.0:8080
