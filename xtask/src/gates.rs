@@ -10,7 +10,7 @@ struct Step {
     arguments: &'static [&'static str],
 }
 
-const COMMAND_STEPS: [Step; 4] = [
+const COMMAND_STEPS: [Step; 6] = [
     Step {
         name: "Q1 fmt",
         program: "cargo",
@@ -25,6 +25,16 @@ const COMMAND_STEPS: [Step; 4] = [
         name: "Q2 tests",
         program: "cargo",
         arguments: &["test", "--quiet"],
+    },
+    Step {
+        name: "Q5 deny",
+        program: "cargo",
+        arguments: &["deny", "check"],
+    },
+    Step {
+        name: "Q5 audit",
+        program: "cargo",
+        arguments: &["audit"],
     },
     Step {
         name: "Q7 plan check",
@@ -48,7 +58,10 @@ pub fn run_all(report: &mut impl std::io::Write) -> Vec<&'static str> {
 }
 
 fn run_step(step: &Step, report: &mut impl std::io::Write) -> bool {
-    let output = Command::new(step.program).args(step.arguments).output();
+    let output = Command::new(step.program)
+        .args(step.arguments)
+        .env("PATH", path_with_cargo_bin())
+        .output();
     let passed = output.as_ref().is_ok_and(|output| output.status.success());
     let _ = writeln!(
         report,
@@ -83,4 +96,14 @@ fn boundaries_clean(report: &mut impl std::io::Write) -> bool {
             false
         }
     }
+}
+
+// why: `cargo install` puts cargo-deny and cargo-audit in ~/.cargo/bin, often missing from PATH.
+fn path_with_cargo_bin() -> std::ffi::OsString {
+    let mut paths: Vec<std::path::PathBuf> =
+        std::env::var_os("PATH").map_or_default(|path| std::env::split_paths(&path).collect());
+    if let Some(home) = std::env::var_os("HOME") {
+        paths.push(std::path::PathBuf::from(home).join(".cargo").join("bin"));
+    }
+    std::env::join_paths(paths).unwrap_or_default()
 }

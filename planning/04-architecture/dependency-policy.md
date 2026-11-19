@@ -39,7 +39,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | HTTP server | `axum` (APPROVED D-62, in use; `tower` dev use) | all six | no HTTP in std | P1 | alternative: `actix-web`; choose one |
 | HTTP client / proxying | `reqwest` or `hyper` client | gateway (proxy, authorize call), all services (internal calls), ingestion (GET-only acquisition) | no HTTP/TLS in std | P1/P6 | thin GET-only wrapper for acquisition |
 | Serialization | `serde` (APPROVED D-62, in use), `serde_json` (APPROVED D-62, dev use) | all six | no derive serialization | P1 | contracts |
-| JSON Schema/OpenAPI | `schemars` / `utoipa` | contracts | generating schemas | P1 | one of them (ADR-0004) |
+| JSON Schema/OpenAPI | `utoipa` (APPROVED D-65, not yet added; `schemars` not used) | contracts | generating schemas | P1 | one of them (ADR-0004) |
 | Database | `sqlx` (Postgres; APPROVED D-62, in use, features runtime-tokio, postgres, migrate, macros) | identity, catalog, reader, ingestion, notify (not gateway) | no DB client | P1 | compile-time checked queries |
 | Errors | `thiserror` (APPROVED D-62, in use) | all six | boilerplate for `Error` impls | P1 | optional; hand-written is acceptable |
 | Logging/tracing | `tracing`, `tracing-subscriber` (APPROVED D-62, in use; features fmt, json, std) | all six | std has only print | P1 | |
@@ -71,7 +71,7 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Compile-fail tests | `trybuild` | all | | P1 | dev-dependency |
 | Benchmarks | `criterion` | all | | when evidence needed | dev-dependency |
 | Test DB | `testcontainers` or local Postgres scripts | all with a database | | P1 | prefer scripts if allowed (Compose already provides Postgres) |
-| Tools (not linked into binaries) | `cargo-deny`, `cargo-audit`, `cargo-mutants`, `kani`, TLC (Java), Alloy (Java), Playwright, k6 | | | P1–P8 | system packages need approval and a stated reason before install |
+| Tools (not linked into binaries) | `cargo-deny` and `cargo-audit` (APPROVED D-66, installed),  `cargo-mutants`, `kani`, TLC (Java), Alloy (Java), Playwright, k6 | | | P1–P8 | system packages need approval and a stated reason before install |
 | Backup encryption and offsite copy | `age` or `restic` (choose one) | `backup` job (monthly encrypted copy off the host, D-33) | encrypts backups before they leave the host and copies them offsite; `pg_dump` and `tar` alone do neither | P1 | **PROPOSED, pending owner approval** (new tool; state version and license) |
 | Runtime tool in the ingestion worker image | Java runtime (JRE) and `epubcheck` | `ingestion-worker` | Build gate runs epubcheck before publish (D-47, REQ-ING-026) | P1 | **PROPOSED, needs owner approval** (new system package; state version, image size and memory) in the dependency batch |
 

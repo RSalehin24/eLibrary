@@ -70,5 +70,7 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-62 | 2026-11-20 | **Foundational crate groups approved**: `thiserror`, `uuid`, `time`, `serde`, `serde_json`, `tokio`, `axum`, `tower`, `hyper`, `sqlx`, `tracing`, `tracing-subscriber`; added to crates only when first used, features minimal | owner choice (all four groups) |
 | D-63 | 2026-11-20 | **Rust service images: glibc on `debian:trixie-slim`** (builder `rust:1.100-slim`, same Debian release); not distroless, not musl | owner choice (recommended option) |
 | D-64 | 2026-11-20 | **Third-party images are pinned by version tag in dev (`postgres:16`, later `caddy:2`); digests are pinned by the release script** | owner choice (recommended option) |
+| D-65 | 2026-11-20 | **`utoipa` generates OpenAPI 3.1 and JSON Schema from the Rust contract types** (`schemars` not used); resolves the ADR-0004 open choice | owner choice (recommended option) |
+| D-66 | 2026-11-20 | **`cargo-deny` and `cargo-audit` approved** as system tools for gate Q5 (package or `cargo install`, whichever exists first) | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).
