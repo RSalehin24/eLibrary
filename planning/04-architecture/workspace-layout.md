@@ -19,6 +19,7 @@ elibrary/                       (this repository; legacy kept read-only in archi
 │   │   └── platform-testkit    fixtures, fake clock, TLA trace replay
 │   ├── contracts-*/            wire types — the ONLY cross-service dependency
 │   │   ├── contracts-ids       newtype IDs
+│   │   ├── contracts-http      shared HTTP wire types: error envelope and common codes, scopes, pagination (I-26)
 │   │   ├── contracts-gateway / -identity / -catalog / -reader / -ingestion / -notify
 │   │   └── contracts-events    event envelope + payloads
 │   ├── domain-*/               pure logic (no I/O, no clock, no randomness)
@@ -53,7 +54,7 @@ elibrary/                       (this repository; legacy kept read-only in archi
 | From | May depend on |
 |---|---|
 | `domain-*` | other `domain-*`, `contracts-ids`, std/third-party pure crates |
-| `contracts-*` | `contracts-ids`, serde/schemars |
+| `contracts-*` | `contracts-ids`, `contracts-http`, serde/utoipa |
 | `platform-*` | other `platform-*`, `contracts-*` (ids/events only), third-party (I-25) |
 | `svc-X` (incl. `svc-gateway`) | `platform-*`, `domain-*`, `contracts-*` (any), **never** `svc-Y` |
 

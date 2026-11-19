@@ -6,6 +6,7 @@ use std::collections::BTreeMap;
 pub type Edges = BTreeMap<String, Vec<String>>;
 
 const CONTRACTS_IDS: &str = "contracts-ids";
+const CONTRACTS_HTTP: &str = "contracts-http";
 
 /// Every forbidden edge, as a readable line. Empty when the graph is clean.
 #[must_use]
@@ -21,7 +22,8 @@ pub fn violations(edges: &Edges) -> Vec<String> {
 fn is_allowed(from: &str, to: &str) -> bool {
     match Layer::of(from) {
         Layer::Domain => to == CONTRACTS_IDS || Layer::of(to) == Layer::Domain,
-        Layer::Contracts => to == CONTRACTS_IDS,
+        // why: shared HTTP wire types (error envelope, scopes) have one home; logged as I-26.
+        Layer::Contracts => to == CONTRACTS_IDS || to == CONTRACTS_HTTP,
         // why: platform crates build on each other (obs and db use config); logged as I-25.
         Layer::Platform => matches!(Layer::of(to), Layer::Platform | Layer::Contracts),
         Layer::Service => Layer::of(to) != Layer::Service,
@@ -95,8 +97,13 @@ mod tests {
     }
 
     #[test]
-    fn contracts_depend_only_on_ids() {
-        let found = violations(&edges(&[("contracts-catalog", &["domain-text"])]));
-        assert_eq!(found.len(), 1);
+    fn contracts_depend_only_on_ids_and_http() {
+        let found = violations(&edges(&[(
+            "contracts-catalog",
+            &["domain-text", "contracts-events"],
+        )]));
+        assert_eq!(found.len(), 2);
+        let allowed = edges(&[("contracts-catalog", &["contracts-ids", "contracts-http"])]);
+        assert_eq!(violations(&allowed), Vec::<String>::new());
     }
 }
