@@ -27,6 +27,8 @@ through this table.
 | Reading ticket | TTL | 15 min (900 s) | expiry; reopen |
 | Reader | opens per user | 30 / hour | 429 |
 | Links | password link TTL | 24 h (setup 7 d) | expiry |
+| Passwords | length (characters) | 12 to 128, plus a built-in deny list of common choices (provisional, owner may change; `domain-credentials`) | validation at creation, not at sign-in |
+| TOTP | code, step, drift | 6 digits, 30 s step, one step either side accepted; the last accepted step only increases | `domain-credentials`, INV-IDN-005 |
 | Acquisition | concurrent requests per source host | 2 | queued |
 | Acquisition | delay between pages (default) | 0.5 s | delay |
 | Acquisition | requests per automation run / attempts per request | 50 / 3 | stop run / failed |

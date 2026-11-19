@@ -24,6 +24,7 @@ elibrary/                       (this repository; legacy kept read-only in archi
 │   │   └── contracts-events    event envelope + payloads
 │   ├── domain-*/               pure logic (no I/O, no clock, no randomness)
 │   │   ├── domain-text         Normalizer (bn/en), slug, collation keys
+│   │   ├── domain-credentials  Argon2id password hashing (salt injected) and TOTP (RFC 6238), pure
 │   │   ├── domain-access       Scopes, Roles, Grants, decide() (used by identity only), reading-ticket type (verified by asking identity, D-37)
 │   │   ├── domain-document     Block IR, SectionTree, CanonicalDocument, conservation checker
 │   │   ├── domain-classify     labels, evidence, lexicons, conflict resolution

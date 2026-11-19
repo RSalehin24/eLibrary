@@ -1,0 +1,20 @@
+[package]
+name = "domain-credentials"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+argon2 = { version = "0.6.0", default-features = false, features = ["alloc", "password-hash"] }
+hmac = "0.13.0"
+platform-time = { version = "0.1.0", path = "../platform-time" }
+sha1 = "0.11.0"
+thiserror = "2.0.21"
+
+[dev-dependencies]
+proptest = "1.12.0"
