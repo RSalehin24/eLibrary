@@ -100,3 +100,7 @@ states/
 
 # Rust build output
 /target/
+
+# Secret values (names documented in deploy/secrets/README.md)
+deploy/secrets/*
+!deploy/secrets/README.md

@@ -68,5 +68,7 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-60 | 2026-11-20 | **Slugs keep Bengali letters**: slug = exact key with spaces to hyphens (no transliteration table) | owner choice (recommended option) |
 | D-61 | 2026-11-20 | **`icu_collator` approved** (ICU4X, compiled `bn` data, with `icu_locale_core` for the locale) for the shared collation comparator and `bytea` sort keys | owner choice (recommended option) |
 | D-62 | 2026-11-20 | **Foundational crate groups approved**: `thiserror`, `uuid`, `time`, `serde`, `serde_json`, `tokio`, `axum`, `tower`, `hyper`, `sqlx`, `tracing`, `tracing-subscriber`; added to crates only when first used, features minimal | owner choice (all four groups) |
+| D-63 | 2026-11-20 | **Rust service images: glibc on `debian:trixie-slim`** (builder `rust:1.100-slim`, same Debian release); not distroless, not musl | owner choice (recommended option) |
+| D-64 | 2026-11-20 | **Third-party images are pinned by version tag in dev (`postgres:16`, later `caddy:2`); digests are pinned by the release script** | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).
