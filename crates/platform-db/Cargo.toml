@@ -1,0 +1,15 @@
+[package]
+name = "platform-db"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+platform-config = { path = "../platform-config" }
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate"] }
+thiserror = "2.0.21"

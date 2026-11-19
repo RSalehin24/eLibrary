@@ -1,12 +1,12 @@
 use std::net::SocketAddr;
 
-use crate::{ConfigError, ConfigSource};
+use crate::{ConfigError, ConfigSource, LogLevel};
 
 /// Every setting of every service starts with this prefix.
 pub const ENV_PREFIX: &str = "ELIBRARY_";
 const LISTEN_ADDRESS_KEY: &str = "ELIBRARY_LISTEN_ADDRESS";
 const INTERNAL_ADDRESS_KEY: &str = "ELIBRARY_INTERNAL_ADDRESS";
-const KNOWN_KEYS: [&str; 2] = [LISTEN_ADDRESS_KEY, INTERNAL_ADDRESS_KEY];
+const LOG_LEVEL_KEY: &str = "ELIBRARY_LOG_LEVEL";
 
 /// Settings every service has: the routed listener and the internal-only one
 /// (health, ready, contract; never routed by Caddy or the gateway).
@@ -14,19 +14,22 @@ const KNOWN_KEYS: [&str; 2] = [LISTEN_ADDRESS_KEY, INTERNAL_ADDRESS_KEY];
 pub struct CommonConfig {
     listen_address: SocketAddr,
     internal_address: SocketAddr,
+    log_level: LogLevel,
 }
 
 impl CommonConfig {
     /// # Errors
     /// Returns the first problem found; unknown settings are rejected.
     pub fn load(source: &impl ConfigSource) -> Result<Self, ConfigError> {
-        reject_unknown(source)?;
+        crate::known::reject_unknown(source)?;
         let listen_address = read_address(source, LISTEN_ADDRESS_KEY)?;
         let internal_address = read_address(source, INTERNAL_ADDRESS_KEY)?;
         ensure_distinct(listen_address, internal_address)?;
+        let log_level = read_log_level(source)?;
         Ok(Self {
             listen_address,
             internal_address,
+            log_level,
         })
     }
 
@@ -39,6 +42,18 @@ impl CommonConfig {
     pub fn internal_address(&self) -> SocketAddr {
         self.internal_address
     }
+
+    #[must_use]
+    pub fn log_level(&self) -> LogLevel {
+        self.log_level
+    }
+}
+
+fn read_log_level(source: &impl ConfigSource) -> Result<LogLevel, ConfigError> {
+    match source.get(LOG_LEVEL_KEY) {
+        Some(text) => LogLevel::parse(LOG_LEVEL_KEY, &text),
+        None => Ok(LogLevel::default()),
+    }
 }
 
 fn ensure_distinct(public: SocketAddr, internal: SocketAddr) -> Result<(), ConfigError> {
@@ -48,18 +63,11 @@ fn ensure_distinct(public: SocketAddr, internal: SocketAddr) -> Result<(), Confi
     Ok(())
 }
 
-fn reject_unknown(source: &impl ConfigSource) -> Result<(), ConfigError> {
-    let unknown = source
-        .keys_with_prefix(ENV_PREFIX)
-        .into_iter()
-        .find(|key| !KNOWN_KEYS.contains(&key.as_str()));
-    unknown.map_or(Ok(()), |key| Err(ConfigError::Unknown { key }))
-}
-
-fn read_address(source: &impl ConfigSource, key: &str) -> Result<SocketAddr, ConfigError> {
-    let text = source.get(key).ok_or_else(|| ConfigError::Missing {
-        key: key.to_owned(),
-    })?;
+pub(crate) fn read_address(
+    source: &impl ConfigSource,
+    key: &str,
+) -> Result<SocketAddr, ConfigError> {
+    let text = require(source, key)?;
     let address: SocketAddr = text.parse().map_err(|source| ConfigError::InvalidAddress {
         key: key.to_owned(),
         source,
@@ -70,4 +78,19 @@ fn read_address(source: &impl ConfigSource, key: &str) -> Result<SocketAddr, Con
         });
     }
     Ok(address)
+}
+
+pub(crate) fn require(source: &impl ConfigSource, key: &str) -> Result<String, ConfigError> {
+    source.get(key).ok_or_else(|| ConfigError::Missing {
+        key: key.to_owned(),
+    })
+}
+
+pub(crate) fn read_address_part(text: &str, key: &str) -> Result<u16, ConfigError> {
+    match text.parse::<u16>() {
+        Ok(port) if port != 0 => Ok(port),
+        _ => Err(ConfigError::InvalidValue {
+            key: key.to_owned(),
+        }),
+    }
 }

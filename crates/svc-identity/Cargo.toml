@@ -14,3 +14,7 @@ axum = { version = "0.8.9", default-features = false, features = ["http1", "toki
 platform-config = { path = "../platform-config" }
 platform-http = { path = "../platform-http" }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "net"] }
+platform-db = { path = "../platform-db" }
+platform-obs = { path = "../platform-obs" }
+tracing = "0.1.44"
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }

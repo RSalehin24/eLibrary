@@ -1,4 +1,4 @@
-use platform_config::{CommonConfig, ConfigError, MapSource, Secret};
+use platform_config::{CommonConfig, ConfigError, DatabaseConfig, LogLevel, MapSource, Secret};
 
 fn valid() -> MapSource {
     MapSource::default()
@@ -64,4 +64,52 @@ fn secret_never_appears_in_debug_output() {
     let secret = Secret::new("hunter2".to_owned());
     assert!(!format!("{secret:?}").contains("hunter2"));
     assert_eq!(secret.expose(), "hunter2");
+}
+
+#[test]
+fn log_level_defaults_to_info_and_rejects_nonsense() -> Result<(), ConfigError> {
+    assert_eq!(CommonConfig::load(&valid())?.log_level(), LogLevel::Info);
+    let debug = valid().with("ELIBRARY_LOG_LEVEL", "debug");
+    assert_eq!(CommonConfig::load(&debug)?.log_level(), LogLevel::Debug);
+    let bad = valid().with("ELIBRARY_LOG_LEVEL", "loud");
+    assert!(matches!(
+        CommonConfig::load(&bad),
+        Err(ConfigError::InvalidValue { .. })
+    ));
+    Ok(())
+}
+
+fn database() -> MapSource {
+    MapSource::default()
+        .with("ELIBRARY_DATABASE_HOST", "postgres")
+        .with("ELIBRARY_DATABASE_PORT", "5432")
+        .with("ELIBRARY_DATABASE_NAME", "identity")
+        .with("ELIBRARY_DATABASE_USER", "identity")
+        .with("ELIBRARY_DATABASE_PASSWORD_FILE", "/nonexistent/secret")
+}
+
+#[test]
+fn database_config_loads_and_keeps_the_password_out_of_it() -> Result<(), ConfigError> {
+    let config = DatabaseConfig::load(&database())?;
+    assert_eq!((config.host.as_str(), config.port), ("postgres", 5432));
+    assert!(matches!(
+        config.read_password(),
+        Err(ConfigError::SecretUnreadable { .. })
+    ));
+    assert!(!format!("{config:?}").contains("hunter2"));
+    Ok(())
+}
+
+#[test]
+fn database_port_must_be_a_nonzero_number() {
+    for port in ["0", "abc", "70000"] {
+        let source = database().with("ELIBRARY_DATABASE_PORT", port);
+        assert!(
+            matches!(
+                DatabaseConfig::load(&source),
+                Err(ConfigError::InvalidValue { .. })
+            ),
+            "{port}"
+        );
+    }
 }

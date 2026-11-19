@@ -14,6 +14,10 @@ pub enum ConfigError {
     ZeroPort { key: String },
     #[error("public and internal listeners must differ")]
     ListenersCollide,
+    #[error("setting {key} has an invalid value")]
+    InvalidValue { key: String },
+    #[error("the secret file named by {key} cannot be read")]
+    SecretUnreadable { key: String },
     #[error("unknown setting {key}")]
     Unknown { key: String },
 }
