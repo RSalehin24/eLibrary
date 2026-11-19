@@ -16,3 +16,7 @@ platform-obs = { path = "../platform-obs" }
 platform-startup = { path = "../platform-startup" }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }
+
+[dev-dependencies]
+platform-testkit = { path = "../platform-testkit" }
+tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
