@@ -38,14 +38,14 @@ Few, large, well-maintained crates over many small ones; avoid crates that dupli
 | Async runtime | `tokio` | all six | std has no async executor/IO | P1 | single runtime for all services |
 | HTTP server | `axum` (on `hyper`/`tower`) | all six | no HTTP in std | P1 | alternative: `actix-web`; choose one |
 | HTTP client / proxying | `reqwest` or `hyper` client | gateway (proxy, authorize call), all services (internal calls), ingestion (GET-only acquisition) | no HTTP/TLS in std | P1/P6 | thin GET-only wrapper for acquisition |
-| Serialization | `serde`, `serde_json` | all six | no derive serialization | P1 | contracts |
+| Serialization | `serde` (APPROVED D-62, in use), `serde_json` (APPROVED D-62, dev use) | all six | no derive serialization | P1 | contracts |
 | JSON Schema/OpenAPI | `schemars` / `utoipa` | contracts | generating schemas | P1 | one of them (ADR-0004) |
 | Database | `sqlx` (Postgres) | identity, catalog, reader, ingestion, notify (not gateway) | no DB client | P1 | compile-time checked queries |
 | Errors | `thiserror` | all six | boilerplate for `Error` impls | P1 | optional; hand-written is acceptable |
 | Logging/tracing | `tracing`, `tracing-subscriber` | all six | std has only print | P1 | |
 | Metrics | `metrics` + Prometheus exporter | all six | none in std | P1 | |
-| IDs | `uuid` | all except gateway | UUID v5/v7 generation | P1 | enable only needed features |
-| Time | `time` or `jiff` | all six | std lacks calendar/zone | P1 | choose one; prefer `time` unless jiff features are needed |
+| IDs | `uuid` (APPROVED D-62, in use) | all except gateway | UUID v5/v7 generation | P1 | enable only needed features |
+| Time | `time` (APPROVED D-62, in use; jiff not chosen) | all six | std lacks calendar/zone | P1 | choose one; prefer `time` unless jiff features are needed |
 | Crypto | `argon2`, `sha2`, `hmac`, `rand`/`getrandom`, `subtle` | identity (hashing, sessions, TOTP), gateway (CSRF token compare) | no crypto in std | P3 | audited RustCrypto family; signature crates (`ed25519-dalek`, PASETO) are no longer needed because tickets are verified by identity (D-37) |
 | TOTP | hand-rolled on `hmac`+`sha1` (RFC 6238 is small) or `totp-rs` | identity | | P3 | prefer hand-rolled + tests |
 | Cookies | `cookie` (or hand-written header handling) | identity, gateway | no cookie parsing in std | P3 | smallest option preferred |

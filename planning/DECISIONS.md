@@ -67,5 +67,6 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-59 | 2026-11-19 | **Crates approved for the first step (`domain-text`)**: `unicode-normalization` (runtime), `proptest` (dev). `unicode-segmentation`, `insta`, `icu_collator` and the rest of the P1 batch are not yet approved | owner choice (recommended option) |
 | D-60 | 2026-11-20 | **Slugs keep Bengali letters**: slug = exact key with spaces to hyphens (no transliteration table) | owner choice (recommended option) |
 | D-61 | 2026-11-20 | **`icu_collator` approved** (ICU4X, compiled `bn` data, with `icu_locale_core` for the locale) for the shared collation comparator and `bytea` sort keys | owner choice (recommended option) |
+| D-62 | 2026-11-20 | **Foundational crate groups approved**: `thiserror`, `uuid`, `time`, `serde`, `serde_json`, `tokio`, `axum`, `tower`, `hyper`, `sqlx`, `tracing`, `tracing-subscriber`; added to crates only when first used, features minimal | owner choice (all four groups) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).
