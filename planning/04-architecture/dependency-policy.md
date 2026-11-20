@@ -2,7 +2,7 @@
 
 Status: DRAFT
 
-Rule from the owner's `AGENTS.md`: **no new dependencies without approval; prefer the standard library.** This applies to crates, system packages, tools and services. Nothing below is approved yet; every row is PROPOSED. The foundational Rust batch is approved at the start of P1 (D-17) and the npm set after spike S-02 (D-20).
+Rule from the owner's `AGENTS.md`: **no new dependencies without approval; prefer the standard library.** This applies to crates, system packages, tools and services. Rows marked APPROVED are approved individually; **every other row is approved as a batch by D-98 (2026-11-20)**, with the selections recorded there, and is marked APPROVED when it is first added. The foundational Rust batch is approved at the start of P1 (D-17) and the npm set after spike S-02 (D-20).
 
 The system has six Rust services (gateway, identity, catalog, reader, ingestion, notify; [ADR-0025](adr/0025-six-services-with-gateway.md)), the `web` SSR app and `caddy`/`postgres` images. The "Used by" column of the register shows which service needs each candidate.
 

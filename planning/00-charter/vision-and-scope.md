@@ -45,7 +45,7 @@ The reader serves the whole rendered book to the signed-in browser (D-28). A rea
 
 ## Source permission
 
-Acquisition is GET-only and never submits a source-site form (D-03). Written permission from the source is still an open owner action; go-live stays blocked until it exists.
+Acquisition is GET-only and never submits a source-site form (D-03). Go-live rests on the owner's own account with the risk accepted by the owner (D-99), not on written permission from the source.
 
 ## Deliberate changes from the legacy app
 

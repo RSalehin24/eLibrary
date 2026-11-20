@@ -19,7 +19,7 @@ pub struct SourceClient(/* GET only: no method parameter, no body, no form encod
 
 `SourceClient` exposes only `get(url) -> Response`. There is no way to issue POST, PUT or DELETE or to submit a form (D-03, INV-ING-010): the type has no such method, and a lint forbids constructing another HTTP client in the crate. A future non-GET action needs a new owner decision, not a code change. The legacy "mark complete" form submission is gone.
 
-Permission from the source site is the owner's outstanding action (D-03, README OPEN-1); until it exists the pipeline is built and tested against fixtures only and go-live gate G6 stays blocked.
+Access uses only the owner's own account via a cookie the owner supplies (D-99); go-live gate G6 is no longer blocked on the source's permission. CI and tests still use fixtures only.
 
 ## Fetch policy
 

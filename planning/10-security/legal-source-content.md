@@ -1,6 +1,6 @@
 # Source content: rights, attribution, behavior
 
-Status: DRAFT · D-03 stance decided; the written permission itself is still outstanding (go-live gate G6 stays blocked until it exists)
+Status: DRAFT · D-03 stance decided; D-99 (2026-11-20) replaced the written-permission blocker with the owner's own account and an accepted risk, so G6 is no longer blocked on it
 
 This records the legal facts and the engineering stance. The plan cannot grant permission; the owner must obtain it. The engineering follows what is decided.
 
@@ -13,7 +13,7 @@ This records the legal facts and the engineering stance. The plan cannot grant p
 
 | Rule | Source |
 |---|---|
-| Obtain the source's **written permission** before ingestion goes live. Until then the pipeline is built and tested on fixtures only | D-03, gate G6 |
+| ~~Obtain the source's written permission before go-live~~ replaced by **the owner's own account only**: the owner logs in to the source in a browser and supplies the cookie; the owner accepts the residual risk of copying into a private shared library | D-03, D-99, gate G6 |
 | **Gold-corpus labelling may start before permission, for private research only**: GET-only fetches by the owner, pages and labels stay outside the repository and are never committed, shared or published. Permission remains the blocker for ingestion go-live (G6) and for any publication | D-51 |
 | Acquisition is **GET only**: the HTTP client type has no other method and no form encoder; a future non-GET action needs a new owner decision, not a code change | D-03, INV-ING-010 |
 | Locked chapters wait for an export, an API or sanctioned access from the source; the system never changes source state | D-03 |
@@ -28,7 +28,11 @@ This records the legal facts and the engineering stance. The plan cannot grant p
 
 Labelling before permission means pages from the source are copied without the source's consent. That is a real exposure: the source could regard the copies as infringement or a terms breach even when they are private and GET-only. The plan reduces it (small sample, polite GET-only fetches, no sharing, no publication, deletion on request, see below) but cannot remove it. The owner accepted this risk in D-51; it ends only when written permission is obtained or the copies are deleted.
 
-## Questions the owner must answer with the source (OPEN actions, not decisions)
+## Residual legal risk (D-99)
+
+Go-live now rests on the owner's own entitlement to read the books with their account, not on the source's consent to copy them into a library other invited readers use. The source may regard that as a terms breach or infringement. The owner accepted this risk in D-99. Mitigations: private invite-only library, signed-in readers only, no published text, GET-only, polite rate, honest User-Agent, prompt takedown. Account risk: the source may flag or ban the personal account.
+
+## Questions to put to the source if the owner wants consent later (OPEN actions, not decisions)
 
 1. Written permission for ingestion and for republishing inside this private library: scope, duration, conditions.
 2. May an account on the source be used (the cookie)? Which account? Is GET-only access sufficient for the locked chapters, or is an export or API available?

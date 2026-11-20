@@ -24,7 +24,7 @@ Basis: [new architecture](../_replan/new-architecture.md) sections 1, 9, 10; dec
 | ID | Assumption | Verified by |
 |---|---|---|
 | A-1 | The source site keeps its LearnDash structure and listing pages | Fixture tests and a canary job; drift detector |
-| A-2 | The source owner permits ingestion and republication to invited readers | Decision D-03 (permission outstanding; blocks ingestion go-live G6 and any publication; gold-corpus labelling for private research may start earlier, D-51) |
+| A-2 | The owner's own source account entitles ingestion for a private library; the source has not consented to republication to invited readers | Decision D-99 (risk accepted by the owner; replaces the permission blocker of D-03) |
 | A-3 | PostgreSQL `FOR UPDATE SKIP LOCKED` suffices for a handful of concurrent jobs | Load test of the job queue |
 | A-4 | PostgreSQL FTS with Bengali normalization finds books well enough at under 5,000 books | Query set with expected hits |
 | A-5 | Whole-book delivery to the browser is fast enough for typical EPUBs | Reader spike on the largest corpus book |

@@ -34,7 +34,6 @@ Raised by writers; each is asked with `AskUserQuestion` when the wave that needs
 | # | Point | Recommendation |
 |---|---|---|
 | I-1 | epubcheck needs a Java runtime: run it in the worker container, or only in CI | CI only (keep Java out of the runtime image); the in-process structure audit stays the runtime gate |
-| I-2 | Generated cover method; crates for HTTP, HTML, sanitizer, ZIP, XML | decide in the dependency batch (P1) |
 
 ## Answered 2026-11-19 (moved to DECISIONS)
 
@@ -48,3 +47,4 @@ Answered 2026-11-20 (cont.): C-1 = D-84 · C-2 = D-85 · C-3 = D-86 · C-4 = D-8
 Answered 2026-11-20 (cont.): C-6 = D-88 · P-3 = D-89 · P-4 = D-90 · P-5 = D-91
 Answered 2026-11-20 (cont.): I-3 = D-92 · I-4 = D-93 · I-5 = D-94 · I-6 = D-95
 Answered 2026-11-20 (cont.): I-7 = D-96 · Q-4 = D-97 · O-6, Q-1, Q-2, Q-3 pruned (D-48, S-01, D-46, formal-models)
+Answered 2026-11-20 (cont.): I-2 = D-98

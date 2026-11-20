@@ -92,7 +92,7 @@ The authoritative test ids are in [test plan](test-plan.md); the column above is
 
 | # | Point | Status |
 |---|---|---|
-| OPEN-1 | Permission from the source site (D-03): the owner's outstanding action; go-live gate G6 stays blocked without it. Locked chapters are never unlocked by submitting a form | owner action |
+| OPEN-1 | Closed by D-99: owner's own account, risk accepted. Locked chapters are never unlocked by submitting a form | closed |
 | OPEN-2 | epubcheck runs in the worker before publish (D-47, decided); the Java runtime and epubcheck install in the worker image still need approval in the P1 dependency batch | owner (tooling install) |
 | OPEN-3 | Generated fallback cover (REQ-ING-027): text shaping and rasterisation need a crate or tool; method not chosen | owner (dependency batch) |
 | OPEN-4 | Crates for HTTP client, HTML parser, sanitizer, ZIP, templating, Unicode normalization, XML: none approved yet (D-17 batch at P1 start); this design names roles, not crates | owner (dependency batch) |

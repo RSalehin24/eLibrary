@@ -8,7 +8,7 @@ Replaces v1 "cutover" (D-32: nothing is migrated; users are re-invited, books ar
 - Release gates for the phase passed; release `release.env` with image digests exists; staging smoke and a restore drill passed ([backup](../backup-restore.md)).
 - DNS points to the host; ports 80 and 443 free (Caddy publishes both; 80 only for the certificate flow).
 - Secret files generated on the host with mode 0400 ([secrets](../../10-security/secrets-and-keys.md)); no value was typed into a shared file or printed.
-- **Source permission (D-03, gate G6) is in hand** before step 5; without it stop after step 4 and run the pipeline on fixtures only.
+- **Source access (D-99, gate G6):** the owner's source cookie is in place before step 5; without it stop after step 4 and run the pipeline on fixtures only.
 
 **Steps**
 1. **Start the stack.** `postgres`, then `migrate` one-shots, then `docker compose up -d --wait` on the pinned digests. Startup checks must pass; a service that refuses to start names its failed check (missing secret, schema version, undeclared route).
