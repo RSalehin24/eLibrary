@@ -2,6 +2,7 @@
 //! This stage: schema and the public read routes (list and detail).
 
 mod blobs;
+pub mod cover;
 pub mod http;
 mod reply;
 mod slug;

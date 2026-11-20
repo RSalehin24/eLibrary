@@ -110,3 +110,4 @@ deploy/secrets/*
 
 # Downloaded tools (jars), never committed; versions in the dependency register
 /tools/
+.claude/settings.local.json
