@@ -21,7 +21,7 @@ Decision: [ADR-0019](adr/0019-docker-compose-deployment.md) (D-22, D-24), [ADR-0
 
 One-shot jobs (not part of the ten): `migrate` (per service image, `<svc> migrate`) and `backup` (`pg_dump` per database plus file volume copy). There is no Redis, no Celery and no message broker.
 
-Only `caddy` publishes host ports (HTTPS; port 80 only for the certificate flow). Each service has its own database and role in the single `postgres` container (D-24) and its own file volume where it stores files; a role cannot connect to another service's database and no volume is shared across services (INV-PLT-014). `ingestion-api` and `ingestion-worker` are one service and share its volume and database.
+Only `caddy` publishes host ports (HTTPS; port 80 only for the certificate flow: ACME challenge and redirect to HTTPS, D-97). Each service has its own database and role in the single `postgres` container (D-24) and its own file volume where it stores files; a role cannot connect to another service's database and no volume is shared across services (INV-PLT-014). `ingestion-api` and `ingestion-worker` are one service and share its volume and database.
 
 ```
 Internet ─► caddy (HTTPS, certificate renewal) ─┬► web :8080       Angular SSR            (/)

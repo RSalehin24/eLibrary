@@ -22,3 +22,4 @@ Levels: model, prop, unit, type, db, e2e (Compose stack with a mail sink and stu
 | TST-NTF-014 | db+unit | retention job deletes only expired terminal rows, in bounded batches | REQ-NTF-012; INV-NTF-012 |
 | TST-NTF-015 | contract | cursor consumer: ordered pages, empty page keeps cursor, restart resumes without loss | REQ-NTF-001 |
 | TST-NTF-016 | fault | crash after provider accept and before `sent`: at most one repeat (documented residual window) | REQ-NTF-001; INV-NTF-001 |
+| TST-NTF-017 | e2e+unit | password change or reset completion yields exactly one `password_changed` mail in the account language with no link or token; replayed event sends nothing more; mail failure never rolls back the change | REQ-NTF-002, 003; INV-NTF-001, 003 |

@@ -75,4 +75,4 @@ Bucket rail is a labelled navigation; the table has header cells and sortable-co
 
 ## Open
 
-I-4 (force-generate parameter of retry), I-6 (`awaiting_credential` wording), U-11 (a cross-request list of REVIEW items has no endpoint; `/requests?outcome=needs_review` assumed).
+U-11 (I-4 and I-6 resolved: D-93, D-95) (a cross-request list of REVIEW items has no endpoint; `/requests?outcome=needs_review` assumed).

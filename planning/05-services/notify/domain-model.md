@@ -9,9 +9,9 @@ Database `notify`, one role. UUIDv7 keys, UTC times from the injected `Clock`. N
 | Table | Columns | Keys / constraints |
 |---|---|---|
 | `templates` | `key`, `language` (`bn`\|`en`), `version`, `subject`, `body_html`, `body_text`, `active` | PK `(key, language, version)`; `UNIQUE (key, language) WHERE active`; a key is active only when both languages exist |
-| `mail_outbox` | `id`, `source` (`identity`), `event_id`, `kind` (`invite`\|`password_reset`), `request_id`, `user_id`, `address_mask`, `language`, `state` (`queued`\|`sending`\|`sent`\|`retry`\|`failed`), `attempts`, `next_attempt_at`, `lease_until`, `error_class` null, `created_at`, `updated_at` | PK `id`; `UNIQUE (source, event_id, kind)` (claim before send); partial index `(next_attempt_at) WHERE state IN ('queued','retry')` |
+| `mail_outbox` | `id`, `source` (`identity`), `event_id`, `kind` (`invite`\|`password_reset`\|`password_changed`), `request_id`, `user_id`, `address_mask`, `language`, `state` (`queued`\|`sending`\|`sent`\|`retry`\|`failed`), `attempts`, `next_attempt_at`, `lease_until`, `error_class` null, `created_at`, `updated_at` | PK `id`; `UNIQUE (source, event_id, kind)` (claim before send); partial index `(next_attempt_at) WHERE state IN ('queued','retry')` |
 | `kindle_deliveries` | `id`, `event_id`, `request_id`, `user_id`, `book_id`, `version_id`, `address_index`, `address_mask` null, `state` (`queued`\|`preflight`\|`sending`\|`sent`\|`rejected`\|`retry`\|`failed`), `reason` null (`unsupported_format`\|`too_large`\|`no_address`\|`sender_not_approved`\|`smtp_failed`), `size_bytes` null, `attempts`, `next_attempt_at`, `lease_until`, `reported_at` null | PK `id`; `UNIQUE (request_id)`; index `(user_id, created_at)`; `CHECK (size_bytes IS NULL OR size_bytes >= 0)` |
-| `delivery_log` | `id`, `kind` (`invite`\|`password_reset`\|`kindle`), `ref_id`, `event_id`, `status`, `error_class` null, `reason` null, `address_mask`, `at` | one row per attempt (REQ-NTF-009); INSERT-only for the service role; no link, token or full address |
+| `delivery_log` | `id`, `kind` (`invite`\|`password_reset`\|`password_changed`\|`kindle`), `ref_id`, `event_id`, `status`, `error_class` null, `reason` null, `address_mask`, `at` | one row per attempt (REQ-NTF-009); INSERT-only for the service role; no link, token or full address |
 | `event_cursors` | `source` (`identity`\|`catalog`), `cursor` bigint, `updated_at` | PK `source`; advanced in the same transaction as the outbox insert |
 | `quota_counters` | `key` (`user:<id>`, `book:<id>:<user>`), `window_start`, `count` | PK `(key, window_start)`; pruned by the retention job |
 
@@ -23,7 +23,7 @@ The real address and link are fetched from identity at send time and held only i
 
 ## Templates
 
-`invite`, `password_reset`, `kindle_cover_note`; each in `bn` and `en`; selected by the account language (REQ-NTF-003). Password-changed and admin notices are not in the requirements and are out of scope until a requirement exists.
+`invite`, `password_reset`, `password_changed`, `kindle_cover_note`; each in `bn` and `en`; selected by the account language (REQ-NTF-003). The `password_changed` notice (D-82) carries no link or token: account name, time and a "not you? contact an administrator" line. It is sent after any successful password change or reset completion; identity emits `email.requested` with `kind=password_changed` in the same transaction as the change. Admin notices stay out of scope (D-82). The requirement text of REQ-NTF-002/003 does not yet name this kind (open point reported to the parent).
 
 ## Limits (provisional until the P0 baseline)
 

@@ -34,7 +34,7 @@ Ingestion extracts credits (name, role, raw text, `exact_key`, evidence, confide
 The one decision procedure is the rule in the [domain model](../domain-model.md) section 9 (REQ-ING-023, INV-ING-023): exact normalized title key plus author, category and edition, compared by `exact_key` set equality or overlap, run through catalog `POST /internal/books/match` over catalog rows. Ingestion supplies the keys and owns the review state (`duplicate_reviews`). Summary of what binds this stage:
 
 - No substring matching, no fuzzy threshold, no automatic merge. Outcomes are `exact_duplicate`, `new_edition`, `new_work`, `needs_review`.
-- Same title with disjoint authors is a different work; same title and author with a different edition is a new edition; all equal is an exact duplicate (refused for `create new`, the source URL linked). A differing translator, a missing or low-confidence author, or a match against a soft-deleted book is `needs_review` (README OPEN-9).
+- Same title with disjoint authors is a different work; same title and author with a different edition is a new edition; all equal is an exact duplicate (refused for `create new`, the source URL linked). A differing translator means a different book (`new_work`, D-92); a missing or low-confidence author, or a match against a soft-deleted book is `needs_review`.
 - Near matches (equal `loose_key` with different `exact_key`, equal title key) are listed with evidence side by side for a human; they never change the outcome.
 - Work and edition grouping is not modelled (open point O-3): "new edition" is the operator's `create_as_new_edition` action.
 - The decision is stored and replayed as an input on reprocess.

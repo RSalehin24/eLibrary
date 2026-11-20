@@ -121,7 +121,7 @@ Gateway 503 and offline give `Offline` or `Failed` states with retry; SSE loss r
 | REQ-WEB-023 | Generated client | review, CI |
 | REQ-WEB-024 | Container, Rendering | review, e2e |
 
-The detailed test rows for the web live in the [testing strategy](../../09-testing/strategy.md); there is no separate web test-plan file.
+Test rows: [web test plan](test-plan.md) (TST-WEB-001..020); journeys in the [testing strategy](../../09-testing/strategy.md).
 
 ## Related
 

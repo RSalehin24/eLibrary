@@ -5,7 +5,7 @@ Status: DRAFT · Service: [notify](../05-services/notify/README.md)
 Line format: `REQ-ID · priority · inv: <invariants> · verify: <methods> · statement`
 
 - **REQ-NTF-001** · MUST · inv: INV-NTF-001 · verify: model, prop · Notify consumes `email.requested` and `kindle.requested` from the producers' outbox endpoints with a stored cursor; each request is handled idempotently by event id, so one issued link or one Kindle request yields at most one send unless a retry follows an unknown outcome (documented at-least-once).
-- **REQ-NTF-002** · MUST · inv: INV-NTF-002 · verify: e2e, prop · Invitation and password reset mails are sent once per issued link; a mail failure never blocks or rolls back account creation or the reset request.
+- **REQ-NTF-002** · MUST · inv: INV-NTF-002 · verify: e2e, prop · Invitation and password reset mails are sent once per issued link, and the password-changed notice once per password change (D-82); a mail failure never blocks or rolls back account creation or the reset request.
 - **REQ-NTF-003** · SHOULD · inv: INV-NTF-003 · verify: unit · Templates exist in Bengali and English, are selected by the account language, and escape every interpolated value.
 - **REQ-NTF-004** · MUST · inv: INV-NTF-004 · verify: type, unit · Links, tokens and addresses never appear in logs or error messages; the delivery log stores a masked address.
 - **REQ-NTF-005** · MUST · inv: INV-NTF-005 · verify: model, e2e · A Kindle send is queued asynchronously and requires an Allow for the `kindle` scope from identity both when requested and when sent (account still Active), a Kindle address on the account, and the book being published (answers X1-075).

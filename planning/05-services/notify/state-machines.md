@@ -15,6 +15,8 @@ Status: DRAFT
 
 ## Mail delivery (outbox row; REQ-NTF-002, 008, 010)
 
+Applies to every mail kind including `password_changed` (D-82), which has no link and so no supersede rule.
+
 | From | Event | Guard | To |
 |---|---|---|---|
 | (none) | event stored | unique `(source, event_id, kind)` | Queued |

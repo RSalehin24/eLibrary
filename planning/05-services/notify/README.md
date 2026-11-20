@@ -2,7 +2,7 @@
 
 Status: DRAFT (six-service design, D-30, D-31)
 
-Sends invitation, password-reset and Kindle mails over SMTP with retries and keeps a delivery log, so a mail failure never blocks or slows another service.
+Sends invitation, password-reset, password-changed notice (D-82) and Kindle mails over SMTP with retries and keeps a delivery log, so a mail failure never blocks or slows another service.
 
 | | |
 |---|---|

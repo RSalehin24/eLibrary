@@ -4,7 +4,7 @@ Status: DRAFT · Service: [ingestion](../../05-services/ingestion/README.md) · 
 
 One pipeline: mirror sync, request, scrape, curate and validate, duplicate review, EPUB build, publish to catalog automatically when every gate passes (D-49). The API container only validates, records and enqueues; the worker container runs the jobs from the PostgreSQL queue. **No handler runs pipeline work** (REQ-ING-005): when the queue is unavailable the route answers 503 `queue_unavailable`. Acquisition is GET-only (D-03); there is no route that submits to the source site. Every route needs `operate` (session completed TOTP where required) and records the actor; there are no anonymous or capability-by-UUID routes and no manual EPUB upload (D-42). Catalog approval is **not** here: it needs `manage_catalog` in [catalog](catalog.md).
 
-Request status (execution) and outcome (domain) are separate fields; the value lists below are indicative and fixed in the ingestion service contract: status `queued`, `running`, `awaiting_credential`, `needs_review`, `done`, `failed`, `cancelled`; outcome `built`, `needs_review`, `duplicate`, `failed`, `published` (catalog accepted the gate-passing build; confirmed by `book.published`). The earlier `submitted` outcome is retired by D-49.
+Request status (execution) and outcome (domain) are separate fields; the value lists below are indicative and fixed in the ingestion service contract: status `queued`, `running`, `awaiting_credential` (scrape blocked by a missing or expired source cookie; returns to `queued` when the credential is valid again; `retry` and `cancel` allowed), `needs_review`, `done`, `failed`, `cancelled`; outcome `built`, `needs_review`, `duplicate`, `failed`, `published` (catalog accepted the gate-passing build; confirmed by `book.published`). The earlier `submitted` outcome is retired by D-49.
 
 ## Public API (`/api/ingestion`) - 34 routes
 
@@ -38,7 +38,7 @@ A re-sync writes only source-owned fields; an empty or failed fetch resolves not
 | POST | `/requests` | operate | create from a source URL or title `{source_url?, title?}` (`Idempotency-Key`); enqueues the scrape job | `duplicate_book`, `validation_failed`, `queue_unavailable` |
 | POST | `/requests/from-mirror` | operate | `{entry_ids[]}` (bounded); per-item results; idempotent (no extra requests) | `limit_exceeded` |
 | GET | `/requests/{id}` | operate | status, outcome, attempts, typed last error, links to build and catalog book | `not_found` |
-| POST | `/requests/{id}/actions/{action}` | operate | `action` in `retry`, `cancel`, `reprocess`, `discard`; allowed-source-state table, invalid transitions are 409; deleting a book applies only to a book the request created | `invalid_transition`, `not_found` |
+| POST | `/requests/{id}/actions/{action}` | operate | `action` in `retry`, `cancel`, `reprocess`, `discard`; `retry` takes an optional `force_generate` boolean (D-93, default false) that regenerates the build instead of reusing the stored cursor and scrape cache; allowed-source-state table, invalid transitions are 409; deleting a book applies only to a book the request created | `invalid_transition`, `not_found` |
 | POST | `/requests/bulk-actions` | operate | `{action, request_ids[]}` bounded, idempotent, per-item results | `limit_exceeded` |
 | GET | `/requests/{id}/document` | operate | curated document summary: sections, entities with evidence and confidence, dropped-block reasons (never the full scraped text) | `not_found` |
 | GET | `/requests/{id}/review` | operate | items below the confidence threshold or with locked chapters or layout drift | |
@@ -62,7 +62,7 @@ A re-sync writes only source-owned fields; an empty or failed fetch resolves not
 | GET | `/jobs` | operate | list with `state` (`queued`, `running`, `succeeded`, `failed`, `cancelled`) | |
 | GET | `/jobs/{id}` | operate | state, lease, attempt counter, error class (`retryable`, `rate_limited`, `auth_required`, `permanent`) and code | `not_found` |
 | POST | `/jobs/{id}/cancel` | operate | sets the cancel flag (checked before every page and between stages) | `invalid_transition` |
-| POST | `/jobs/{id}/retry` | operate | new attempt for a failed job; at most one active job per request | `invalid_transition`, `conflict` |
+| POST | `/jobs/{id}/retry` | operate | new attempt for a failed job; optional `force_generate` boolean as for the request `retry` action (D-93); at most one active job per request | `invalid_transition`, `conflict` |
 | GET | `/jobs/{id}/attempts` | operate | attempts and logs, bounded | `not_found` |
 
 ### Automation, rulesets, audit

@@ -155,7 +155,7 @@ Design basis: six Rust services (gateway, identity, catalog, reader, ingestion, 
 - **INV-ING-020** · ingestion · by: prop · No normalized text block appears in two output sections of different types.
 - **INV-ING-021** · ingestion · by: unit · Label, digit and key language equals the stored book language for all generated text.
 - **INV-ING-022** · ingestion · by: unit, prop · One normalization function is the only entry to matching; rule tables are versioned and match at token boundaries.
-- **INV-ING-023** · ingestion · by: prop · Duplicate outcome ∈ {exact_duplicate, new_edition, new_work, needs_review} and is a pure function of (normalized title key, author, category, edition); no outcome merges automatically.
+- **INV-ING-023** · ingestion · by: prop · Duplicate outcome ∈ {exact_duplicate, new_edition, new_work, needs_review} and is a pure function of (normalized title key, author, category, edition, translators; a translator difference ⇒ new_work, D-92); no outcome merges automatically.
 - **INV-ING-024** · ingestion · by: type, fuzz · Template escaping is always on; chapter HTML has type `SafeHtml`; `build(curated document, builder_version)` is pure and byte-identical across runs.
 - **INV-ING-025** · ingestion · by: prop, review · Every `<img>` and font reference in the XHTML resolves to a packaged file; the OPF has identifier derived from (book id, version), title, language and creator roles; nav and NCX both exist.
 - **INV-ING-026** · ingestion · by: prop, review · A publishable build exists only after XML well-formedness, structure audit and epubcheck (run in the ingestion worker before publish, D-47) report 0 errors; nav, NCX and TOC links = tree leaves ∪ parents.

@@ -2,7 +2,7 @@
 
 Status: DRAFT (six-service design; D-29, D-31, D-32, D-47)
 
-Six Rust services (gateway, identity, catalog, reader, ingestion, notify) plus the Angular SSR `web`, all run in Docker Compose. Every service test plan (`05-services/*/test-plan.md`) holds the `TST-*` rows; this file holds the levels, the rules, the environments, the web rows and the end-to-end journeys. The legacy tests protected only helper functions and happy paths (no permission, state-visibility, ticket or job-recovery tests); the levels below exist to close exactly those gaps. Kept from v1: pyramid, rules 1-9. Changed: Compose stack replaces per-service fakes for e2e, six services, no migration tests (D-32), source-site fixtures replace the live site.
+Six Rust services (gateway, identity, catalog, reader, ingestion, notify) plus the Angular SSR `web`, all run in Docker Compose. Every service test plan (`05-services/*/test-plan.md`) holds the `TST-*` rows; this file holds the levels, the rules, the environments, the end-to-end journeys. The legacy tests protected only helper functions and happy paths (no permission, state-visibility, ticket or job-recovery tests); the levels below exist to close exactly those gaps. Kept from v1: pyramid, rules 1-9. Changed: Compose stack replaces per-service fakes for e2e, six services, no migration tests (D-32), source-site fixtures replace the live site.
 
 ## Pyramid
 
@@ -58,34 +58,9 @@ Fuzzing: 256 cases per PR, 10,000 nightly, 30 min per target nightly; seeds and 
 
 Recorded and hand-made pages of the source site live in `fixtures/source/`, synthetic where possible (invented titles and text) and minimal excerpts only when a structure cannot be reproduced; no full third-party book is committed (CLAUDE.md). `source-fixture` serves them by path and can answer with 404, 429 with `Retry-After`, 5xx bursts, timeouts, truncated bodies, redirect loops, a 50 MiB page, a 200 sentinel page (login or bot page), and an expired-cookie response. Canary pages of each structure shape detect drift (TST-ING-042). Ingestion tests assert no non-GET request ever reaches the fixture server (D-03, TST-ING-011).
 
-## Web test plan (rows carried from the web README; there is no separate web test-plan file, O-10 resolved here)
+## Web test plan
 
-Levels: `unit` (Angular runner, real units, schema-generated mocks), `type`, `e2e` (Playwright on the Compose stack, hermetic, no fixed sleeps), `static`. Every acceptance criterion of REQ-WEB maps to a row.
-
-| ID | Level | Behaviour | REQ |
-|---|---|---|---|
-| TST-WEB-001 | type, e2e | `PageState` has Loading, Empty, Ready, Error, Forbidden, NotFound, Offline; a missing variant fails compilation; each state rendered in the matrix | REQ-WEB-001 |
-| TST-WEB-002 | unit, e2e | 401 goes to sign-in and keeps the target; 403 keeps the session and shows the reason; `mfa_required` goes to TOTP | REQ-WEB-002, 020 |
-| TST-WEB-003 | unit, e2e | guards and navigation built from capabilities, per role (reader, operator, admin); direct URL refused | REQ-WEB-003, 014 |
-| TST-WEB-004 | e2e | link checker over the typed route table; unknown route gives NotFound | REQ-WEB-004 |
-| TST-WEB-005 | e2e, review | minimalist rules; screenshot checks at the three widths in both themes | REQ-WEB-005, 006 |
-| TST-WEB-006 | e2e | theme: System, Light, Dark; applied before first paint; follows `prefers-color-scheme`; persists | REQ-WEB-007 |
-| TST-WEB-007 | e2e | automated contrast checks (4.5:1 text, 3:1 UI) in both themes on every screen | REQ-WEB-008 |
-| TST-WEB-008 | e2e | 360 to 1920 px, no horizontal scroll, orientation change keeps form state; window classes compact, medium, expanded, large | REQ-WEB-009 |
-| TST-WEB-009 | e2e | axe, keyboard operation, focus visible, dialogs trap focus, 200% text scale, reduced motion | REQ-WEB-010, NFR-008 |
-| TST-WEB-010 | unit, static | `bn` and `en` catalogs have identical keys (build fails otherwise); no hard-coded text | REQ-WEB-011, NFR-010 |
-| TST-WEB-011 | e2e | Bengali rendering: conjuncts and vowel signs intact, self-hosted fonts, no uppercase transform | REQ-WEB-012 |
-| TST-WEB-012 | static, CI | codegen produces no diff; `any`, non-null assertion and unchecked cast only in the generated boundary; no HTTP call outside `core/` | REQ-WEB-013, 023 |
-| TST-WEB-013 | e2e | Library: filters and sort in the URL, chips, card/list toggle, saved filters, Bengali-aware sort | REQ-WEB-015 |
-| TST-WEB-014 | e2e | Book detail: tabs, scope-gated download and Kindle actions, honest read-limit notice, Read opens through a ticket | REQ-WEB-016 |
-| TST-WEB-015 | e2e | Import workspace: bucket rail, confirm dialogs, snackbar results, live SSE update and reconnect with snapshot | REQ-WEB-017 |
-| TST-WEB-016 | e2e | Users and access: batched atomic grants, per-user drawer, audit view | REQ-WEB-018 |
-| TST-WEB-017 | e2e | Settings: re-authentication stepper for TOTP, preferences, own data export | REQ-WEB-019 |
-| TST-WEB-018 | unit, e2e | CSRF refresh and one retry; backoff on 429, 503, 504; no health poll; form state kept | REQ-WEB-020 |
-| TST-WEB-019 | type, e2e | ticket held in memory only (not in URL, storage, logs); header `X-Reader-Ticket`; one refresh on `ticket_expired`; progress flushed on `visibilitychange` and `pagehide` | REQ-WEB-021 |
-| TST-WEB-020 | e2e | first HTML of public pages carries title, canonical, meta, structured metadata; preview is `noindex`; SSR keeps no cross-request user state; SSR failure shows a typed page | REQ-WEB-022, 024 |
-
-Security headers on pages are **OPEN (O-2)**.
+The web rows (TST-WEB-001..020) live in [05-services/web/test-plan.md](../05-services/web/test-plan.md) like every other service (D-83). Security headers on pages are set by the web container (D-77).
 
 ## E2E critical journeys (must pass before every release)
 

@@ -31,7 +31,7 @@ Status: DRAFT (pull-based outbox, no broker; [ADR-0022](../../04-architecture/ad
 | `kindle.requested` | 1 | catalog | notify | `request_id, user_id, book_id, version_id, address_index` | `request_id` (claim-before-send row) | send a book to a Kindle address (address read from identity at send time) |
 | `user.disabled` | 1 | identity | reader, catalog | `user_id, grant_version` | `(user_id, grant_version)` | account suspended or disabled (suspend and disable both emit it); reader invalidates tickets, catalog drops cached decisions |
 | `grant.changed` | 1 | identity | reader, catalog | `user_id, grant_version, scope?, book_id?` | `(user_id, grant_version)`; keep the highest | invalidate decision caches and issued tickets |
-| `email.requested` | 1 | identity | notify | `request_id, kind` (`invite`, `password_reset`), `user_id, language` | `(request_id, kind)` | send a mail; address and link are fetched by reference from identity, never in the event |
+| `email.requested` | 1 | identity | notify | `request_id, kind` (`invite`, `password_reset`, `password_changed`), `user_id, language` | `(request_id, kind)` | send a mail; address and link are fetched by reference from identity, never in the event |
 | `build.finished` | 1 | ingestion | ingestion console | `request_id, artifact_id, outcome` | internal; feeds SSE only | not a cross-service contract |
 
 `notify` and `reader` emit no events; the gateway neither emits nor consumes any. The ingestion console stream (`request.changed`, `job.progress`, `sync.changed`, `credential.changed`, `automation.changed`) is SSE for display and is specified in the [ingestion API](../http/ingestion.md).

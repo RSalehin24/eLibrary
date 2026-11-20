@@ -14,4 +14,4 @@ Actors: operator (`operate`). Requirements: REQ-ING-023; INV: exact normalized t
 Branches:
 - Already resolved by someone else: `invalid_transition` shows the current state with Refresh.
 - Matched book was unpublished or deleted meanwhile: the match panel shows its state.
-- Translator difference is a `needs_review` outcome rather than a duplicate (I-3), shown in the review bucket.
+- A translator difference is not a duplicate and not a review: the records are different books (`new_work`, D-92), so no review is opened for it; the match panel may still list the other translation as a near match.

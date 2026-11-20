@@ -96,8 +96,7 @@ The authoritative test ids are in [test plan](test-plan.md); the column above is
 | OPEN-2 | epubcheck runs in the worker before publish (D-47, decided); the Java runtime and epubcheck install in the worker image still need approval in the P1 dependency batch | owner (tooling install) |
 | OPEN-3 | Generated fallback cover (REQ-ING-027): text shaping and rasterisation need a crate or tool; method not chosen | owner (dependency batch) |
 | OPEN-4 | Crates for HTTP client, HTML parser, sanitizer, ZIP, templating, Unicode normalization, XML: none approved yet (D-17 batch at P1 start); this design names roles, not crates | owner (dependency batch) |
-| OPEN-5 | Contract open points C-2 (ingestion chooses the book UUID for `POST /internal/books/{id}/versions`; this design assumes yes) and C-3 (`POST /internal/books/match` kept) | open-points.md |
+| OPEN-5 | Contract open points C-2 (ingestion chooses the book UUID for `POST /internal/books/{id}/versions`; resolved yes by D-85) and C-3 (`POST /internal/books/match` kept, D-86) | open-points.md |
 | OPEN-6 | O-3: work/edition grouping is not modelled; "new edition" is a human action only; the model has no work entity | open-points.md |
 | OPEN-7 | O-4: scope guarding CSV export and book deletion (not an ingestion route today) | open-points.md |
 | OPEN-8 | Numbers marked "provisional" (job-log retention, lease length, back-off base, worker slots) are tuned at the P0 baseline (O-7) | open-points.md |
-| OPEN-9 | Translator difference between otherwise equal records: this design lists it as `needs_review` (the outcome set is fixed by INV-ING-023 to exact_duplicate, new_edition, new_work, needs_review); confirm | open |

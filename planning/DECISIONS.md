@@ -81,5 +81,27 @@ Answered decisions only. Open questions live in [open-decisions](04-architecture
 | D-73 | 2026-11-20 | **Crates approved for identity sign-in**: `argon2` (Argon2id password hashing) and `sha1` (TOTP's HMAC-SHA1 only); TOTP and base32 hand-written and tested against the RFC vectors | owner choice (recommended option) |
 | D-74 | 2026-11-20 | **CSRF token derived from the session token**: `csrf = hex(SHA-256("csrf:" + session token))`, recomputed for `GET /auth/session`; `sessions.csrf_hash` keeps its hash for the gateway check; no new column or dependency | owner choice (recommended option) |
 | D-75 | 2026-11-20 | **Crate approved for TOTP secret encryption at rest**: `chacha20poly1305` (authenticated encryption, nonce injected from `platform-random`, key from a secret file) | owner choice (recommended option) |
+| D-76 | 2026-11-20 | **`user.deleted` event added** to the event list (O-1); consumers remove the user's reading state and shelves | owner choice (recommended option) |
+| D-77 | 2026-11-20 | **Security headers split by layer** (O-2): gateway for API responses, web container for pages, Caddy only HSTS | owner choice (recommended option) |
+| D-78 | 2026-11-20 | **Work/edition grouping not modelled** (O-3); only the human "new edition" action exists | owner choice (recommended option) |
+| D-79 | 2026-11-20 | **CSV export and book deletion guarded by `manage_catalog`** (O-4) | owner choice (recommended option) |
+| D-80 | 2026-11-20 | **Search relevance gate (MRR/recall) is SHOULD** at this scale (O-5): measured and reported, a miss does not block release | owner choice (recommended option) |
+| D-81 | 2026-11-20 | **NFR numbers are provisional until the P0 baseline** (O-7) | owner choice (recommended option) |
+| D-82 | 2026-11-20 | **notify adds a password-changed notice**, no admin notice (O-9) | owner choice (recommended option) |
+| D-83 | 2026-11-20 | **Web test rows move into `09-testing`** (O-10) | owner choice (recommended option) |
+| D-84 | 2026-11-20 | **Identity audit log readable with `manage_users`** (C-1) | owner choice (recommended option) |
+| D-85 | 2026-11-20 | **Ingestion chooses the book UUID** in `POST /internal/books/{id}/versions` (idempotent publish) (C-2) | owner choice (recommended option) |
+| D-86 | 2026-11-20 | **`POST /internal/books/match` kept** and added to the brief (C-3) | owner choice (recommended option) |
+| D-87 | 2026-11-20 | **Notes are a field of a highlight**, not a separate entity (C-4) | owner choice (recommended option) |
+| D-88 | 2026-11-20 | **Invented limits provisional until the P0 baseline** (profile image 2 MiB, 20 SSE streams / 3 per user, upstream concurrency 64, Kindle 10 per hour) (C-6) | owner choice (recommended option) |
+| D-89 | 2026-11-20 | **Reader answers `copy_unavailable`** for a ticket bound to a superseded version; identity `verify` stays version-agnostic and web re-opens once (P-3) | owner choice (recommended option) |
+| D-90 | 2026-11-20 | **Reader drops publisher stylesheets** and keeps an inline-style allow-list (P-4) | owner choice (recommended option) |
+| D-91 | 2026-11-20 | **New limits rows added as provisional**: package size, saved-filter count, progress-write rate, purge delay (P-5) | owner choice (recommended option) |
+| D-92 | 2026-11-20 | **A translator difference means different books** (I-3): not `needs_review`, not a duplicate; the matching rule of INV-ING-023 must treat the translator as a distinguishing field (plan docs to be updated) | owner free-text answer |
+| D-93 | 2026-11-20 | **Force-generate is a parameter of `retry`** and is added to the HTTP contract (I-4) | owner choice (recommended option) |
+| D-94 | 2026-11-20 | **Contributor linking lives in catalog intake** (I-5) | owner choice (recommended option) |
+| D-95 | 2026-11-20 | **`awaiting_credential` wording aligned to the state machine** (I-6); the HTTP contract is updated | owner choice (recommended option) |
+| D-96 | 2026-11-20 | **Ingestion numbers provisional until the P0 baseline** (lease 120 s, back-off base 30 s, `job_log` 30 days, 6 h cooldown, 3-day expiring window) (I-7) | owner choice (recommended option) |
+| D-97 | 2026-11-20 | **Caddy publishes port 80 only for the certificate flow** (ACME challenge and redirect to HTTPS); added to the brief (Q-4) | owner choice (recommended option) |
 
 Pending approval (proposed, not decided): the dependency register contents themselves (approved as a batch at P1 start, npm after S-02).

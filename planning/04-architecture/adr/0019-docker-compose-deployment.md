@@ -14,7 +14,7 @@ The earlier plan allowed systemd units or Compose, release directories with a sy
 - The "all services in one process" local mode and systemd/symlink releases are removed. Releases are image digests; a deploy restarts one service at a time (never `down` then `up`); rollback is redeploying the previous digests.
 - Secrets are files mounted into containers (Compose secrets), never environment variables in images or committed files; every container has memory and process limits and a restart policy.
 - Backups are monthly (D-33): a full dump of every database plus the file volumes, copied off the host, with a restore drill; up to 30 days of data may be lost.
-- Domain services are never published on host ports; only `caddy` publishes 80/443.
+- Domain services are never published on host ports; only `caddy` publishes 80/443; port 80 serves only the ACME challenge and the redirect to HTTPS (D-97).
 
 ## Consequences
 + One reproducible environment everywhere; service isolation (network, filesystem, resources) is enforceable and testable.

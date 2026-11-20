@@ -28,6 +28,6 @@ The endpoint list is owned by [07-contracts/http/catalog.md](../../07-contracts/
 
 ## Open items
 
-- C-2: ingestion chooses the book UUID in `POST /internal/books/{id}/versions` (assumed in the contract, not confirmed).
-- C-3: `POST /internal/books/match` is kept in the contract but is not in the architecture brief.
+- C-2 resolved (D-85): ingestion chooses the book UUID in `POST /internal/books/{id}/versions`; publishing is idempotent.
+- C-3 resolved (D-86): `POST /internal/books/match` is kept and is part of the brief.
 - O-4 and O-1 as in the [README](README.md).

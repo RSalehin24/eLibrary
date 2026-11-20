@@ -118,7 +118,7 @@ Author parsing: the raw string is always kept. Split on `, ; |` and newline, and
 
 ### Duplicate rule (decision procedure)
 
-Two books are the same only on **exact normalized title key + author + category + edition**. The first decisive step wins.
+Two books are the same only on **exact normalized title key + author + category + edition + translators** (a translator difference means different books, D-92). The first decisive step wins.
 
 1. **Source identity**: `url_key` equals a catalog `book_sources` key or an active request: `exact_duplicate` (the operator may `confirm_duplicate` or `discard`; reprocessing an existing book is the `reprocess` action, not a duplicate decision).
 2. **Exact key**: `title_key` equals a catalog book's title key; then compare by `exact_key` set equality or overlap:
@@ -128,7 +128,7 @@ Two books are the same only on **exact normalized title key + author + category 
 | >= 1 shared | >= 1 shared | same, or both absent | equal sets | `exact_duplicate` |
 | >= 1 shared | any | differs | equal sets | `new_edition` |
 | both sides have authors, none shared | any | any | any | `new_work` |
-| >= 1 shared | any | any | sets differ | `needs_review` (README OPEN-9) |
+| >= 1 shared | any | any | sets differ | `new_work` (different translation, D-92) |
 | missing or low confidence on either side | any | any | any | `needs_review` |
 
 3. Series and volume digits are part of the key ("খণ্ড ১" never matches "খণ্ড ১০"); a collection never matches its component by containment.
