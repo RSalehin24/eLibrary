@@ -1890,11 +1890,18 @@ name = "svc-catalog"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "contracts-http",
  "platform-http",
  "platform-obs",
  "platform-startup",
+ "platform-testkit",
+ "serde",
+ "serde_json",
  "sqlx",
  "tokio",
+ "tower",
+ "tracing",
+ "uuid",
 ]
 
 [[package]]

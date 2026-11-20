@@ -89,7 +89,7 @@ All 46 crates/tools listed at that date exist (the register has since been revis
 | `tracing-subscriber` 0.3.23 | badge "maintenance-experimental" | review at approval |
 | `jiff` 1.0.0 | first 1.0 release 2026-11-15 | prefer `time` 0.3.55 unless jiff features are needed; decide at approval |
 | `pasetors` 0.8.1 (no longer needed, D-37) | "has not undergone any third-party security audit" (supports v4.public and v4.local) | alternative `rusty_paseto` 0.10.1 (v4 public/local via feature flags); compare at approval |
-| `uuid` 1.29.3 | features `v7`, `v5` confirmed | enable only needed features |
+| `uuid` 1.29.3 | features `v7`, `v5` confirmed; `serde` used by `svc-catalog` (2026-11-20, already built into `contracts-ids`) | enable only needed features |
 | `icu_collator` 2.4.0 | CLDR has `bn.xml`; baked locale list not shown | S-01 builds a `bn` collator and checks it does not fall back to root |
 | `utoipa` 6.0.0, `sqlx` 0.9.0, `axum` 0.8.9, `reqwest` 0.13.5, `tantivy` 0.27.0 (withdrawn), `ed25519-dalek` 3.0.0 (no longer needed) | current latest per docs.rs | pin exact versions on approval |
 | `totp-rs` 6.0.0 | exists | hand-rolled TOTP on `hmac`+`sha2` remains the preferred minimal option |
