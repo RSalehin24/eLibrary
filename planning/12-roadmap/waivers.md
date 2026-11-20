@@ -6,4 +6,4 @@ Kept from v1; the six-service rewrite adds no waiver. A waiver is a dated, owned
 
 | Date | Gate/Check | What is waived | Why | Owner | Expires | Resolution |
 |---|---|---|---|---|---|---|
-| _(none)_ | | | | | | |
+| 2026-11-20 | Q5 deny (licenses) | `deny.toml` allow list gains `0BSD` and `CDLA-Permissive-2.0` | `lettre` with rustls needs `quoted_printable` (0BSD) and `webpki-roots` (CDLA-Permissive-2.0); both permissive | owner | 2026-12-20 | permanent by D-103; delete this row once the plan check no longer needs it |
