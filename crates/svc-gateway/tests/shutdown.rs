@@ -6,8 +6,21 @@ use std::time::{Duration, Instant};
 const STARTUP_LIMIT: Duration = Duration::from_secs(10);
 const STOP_LIMIT: Duration = Duration::from_secs(3);
 
+fn key_file() -> std::io::Result<String> {
+    let path = format!("{}/shutdown-test-key", env!("CARGO_TARGET_TMPDIR"));
+    std::fs::write(&path, "cd".repeat(32))?;
+    Ok(path)
+}
+
 fn start(port: u16) -> std::io::Result<Child> {
+    let key = key_file()?;
     Command::new(env!("CARGO_BIN_EXE_svc-gateway"))
+        .env("ELIBRARY_PUBLIC_ORIGIN", "https://library.test")
+        .env("ELIBRARY_UPSTREAM_IDENTITY", "http://127.0.0.1:1")
+        .env("ELIBRARY_UPSTREAM_CATALOG", "http://127.0.0.1:1")
+        .env("ELIBRARY_UPSTREAM_READER", "http://127.0.0.1:1")
+        .env("ELIBRARY_UPSTREAM_INGESTION", "http://127.0.0.1:1")
+        .env("ELIBRARY_SERVICE_TOKEN_KEY_FILE", key)
         .env("ELIBRARY_LISTEN_ADDRESS", format!("127.0.0.1:{port}"))
         .env(
             "ELIBRARY_INTERNAL_ADDRESS",
