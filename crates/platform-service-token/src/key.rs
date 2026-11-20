@@ -24,6 +24,15 @@ impl SigningKey {
             .ok_or(TokenError::KeyTooShort)
     }
 
+    /// Reads the key from its secret file text: hex digits (64 for 32 bytes).
+    ///
+    /// # Errors
+    /// [`TokenError::KeyTooShort`] for text that is not hex or decodes below 32 bytes.
+    pub fn from_hex(text: &str) -> Result<Self, TokenError> {
+        let bytes = crate::hex::decode(text.trim()).ok_or(TokenError::KeyTooShort)?;
+        Self::new(bytes)
+    }
+
     pub(crate) fn bytes(&self) -> &[u8] {
         self.0.expose()
     }
@@ -58,5 +67,29 @@ impl KeyRing {
             service: caller.clone(),
             id: key_id,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SigningKey;
+    use crate::TokenError;
+
+    #[test]
+    fn reads_a_64_digit_hex_secret_file() {
+        let text = format!("{}\n", "ab".repeat(32));
+        assert!(SigningKey::from_hex(&text).is_ok());
+    }
+
+    #[test]
+    fn refuses_short_or_non_hex_text() {
+        assert_eq!(
+            SigningKey::from_hex("abcd").err(),
+            Some(TokenError::KeyTooShort)
+        );
+        assert_eq!(
+            SigningKey::from_hex(&"zz".repeat(32)).err(),
+            Some(TokenError::KeyTooShort)
+        );
     }
 }
