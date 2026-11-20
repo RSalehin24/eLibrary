@@ -84,7 +84,7 @@ async fn pending_session(
 }
 
 // why: a hash key keeps user ids out of the throttle table's readable keys, like sign-in does.
-fn throttle_key(user: Uuid) -> String {
+pub(crate) fn throttle_key(user: Uuid) -> String {
     to_hex(&Sha256::digest(format!("totp:{user}").as_bytes()))
 }
 
