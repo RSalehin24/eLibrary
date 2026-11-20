@@ -7,6 +7,7 @@ use serde::Serialize;
 use sqlx::{PgPool, Row, postgres::PgRow};
 use uuid::Uuid;
 
+use crate::blobs::BlobId;
 use crate::slug::SlugParam;
 
 /// One credit as the public sees it.
@@ -167,6 +168,36 @@ fn card_of(row: &PgRow, extras: Extras) -> Result<Card, sqlx::Error> {
         series: extras.series,
         categories: extras.categories,
     })
+}
+
+/// The stored cover of a visible book.
+pub(crate) struct CoverRef {
+    pub(crate) blob: BlobId,
+    pub(crate) media_type: String,
+}
+
+/// The current version's cover; `None` when the book is not visible or has no cover (a generated
+/// cover is not built yet). Only a current slug matches.
+pub(crate) async fn cover_of(
+    pool: &PgPool,
+    slug: &SlugParam,
+) -> Result<Option<CoverRef>, sqlx::Error> {
+    let row = sqlx::query(
+        "select a.sha256, a.media_type from visible_books v
+         join assets a on a.version_id = v.version_id and a.kind = 'cover' where v.slug = $1",
+    )
+    .bind(slug.as_str())
+    .fetch_optional(pool)
+    .await?;
+    row.map(|row| {
+        let sha: String = row.try_get("sha256")?;
+        Ok(CoverRef {
+            blob: BlobId::parse(&sha)
+                .ok_or_else(|| sqlx::Error::Decode("bad cover hash".into()))?,
+            media_type: row.try_get("media_type")?,
+        })
+    })
+    .transpose()
 }
 
 /// The current slug's detail, or where an old slug now lives, or nothing.

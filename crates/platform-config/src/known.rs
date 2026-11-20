@@ -1,7 +1,7 @@
 use crate::{ConfigError, ConfigSource, ENV_PREFIX};
 
 /// The one registry of settings; anything else with the prefix is a typo or a stale deploy.
-const KNOWN_KEYS: [&str; 23] = [
+const KNOWN_KEYS: [&str; 24] = [
     "ELIBRARY_LISTEN_ADDRESS",
     "ELIBRARY_INTERNAL_ADDRESS",
     "ELIBRARY_LOG_LEVEL",
@@ -25,6 +25,7 @@ const KNOWN_KEYS: [&str; 23] = [
     "ELIBRARY_UPSTREAM_CATALOG",
     "ELIBRARY_UPSTREAM_READER",
     "ELIBRARY_UPSTREAM_INGESTION",
+    "ELIBRARY_BLOB_ROOT",
 ];
 
 pub(crate) fn reject_unknown(source: &impl ConfigSource) -> Result<(), ConfigError> {

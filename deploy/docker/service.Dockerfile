@@ -22,6 +22,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates
 FROM debian:trixie-slim AS runtime-base
 ARG SERVICE
 RUN useradd --system --no-create-home --uid 10001 elibrary
+# why: a new named volume copies this directory's owner, so catalog can write its blobs (D-63 read-only root).
+RUN mkdir -p /data/catalog/blobs && chown -R 10001 /data
 COPY --from=build /out/ /usr/local/bin/
 RUN ln -s "/usr/local/bin/svc-${SERVICE}" /usr/local/bin/service
 # why: slim has no curl; bash can open a TCP socket for the internal health probe.

@@ -3,12 +3,16 @@
 
 use axum::Router;
 use axum::extract::{Path, RawQuery, State};
+use axum::http::HeaderMap;
+use axum::http::header::IF_NONE_MATCH;
 use axum::response::Response;
 use axum::routing::get;
 use contracts_http::Page;
+use platform_config::{ConfigError, EnvSource};
 use sqlx::PgPool;
 
-use crate::reply::{Failure, public_json};
+use crate::blobs::BlobStore;
+use crate::reply::{Failure, not_modified, public_image, public_json};
 use crate::slug::SlugParam;
 use crate::store::{self, Cursor, Lookup};
 
@@ -26,12 +30,27 @@ const UNSUPPORTED: [&str; 9] = [
     "snapshot",
 ];
 
+#[derive(Clone)]
+struct AppState {
+    pool: PgPool,
+    blobs: BlobStore,
+}
+
+/// The routes under `/api/catalog` with the blob store named by `ELIBRARY_BLOB_ROOT`.
+///
+/// # Errors
+/// The blob root is missing or not a directory.
+pub fn routes(pool: PgPool) -> Result<Router, ConfigError> {
+    Ok(routes_with(pool, BlobStore::from_config(&EnvSource)?))
+}
+
 /// The routes under `/api/catalog`, ready to merge into the public router.
-pub fn routes(pool: PgPool) -> axum::Router {
+pub fn routes_with(pool: PgPool, blobs: BlobStore) -> Router {
     Router::new()
         .route("/api/catalog/books", get(list_route))
         .route("/api/catalog/books/{slug}", get(detail_route))
-        .with_state(pool)
+        .route("/api/catalog/books/{slug}/cover", get(cover_route))
+        .with_state(AppState { pool, blobs })
 }
 
 /// The list parameters this stage supports: `after`, `limit` and `sort=recent`. `q`, facets and
@@ -77,11 +96,11 @@ fn parse_limit(value: &str) -> Result<i64, Failure> {
 }
 
 async fn list_route(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     RawQuery(raw): RawQuery,
 ) -> Result<Response, Failure> {
     let query = parse_list(raw.as_deref())?;
-    let page = store::list(&pool, query.after, query.limit).await?;
+    let page = store::list(&state.pool, query.after, query.limit).await?;
     Ok(public_json(&Page {
         items: page.cards,
         next: page.next.map(Cursor::encode),
@@ -89,15 +108,41 @@ async fn list_route(
 }
 
 async fn detail_route(
-    State(pool): State<PgPool>,
+    State(state): State<AppState>,
     Path(slug): Path<String>,
 ) -> Result<Response, Failure> {
     let slug = SlugParam::parse(&slug).ok_or(Failure::NotFound)?;
-    match store::by_slug(&pool, &slug).await? {
+    match store::by_slug(&state.pool, &slug).await? {
         Lookup::Found(detail) => Ok(public_json(&*detail)),
         Lookup::Moved(now) => Err(Failure::Moved(now)),
         Lookup::Missing => Err(Failure::NotFound),
     }
+}
+
+async fn cover_route(
+    State(state): State<AppState>,
+    Path(slug): Path<String>,
+    headers: HeaderMap,
+) -> Result<Response, Failure> {
+    let slug = SlugParam::parse(&slug).ok_or(Failure::NotFound)?;
+    let cover = store::cover_of(&state.pool, &slug)
+        .await?
+        .ok_or(Failure::NotFound)?;
+    let etag = format!("\"{}\"", cover.blob.as_str());
+    let cached = headers
+        .get(IF_NONE_MATCH)
+        .and_then(|value| value.to_str().ok())
+        .is_some_and(|value| value.split(',').any(|tag| tag.trim() == etag));
+    if cached {
+        return Ok(not_modified(&etag));
+    }
+    // why: a missing or altered blob is a server fault; nothing is changed and no body is sent (REQ-CAT-032).
+    let bytes = state
+        .blobs
+        .read(&cover.blob)
+        .await?
+        .ok_or(Failure::Internal)?;
+    Ok(public_image(&cover.media_type, &etag, bytes))
 }
 
 #[cfg(test)]

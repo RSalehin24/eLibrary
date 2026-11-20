@@ -1891,12 +1891,14 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "contracts-http",
+ "platform-config",
  "platform-http",
  "platform-obs",
  "platform-startup",
  "platform-testkit",
  "serde",
  "serde_json",
+ "sha2",
  "sqlx",
  "tokio",
  "tower",
@@ -2423,6 +2425,7 @@ version = "1.29.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3c14b15dffa2f4bd712103e857140aa04a4f2ff6e955c77d7eb8e53ee02a3b64"
 dependencies = [
+ "getrandom 0.4.3",
  "js-sys",
  "serde_core",
  "wasm-bindgen",

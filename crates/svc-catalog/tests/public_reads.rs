@@ -8,16 +8,26 @@ use axum::http::{Request, StatusCode};
 use platform_testkit::TestDatabase;
 use serde_json::Value;
 use sqlx::PgPool;
-use svc_catalog::{MIGRATIONS, http};
+use svc_catalog::{BlobStore, MIGRATIONS, http};
 use tower::ServiceExt;
 
 type Failure = Box<dyn std::error::Error>;
 
 const HASH: &str = "0000000000000000000000000000000000000000000000000000000000000000";
 
+fn blobs() -> Result<BlobStore, Failure> {
+    let dir = std::env::temp_dir().join(format!("catalog-test-blobs-{}", uuid::Uuid::now_v7()));
+    std::fs::create_dir_all(&dir)?;
+    Ok(BlobStore::open(dir)?)
+}
+
 async fn app() -> Result<(Router, PgPool), Failure> {
+    app_with(blobs()?).await
+}
+
+async fn app_with(store: BlobStore) -> Result<(Router, PgPool), Failure> {
     let pool = TestDatabase::create(&MIGRATIONS).await?.pool;
-    Ok((http::routes(pool.clone()), pool))
+    Ok((http::routes_with(pool.clone(), store), pool))
 }
 
 /// A published book `n` with one writer; `minutes` orders publication times.
@@ -239,5 +249,87 @@ async fn assert_invalid(app: &Router, query: &str) -> Result<(), Failure> {
         Some("validation_failed"),
         "{query}"
     );
+    Ok(())
+}
+
+fn header(response: &axum::response::Response, name: &str) -> Option<String> {
+    let value = response.headers().get(name)?;
+    value.to_str().ok().map(str::to_owned)
+}
+
+async fn add_cover(pool: &PgPool, n: u32, sha: &str) -> Result<(), Failure> {
+    sqlx::query(sqlx::AssertSqlSafe(format!(
+        "insert into assets (id, version_id, kind, sha256, size_bytes, media_type, storage_path, created_at)
+         values (gen_random_uuid(), '00000000-0000-7000-8000-0000000000c{n}', 'cover', '{sha}', 5, 'image/png', 'p', now())"
+    )))
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+async fn get_raw(
+    app: &Router,
+    path: &str,
+    tag: Option<&str>,
+) -> Result<axum::response::Response, Failure> {
+    let mut request = Request::builder().uri(path);
+    if let Some(tag) = tag {
+        request = request.header("if-none-match", tag);
+    }
+    Ok(app.clone().oneshot(request.body(Body::empty())?).await?)
+}
+
+#[tokio::test]
+#[ignore = "needs the test postgres: run `cargo xtask check`"]
+async fn the_cover_streams_with_etag_cache_and_nosniff_and_revalidates() -> Result<(), Failure> {
+    let store = blobs()?;
+    let id = store.put(b"png-bytes").await?;
+    let (app, pool) = app_with(store).await?;
+    publish(&pool, seed(1, "with-cover", 10)).await?;
+    add_cover(&pool, 1, id.as_str()).await?;
+    let response = get_raw(&app, "/api/catalog/books/with-cover/cover", None).await?;
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        header(&response, "content-type").as_deref(),
+        Some("image/png")
+    );
+    assert_eq!(
+        header(&response, "x-content-type-options").as_deref(),
+        Some("nosniff")
+    );
+    assert_eq!(
+        header(&response, CACHE_CONTROL.as_str()).as_deref(),
+        Some("public, max-age=60")
+    );
+    let etag = header(&response, "etag").ok_or("no etag")?;
+    let bytes = axum::body::to_bytes(response.into_body(), 1 << 20).await?;
+    assert_eq!(&bytes[..], b"png-bytes");
+    let again = get_raw(&app, "/api/catalog/books/with-cover/cover", Some(&etag)).await?;
+    assert_eq!(again.status(), StatusCode::NOT_MODIFIED);
+    Ok(())
+}
+
+#[tokio::test]
+#[ignore = "needs the test postgres: run `cargo xtask check`"]
+async fn no_cover_unknown_or_invisible_book_is_not_found_and_a_lost_blob_is_a_server_error()
+-> Result<(), Failure> {
+    let (app, pool) = app().await?;
+    publish(&pool, seed(1, "bare", 10)).await?;
+    assert_eq!(
+        get_raw(&app, "/api/catalog/books/bare/cover", None)
+            .await?
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+    assert_eq!(
+        get_raw(&app, "/api/catalog/books/nope/cover", None)
+            .await?
+            .status(),
+        StatusCode::NOT_FOUND
+    );
+    publish(&pool, seed(2, "lost", 5)).await?;
+    add_cover(&pool, 2, HASH).await?;
+    let lost = get_raw(&app, "/api/catalog/books/lost/cover", None).await?;
+    assert_eq!(lost.status(), StatusCode::INTERNAL_SERVER_ERROR);
     Ok(())
 }

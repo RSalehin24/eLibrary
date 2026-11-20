@@ -207,7 +207,10 @@ services:
       ELIBRARY_DATABASE_PORT: "5432"
       ELIBRARY_DATABASE_NAME: catalog
       ELIBRARY_DATABASE_USER: catalog
+      ELIBRARY_BLOB_ROOT: /data/catalog/blobs
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/catalog_db_password
+    volumes:
+      - catalog-blobs:/data/catalog/blobs
     secrets:
       - catalog_db_password
     depends_on:
@@ -385,6 +388,7 @@ networks:
   edge: {}
 
 volumes:
+  catalog-blobs:
   postgres-data:
   caddy-data:
   caddy-config:
