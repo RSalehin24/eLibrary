@@ -10,9 +10,26 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio"] }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "json"] }
+contracts-http = { path = "../contracts-http" }
+contracts-ids = { path = "../contracts-ids" }
+lettre = { version = "=0.11.24", default-features = false, features = ["smtp-transport", "builder", "tokio1-rustls-tls"] }
+platform-config = { path = "../platform-config" }
+platform-internal-http = { path = "../platform-internal-http" }
+platform-random = { path = "../platform-random" }
+platform-service-token = { path = "../platform-service-token" }
+platform-time = { path = "../platform-time" }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+thiserror = "2.0.21"
+tracing = "0.1.44"
+uuid = "1.29.3"
 platform-http = { version = "0.1.0", path = "../platform-http" }
 platform-obs = { version = "0.1.0", path = "../platform-obs" }
 platform-startup = { version = "0.1.0", path = "../platform-startup" }
-sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros"] }
+sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros", "time", "uuid", "json"] }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
+
+[dev-dependencies]
+platform-testkit = { path = "../platform-testkit" }
+tower = { version = "0.5.3", features = ["util"] }
