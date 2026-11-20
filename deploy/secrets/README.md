@@ -6,3 +6,4 @@ readable: file mode 0444, protected by this directory being 0700 (`chmod 700 dep
 
 - `postgres_password` (dev: `head -c 24 /dev/urandom | base64 > deploy/secrets/postgres_password`)
 - `<service>_db_password` for identity, catalog, reader, ingestion and notify (same command; read by that service and by the postgres init script)
+- `identity_totp_key` (identity only: 64 hex characters, the key that encrypts TOTP secrets at rest; dev: `head -c 32 /dev/urandom | od -An -tx1 | tr -d ' \n' > deploy/secrets/identity_totp_key`; losing it means every user must enrol TOTP again, so back it up with the other secrets)

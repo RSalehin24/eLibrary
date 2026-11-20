@@ -31,3 +31,31 @@ pub(crate) async fn find_for_sign_in(
     })
     .transpose()
 }
+
+/// The account fields the session response shows.
+pub(crate) struct Profile {
+    pub id: Uuid,
+    pub email: String,
+    pub display_name: String,
+    pub language: String,
+    pub role: String,
+}
+
+pub(crate) async fn find_profile(pool: &PgPool, id: Uuid) -> Result<Option<Profile>, sqlx::Error> {
+    let row = sqlx::query(
+        "select id, email, display_name, language, role from users where id = $1 and status = 'active'",
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await?;
+    row.map(|row| {
+        Ok(Profile {
+            id: row.try_get("id")?,
+            email: row.try_get("email")?,
+            display_name: row.try_get("display_name")?,
+            language: row.try_get("language")?,
+            role: row.try_get("role")?,
+        })
+    })
+    .transpose()
+}

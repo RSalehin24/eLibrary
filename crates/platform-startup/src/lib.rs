@@ -18,6 +18,9 @@ pub use error::StartupError;
 
 const MIGRATE_COMMAND: &str = "migrate";
 
+/// Builds routes from the connected pool; a failure stops startup before any listener opens.
+pub type DatabaseRoutes = fn(PgPool) -> Result<Router, Box<dyn std::error::Error + Send + Sync>>;
+
 /// What a service says about itself; everything else is shared.
 pub struct ServiceSpec {
     pub identity: ServiceIdentity,
@@ -25,6 +28,9 @@ pub struct ServiceSpec {
     /// `None` for a service without a database (the gateway).
     pub migrations: Option<&'static Migrator>,
     pub public_routes: Router,
+    /// Routes that need the database pool, built once it is connected and merged into
+    /// `public_routes`. `None` for services whose routes use no database.
+    pub database_routes: Option<DatabaseRoutes>,
 }
 
 /// Runs the service until a listener fails. With a database, `migrate` as the first
@@ -40,29 +46,33 @@ pub async fn run(spec: ServiceSpec) -> Result<(), StartupError> {
 }
 
 async fn start(config: CommonConfig, spec: ServiceSpec) -> Result<(), StartupError> {
-    let ServiceSpec {
-        contract,
-        migrations,
-        public_routes,
-        ..
-    } = spec;
-    let Some(migrations) = migrations else {
-        return serve::serve(
-            config,
-            public_routes,
-            serve::checks_without_database(contract),
-        )
-        .await;
+    let Some(migrations) = spec.migrations else {
+        let checks = serve::checks_without_database(spec.contract);
+        return serve::serve(config, spec.public_routes, checks).await;
     };
+    start_with_database(config, spec, migrations).await
+}
+
+async fn start_with_database(
+    config: CommonConfig,
+    spec: ServiceSpec,
+    migrations: &Migrator,
+) -> Result<(), StartupError> {
     let pool = connect(&DatabaseConfig::load(&EnvSource)?).await?;
     if is_migrate_command() {
         return migrate(&pool, migrations).await;
     }
     ensure_schema_current(&pool, migrations).await?;
+    let routes = match spec.database_routes {
+        Some(build) => spec
+            .public_routes
+            .merge(build(pool.clone()).map_err(StartupError::Routes)?),
+        None => spec.public_routes,
+    };
     serve::serve(
         config,
-        public_routes,
-        serve::checks_with_database(contract, pool),
+        routes,
+        serve::checks_with_database(spec.contract, pool),
     )
     .await
 }

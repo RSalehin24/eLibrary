@@ -147,8 +147,10 @@ services:
       ELIBRARY_DATABASE_NAME: identity
       ELIBRARY_DATABASE_USER: identity
       ELIBRARY_DATABASE_PASSWORD_FILE: /run/secrets/identity_db_password
+      ELIBRARY_TOTP_KEY_FILE: /run/secrets/identity_totp_key
     secrets:
       - identity_db_password
+      - identity_totp_key
     depends_on:
       identity-migrate:
         condition: service_completed_successfully
@@ -369,6 +371,8 @@ secrets:
     file: ../secrets/postgres_password
   identity_db_password:
     file: ../secrets/identity_db_password
+  identity_totp_key:
+    file: ../secrets/identity_totp_key
   catalog_db_password:
     file: ../secrets/catalog_db_password
   reader_db_password:

@@ -13,6 +13,8 @@ pub enum StartupError {
     Logging(#[from] LoggingAlreadyStarted),
     #[error(transparent)]
     Database(#[from] DbError),
+    #[error("routes could not be built: {0}")]
+    Routes(#[source] Box<dyn std::error::Error + Send + Sync>),
     #[error("listener failed: {0}")]
     Listener(#[from] std::io::Error),
 }

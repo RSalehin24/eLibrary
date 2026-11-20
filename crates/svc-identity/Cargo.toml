@@ -10,13 +10,15 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
-axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio"] }
+axum = { version = "0.8.9", default-features = false, features = ["http1", "tokio", "json"] }
+platform-config = { path = "../platform-config" }
 platform-http = { path = "../platform-http" }
 platform-obs = { path = "../platform-obs" }
 platform-startup = { path = "../platform-startup" }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }
 sqlx = { version = "0.9.1", default-features = false, features = ["runtime-tokio", "postgres", "migrate", "macros", "time", "uuid"] }
 
+contracts-http = { path = "../contracts-http" }
 contracts-ids = { path = "../contracts-ids" }
 domain-credentials = { path = "../domain-credentials" }
 platform-random = { path = "../platform-random" }
@@ -24,7 +26,12 @@ platform-time = { path = "../platform-time" }
 sha2 = "0.11.1"
 uuid = "1.29.3"
 thiserror = "2.0.21"
+serde = { version = "1.0.229", features = ["derive"] }
+tracing = "0.1.44"
+chacha20poly1305 = { version = "0.11.0", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
+serde_json = "1.0.154"
+tower = { version = "0.5.3", features = ["util"] }
 platform-testkit = { path = "../platform-testkit" }
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread"] }

@@ -4,7 +4,7 @@ use axum::Router;
 use platform_http::ContractVersion;
 use platform_obs::ServiceIdentity;
 use platform_startup::{ServiceSpec, StartupError, run};
-use svc_identity::MIGRATIONS;
+use svc_identity::{MIGRATIONS, http};
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
@@ -16,6 +16,7 @@ async fn main() -> Result<(), StartupError> {
         contract: ContractVersion(1),
         migrations: Some(&MIGRATIONS),
         public_routes: Router::new(),
+        database_routes: Some(http::routes),
     })
     .await
 }

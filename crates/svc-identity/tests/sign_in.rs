@@ -236,7 +236,8 @@ async fn revoked_and_unknown_sessions_find_nothing() -> Result<(), Failure> {
     let world = world().await?;
     add_user(&world.pool, "active", false).await?;
     let issued = signed_in(attempt(&world, "reader@example.org", PASSWORD).await?)?;
-    session::revoke(&world.pool, &issued.token, world.clock.now()).await?;
+    let mut connection = world.pool.acquire().await?;
+    session::revoke(&mut connection, &issued.token, world.clock.now()).await?;
     assert!(
         session::lookup(&world.pool, &issued.token, world.clock.now())
             .await?

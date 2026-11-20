@@ -17,6 +17,7 @@ async fn main() -> Result<(), StartupError> {
         contract: ContractVersion(1),
         migrations: Some(&MIGRATIONS),
         public_routes: Router::new(),
+        database_routes: None,
     })
     .await
 }
